@@ -155,6 +155,10 @@ Herhangi bir gövdeye denetçide **Özellik ekle → Kurtarma paraşütü** ile 
 
 Unity'deki gibi denetçide nesnenin adının altında **Etiket** ve **Katman** vardır. Etiket parçanın ne olduğunu betiklere ve aramalara söyleyen bir sözcüktür (engel, hedef); listeden seçilir ya da **Etiket ekle…** ile yazılır. Katman çarpışmalar için bir gruptur: **Katman ekle…** yeni bir katmana ad verir (31'e kadar), **Çarpışma matrisi…** Unity'nin katman çarpışma matrisini açar. Matriste işareti kaldırılan iki katmanın parçaları birbirinin içinden geçer; zemin, arazi ve kablolar her zaman çarpışır. Değişiklik seçili bütün nesnelere uygulanır ve çalıştırmada etkilidir.
 
+### Tetik bölgesi
+
+Unity'deki Is Trigger'dır. Bir gövdeye **Bileşen ekle → Tetik bölgesi** verince parça, hiçbir şeyin çarpmadığı, içinden geçilen bir bölgeye döner (zemin ve diğer parçalar ona değmez). Bir parçanın sınır küresi bölgenin kutusuna değdiği anda **girdi**, değmez olunca **çıktı** olayları yazılır; çalışırken kartında içindeki parçalar listelenir. Bir parçaya sabitlenen bölge onunla gider: bir tutucunun erişimi, bandın ucundaki algılama alanı. Kartın kutusuyla kapatılınca yeniden katı bir parçadır.
+
 ### Sabit kuvvet
 
 Unity'deki Constant Force bileşenidir. Hareket edebilen bir parçaya **Bileşen ekle → Sabit kuvvet** ile ekleyin: **Kuvvet (N) X · Y · Z** her fizik adımında parçanın kütle merkezine etkir (F = m·a), **Tork (N·m) X · Y · Z** onu döndürür. Altlarındaki kutular değeri dünya eksenleri yerine parçanın kendi eksenlerinde verir; böylece bir roketin itkisi ya da bir pervanenin çekişi parça döndükçe onunla döner. Z yukarıdır. Yerçekimi, sürükleme, temaslar ve bağlantılar aynı fizikte işlemeye devam eder; sabitlenmiş bir parçaya eklenmez. Kartın kutusuyla kapatılabilir, ⋮ menüsüyle kopyalanıp başka parçaya yapıştırılabilir.
@@ -731,6 +735,10 @@ Wi-Fi, BLE ve Bluetooth sinyalleri uzaklıkla, engellerle ve gövdelerle zayıfl
 ## Etkin ve devre dışı nesneler
 
 Denetçide nesnenin adının solundaki kutu Unity'deki **etkin** anahtarıdır (Alt+Shift+A, sahne ağacının sağ tık menüsünde **Devre dışı bırak / Etkinleştir**). Kapalı bir nesne ve üstüne takılı her şey sahneden çıkar, kabloları çizilmez ve çalıştırmada hiç yokmuş gibi davranılır: fizik gövdesi kurulmaz, devreye girmez, sensörleri okumaz. Dosyada kalır; sahne ağacında soluk görünür ve oradan seçilip yeniden açılabilir. Çalışırken değiştirilemez; durdurup değiştirin. **Gizle** ise yalnız görüntüden kaldırır, nesne simülasyonda kalır.
+
+## Kaplamalar
+
+Unity'deki kaplama menüsü gibi, sahnenin sağ üstündeki kaplama düğmesi ya da 1 tuşunun solundaki tuş sahne görünümünün kaplamalarını listeler: **İpucu satırı**, **Tutamaç**, **Sensör kaplamaları** (mesafe sensörlerinin ışınları, kameraların ve lidarların görüş alanları) ve **Izgara**. Her biri ayrı açılıp kapanır; **Hepsini gizle** temiz bir görünüm verir. Seçimler saklanır.
 
 ## Izgara ve yakalama
 

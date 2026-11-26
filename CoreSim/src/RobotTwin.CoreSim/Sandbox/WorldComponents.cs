@@ -15,7 +15,7 @@ namespace RobotTwin.CoreSim.Sandbox
         public const string OffSuffix = ".off";
 
         /// <summary>The keys of the components that can be switched off.</summary>
-        public static readonly string[] Switchable = { "shell", "vessel", "parachute", MachineFaults.Key, WorldPhysics.ConstantForceKey };
+        public static readonly string[] Switchable = { "shell", "vessel", "parachute", MachineFaults.Key, WorldPhysics.ConstantForceKey, WorldPhysics.TriggerKey };
 
         public static bool IsOff(WorldObject o, string key) => o.Parameters.ContainsKey(key + OffSuffix);
 
@@ -71,6 +71,7 @@ namespace RobotTwin.CoreSim.Sandbox
             MachineFaults.Key => (values.TryGetValue(MachineFaults.Key, out var id) || values.TryGetValue(MachineFaults.Key + OffSuffix, out id))
                                  && MachineFaults.For(o.PartId).Any(f => f.Id == id),
             WorldPhysics.ConstantForceKey => o.Kind != WorldObjectKind.Empty && !o.IsStatic,
+            WorldPhysics.TriggerKey => o.Kind == WorldObjectKind.Body && !Has(o, "shell") && !Has(o, "vessel"),
             _ => false
         };
 

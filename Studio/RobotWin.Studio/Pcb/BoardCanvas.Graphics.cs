@@ -86,6 +86,7 @@ namespace RobotWin.Studio.Pcb
         private void GraphicClick(double x, double y, bool doubleClick)
         {
             var p = Magnet(x, y);   // [magnet]
+            if (_tool is PcbTool.Line or PcbTool.Polygon && _gfx.Count > 0) p = Angle45(_gfx[^1], p);   // [angle45]
             if (_tool == PcbTool.Polygon && (doubleClick || (_gfx.Count >= 3 && Near(_gfx[0], p))))
             {
                 FinishGraphic();
@@ -190,7 +191,8 @@ namespace RobotWin.Studio.Pcb
         {
             if (!IsGraphicTool(_tool) || _gfx.Count == 0) return;
             var pts = _gfx.ToList();
-            pts.Add(Magnet(_cursor.X, _cursor.Y));   // [magnet]
+            var cursor = Magnet(_cursor.X, _cursor.Y);   // [magnet]
+            pts.Add(_tool is PcbTool.Line or PcbTool.Polygon ? Angle45(pts[^1], cursor) : cursor);   // [angle45]
             var g = new BoardGraphic { Shape = ShapeOf(_tool), Layer = GraphicDrawLayer, Width = DrawWidth, Points = pts };
             var pen = new Pen(SymbolRenderer.Brush(A(Accent, (byte)0xD0)), Math.Max(1, DrawWidth * _scale)) { DashStyle = DashStyles.Dash };
             pen.Freeze();

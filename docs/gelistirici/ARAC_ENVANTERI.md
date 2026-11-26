@@ -59,7 +59,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Kutupsal koordinat | yok | yok | 3 |
 | mm / mil | panelde | var | |
 | Tam ekran imleç | yok | yok | 3 |
-| 45° kısıtı | Boşluk tuşu | kısmi | 2 |
+| 45° kısıtı | yol çizerken Boşluk (köşe yönü); görünüm çubuğunda 45° anahtarı: çizgiler, çokgenler, dolgu ve kenar köşeleri yatay / dikey / 45° (saklanır) | var | |
 | Ratsnest göster, eğri ratsnest | göster var, eğri yok | kısmi | 3 |
 | Dolgu görünüşü (dolu / kenar) | Katmanlar: dolgular aç/kapa ve yalnız kenarıyla göster (saklanır) | var | |
 | Yüksek kontrast | var | var | |
@@ -95,7 +95,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Görünüm: katmanlar | Katmanlar | var | |
 | Görünüm: nesneler (görünürlük, saydamlık) | görünürlük anahtarları; yol, via, ped, dolgu saydamlığı (kaydırıcı + yazılır, saklanır) | var | |
 | Görünüm: ağlar (renk, sınıf) | Hatlar sekmesi: sınıf, vurgula ve ağ rengi (12 düz renk; bakır her katmanda o renkte, kartla kaydedilir, üretim dosyalarını değiştirmez) | var | |
-| Görünüm ön ayarları, görüş alanları | yok | yok | 3 |
+| Görünüm ön ayarları, görüş alanları | Katmanlar sekmesinde ön ayar: tüm katmanlar, üst / alt taraf, yalnız bakır, yalnız etkin katman; görüş alanları sonra | kısmi | 3 |
 | Seçim süzgeci | var | var | |
 | Özellikler paneli | var (taşınır, küçülür, ayrılır) | var | |
 
@@ -141,10 +141,10 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Araç | Bizde | Durum | Öncelik |
 | --- | --- | --- | --- |
 | Çizgi, dikdörtgen, daire, yay | eskiz düzenleyici | var | |
-| Çokgen, kanal (slot), elips, spline | denetlenecek | kısmi | 2 |
+| Çokgen, kanal (slot), elips, spline | düzgün ve serbest çokgen, kanal (profil şekilleri); ölçülü eskizde çizgi, daire, yay; elips ve spline yok | kısmi | 3 |
 | Eskiz radyüsü, eskiz pahı | köşe noktası seçilince Köşe radyüsü ve Pah (teğet yay / düz kenar, sanal sivri, uzunluk ölçüleri korunur) | var | |
 | Ofset | var | var | |
-| Budama (trim), uzatma | budama var | kısmi | 2 |
+| Budama (trim), uzatma | Buda (güçlü budama, kesen öğeye tutulur) ve Uzat, çizgiler için; daire ve yay budama sonra | kısmi | 3 |
 | Eskizde aynala, doğrusal / dairesel çoğaltma | Aynala (yardımcı çizgi ekseni, simetri ilişkileri, eksendeki noktalar paylaşılır); eskizde çoğaltma sonra | kısmi | 3 |
 | Akıllı ölçü, ilişkiler (çakışık, teğet, eş merkezli, yatay, dikey) | kısıtlar var | var | |
 | Yapı (construction) geometrisi | Yardımcı geometri anahtarı: kesik çizilir, profile girmez | var | |
@@ -237,7 +237,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Köşe yakalama (V): köşeden köşeye, köşeden yüzeye, pivotu köşeye | V ile serbest sürüklemede ve taşı tutamacının ortasında köşeden köşeye (şekil kutusunun 8 köşesi); köşeden yüzeye ve pivotu köşeye sonra | kısmi | 3 |
 | Yüzeye yakalama (Ctrl+Shift) | Ctrl+Shift ile serbest sürüklemede ve taşı tutamacının ortasında: parçanın tabanı imlecin altındaki parça, arazi ya da zemin yüzeyine (kendisi ve takılıları atlanır) | var | |
 | Bakışla döndürme (bir yüzeye çevir) | yok | yok | 3 |
-| Kaplama menüsü: araçlar, araç seçenekleri, ızgara ve yakalama, çizim kipleri, görünüm seçenekleri, arama, yön, kameralar | yok | yok | 2 |
+| Kaplama menüsü: araçlar, araç seçenekleri, ızgara ve yakalama, çizim kipleri, görünüm seçenekleri, arama, yön, kameralar | Kaplamalar (` ve sahne çubuğu): ipucu satırı, tutamaç, sensör kaplamaları, ızgara, hepsini gizle (saklanır); kaplamaların taşınması sonra | kısmi | 3 |
 
 ### Sahne ağacı (Hierarchy)
 
@@ -264,7 +264,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Bileşen ⋮: sıfırla, kaldır, yukarı / aşağı, kopyala, değerleri yapıştır, yeni olarak yapıştır | kaldır, kopyala, değerleri yapıştır, yeni bileşen olarak yapıştır (kabuk, kap, paraşüt, arıza); Fizik'te sıfırla ve değerleri kopyala / yapıştır; Konum'da kopyala / yapıştır / sıfırla (yukarı / aşağı yok: kartların sırası sabit) | var | |
 | Dönüşüm ⋮: konum / dönüş / ölçek / dünya dönüşümü kopyala ve yapıştır, özelliği sıfırla | konum / dönüş kopyala, yapıştır; dönüşü sıfırla; zemine indir | var | |
 | Fizik gövdesi: kütle, doğrusal / açısal sönüm, kütle merkezi ve eylemsizlik otomatik ya da elle, yerçekimi, kinematik, ara değerleme, çarpışma algılama, konum / dönüş kilitleri (X/Y/Z) | kütle, sabit, doğrusal / açısal sönüm, konum / dönüş kilitleri (Kısıtlar ve sönüm); kütle merkezi, kinematik sonra | kısmi | 2 |
-| Çarpışma şekilleri: kutu, küre, kapsül, ağ, tekerlek, arazi; tetik | çarpışma şekilleri | kısmi | 2 |
+| Çarpışma şekilleri: kutu, küre, kapsül, ağ, tekerlek, arazi; tetik | çarpışma şekilleri; Tetik bölgesi bileşeni (giriş / çıkış olayları, içindekiler, taşıyıcıyla gider) | var | |
 | Eklemler: menteşe, sabit, yay, karakter, yapılandırılabilir; sınırlar, yaylar, kırılma kuvveti ve torku | menteşe, kızak, sabit, yay ve sönüm, rulman; sınırlar, kırılma kuvveti ve torku (denetçide eklem başına); karakter ve yapılandırılabilir sonra | kısmi | 3 |
 | Kısıtlar: hedefe bak, üst nesne, konum, dönüş, ölçek | yok | yok | 2 |
 | Sabit kuvvet | Sabit kuvvet bileşeni: kuvvet ve tork, dünya ya da kendi eksenlerinde; açılıp kapanır, kopyalanır | var | |

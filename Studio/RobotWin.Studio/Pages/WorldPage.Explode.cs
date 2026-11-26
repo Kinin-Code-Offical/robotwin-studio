@@ -445,6 +445,12 @@ namespace RobotWin.Studio.Pages
             }
 
             if (args.Contains("--pattern")) ShowPatternDialog();   // [pattern] the dialog open
+            if (args.Contains("--overlays")) ShowOverlayMenu(OverlayButton);   // [overlays] the menu open
+            if (args.Contains("--trigger") && World?.Find(Scene.Selected) is { } tz)   // [trigger] the selection made a zone
+            {
+                tz.Parameters[WorldPhysics.TriggerKey] = "1";
+                BuildInspector();
+            }
             int ts = Array.IndexOf(args, "--tree-search");   // [tree-search] --tree-search <query>: the scene tree filtered
             if (ts >= 0 && ts + 1 < args.Length) SearchBox.Text = args[ts + 1];
             int rp = Array.IndexOf(args, "--reparent");   // [reparent] --reparent <part name>: the selection's row dropped on that part's row

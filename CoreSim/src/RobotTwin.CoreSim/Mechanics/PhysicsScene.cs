@@ -35,7 +35,13 @@ namespace RobotTwin.CoreSim.Mechanics
         Impact,
         BodyBroken,
         JointBroken,
-        Detached
+        Detached,
+
+        /// <summary>[trigger] A part came into a trigger zone (information, nothing broke).</summary>
+        TriggerEnter,
+
+        /// <summary>[trigger] A part left a trigger zone.</summary>
+        TriggerExit
     }
 
     public sealed class PhysicsEvent

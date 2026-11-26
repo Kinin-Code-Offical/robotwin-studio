@@ -25,6 +25,7 @@ namespace RobotWin.Studio.Shell
             ("Katı yakıt", "Basınçlı kaplar ve roketler", "Pressure vessels and rockets"),
             ("paraşüt", "Paraşüt", "Parachute"),
             ("Sabit kuvvet", "Sabit kuvvet", "Constant force"),
+            ("Tetik bölgesi", "Tetik bölgesi", "Trigger zone"),
             ("Arıza", "Arıza senaryoları", "Fault scenarios"),
             ("Mekanik bağlantılar", "Mekanik bağlantılar", "Mechanical joints"),
             ("Güç aktarımı", "Güç aktarım parçaları: gerçekteki gibi kurulan mekanizma", "Power transmission parts: a mechanism built as in reality"),

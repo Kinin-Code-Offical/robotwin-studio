@@ -39,6 +39,7 @@ Bir profili ölçülü eskizle de çizebilirsiniz. Profili seçin, denetçide **
 3. Ölçü verin: uzunluk, mesafe, yatay/dikey ölçü, çap, yarıçap, açı. Değeri kısıt listesinden değiştirin.
 4. İki çizginin birleştiği köşe noktasını seçince mm kutusunun yanında **Köşe radyüsü** ve **Pah** çıkar (SolidWorks'teki eskiz radyüsü ve eskiz pahı). Çizgiler geri kesilir; radyüs iki çizgiye teğet bir yayla (yarıçapı ölçü olarak gelir), pah düz bir kenarla birleştirir. Köşe, çizgilerin uzantısında sanal sivri olarak kalır; çizgilerin uzunluk ölçüleri ona kadar ölçmeye devam eder. **Yardımcı geometri** açıkken çizilenler profile girmez, yalnız yol gösterir.
 5. **Aynala**: tek bir yardımcı çizgiyi (eksen) ve aynalanacak çizgi, daire ve yayları birlikte seçin. Kopyalar eksenin öbür yanına gelir; her kopya noktası aslına simetri ilişkisiyle bağlıdır, yani aslı değişince kopya da izler. Eksen üstündeki noktalar kopyalanmaz, paylaşılır; kopyalanan daireler aslıyla eşit kalır.
+6. **Buda** (SolidWorks'teki güçlü budama): bir çizginin tıklanan parçası, iki yanındaki kesişimler arasında silinir; hiçbir şey kesmiyorsa çizginin tamamı gider. Kesilen uç, onu kesen öğenin üstünde tutulur. **Uzat**: çizginin tıklanan yakınındaki serbest ucu, önünde kesiştiği ilk çizgi, daire ya da yaya kadar uzar. Budanan ya da uzatılan çizginin uzunluk ölçüsü kaldırılır (artık o çizgi yok).
 
 Her değişiklik hemen çözülür ve çizim ölçülere oturur. Pencerenin sağında eskizin durumu yazar:
 - kaç serbestlik kaldığı;

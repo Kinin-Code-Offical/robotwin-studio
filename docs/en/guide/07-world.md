@@ -155,6 +155,10 @@ Give any body a parachute with **Add feature → Recovery parachute** in its ins
 
 As in Unity, the inspector shows a **Tag** and a **Layer** under the object's name. A tag is a word that tells scripts and searches what the part is (obstacle, target); pick one from the list or type one with **Add tag…**. A layer is a group for collisions: **Add layer…** names a new layer (up to 31), **Collision matrix…** opens Unity's layer collision matrix. Two layers whose box is unticked there pass through each other; the floor, the terrain and cables always collide. A change applies to every selected object and takes effect in the run.
 
+### Trigger zone
+
+Unity's Is Trigger. Give a body **Add component → Trigger zone** and the part becomes a zone nothing bumps into and things pass through (the floor and other parts do not touch it). The moment a part's bounding sphere reaches the zone's box an **entered** event is logged, and **left** when it no longer does; while running, its card lists the parts inside. A zone fixed on a part rides with it: a gripper's reach, the sensing area at a conveyor's end. Switched off with its card's box, it is a solid part again.
+
 ### Constant force
 
 Unity's Constant Force component. Add it to a part that can move with **Add component → Constant force**: **Force (N) X · Y · Z** acts on the part's centre of mass on every physics step (F = m·a), **Torque (N·m) X · Y · Z** turns it. The boxes under them give the value along the part's own axes instead of the world's, so a rocket's thrust or a propeller's pull turns with the part. Z is up. Gravity, drag, contacts and joints keep working in the same physics; a fixed part cannot take one. The card's box switches it off, and its ⋮ menu copies it to paste on another part.
@@ -732,6 +736,10 @@ Wi-Fi, BLE and Bluetooth signals weaken with distance, obstacles and bodies. The
 ## Active and inactive objects
 
 The box left of the object's name in the inspector is Unity's **active** switch (Alt+Shift+A, or **Deactivate / Activate** in the scene tree's right-click menu). An inactive object and everything mounted on it leave the scene, their cables are not drawn and the run behaves as if they were not there: no physics body, not in the circuit, no sensor readings. The file keeps them; the scene tree shows them faded, and they can be selected there and switched back on. It cannot be changed while running; stop first. **Hide** only takes an object out of the view; it stays in the simulation.
+
+## Overlays
+
+Like Unity's overlay menu, the overlay button at the scene's top right, or the key left of 1, lists the scene view's overlays: **Hint line**, **Handle**, **Sensor overlays** (distance sensors' beams, cameras' and lidars' fields of view) and **Grid**. Each switches on and off on its own; **Hide all** gives a clean view. The choices are kept.
 
 ## Grid and snap
 

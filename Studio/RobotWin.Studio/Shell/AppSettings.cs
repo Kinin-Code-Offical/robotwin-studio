@@ -130,6 +130,14 @@ namespace RobotWin.Studio.Shell
         public string PcbMagnetTracks { get; set; } = "Creating";
         public bool PcbMagnetGraphics { get; set; } = true;
 
+        /// <summary>[overlays] The World scene's overlays (Unity's Overlay menu).</summary>
+        public bool WorldShowHint { get; set; } = true;
+        public bool WorldShowGizmo { get; set; } = true;
+        public bool WorldShowSensorOverlays { get; set; } = true;
+
+        /// <summary>[angle45] KiCad's H / V / 45° constraint for drawn lines, zones and the edge.</summary>
+        public bool PcbConstrain45 { get; set; }
+
         /// <summary>[zone-look] Whether the PCB editor draws pours by their outline only.</summary>
         public bool PcbZoneOutlines { get; set; }
 

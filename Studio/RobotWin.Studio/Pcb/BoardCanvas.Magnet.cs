@@ -107,6 +107,26 @@ namespace RobotWin.Studio.Pcb
             return found is { } f ? Mark(f.X, f.Y) : new PcbPoint(Snap(x), Snap(y));
         }
 
+        /// <summary>[angle45] KiCad's "Constrain to H, V, 45°": drawn lines, zone and edge corners leave the last point level, upright or at 45°.</summary>
+        public bool Constrain45 { get; set; }
+
+        /// <summary>
+        /// [angle45] The next point of a line drawn from <paramref name="from"/>: on the nearest of the eight directions, as
+        /// far along it as the pointer reaches, on the grid (a diagonal in whole grid steps on both axes). A point the magnet
+        /// caught (a pad, a track's end) stays where it was caught.
+        /// </summary>
+        private PcbPoint Angle45(PcbPoint from, PcbPoint to)
+        {
+            if (!Constrain45 || _magnetMark != null) return to;
+            double vx = to.X - from.X, vy = to.Y - from.Y;
+            if (Math.Abs(vx) + Math.Abs(vy) < 1e-12) return to;
+            double angle = Math.Round(Math.Atan2(vy, vx) / (Math.PI / 4)) * (Math.PI / 4);
+            double dx = Math.Round(Math.Cos(angle)), dy = Math.Round(Math.Sin(angle));   // -1, 0 or 1 each
+            double along = (vx * dx + vy * dy) / (dx * dx + dy * dy);   // steps of (dx, dy)
+            if (GridSize > 0) along = Math.Round(along / GridSize) * GridSize;
+            return new PcbPoint(Math.Round(from.X + dx * along, 6), Math.Round(from.Y + dy * along, 6));
+        }
+
         /// <summary>Snapshot: a line started at one point and the pointer at another, caught by the magnet.</summary>
         public void SimulateDrawForSnapshot(double x0, double y0, double x1, double y1)
         {

@@ -127,6 +127,7 @@ namespace RobotTwin.CoreSim.Sandbox
             foreach (var o in world.Objects)
             {
                 if (IsLiquid(o)) continue;   // [liquid] particles, built once every solid stands (Sandbox/WorldPhysics.Liquids.cs)
+                if (IsTrigger(o)) continue;   // [trigger] a zone, not a body (Sandbox/WorldPhysics.Triggers.cs)
                 if (!p.TryAddProp(o)) p.AddObject(o, geometry(o)); // [terrain] static props collide piecewise
             }
             p.BuildMachines(world);   // [arm] robot arms, tools, conveyors, light curtains
@@ -147,6 +148,7 @@ namespace RobotTwin.CoreSim.Sandbox
             p.BuildGas(world);   // [gas] pressure vessels, propellant grains, nozzles, water (Sandbox/WorldPhysics.Gas.cs)
             p.BuildChutes();   // [launch] recovery parachutes (Sandbox/WorldPhysics.Launch.cs)
             p.BuildConstantForces();   // [cforce] Unity's Constant Force (Sandbox/WorldPhysics.ConstantForce.cs)
+            p.BuildTriggers(world, geometry);   // [trigger] Unity's trigger zones
             return p;
         }
 
@@ -348,6 +350,7 @@ namespace RobotTwin.CoreSim.Sandbox
         private void AddJoint(WorldDocument world, WorldJoint j)
         {
             if (!_items.TryGetValue(j.ObjectA, out var child)) return;
+            if (j.ObjectB != null && !_items.ContainsKey(j.ObjectB) && world.Find(j.ObjectB) is { } zone && IsTrigger(zone)) return;   // [trigger] a zone holds nothing: what hangs on it stands free
             SceneBody? parent = null;
             if (j.ObjectB != null && _items.TryGetValue(j.ObjectB, out var p))
             {
@@ -542,6 +545,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 StepConstantForces();   // [cforce] constant pushes and twists
                 t1 = Lap(ref Times.Air, t1);
                 Scene.Step(Step);
+                StepTriggers();   // [trigger] who is inside each zone now
                 t1 = Lap(ref Times.Bodies, t1);
                 // [phys] The ropes after the bodies: their contacts are solved against where the parts are now (stepped
                 // first, a wire inside a plane at 12 m/s trailed its fuselage by 12 mm), and their pull on the plugs is

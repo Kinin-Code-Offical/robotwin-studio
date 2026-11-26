@@ -69,6 +69,8 @@ namespace RobotWin.Studio.Pages
             Canvas.PadOpacity = AppSettings.Current.PcbPadOpacity;
             Canvas.ZoneOpacity = AppSettings.Current.PcbZoneOpacity;
             GridToggle.IsChecked = Canvas.ShowGrid;
+            Canvas.Constrain45 = AppSettings.Current.PcbConstrain45;   // [angle45]
+            Angle45Toggle.IsChecked = Canvas.Constrain45;
             InitDock();   // [dock-min]
             Canvas.SelectionChanged += (_, _) => UpdateSelection();
             Canvas.BeforeEdit += (_, _) => W.BeginChange();
@@ -812,6 +814,12 @@ namespace RobotWin.Studio.Pages
                     Canvas.Select(null);
                     break;
                 }
+
+                case "angle45":   // [angle45] a line drawn with the H / V / 45° constraint: the pointer at 39°, the line at 45°
+                    Canvas.Constrain45 = true;
+                    Angle45Toggle.IsChecked = true;
+                    Canvas.SimulateDrawForSnapshot(5, 26, 15, 18);
+                    break;
 
                 case "magnet":   // [magnet] a line from a pad's centre, the pointer a little off a track's end: caught there
                 {
@@ -1976,10 +1984,46 @@ namespace RobotWin.Studio.Pages
             }
         }
 
+        /// <summary>[presets] Shows the layers a preset names: copper by side, the legend and drawings with them.</summary>
+        private string _layerPreset = "Tüm katmanlar";
+
+        private void ApplyLayerPreset(string preset, BoardDocument board)
+        {
+            _layerPreset = preset;
+            var stack = board.CopperLayers();
+            Canvas.HiddenLayers.Clear();
+            foreach (var l in stack)
+            {
+                bool show = preset switch
+                {
+                    "Üst taraf" => l == CopperLayer.Top,
+                    "Alt taraf" => l == CopperLayer.Bottom,
+                    "Yalnız etkin katman" => l == Canvas.ActiveLayer,
+                    _ => true
+                };
+                if (!show) Canvas.HiddenLayers.Add(l);
+            }
+
+            bool copperOnly = preset is "Yalnız bakır" or "Yalnız etkin katman";
+            Canvas.ShowSilk = !copperOnly;
+            Canvas.ShowDrawings = !copperOnly;
+            Canvas.ShowZones = true;
+            if (preset == "Üst taraf" && stack.Contains(CopperLayer.Top)) Canvas.ActiveLayer = CopperLayer.Top;
+            if (preset == "Alt taraf" && stack.Contains(CopperLayer.Bottom)) Canvas.ActiveLayer = CopperLayer.Bottom;
+            Canvas.InvalidateVisual();
+            W.Status = Shell.Lang.T("Görünüm: " + preset);
+            Dispatcher.BeginInvoke(new Action(UpdateLayersPanel), System.Windows.Threading.DispatcherPriority.Background);   // the rows' eyes follow
+        }
+
         private void UpdateLayersPanel()
         {
             var board = Board;
             LayersPanel.Children.Clear();
+            // [presets] KiCad's layer presets: which layers are shown, in one choice
+            var presets = new[] { "Tüm katmanlar", "Üst taraf", "Alt taraf", "Yalnız bakır", "Yalnız etkin katman" };
+            var presetBox = Combo(presets, _layerPreset, p => ApplyLayerPreset(p, board), p => Shell.Lang.T(p));
+            presetBox.ToolTip = Shell.Lang.T("Görünüm ön ayarı: hangi katmanların gösterileceği tek seçimde");
+            LayersPanel.Children.Add(Row("Ön ayar", presetBox, 150));
             LayersPanel.Children.Add(Overline("Bakır katmanları", 8));
             foreach (var layer in board.CopperLayers())
             {

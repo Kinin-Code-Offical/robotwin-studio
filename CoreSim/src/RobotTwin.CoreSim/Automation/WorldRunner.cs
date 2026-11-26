@@ -302,8 +302,9 @@ namespace RobotTwin.CoreSim.Automation
             if (Physics == null) return;
             foreach (var pe in Physics.DrainEvents())
             {
-                bool broke = pe.Kind != PhysicsEventKind.Impact;
-                AddEvent(new RunnerEvent(pe.Time, pe.Source, broke ? RunnerEventKind.Failure : RunnerEventKind.Impact, pe.Message, pe.Value));
+                bool trigger = pe.Kind is PhysicsEventKind.TriggerEnter or PhysicsEventKind.TriggerExit;   // [trigger] information, never a failure
+                bool broke = !trigger && pe.Kind != PhysicsEventKind.Impact;
+                AddEvent(new RunnerEvent(pe.Time, pe.Source, broke ? RunnerEventKind.Failure : trigger ? RunnerEventKind.Info : RunnerEventKind.Impact, pe.Message, pe.Value));
                 if (broke && World.Find(pe.Source) != null) Failed.Add(pe.Source);
             }
         }

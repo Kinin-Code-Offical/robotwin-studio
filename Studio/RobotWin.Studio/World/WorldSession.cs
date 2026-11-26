@@ -529,10 +529,12 @@ namespace RobotWin.Studio.World
                 {
                     var o = World?.Find(pe.Source);
                     // Knocks are information; only something that actually breaks or comes off is a failure.
-                    bool broke = pe.Kind != RobotTwin.CoreSim.Mechanics.PhysicsEventKind.Impact;
+                    // [trigger] a zone's comings and goings are information: logged, not heard, never a failure
+                    bool trigger = pe.Kind is RobotTwin.CoreSim.Mechanics.PhysicsEventKind.TriggerEnter or RobotTwin.CoreSim.Mechanics.PhysicsEventKind.TriggerExit;
+                    bool broke = !trigger && pe.Kind != RobotTwin.CoreSim.Mechanics.PhysicsEventKind.Impact;
                     if (broke) _sounds.OnEvent(AnalogEventKind.Failure, pe.Source, pe.Message);
-                    else _sounds.Impact(pe.Value, pe.Source);   // [objs] heard where it hit
-                    if (!broke && _impactLogged++ > 20) continue;
+                    else if (!trigger) _sounds.Impact(pe.Value, pe.Source);   // [objs] heard where it hit
+                    if (!broke && !trigger && _impactLogged++ > 20) continue;
                     AddLog(new SimLogEntry(Time, o?.Name ?? pe.Source, pe.Message, broke ? AnalogEventKind.Failure : AnalogEventKind.StateChange));
                     if (broke && o != null) Failure?.Invoke(o.Id, pe.Message);
                 }

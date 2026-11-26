@@ -1346,6 +1346,7 @@ namespace RobotWin.Studio.Pcb
         private void PolygonClick(double x, double y, bool doubleClick)
         {
             var p = Magnet(x, y);   // [magnet] a zone's or the edge's corner on a pad, a track or a drawing
+            if (_polyPts.Count > 0) p = Angle45(_polyPts[^1], p);   // [angle45]
             if (_tool == PcbTool.Outline) p = new PcbPoint(Math.Max(0, p.X), Math.Max(0, p.Y));
             if (doubleClick || _polyPts.Count >= 3 && Math.Abs(_polyPts[0].X - p.X) * _scale < 6 && Math.Abs(_polyPts[0].Y - p.Y) * _scale < 6)
             {
@@ -1404,7 +1405,7 @@ namespace RobotWin.Studio.Pcb
             if (_tool != PcbTool.Zone && _tool != PcbTool.Outline && _tool != PcbTool.Keepout || _polyPts.Count == 0) return;
             var color = _tool == PcbTool.Zone ? LayerColor(_activeLayer) : _tool == PcbTool.Keepout ? Danger : SubstrateEdge;
             var pen = P(color, 1.6);
-            var cur = Magnet(_cursor.X, _cursor.Y);   // [magnet]
+            var cur = Angle45(_polyPts[^1], Magnet(_cursor.X, _cursor.Y));   // [magnet] [angle45]
             var pts = _polyPts.Concat(new[] { cur }).ToList();
             if (pts.Count >= 3) dc.DrawGeometry(SymbolRenderer.Brush(A(color, (byte)0x30)), null, Poly(pts));
             for (int i = 1; i < pts.Count; i++) dc.DrawLine(pen, S(pts[i - 1].X, pts[i - 1].Y), S(pts[i].X, pts[i].Y));

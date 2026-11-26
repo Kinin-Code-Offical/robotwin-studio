@@ -160,6 +160,16 @@ namespace RobotWin.Studio.Pages
             AppSettings.Current.Save();
         }
 
+        /// <summary>[angle45] KiCad's H / V / 45° constraint, remembered.</summary>
+        private void OnHeads45(object sender, RoutedEventArgs e)
+        {
+            bool on = Angle45Toggle.IsChecked == true;
+            Canvas.Constrain45 = on;
+            AppSettings.Current.PcbConstrain45 = on;
+            AppSettings.Current.Save();
+            W.Status = Lang.T(on ? "Çizgiler yatay, dikey ya da 45° gider" : "Çizgiler her açıda gider");
+        }
+
         private void OnHeadsRotate(object sender, RoutedEventArgs e) => Canvas.RotateSelection();
 
         private void OnHeadsFlip(object sender, RoutedEventArgs e) => Canvas.FlipSelection();

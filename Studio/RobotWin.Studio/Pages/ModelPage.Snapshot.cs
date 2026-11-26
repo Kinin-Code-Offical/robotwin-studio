@@ -91,7 +91,7 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            if (demo is "sketch" or "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror")
+            if (demo is "sketch" or "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim")
             {
                 // [sketch] A motor bracket drawn as a dimensioned sketch: a 50 × 40 plate with a round end tangent to its
                 // sides, a bolt hole and a bearing seat round the end's centre, fully constrained; extruded 6 mm.
@@ -106,11 +106,28 @@ namespace RobotWin.Studio.Pages
                 _ed.Load(bracket, null);
                 _ed.Select(plate.Id);
                 _vp.FrameAll();
-                if (demo is "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror")
+                if (demo is "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim")
                 {
-                    var start = demo is "sketch-draw" or "sketch-fillet" or "sketch-mirror" ? new ConstrainedSketch() : plate.Primitive.Sketch.Constrained;
+                    var start = demo is "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim" ? new ConstrainedSketch() : plate.Primitive.Sketch.Constrained;
                     var editor = new SketchEditorWindow(Window.GetWindow(this), start, _ => { });
                     editor.Show();
+                    if (demo == "sketch-trim")
+                    {
+                        // [sketch-trim] a hash of lines: the middle of the top one trimmed out, the left stub run on to the right post
+                        editor.UpdateLayout();
+                        editor.Script(new (string, double, double, string?)[]
+                        {
+                            ("line", -30, 10, null), ("line", 30, 10, null), ("end", 0, 0, null),
+                            ("line", -10, 20, null), ("line", -10, -20, null), ("end", 0, 0, null),
+                            ("line", 10, 20, null), ("line", 10, -20, null), ("end", 0, 0, null),
+                            ("line", -30, -10, null), ("line", -20, -10, null), ("end", 0, 0, null),
+                            ("trim", 0, 10, null), ("extend", -21, -10, null), ("select", 40, 40, null)
+                        });
+                        editor.UpdateLayout();
+                        App.SnapshotTarget = editor.Content as FrameworkElement;
+                        return;
+                    }
+
                     if (demo == "sketch-mirror")
                     {
                         // [sketch-mirror] a construction axis, half a roof and a window beside it, mirrored across

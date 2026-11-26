@@ -26,7 +26,13 @@ namespace RobotWin.Studio.Modeling
             Line,
             Rectangle,
             Circle,
-            Arc
+            Arc,
+
+            /// <summary>[sketch-trim] Power trim: the clicked piece of a line, between the crossings either side, goes.</summary>
+            Trim,
+
+            /// <summary>[sketch-trim] A line's free end runs on to the first entity it meets.</summary>
+            Extend
         }
 
         private const double SnapPx = 9;
@@ -114,7 +120,9 @@ namespace RobotWin.Studio.Modeling
                 (Tool.Line, "Çizgi", "Tıklaya tıklaya çizgi zinciri; Esc ya da sağ tık bitirir"),
                 (Tool.Rectangle, "Dikdörtgen", "İki köşe"),
                 (Tool.Circle, "Daire", "Merkez, sonra çevre"),
-                (Tool.Arc, "Yay", "Merkez, başlangıç, bitiş (saat yönünün tersine)")
+                (Tool.Arc, "Yay", "Merkez, başlangıç, bitiş (saat yönünün tersine)"),
+                (Tool.Trim, "Buda", "Çizginin tıklanan parçasını kesiştiği öğeler arasında siler; hiçbir şey kesmiyorsa çizginin tamamını"),
+                (Tool.Extend, "Uzat", "Çizginin tıklanan yakınındaki serbest ucunu ilk kesiştiği öğeye uzatır")
             })
             {
                 var t = tool;
@@ -406,6 +414,8 @@ namespace RobotWin.Studio.Modeling
                     case "rect": Use(Tool.Rectangle); break;
                     case "circle": Use(Tool.Circle); break;
                     case "arc": Use(Tool.Arc); break;
+                    case "trim": Use(Tool.Trim); break;   // [sketch-trim]
+                    case "extend": Use(Tool.Extend); break;
                     case "select": Use(Tool.Select); break;
                     case "add": Use(Tool.Select); break;
                     case "end": EndTool(); break;
@@ -460,6 +470,33 @@ namespace RobotWin.Studio.Modeling
                 }
 
                 Refresh();
+                return;
+            }
+
+            if (_tool is Tool.Trim or Tool.Extend)
+            {
+                // [sketch-trim] on the line under the pointer, at the click
+                var target = EntityAt(p);
+                if (target == null || target.Kind != SketchEntityKind.Line)
+                {
+                    _message = _tool == Tool.Trim ? "Budamak için bir çizgiye tıklayın." : "Uzatmak için bir çizgiye tıklayın.";
+                    ShowState();
+                    return;
+                }
+
+                var (mx, my) = Model(p);
+                string? why = null;
+                Change(_tool == Tool.Trim ? "Buda" : "Uzat", () =>
+                {
+                    why = _tool == Tool.Trim ? SketchTrim.Trim(_sk, target.Id, mx, my) : SketchTrim.Extend(_sk, target.Id, mx, my);
+                    _selection.Clear();
+                });
+                if (why != null)
+                {
+                    _message = why;
+                    ShowState();
+                }
+
                 return;
             }
 

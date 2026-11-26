@@ -1556,6 +1556,20 @@ namespace RobotWin.Studio.World
             UpdateHint();
         }
 
+        /// <summary>[overlays] The hint line under the scene shown or not.</summary>
+        public bool ShowHint
+        {
+            get => _hint.Visibility == Visibility.Visible;
+            set => _hint.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        /// <summary>[overlays] Draws the overlays again after one was switched (the handle, the sensors' beams).</summary>
+        public void RefreshOverlays()
+        {
+            RebuildOverlay();
+            InvalidateVisual();
+        }
+
         private void UpdateHint()
         {
             _hint.Text = Tool switch

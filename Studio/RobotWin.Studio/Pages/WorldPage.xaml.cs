@@ -59,6 +59,7 @@ namespace RobotWin.Studio.Pages
             _session.CableSeed = Scene.CableSeedOf;   // [phys]
             Scene.MassOf = o => W.ActiveWorld is { } w ? EstimateMass(w, o) / 1000.0 : 0.01;
             ApplyGridSettings();   // [grid] steps, snapping and the floor grid (Pages/WorldPage.GridSnap.cs)
+            ApplyOverlaySettings();   // [overlays] Pages/WorldPage.Overlays.cs
             Scene.CableSelectionChanged += _ =>
             {
                 BuildInspector();
@@ -859,6 +860,7 @@ namespace RobotWin.Studio.Pages
             GasSection(world, o);   // [gas] contents, nozzle, valve, grain, burst pressure, live readout (Pages/WorldPage.Gas.cs)
             if (!IsSwitchPart(o)) LaunchSection(world, o);   // [launch] parachute
             ConstantForceSection(o);   // [cforce] Unity's Constant Force (Pages/WorldPage.ConstantForce.cs)
+            TriggerSection(o);   // [trigger] Unity's Is Trigger (Pages/WorldPage.Trigger.cs)
             SdkSection(world, o);   // [sdk] its own air settings, behaviours, live forces
             FaultSection(o);   // [fault] the part's fault scenario, when it has one
             FeaturesSection(world, o);   // "Özellik ekle ▾"
@@ -1653,6 +1655,9 @@ namespace RobotWin.Studio.Pages
                     if (Scene.Selected != null) Scene.FrameSelected();
                     else Scene.FrameAll();
                     break;
+                case Key.Oem3 when !ctrl:   // [overlays] Unity's ` : the overlay menu
+                    ShowOverlayMenu(OverlayButton);
+                    break;
                 case Key.R when ctrl:
                     OnRecord(this, new RoutedEventArgs());
                     break;
@@ -1813,6 +1818,7 @@ namespace RobotWin.Studio.Pages
             UpdateLive();
             UpdateRadioLive();   // [radio]
             UpdateGasLive();   // [gas]
+            UpdateTriggerLive();   // [trigger]
             UpdateCellLive();   // [arm]
             UpdateArmLive();   // [kin]
             UpdateVehicleLive();   // [mobile]
