@@ -228,9 +228,16 @@ namespace RobotWin.Studio.Pages
 
         /// <summary>A number field bound to an apply action, with undo and live scrubbing.</summary>
         private NumberField Num(Panel host, string label, double value, string unit, Action<double> apply, string undo, bool geometry,
-            double step = 1, int decimals = 2, double min = double.NegativeInfinity, double max = double.PositiveInfinity, bool integer = false)
+            double step = 1, int decimals = 2, double min = double.NegativeInfinity, double max = double.PositiveInfinity, bool integer = false,
+            string? formula = null, Action<string?>? bind = null)
         {
             var f = new NumberField(label, value, unit, step, decimals) { Min = min, Max = max, Integer = integer };
+            if (bind != null)
+            {
+                // [param] "=…" binds the value to a formula of the model's parameters.
+                f.Formula = formula;
+                f.FormulaCommitted += bind;
+            }
             f.Committed += v => _ed.Do(undo, () => apply(v));
             f.ScrubStarted += () =>
             {
@@ -381,7 +388,15 @@ namespace RobotWin.Studio.Pages
             {
                 var ps = p;
                 double step = ps.Integer ? 1 : ps.Unit == "°" ? 5 : 0.5;
-                Num(host, ps.Label, spec.Get(ps.Key), ps.Unit, v => spec.Set(ps.Key, ps.Clamp(v)), ps.Label, true, step, 3, ps.Min, ps.Max, ps.Integer);
+                string key = ps.Key;
+                Num(host, ps.Label, spec.Get(ps.Key), ps.Unit, v => spec.Set(ps.Key, ps.Clamp(v)), ps.Label, true, step, 3, ps.Min, ps.Max, ps.Integer,
+                    spec.Expressions != null && spec.Expressions.TryGetValue(key, out var bound) ? bound : null,
+                    formula => BindFormula(ps.Label, formula, () =>
+                    {
+                        if (formula == null) spec.Expressions?.Remove(key);
+                        else (spec.Expressions ??= new Dictionary<string, string>(StringComparer.Ordinal))[key] = formula;
+                        if (spec.Expressions is { Count: 0 }) spec.Expressions = null;
+                    }));
             }
 
             if (spec.Kind == PrimitiveKind.Part && RobotParts.Find(spec.Template) is { } tpl) Caption(tpl.Description);
@@ -488,7 +503,12 @@ namespace RobotWin.Studio.Pages
                 {
                     string id = d.Id;
                     bool angle = d.Kind == SketchConstraintKind.Angle;
-                    Num(host, DimensionLabel(d), d.Value, angle ? "°" : "mm", v => SetDimension(sk, id, v), "Ölçü", true, angle ? 1 : 0.5, 3);
+                    Num(host, DimensionLabel(d), d.Value, angle ? "°" : "mm", v => SetDimension(sk, id, v), "Ölçü", true, angle ? 1 : 0.5, 3,
+                        formula: d.Expression, bind: formula => BindFormula(DimensionLabel(d), formula, () =>
+                        {
+                            var k = sk.Constrained?.Constraints.FirstOrDefault(x => x.Id == id);
+                            if (k != null) k.Expression = formula;
+                        }));
                 }
             }
 
@@ -827,6 +847,127 @@ namespace RobotWin.Studio.Pages
             }
         }
 
+        /// <summary>
+        /// [param] Binds (or, with null, unbinds) a value to a formula: one that does not work out with the model's
+        /// parameters is refused with why; a bound value is worked out at once.
+        /// </summary>
+        private void BindFormula(string what, string? formula, Action bind)
+        {
+            if (formula != null)
+            {
+                ModelParameters.Evaluate(_ed.Doc);
+                if (!ModelParameters.TryValue(_ed.Doc, formula, out _, out string? error))
+                {
+                    _ed.Status($"Formül kurulmadı: {error}");
+                    BuildProperties();
+                    return;
+                }
+            }
+
+            _ed.Do(formula == null ? what + ": formül kaldırıldı" : what + " = " + formula, () =>
+            {
+                bind();
+                ReportParameters(ModelParameters.Apply(_ed.Doc));
+            });
+        }
+
+        private void ReportParameters(List<string> problems)
+        {
+            if (problems.Count > 0) _ed.Status("Parametre: " + problems[0] + (problems.Count > 1 ? $" (+{problems.Count - 1})" : ""));
+        }
+
+        /// <summary>
+        /// [param] The model's named values: each a number or a formula of the others, worked out in the order they need
+        /// each other; the dimensions bound to them (typed as "=name" in a value) follow every change.
+        /// </summary>
+        private void ParametersSection(ModelDocument doc)
+        {
+            var list = doc.Parameters ?? new List<ModelParameter>();
+            ModelParameters.Evaluate(doc);
+            Section("Parametreler", list.Count == 0 ? null : $"{list.Count} adet");
+            if (list.Count == 0) Caption("Adlı değerler (genislik = 60, delik_x = genislik / 2 - 10). Bir ölçüye \"=genislik\" yazınca ona bağlanır ve parametreyle değişir.");
+            foreach (var p in list.ToList())
+            {
+                var param = p;
+                var row = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.9, GridUnitType.Star) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.3, GridUnitType.Star) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                var name = new TextBox { Text = param.Name, FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, Padding = new Thickness(4, 2, 4, 2), Margin = new Thickness(0, 0, 4, 0) };
+                var formula = new TextBox { Text = param.Expression, FontFamily = (FontFamily)FindResource("F.Mono"), FontSize = 12, Padding = new Thickness(4, 2, 4, 2) };
+                formula.ToolTip = param.Error != null ? param.Error : "= " + param.Value.ToString("0.####", CultureInfo.InvariantCulture);
+                if (param.Error != null) formula.Foreground = Res("B.Warning");
+                void CommitName()
+                {
+                    string n = name.Text.Trim();
+                    if (n == param.Name) return;
+                    if (!RobotTwin.CoreSim.Modeling.Expression.IsName(n))
+                    {
+                        _ed.Status($"'{n}' ad olamaz: harfle başlar; harf, rakam ve _ içerir");
+                        name.Text = param.Name;
+                        return;
+                    }
+
+                    if (ModelParameters.IsUsed(doc, param.Name)) _ed.Status($"'{param.Name}' kullanılıyor: ona bağlı formüller artık '{n}' adını bulamaz");
+                    _ed.Do("Parametre adı", () =>
+                    {
+                        param.Name = n;
+                        ReportParameters(ModelParameters.Apply(doc));
+                    });
+                }
+
+                void CommitFormula()
+                {
+                    string f = formula.Text.Trim().TrimStart('=').Trim();
+                    if (f.Length == 0 || f == param.Expression) return;
+                    _ed.Do(param.Name + " = " + f, () =>
+                    {
+                        param.Expression = f;
+                        ReportParameters(ModelParameters.Apply(doc));
+                    });
+                }
+
+                name.LostKeyboardFocus += (_, _) => CommitName();
+                name.KeyDown += (_, e) =>
+                {
+                    if (e.Key == Key.Enter) CommitName();
+                };
+                formula.LostKeyboardFocus += (_, _) => CommitFormula();
+                formula.KeyDown += (_, e) =>
+                {
+                    if (e.Key == Key.Enter) CommitFormula();
+                };
+                var rm = new Button { Style = (Style)FindResource("Btn.Icon"), Width = 22, Height = 22, Margin = new Thickness(4, 0, 0, 0), ToolTip = "Parametreyi kaldır", Content = new Icon { Data = Icon("I.Close"), Size = 12 } };
+                rm.Click += (_, _) =>
+                {
+                    if (ModelParameters.IsUsed(doc, param.Name)) _ed.Status($"'{param.Name}' kullanılıyordu: ona bağlı formüller çözülemeyecek");
+                    _ed.Do("Parametre kaldırıldı", () =>
+                    {
+                        doc.Parameters?.Remove(param);
+                        if (doc.Parameters is { Count: 0 }) doc.Parameters = null;
+                        ReportParameters(ModelParameters.Apply(doc));
+                    });
+                };
+                Grid.SetColumn(formula, 1);
+                Grid.SetColumn(rm, 2);
+                row.Children.Add(name);
+                row.Children.Add(formula);
+                row.Children.Add(rm);
+                Props.Children.Add(row);
+                if (param.Error != null) Caption(param.Error);
+            }
+
+            var add = SmallButton("+ Parametre", () => _ed.Do("Parametre eklendi", () =>
+            {
+                doc.Parameters ??= new List<ModelParameter>();
+                string n = "p1";
+                for (int i = 1; doc.Parameters.Any(x => x.Name == n); i++) n = "p" + i.ToString(CultureInfo.InvariantCulture);
+                doc.Parameters.Add(new ModelParameter { Name = n, Expression = "10" });
+            }), "Yeni adlı değer");
+            add.HorizontalAlignment = HorizontalAlignment.Left;
+            Props.Children.Add(add);
+        }
+
         private void DocumentProperties()
         {
             var doc = _ed.Doc;
@@ -852,6 +993,7 @@ namespace RobotWin.Studio.Pages
                 Line("Toplam hacim", $"{t.VolumeMm3 / 1000:0.###} cm³");
             }
 
+            ParametersSection(doc);   // [param]
             Section("Kısayollar", "Blender uyumlu");
             foreach (var (k, v) in new[]
                      {

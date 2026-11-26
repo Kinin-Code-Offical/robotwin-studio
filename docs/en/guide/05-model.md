@@ -47,6 +47,20 @@ A constraint that contradicts the others is taken back, and the ones it fights a
 
 After the window closes, the dimensions stay in the inspector. Change one and the part is solved again.
 
+### Parameters and formulas
+
+With nothing selected, the inspector has a **Parameters** section. Define named values there: `genislik = 80`, `yukseklik = genislik / 2`, `delik_x = genislik * 3 / 4`. A parameter is a number or a formula of other parameters. Whatever order the list is in, they are worked out in the order they need each other. A loop (a = b, b = a), an unknown name and a name defined twice are reported by name.
+
+Type a formula such as `=genislik` into a part's dimension (thickness, diameter…) or a dimensioned sketch's dimension to bind it to the parameter. A bound value shows **ƒ** before its name, and clicking its box shows the formula. When a parameter changes, the bound dimensions and the sketches are solved again. Typing a plain number into the value removes the binding.
+
+Formulas can use:
+- `+ − * / % ^` and brackets;
+- a decimal point or comma (`2,5`);
+- `pi`;
+- `sin cos tan asin acos atan atan2` in degrees, and `sqrt abs min max round floor ceil hypot`.
+
+Separate function arguments with `;` (`max(a; b)`), or with a comma followed by a space (`max(a, b)`). Plain number fields take arithmetic too: `20*2`, `sqrt(2)*10`.
+
 ## Move, rotate, scale
 
 1. Click an object to select it (**A** selects all, **Alt+A** clears the selection).

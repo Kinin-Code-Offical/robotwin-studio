@@ -293,6 +293,9 @@ namespace RobotTwin.CoreSim.Modeling
         public Sketch2D? Sketch { get; set; }
         public List<HoleSpec>? Holes { get; set; }
 
+        /// <summary>[param] Dimensions given by a formula of the model's parameters (key → formula); null when none.</summary>
+        public Dictionary<string, string>? Expressions { get; set; }
+
         /// <summary>Value of a parameter, or its schema default.</summary>
         public double Get(string key)
         {
@@ -309,7 +312,8 @@ namespace RobotTwin.CoreSim.Modeling
             Template = Template,
             Values = new Dictionary<string, double>(Values, StringComparer.Ordinal),
             Sketch = Sketch?.Clone(),
-            Holes = Holes?.Select(h => h.Clone()).ToList()
+            Holes = Holes?.Select(h => h.Clone()).ToList(),
+            Expressions = Expressions == null ? null : new Dictionary<string, string>(Expressions, StringComparer.Ordinal)
         };
 
         /// <summary>Stable text key of every parameter (cache key for the generated mesh).</summary>
@@ -542,6 +546,9 @@ namespace RobotTwin.CoreSim.Modeling
         public double GridMm { get; set; } = 1;
 
         public List<ModelObject> Objects { get; set; } = new List<ModelObject>();
+
+        /// <summary>[param] Named values and formulas the dimensions can use (Modeling/ModelParameters.cs); null when none.</summary>
+        public List<ModelParameter>? Parameters { get; set; }
 
         [JsonIgnore]
         public byte[]? Preview { get; set; }

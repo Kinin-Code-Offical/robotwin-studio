@@ -7659,7 +7659,21 @@
   "bu parça yerinde duruyor; eklemi ona bağlanan parçada kurun": "this part stays put; build the joint on the part mated to it",
   "kalan hareket vida gibi; menteşe ya da kızak değil": "the motion left is a screw's, not a hinge's or a slider's",
   "Hizala: iki parçayı yüzlerinden ya da eksenlerinden ilişkilendir (yüz yüze, aynı hizada, eş eksenli…) (H)": "Align: relate two parts by their faces or axes (face to face, flush, concentric…) (H)",
-  "Hizala: iki parçanın yüzünü ya da eksenini (milin, tekerin yuvarlak yanı) tıklayın, sonra ilişkiyi seçin · Esc: iptal": "Align: click a face or axis (a shaft's or wheel's round side) on two parts, then pick the relation · Esc: cancel"
+  "Hizala: iki parçanın yüzünü ya da eksenini (milin, tekerin yuvarlak yanı) tıklayın, sonra ilişkiyi seçin · Esc: iptal": "Align: click a face or axis (a shaft's or wheel's round side) on two parts, then pick the relation · Esc: cancel",
+  "formül eksik": "the formula is incomplete",
+  "sayı okunamadı": "the number could not be read",
+  "sıfıra bölme": "division by zero",
+  "Parametre adı": "Parameter name",
+  "Parametreyi kaldır": "Remove the parameter",
+  "Parametre kaldırıldı": "Parameter removed",
+  "Parametre eklendi": "Parameter added",
+  "+ Parametre": "+ Parameter",
+  "Yeni adlı değer": "A new named value",
+  "Formül kurulmadı": "Formula not set",
+  "Adlı değerler (genislik = 60, delik_x = genislik / 2 - 10). Bir ölçüye \"=genislik\" yazınca ona bağlanır ve parametreyle değişir.": "Named values (genislik = 60, delik_x = genislik / 2 - 10). Type \"=genislik\" into a dimension to bind it: it then changes with the parameter.",
+  "Parametrik plaka": "Parametric plate",
+  "eskiz bu değerlerle çelişiyor, eski hâlinde kaldı": "the sketch contradicts these values; it stayed as it was",
+  "döngü": "loop"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -10776,6 +10790,20 @@
   "İlişkilerden eklem kur ({0})": "Build the joint from the mates ({0})",
   "{0} eklem kuruldu": "{0} joint built",
   "{0} serbestlik kaldı; eklem için bir ya da hiç kalmamalı": "{0} degrees of freedom left; a joint needs one or none",
-  "{0} değişti": "{0} changed"
+  "{0} değişti": "{0} changed",
+  "'{0}' tanımlı değil": "'{0}' is not defined",
+  "'{0}' çözülemedi": "'{0}' could not be worked out",
+  "'{0}' iki kez tanımlı": "'{0}' is defined twice",
+  "'{0}' ad olamaz": "'{0}' cannot be a name",
+  "döngü: {0}": "loop: {0}",
+  "beklenmeyen '{0}'": "unexpected '{0}'",
+  "{0}(…) bekleniyor": "{0}(…) expected",
+  "{0} en az bir değer alır": "{0} takes at least one value",
+  "{0} {1} değer alır": "{0} takes {1} values",
+  "'{0}' bilinmiyor": "'{0}' is unknown",
+  "{0}: formül kaldırıldı": "{0}: formula removed",
+  "'{0}' ad olamaz: harfle başlar; harf, rakam ve _ içerir": "'{0}' cannot be a name: it starts with a letter and has letters, digits and _",
+  "'{0}' kullanılıyor: ona bağlı formüller artık '{1}' adını bulamaz": "'{0}' is in use: the formulas bound to it will not find '{1}'",
+  "'{0}' kullanılıyordu: ona bağlı formüller çözülemeyecek": "'{0}' was in use: the formulas bound to it will not work out"
  }
 }

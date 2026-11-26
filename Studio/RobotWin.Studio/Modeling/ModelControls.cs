@@ -17,6 +17,8 @@ namespace RobotWin.Studio.Modeling
         private readonly TextBox _box = new TextBox();
         private readonly TextBlock _label = new TextBlock();
         private double _value;
+        private string? _formula;
+        private readonly string _labelText;
         private Point? _drag;
         private double _dragStart;
         private bool _scrubbing;
@@ -31,6 +33,7 @@ namespace RobotWin.Studio.Modeling
             ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.25, GridUnitType.Star) });
             Margin = new Thickness(0, 0, 0, 4);
             _label.Text = label;
+            _labelText = label;
             _label.FontSize = 12;
             _label.Foreground = (Brush)Application.Current.FindResource("B.TextSecondary");
             _label.VerticalAlignment = VerticalAlignment.Center;
@@ -66,6 +69,11 @@ namespace RobotWin.Studio.Modeling
                 }
             };
             _box.LostKeyboardFocus += (_, _) => CommitText();
+            _box.GotKeyboardFocus += (_, _) =>
+            {
+                // A bound value is edited as its formula.
+                if (_formula != null && FormulaCommitted != null) _box.Text = "=" + _formula;
+            };
             _label.MouseLeftButtonDown += (_, e) =>
             {
                 _drag = e.GetPosition(this);
@@ -117,6 +125,26 @@ namespace RobotWin.Studio.Modeling
 
         public double Value => _value;
 
+        /// <summary>
+        /// [param] The formula the value comes from ("genislik / 2"), shown in the box while it is being edited; typing
+        /// "=…" binds one and typing a plain number unbinds it (<see cref="FormulaCommitted"/>, set only where a value can
+        /// take a formula).
+        /// </summary>
+        public string? Formula
+        {
+            get => _formula;
+            set
+            {
+                _formula = string.IsNullOrWhiteSpace(value) ? null : value;
+                _label.Text = _formula != null ? "ƒ " + _labelText : _labelText;
+                _box.ToolTip = _formula != null ? "= " + _formula : null;
+                _box.FontStyle = _formula != null ? FontStyles.Italic : FontStyles.Normal;
+            }
+        }
+
+        /// <summary>[param] A formula typed ("=…"), or null when a plain number replaced the formula.</summary>
+        public event Action<string?>? FormulaCommitted;
+
         /// <summary>Typed or stepped value (final).</summary>
         public event Action<double>? Committed;
 
@@ -142,8 +170,28 @@ namespace RobotWin.Studio.Modeling
 
         private void CommitText()
         {
-            string t = _box.Text.Replace(Unit, string.Empty).Replace("°", string.Empty).Replace("%", string.Empty).Trim().Replace(',', '.');
+            string raw = _box.Text.Trim();
+            if (FormulaCommitted != null && raw.StartsWith("=", StringComparison.Ordinal))
+            {
+                string formula = raw.Substring(1).Trim();
+                if (formula.Length > 0 && formula != _formula) FormulaCommitted(formula);
+                else Show();
+                return;
+            }
+
+            string t = _box.Text.Replace(Unit, string.Empty).Replace("°", string.Empty).Replace("%", string.Empty).Trim();
             if (TryEval(t, out double v))
+            {
+                if (_formula != null && FormulaCommitted != null)
+                {
+                    // A plain number in place of the formula: the formula goes, the number stays.
+                    FormulaCommitted(null);
+                    SetValue(v, true);
+                    return;
+                }
+            }
+
+            if (TryEval(t, out v))
             {
                 if (Math.Abs(v - _value) > 1e-12) SetValue(v, true);
                 else Show();
@@ -151,22 +199,13 @@ namespace RobotWin.Studio.Modeling
             else Show();
         }
 
-        /// <summary>Numbers with + − * / (e.g. "20*2", "100/3").</summary>
+        /// <summary>Numbers and arithmetic ("20*2", "100/3", "2,5", "sqrt(2)*10"): Modeling/Expressions.cs.</summary>
         internal static bool TryEval(string text, out double value)
         {
             value = 0;
             if (string.IsNullOrWhiteSpace(text)) return false;
             if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value)) return true;
-            try
-            {
-                var r = new System.Data.DataTable().Compute(text, null);
-                value = Convert.ToDouble(r, CultureInfo.InvariantCulture);
-                return !double.IsNaN(value) && !double.IsInfinity(value);
-            }
-            catch (Exception ex) when (ex is System.Data.EvaluateException || ex is System.Data.SyntaxErrorException || ex is InvalidCastException || ex is FormatException || ex is OverflowException || ex is ArgumentException)
-            {
-                return false;
-            }
+            return RobotTwin.CoreSim.Modeling.Expression.TryEvaluate(text, null, out value, out _);
         }
     }
 

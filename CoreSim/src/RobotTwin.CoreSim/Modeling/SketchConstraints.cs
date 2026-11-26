@@ -131,6 +131,9 @@ namespace RobotTwin.CoreSim.Modeling
         /// <summary>A Fix's Y.</summary>
         public double Value2 { get; set; }
 
+        /// <summary>[param] A dimension given by a formula of the model's parameters; null: by its value.</summary>
+        public string? Expression { get; set; }
+
         public SketchConstraint Clone() => (SketchConstraint)MemberwiseClone();
     }
 

@@ -234,6 +234,9 @@ public class LangTests
     [InlineData("İlişkilerden eklem kur (menteşe)", "Build the joint from the mates (hinge)")]
     [InlineData("Mesafe: şimdiki 12,5 mm", "Distance: now 12,5 mm")]
     [InlineData("Yüz yüze eklenmedi: öteki ilişkilerle çelişiyor", "Face to face was not added: contradicts the other mates")]
+    [InlineData("Formül kurulmadı: 'genislik' tanımlı değil", "Formula not set: 'genislik' is not defined")]
+    [InlineData("Parametre: a: döngü: a → b → a", "Parameter: a: loop: a → b → a")]
+    [InlineData("Uzunluk (L1): formül kaldırıldı", "Length (L1): formula removed")]
     public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
     {
         Lang.Load("en");

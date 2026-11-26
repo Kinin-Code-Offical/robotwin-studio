@@ -47,6 +47,20 @@ Her değişiklik hemen çözülür ve çizim ölçülere oturur. Pencerenin sağ
 
 Pencere kapandıktan sonra ölçüler denetçide de durur. Bir ölçüyü değiştirdiğinizde parça yeniden çözülür.
 
+### Parametreler ve formüller
+
+Hiçbir şey seçili değilken denetçide **Parametreler** bölümü vardır. Burada adlı değerler tanımlayın: `genislik = 80`, `yukseklik = genislik / 2`, `delik_x = genislik * 3 / 4`. Bir parametre sayı ya da öteki parametrelerden bir formül olabilir. Liste hangi sırada yazılırsa yazılsın, parametreler birbirine gereken sırayla hesaplanır. Döngü (a = b, b = a), tanımsız ad ve iki kez tanımlanan ad adıyla yazılır.
+
+Bir parçanın ölçüsüne (kalınlık, çap…) ya da ölçülü eskizin bir ölçüsüne `=genislik` gibi bir formül yazınca o ölçü parametreye bağlanır. Bağlı ölçünün adının önünde **ƒ** görünür; kutuya tıklayınca formülü gösterir. Parametre değişince bağlı ölçüler de, eskizler de yeniden çözülür. Ölçüye düz bir sayı yazmak bağı kaldırır.
+
+Formüllerde şunlar kullanılabilir:
+- `+ − * / % ^` ve parantez;
+- ondalık nokta ya da virgül (`2,5`);
+- `pi`;
+- derece cinsinden `sin cos tan asin acos atan atan2`, ayrıca `sqrt abs min max round floor ceil hypot`.
+
+Fonksiyon değerlerini `;` ile ayırın (`max(a; b)`), ya da virgülden sonra boşluk bırakın (`max(a, b)`). Düz sayı alanlarına da `20*2` ya da `sqrt(2)*10` yazılabilir.
+
 ## Taşıma, döndürme, ölçekleme
 
 1. Nesneyi tıklayarak seçin (**A** hepsini seçer, **Alt+A** seçimi kaldırır).

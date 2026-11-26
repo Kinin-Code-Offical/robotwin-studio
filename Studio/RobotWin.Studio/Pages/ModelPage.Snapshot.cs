@@ -42,6 +42,55 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
+            if (demo is "params" or "params-part")
+            {
+                // [param] A plate driven by named values: its width, height, hole place and thickness follow them.
+                var pd = new ModelDocument
+                {
+                    Title = "Parametrik plaka",
+                    Parameters = new System.Collections.Generic.List<ModelParameter>
+                    {
+                        new ModelParameter { Name = "genislik", Expression = "80" },
+                        new ModelParameter { Name = "yukseklik", Expression = "genislik / 2" },
+                        new ModelParameter { Name = "kalinlik", Expression = "4" },
+                        new ModelParameter { Name = "delik_x", Expression = "genislik * 3 / 4" },
+                        new ModelParameter { Name = "vida", Expression = "3,2" }
+                    }
+                };
+                var pp = ModelOps.AddPrimitive(pd, PrimitiveKind.Extrude);
+                pp.Name = "Parametrik plaka";
+                pp.Color = "#2E9E6E";
+                var shapes = new Sketch2D { Outer = SketchShape.Rect(40, 20) };
+                shapes.Holes.Add(SketchShape.Circle(5, 10, 0));
+                shapes.Constrained = ConstrainedSketch.From(shapes);
+                var dims = shapes.Constrained.Dimensions.ToList();
+                dims.First(d => d.Kind == SketchConstraintKind.Length).Expression = "genislik";
+                dims.Where(d => d.Kind == SketchConstraintKind.Length).Skip(1).First().Expression = "yukseklik";
+                dims.First(d => d.Kind == SketchConstraintKind.HorizontalDistance).Expression = "delik_x";
+                dims.First(d => d.Kind == SketchConstraintKind.Diameter).Expression = "vida";
+                pp.Primitive!.Sketch = shapes;
+                pp.Primitive.Expressions = new System.Collections.Generic.Dictionary<string, string> { ["h"] = "kalinlik" };
+                ModelParameters.Apply(pd);
+                _ed.Load(pd, null);
+                if (demo == "params-part") _ed.Select(pp.Id);
+                else _ed.Select(null);
+                _vp.FrameAll();
+                if (demo == "params-part")
+                {
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        foreach (var g in Props.Children.OfType<System.Windows.Controls.Grid>())
+                        {
+                            if (g.Children.OfType<System.Windows.Controls.TextBlock>().FirstOrDefault()?.Text != "Profil ölçüleri") continue;
+                            g.BringIntoView(new Rect(0, 0, 10, 900));
+                            break;
+                        }
+                    }), DispatcherPriority.Loaded);
+                }
+
+                return;
+            }
+
             if (demo is "sketch" or "sketch-editor" or "sketch-draw")
             {
                 // [sketch] A motor bracket drawn as a dimensioned sketch: a 50 × 40 plate with a round end tangent to its
