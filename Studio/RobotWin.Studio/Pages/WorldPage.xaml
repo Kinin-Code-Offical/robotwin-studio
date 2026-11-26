@@ -64,7 +64,7 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Button x:Name="RunButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="28" Click="OnRun" ToolTip="Dünyayı simüle et / duraklat (F5)">
                             <StackPanel Orientation="Horizontal">
-                                <t:Icon x:Name="RunIcon" Data="{StaticResource I.Play}" Size="12" Filled="True" Foreground="{DynamicResource B.OnPrimary}"/>
+                                <t:Icon x:Name="RunIcon" Data="{StaticResource I.Play}" Size="13" Filled="True" Foreground="{DynamicResource B.OnPrimary}"/>
                                 <TextBlock x:Name="RunText" Text="Dünyayı çalıştır" Margin="7,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource B.OnPrimary}"/>
                             </StackPanel>
                         </Button>

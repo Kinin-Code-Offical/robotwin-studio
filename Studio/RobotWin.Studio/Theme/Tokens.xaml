@@ -80,5 +80,4 @@
     <CornerRadius x:Key="R.Pill">999</CornerRadius>
 
     <!-- The only shadow: popups need separation from what is under them. -->
-    <DropShadowEffect x:Key="E.Popup" BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.35" Color="#000000"/>
 </ResourceDictionary>

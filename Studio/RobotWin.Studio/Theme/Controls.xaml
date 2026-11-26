@@ -497,7 +497,7 @@
                                Focusable="False" PopupAnimation="Fade">
                             <Border Margin="0,4,10,10" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
                                     MaxHeight="340" Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.BorderStrong}"
-                                    BorderThickness="1" CornerRadius="{StaticResource R.Medium}" Effect="{StaticResource E.Popup}" Padding="4">
+                                    BorderThickness="1" CornerRadius="{StaticResource R.Medium}" Padding="4">
                                 <ScrollViewer>
                                     <ItemsPresenter/>
                                 </ScrollViewer>
@@ -677,7 +677,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ContextMenu">
                     <Border Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1"
-                            CornerRadius="6" Padding="4" Margin="0,0,10,10" Effect="{StaticResource E.Popup}" MinWidth="220">
+                            CornerRadius="6" Padding="4" Margin="0,0,10,10" MinWidth="220">
                         <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
                     </Border>
                 </ControlTemplate>

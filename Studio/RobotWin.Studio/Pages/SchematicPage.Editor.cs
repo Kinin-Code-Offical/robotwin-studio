@@ -73,7 +73,6 @@ namespace RobotWin.Studio.Pages
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(padding),
-            Effect = (System.Windows.Media.Effects.Effect)FindResource("E.Popup"),
             Child = child
         };
 
@@ -372,7 +371,6 @@ namespace RobotWin.Studio.Pages
                 BorderBrush = Res<Brush>("B.BorderStrong"),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(12),
-                Effect = (System.Windows.Media.Effects.Effect)FindResource("E.Popup"),
                 Child = panel
             };
             card.MouseLeftButtonDown += (_, e) =>
@@ -1153,6 +1151,12 @@ namespace RobotWin.Studio.Pages
                     _ercShowExcluded = true;
                     _ercShowInfo = true;
                     BuildErcPanel();
+                    break;
+                case "dock-min":   // [dock-min] the library minimized to its strip
+                    _dock?.Minimize(DockPlace.Left, true);
+                    break;
+                case "fullview":   // [dock-min] Ctrl+Space: the sheet alone
+                    _dock?.ToggleFullView();
                     break;
                 case "nets":   // [net-navigator] the nets tab with a net picked
                     _dock?.Reveal("nets");

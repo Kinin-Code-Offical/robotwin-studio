@@ -107,7 +107,7 @@ namespace RobotWin.Studio.Pages
             Content = new Border
             {
                 Margin = new Thickness(20), Background = R<Brush>("B.Overlay"), BorderBrush = R<Brush>("B.BorderStrong"), BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(14), Effect = R<System.Windows.Media.Effects.Effect>("E.Popup"), Child = root
+                CornerRadius = new CornerRadius(14), Child = root
             };
             SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "B.Text");
             Refresh();

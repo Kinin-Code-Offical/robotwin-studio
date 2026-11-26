@@ -19,7 +19,17 @@ namespace RobotWin.Studio.Pages
 
         private void InitLayout()
         {
-            _dock = new DockManager("schematic", this, Root, CanvasArea, 0, 4, DockTabs, DockHost, BottomArea, DockRow, DockLineRow, DockSplitter, DockLine);
+            _dock = new DockManager("schematic", this, Root, MainArea, 0, 4, DockTabs, DockHost, BottomArea, DockRow, DockLineRow, DockSplitter, DockLine);
+            // [dock-min] the library and the inspector move, minimize to a strip and tear off like every other panel
+            _dock.Add(new DockItem("library", "Parça kütüphanesi", LibraryHost, DockPlace.Left));
+            _dock.Add(new DockItem("inspector", "Özellikler", InspectorHost, DockPlace.Right));
+            _dock.Changed += () =>
+            {
+                _libraryOpen = _dock.PlaceOf("library") != DockPlace.Hidden;
+                _inspectorOpen = _dock.PlaceOf("inspector") != DockPlace.Hidden;
+                LibraryToggle.IsChecked = _libraryOpen && !_dock.Collapsed;
+                InspectorToggle.IsChecked = _inspectorOpen && !_dock.Collapsed;
+            };
             var framed = new Thickness(6, 4, 6, 6);
             _dock.Add(new DockItem("scope", "Osiloskop", ScopePane, DockPlace.Bottom) { CanBottom = true, Chip = DockScope, FramedMargin = framed });
             _dock.Add(new DockItem("meter", "Multimetre", MeterPane, DockPlace.Bottom) { CanBottom = true, Chip = DockMeter, FramedMargin = framed });

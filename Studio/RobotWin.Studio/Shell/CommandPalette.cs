@@ -43,7 +43,6 @@ namespace RobotWin.Studio.Shell
                 Margin = new Thickness(0, 90, 0, 0),
                 CornerRadius = new CornerRadius(10),
                 BorderThickness = new Thickness(1),
-                Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 30, ShadowDepth = 6, Opacity = 0.5 }
             };
             panel.SetResourceReference(Border.BackgroundProperty, "B.Raised");
             panel.SetResourceReference(Border.BorderBrushProperty, "B.BorderStrong");

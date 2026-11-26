@@ -183,6 +183,85 @@ Referans uygulamalar yerinde incelendi (26 Kasım): KiCad 10 (PCB: Görünüm pa
 
 Büyük sürümden sonraya kalanlar (süreyi kısaltan kesinti): D6 eklenti ekosistemi ve öğrenme yolu, yeni MCU aileleri, Xtensa FPU, FMI 3.0 ve FMU dışa aktarma, hidrolik ve esnek yapılar. Kod imzalama bir sertifika ister: kullanıcının kararı.
 
+### E2. Arayüz incelemesi, ikinci tur (26 Kasım 2026): araçlar, yerleşim, paneller
+
+Kullanıcı geri bildirimi: ikonlar, düğmeler ve yazılar tam hizada değil; araçlar az; araçların alt eylemleri yok; çizim alanı sıkışık; paneller katlanmıyor, küçülmüyor, ayrılmıyor; yüzen araç pencereleri yok. KiCad 10, SolidWorks 2026 ve Blender 5.3 yerinde açılıp ilk ekranın ötesine bakıldı.
+
+**Ne gördük:**
+
+- **KiCad 10:**
+  - PCB'de üstte ~32 eylem (yeni, aç, kaydet; kart ayarları; yazdır, çizdir; geri al, yinele; bul; yakınlaştır ×5; döndür, çevir, aynala; grupla, kilitle; şemadan güncelle, kütüphane, ayak izi düzenleyici, DRC).
+  - İkinci satırda araç seçenekleri: yol genişliği, via, katman, ızgara, yakınlık, "kilitleri geçersiz kıl".
+  - Solda ~12 görünüm anahtarı: ızgara, birim, imleç, 45°, ratsnest, dolgu görünümü, yüksek kontrast, paneller.
+  - Sağda ~28 çizim aracı. Grupluların köşesinde küçük üçgen var, uzun basınca alt araçlar açılır (yol: tek yol / fark çifti; uzunluk ayarı; ölçüler).
+  - Şemada üstte ~40, sağda ~25 araç (kablo, bus, bağlantı noktası, etiket türleri, hiyerarşik sayfa, grafikler, silici).
+  - Paneller kapanır, yüzdürülür, yerleştirilir.
+- **SolidWorks 2026:**
+  - Sekmeli komut şeridi: Unsurlar, Çizim, Hesapla vb.
+  - Ana komutlar büyük ikon ve altında etiketle; ikincil komutlar küçük ikon ve etiketle üçlü sıralarda; gruplar arası ayraç var.
+  - Komutların altında açılır ok ile türevleri (örneğin Ekstrüzyon ile Katı Oluşturma → türevleri).
+  - Görünüm penceresinin üstünde yarı saydam görünüm araç çubuğu: sığdır, alan yakınlaştır, kesit, yön, görünüş stili, gizle/göster.
+  - FeatureManager sekmeleri; görev bölmesi otomatik gizlenir.
+- **Blender 5.3:**
+  - 3B görünüm ekranın ~%80'i; Ctrl+Space ile tek alan bütün pencere.
+  - Araç çubuğu (T) tek sütun ikon. Köşesinde üçgen olan araçta basılı tutunca etiketli ve kısayollu alt araç listesi açılır (Seç: Tweak / Kutu / Daire / Kement).
+  - Etkin aracın seçenekleri başlıkta.
+  - N ile açılıp kapanan, sağ kenarında dikey sekmeleri olan yan çubuk.
+  - Özellikler: dikey ikon sekmeleri, katlanıp sürüklenerek sıralanan bölümler.
+  - Her alanın türü değiştirilir, alanlar bölünür ve birleşir.
+
+**Bizde neydi:**
+
+- Devre ve PCB'de ~17'şer araç vardı.
+- Alt araç ve araç seçenek çubuğu yoktu.
+- Devre'de kütüphane ve özellikler, PCB'de özellikler sabitti. PCB paneli geniş ekranda gizlenemiyordu.
+- Model, Kod ve Montaj sayfalarında panel yöneticisi yoktu.
+- Açılır pencerelerde gölge vardı.
+- Bir satırda farklı ikon boyları vardı; 7 ikon kendi kutusunda kaymıştı.
+
+**Yapılanlar (bu tur):**
+
+- [x] **Paneller (`Shell/DockManager.cs`):**
+  - Her yan taraf **küçültülür**: kenarda panel adlarının yazdığı dikey şerit; tıklayınca açılır, durumu saklanır.
+  - **Ctrl+Space tam görünüm** (Blender): bütün paneller ve alt bölme çekilir, ikinci basışta döner.
+  - Devre'nin parça kütüphanesi ve özellikler paneli, PCB'nin özellikler paneli artık başlıklı, taşınır, ayrı pencereye alınır, gizlenir, küçültülür paneller (Dünya'daki gibi).
+  - PCB paneli her genişlikte gizlenip açılır.
+  - Çalışma alanları PCB düzenini de saklar.
+- [x] **Hizalama denetimi (`--align-report`, `Shell/AlignAudit.cs`):**
+  - Düğmede ikon ile yazının dikey merkezi; araç satırında merkez, yükseklik ve ikon boyu; temanın her ikonunun kendi kutusunda ortalı olup olmadığı.
+  - İlk çalıştırmada bulunanlar düzeltildi:
+    - Bağlantı, toprak, ölçü aleti, geri al / yinele ve yol ikonları ortalandı.
+    - Araç çubuklarında tek ikon boyu (16 px; başlık çubuğu 15, panel başlıkları 12).
+    - Kütüphane ayrıntısında farklı yükseklikteki ve kayık düğmeler düzeltildi; kart ızgarası satırı dolduruyor.
+- [x] **Gölge yok:** bütün açılır pencere ve panellerden gölge efekti kaldırıldı (düz renk kuralı).
+
+**Sıradakiler (bu sırayla):**
+
+- [ ] **Alt araçlar:**
+  - Gruplu araçlarda köşe üçgeni.
+  - Basılı tutunca ya da sağ tıklayınca etiketli ve kısayollu alt araç listesi (Blender gibi; KiCad'in yalnız ikonlu listesinden okunaklı).
+  - PCB: yol → tek / fark çifti / uzunluk ayarı; çizim → çizgi / yay / dikdörtgen / daire / çokgen; ölçü → doğrusal / açısal / yarıçap.
+  - Devre: etiket → yerel / global / hiyerarşik; grafikler.
+- [ ] **Araç seçenek çubuğu:** etkin aracın seçenekleri araç çubuğunun altında (PCB yolu: genişlik, via, katman, açı kipi; kablo: açı kipi; ölçüm: birim).
+- [ ] **Eksik araçlar:**
+  - PCB:
+    - Yakınlaştırma düğmeleri.
+    - Döndür, çevir, aynala, kilitle, grupla.
+    - Via aracı, yasak bölge, grafik çizim araçları.
+    - Silici.
+    - Izgara ve birim seçimi.
+    - Görünüm anahtarları.
+  - Devre:
+    - Bağlantı noktası, bus, hiyerarşik sayfa.
+    - Grafik ve metin kutusu.
+    - Silici, hat vurgulama aracı.
+    - Izgara, birim, gizli pinler.
+  - Her eksik aracın arkasında gerçek işlevi olacak; yalnızca düğme eklenmeyecek.
+- [ ] **Yüzen araç çubukları:** araç şeritleri tutamağından sürüklenip ayrı küçük pencereye alınır, kenara bırakınca yerleşir (SolidWorks, Unity); yerleri saklanır.
+- [ ] **Model, Kod, Montaj:** panel yöneticisine geçiş (taşınır, küçülür, ayrılır paneller) ve tam görünüm.
+- [ ] **Denetçi bölümleri:** Blender gibi katlanır, katlanma durumu saklanır.
+- [ ] **Sorunlar paneli (D4):** kaynaklar hazır (devre ERC'si, PCB'nin son DRC'si eskiyse "eski", kodun son derlemesi; `Shell/ProblemsHub.cs`); durum çubuğu sayacı ve pencere kalıyor.
+
 ### D1. Temel ve güvenlik (P0)
 
 - [x] **.NET 10 LTS'ye geçiş:** .NET 9'un desteği 10 Kasım 2026'da bitti. Bütün projeler net10.0'da (CoreSim ayrıca netstandard2.1), C# 14'e sabit (yerelde daha yeni bir SDK da aynı dili derler); kurulumun .NET bileşeni ve çalışma zamanı denetimi, güncelleyici, betik derleyicisi (aynı ana sürümün SDK'sı ya da başvuru paketi kurulu daha yenisi), CI ve SDK şablonu .NET 10'da; tam test, kontrast ve kurulum denetimi.

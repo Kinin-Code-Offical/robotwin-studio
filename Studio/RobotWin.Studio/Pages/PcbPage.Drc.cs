@@ -23,11 +23,16 @@ namespace RobotWin.Studio.Pages
         private List<DrcViolation> _raw = new List<DrcViolation>();
         private DrcResult _drc = new DrcResult();
 
+        /// <summary>[problems] Whether the DRC ran on the board as it is (an edit makes the result out of date).</summary>
+        private bool _drcCurrent;
+
         /// <summary>Every marker the checkers gave, before the user's severities and exclusions.</summary>
         private void SetDrc(List<DrcViolation> raw)
         {
             _raw = raw;
+            _drcCurrent = true;
             ApplyDrcPolicy();
+            ProblemsHub.Notify();   // [problems]
         }
 
         private void ClearDrc()
@@ -37,6 +42,44 @@ namespace RobotWin.Studio.Pages
             _violations = new List<DrcViolation>();
             Canvas.Violations = _violations;
             Canvas.FocusedViolation = null;
+            if (_drcCurrent)
+            {
+                _drcCurrent = false;
+                ProblemsHub.Notify();   // [problems] the PCB's result is out of date now
+            }
+        }
+
+        /// <summary>[problems] The PCB's share of the Problems panel: the last DRC, or that it has not run on the board as it is; null without a board.</summary>
+        public AreaReport? BoardProblems()
+        {
+            if (W.Schematic.Board == null) return null;
+            var r = new AreaReport { Check = RunDrc };
+            if (!_drcCurrent) r.NotChecked = "DRC son değişiklikten beri çalıştırılmadı";
+            foreach (var v in _drc.Shown)
+            {
+                var marker = v;
+                r.Problems.Add(new Problem(ProblemsHub.Pcb, v.Severity == DrcSeverity.Error ? ProblemLevel.Error : ProblemLevel.Warning, v.Rule, v.Message, () => ShowMarker(marker)));
+            }
+
+            return r;
+        }
+
+        /// <summary>Goes to a DRC marker as a click on its row does (the row selected when the filters show it).</summary>
+        public void ShowMarker(DrcViolation v)
+        {
+            ShowPanel(3);
+            var row = DrcList.Items.OfType<DrcItem>().FirstOrDefault(i => ReferenceEquals(i.Violation, v));
+            if (row != null)
+            {
+                DrcList.SelectedItem = row;
+                DrcList.ScrollIntoView(row);
+                return;
+            }
+
+            Show3D(false);
+            if (v.Layer.HasValue && Board.HasLayer(v.Layer.Value)) Canvas.ActiveLayer = v.Layer.Value;
+            Canvas.FocusedViolation = v;
+            Canvas.ZoomTo(v.X, v.Y);
         }
 
         /// <summary>The last run again under the current severities, exclusions and filters (the checks are not re-run).</summary>
@@ -112,6 +155,7 @@ namespace RobotWin.Studio.Pages
             ApplyDrcPolicy();
             UpdateDrcPanel(Board);
             Canvas.InvalidateVisual();
+            ProblemsHub.Notify();   // [problems] a severity or an exclusion changes the counts
         }
 
         private void Exclude(DrcViolation v)

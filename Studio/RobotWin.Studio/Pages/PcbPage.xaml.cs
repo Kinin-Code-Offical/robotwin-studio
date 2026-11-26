@@ -57,6 +57,7 @@ namespace RobotWin.Studio.Pages
         public PcbPage()
         {
             InitializeComponent();
+            InitDock();   // [dock-min]
             Canvas.SelectionChanged += (_, _) => UpdateSelection();
             Canvas.BeforeEdit += (_, _) => W.BeginChange();
             Canvas.EditCancelled += (_, _) => W.CancelChange();
@@ -142,33 +143,11 @@ namespace RobotWin.Studio.Pages
             bool narrow = width < 900;
             if (narrow != _narrow || _toolbarLevel < 0)
             {
+                // [dock-min] the properties panel is a dock panel: a narrow page hides it (the toggle brings it back), a wide one keeps what was chosen
+                bool first = _toolbarLevel < 0;
                 _narrow = narrow;
-                PanelToggle.Visibility = narrow ? Visibility.Visible : Visibility.Collapsed;
-                if (narrow)
-                {
-                    PanelColumn.Width = new GridLength(0);
-                    SplitColumn.Width = new GridLength(0);
-                    Grid.SetColumn(SidePanel, 1);
-                    SidePanel.HorizontalAlignment = HorizontalAlignment.Right;
-                    SidePanel.BorderThickness = new Thickness(1, 0, 0, 0);
-                    SidePanel.Effect = (System.Windows.Media.Effects.Effect)FindResource("E.Popup");
-                    PanelToggle.IsChecked = false;
-                    SidePanel.Visibility = Visibility.Collapsed;
-                }
-                else
-                {
-                    PanelColumn.Width = new GridLength(320);
-                    SplitColumn.Width = new GridLength(1);
-                    Grid.SetColumn(SidePanel, 3);
-                    SidePanel.HorizontalAlignment = HorizontalAlignment.Stretch;
-                    SidePanel.BorderThickness = new Thickness(0);
-                    SidePanel.Effect = null;
-                    SidePanel.Visibility = Visibility.Visible;
-                    SidePanel.Width = double.NaN;
-                }
+                if (_dock != null && (narrow || !first)) _dock.SetVisible("properties", !narrow);
             }
-
-            if (narrow) SidePanel.Width = Math.Min(320, Math.Max(240, width - 140));
             StatusBar.Margin = new Thickness(width < 760 ? 70 : 120, 0, 10, 6);
             CursorText.Visibility = width < 680 ? Visibility.Collapsed : Visibility.Visible;
 
@@ -273,20 +252,30 @@ namespace RobotWin.Studio.Pages
 
         private void OnOverflow(object sender, RoutedEventArgs e) => OverflowPopup.IsOpen = !OverflowPopup.IsOpen;
 
-        private void OnPanelToggle(object sender, RoutedEventArgs e)
-        {
-            SidePanel.Visibility = PanelToggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        }
+        private void OnPanelToggle(object sender, RoutedEventArgs e) => _dock?.SetVisible("properties", PanelToggle.IsChecked == true);
 
-        /// <summary>Shows the properties panel (opens the overlay on narrow pages) at a tab.</summary>
+        /// <summary>Shows the properties panel at a tab, wherever it is docked (out of its strip, back from hidden).</summary>
         private void ShowPanel(int tab)
         {
             Tabs.SelectedIndex = tab;
-            if (_narrow)
-            {
-                PanelToggle.IsChecked = true;
-                SidePanel.Visibility = Visibility.Visible;
-            }
+            if (_dock != null && (_dock.PlaceOf("properties") == DockPlace.Hidden || _dock.IsMinimized(_dock.PlaceOf("properties")) || _dock.Collapsed))
+                _dock.SetVisible("properties", true);
+        }
+
+        // ================================================================ [dock-min] movable panels
+
+        private DockManager? _dock;
+
+        /// <summary>[workspaces] The page's panels; null before the page is built.</summary>
+        public DockManager? Panels => _dock;
+
+        /// <summary>The properties panel (board, layers, nets, DRC) docks left or right, minimizes to a strip or tears off into its own window.</summary>
+        private void InitDock()
+        {
+            _dock = new DockManager("pcb", this, PageRoot, ContentGrid, 1, 5, DockTabs, DockHost, BottomArea, DockRow, DockLineRow);
+            _dock.Add(new DockItem("properties", "Özellikler", SidePanel, DockPlace.Right));
+            _dock.Changed += () => PanelToggle.IsChecked = _dock.PlaceOf("properties") != DockPlace.Hidden && !_dock.Collapsed && !_dock.IsMinimized(_dock.PlaceOf("properties"));
+            _dock.Start();
         }
 
         // ================================================================ editing plumbing
@@ -744,6 +733,12 @@ namespace RobotWin.Studio.Pages
                     ShowPanel(3);
                     DrcRulesToggle.IsChecked = true;
                     OnDrcRules(this, new RoutedEventArgs());
+                    break;
+                case "dock-min":   // [dock-min] the properties panel minimized to its strip
+                    _dock?.Minimize(DockPlace.Right, true);
+                    break;
+                case "dock-left":   // [dock-min] the properties panel moved to the left
+                    if (_dock?.Items.FirstOrDefault(i => i.Key == "properties") is { } props) _dock.Dock(props, DockPlace.Left);
                     break;
                 case "stats":   // [board-stats] the statistics dialog over the routed board
                     UpdatePanel();

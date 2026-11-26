@@ -8205,7 +8205,14 @@
   "Asal eksenler ve asal atalet momentleri (g·mm², ağırlık merkezinde)": "Principal axes and principal moments of inertia (g·mm², at the centre of mass)",
   "Atalet momentleri (g·mm², ağırlık merkezinde, dünya eksenleri)": "Moments of inertia (g·mm², at the centre of mass, world axes)",
   "Not: ağ kapalı değil; değerler tahmindir.": "Note: the mesh is not closed; the values are estimates.",
-  "vurgulu hat": "highlighted net"
+  "vurgulu hat": "highlighted net",
+  "Parça kütüphanesi": "Part library",
+  "Küçült: bu taraf kenarda adların yazdığı ince bir şeride iner, tıklayınca açılır": "Minimize: this side folds into a thin strip with the panels' names at the edge; a click opens it",
+  "Paneli aç": "Open the panel",
+  "Tam görünüm: paneller gizlendi (Ctrl+Space ile geri gelir)": "Full view: the panels are hidden (Ctrl+Space brings them back)",
+  "Paneller geri geldi": "The panels are back",
+  "Tam görünüm: panelleri gizle / geri getir": "Full view: hide / bring back the panels",
+  "Özellik panelini göster / gizle (başlığından küçültülür, taşınır ya da ayrı pencereye alınır)": "Show / hide the properties panel (its header minimizes it, moves it or opens it in its own window)"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11540,6 +11547,7 @@
   "{…} hat": "{0} nets",
   "{…} / {…} hat": "{0} / {1} nets",
   "{…} pin": "{0} pins",
-  "Hat: {…} · {…} pin": "Net: {0} · {1} pins"
+  "Hat: {…} · {…} pin": "Net: {0} · {1} pins",
+  "{…}: aç": "{0}: open"
  }
 }

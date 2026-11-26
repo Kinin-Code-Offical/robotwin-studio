@@ -39,10 +39,22 @@ namespace RobotWin.Studio
             W.Status = "Çalışma alanı: " + name;
         }
 
+        /// <summary>
+        /// [dock-min] Full view (Blender's Ctrl+Space): the page's panels and bottom row out of the way, the canvas
+        /// the whole window; again brings them back as they were.
+        /// </summary>
+        private void ToggleFullView()
+        {
+            if (DockOf(_current) is not { } d) return;
+            d.ToggleFullView();
+            W.Status = d.Collapsed ? "Tam görünüm: paneller gizlendi (Ctrl+Space ile geri gelir)" : "Paneller geri geldi";
+        }
+
         private DockManager? DockOf(string page) => page switch
         {
             "schematic" => _schematic.Panels,
             "world" => _world.Panels,
+            "pcb" => _pcb.Panels,
             _ => null
         };
 
@@ -52,6 +64,7 @@ namespace RobotWin.Studio
             var p = new WorkspaceProfile { Name = name, Page = _current };
             if (_schematic.Panels is { } s) p.Layouts["schematic"] = s.Snapshot();
             if (_world.Panels is { } w) p.Layouts["world"] = w.Snapshot();
+            if (_pcb.Panels is { } pc) p.Layouts["pcb"] = pc.Snapshot();
             return p;
         }
 
@@ -100,6 +113,7 @@ namespace RobotWin.Studio
         {
             _schematic.Panels?.Reset();
             _world.Panels?.Reset();
+            _pcb.Panels?.Reset();
             WorkspaceProfiles.Active = null;
             UpdateWorkspaceButton();
             W.Status = "Paneller varsayılan yerlerine döndü";

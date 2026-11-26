@@ -46,7 +46,7 @@
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Width="168" Height="140" CornerRadius="6" Background="Transparent" BorderBrush="{DynamicResource B.Border}" BorderThickness="1" Padding="12">
+                        <Border Width="{DynamicResource Lib.CardWidth}" Height="140" CornerRadius="6" Background="Transparent" BorderBrush="{DynamicResource B.Border}" BorderThickness="1" Padding="12">
                             <DockPanel>
                                 <StackPanel DockPanel.Dock="Bottom">
                                     <TextBlock Text="{Binding Name}" Foreground="{DynamicResource B.Text}" FontSize="12.5" TextTrimming="CharacterEllipsis"/>

@@ -25,20 +25,20 @@
                     <ComboBox x:Name="TemplateBox" Width="190" SelectionChanged="OnTemplate"/>
                     <Border Width="1" Height="22" Background="{DynamicResource B.Border}" Margin="12,0"/>
                     <Button x:Name="BuildButton" Click="OnBuild" ToolTip="Derle (F7)">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Chip}" Size="14"/><TextBlock Text="Derle" Margin="7,0,0,0"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Chip}" Size="16"/><TextBlock Text="Derle" Margin="7,0,0,0"/></StackPanel>
                     </Button>
                     <Button x:Name="UploadButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="30" Margin="6,0,0,0" Click="OnUpload" ToolTip="Bu klasörü seçili karta yükle, derle ve çalıştır (F5)">
                         <StackPanel Orientation="Horizontal">
-                            <t:Icon Data="{StaticResource I.Play}" Size="14" Foreground="{DynamicResource B.OnPrimary}"/>
+                            <t:Icon Data="{StaticResource I.Play}" Size="16" Foreground="{DynamicResource B.OnPrimary}"/>
                             <TextBlock Text="Karta yükle ve çalıştır" Margin="7,0,0,0" Foreground="{DynamicResource B.OnPrimary}"/>
                         </StackPanel>
                     </Button>
                     <Button x:Name="HardwareButton" Margin="6,0,0,0" Click="OnHardware" Visibility="Collapsed"
                             ToolTip="Gerçek ESP32 için: Espressif'in araç zinciriyle derle, USB ile karta yükle ya da imajı dışa aktar">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Export}" Size="14"/><TextBlock Text="Gerçek kart" Margin="7,0,0,0"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Export}" Size="16"/><TextBlock Text="Gerçek kart" Margin="7,0,0,0"/></StackPanel>
                     </Button>
-                    <Button Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" ToolTip="Simülasyonu durdur" Click="OnStop"><t:Icon Data="{StaticResource I.Stop}"/></Button>
-                    <Button Style="{StaticResource Btn.Icon}" ToolTip="Kartı resetle" Click="OnReset"><t:Icon Data="{StaticResource I.Reset}"/></Button>
+                    <Button Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" ToolTip="Simülasyonu durdur" Click="OnStop"><t:Icon Data="{StaticResource I.Stop}" Size="16"/></Button>
+                    <Button Style="{StaticResource Btn.Icon}" ToolTip="Kartı resetle" Click="OnReset"><t:Icon Data="{StaticResource I.Reset}" Size="16"/></Button>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <TextBlock x:Name="BuildStatus" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="460"/>

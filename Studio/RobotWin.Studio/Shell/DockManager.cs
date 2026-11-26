@@ -84,6 +84,11 @@ namespace RobotWin.Studio.Shell
         private readonly Grid _overlayHost, _main;
         private readonly int _leftCol, _rightCol;
         private readonly Grid _leftStack = new Grid(), _rightStack = new Grid();
+
+        /// <summary>[dock-min] A minimized side: a narrow strip with each panel's name, as Visual Studio's and Rider's auto-hide.</summary>
+        private readonly StackPanel _leftStrip = new StackPanel(), _rightStrip = new StackPanel();
+        private bool _leftMin, _rightMin;
+        private const double StripWidth = 30;
         private readonly GridSplitter _leftSplit, _rightSplit;
         private readonly Panel _tabStrip;
         private readonly Grid _tabHost;
@@ -124,6 +129,13 @@ namespace RobotWin.Studio.Shell
             Grid.SetColumn(_rightStack, rightCol);
             main.Children.Add(_leftStack);
             main.Children.Add(_rightStack);
+            foreach (var (strip, col) in new[] { (_leftStrip, leftCol), (_rightStrip, rightCol) })
+            {
+                Grid.SetColumn(strip, col);
+                strip.Visibility = Visibility.Collapsed;
+                strip.SetResourceReference(Panel.BackgroundProperty, "B.Base");
+                main.Children.Add(strip);
+            }
             _leftSplit = ColumnSplitter(leftCol + 1);
             _rightSplit = ColumnSplitter(rightCol - 1);
             StripButtons();
@@ -152,6 +164,48 @@ namespace RobotWin.Studio.Shell
 
         /// <summary>A panel became visible (its tab was picked, it was docked or opened in a window): refresh it.</summary>
         public event Action<string>? Shown;
+
+        /// <summary>[dock-min] The layout changed (a panel moved, hid, a side minimized, full view): pages sync their toggles.</summary>
+        public event Action? Changed;
+
+        /// <summary>[dock-min] Whether a side is minimized to its strip.</summary>
+        public bool IsMinimized(DockPlace side) => side == DockPlace.Left ? _leftMin : side == DockPlace.Right && _rightMin;
+
+        /// <summary>[dock-min] Minimizes a side to a strip of its panels' names (or brings it back); the canvas gets the room.</summary>
+        public void Minimize(DockPlace side, bool on)
+        {
+            if (side != DockPlace.Left && side != DockPlace.Right) return;
+            CaptureSizes();
+            if (side == DockPlace.Left) _leftMin = on;
+            else _rightMin = on;
+            Apply();
+            ScheduleSave();
+        }
+
+        /// <summary>[dock-min] Full view (Blender's Ctrl+Space): every side and the bottom row out of the way, and back.</summary>
+        public void ToggleFullView()
+        {
+            Collapsed = !Collapsed;
+            Changed?.Invoke();
+        }
+
+        /// <summary>[dock-min] Shows a panel where it was last docked, or hides it (a page's own show / hide toggle).</summary>
+        public void SetVisible(string key, bool visible)
+        {
+            if (Find(key) is not { } it) return;
+            if (visible)
+            {
+                if (it.Place == DockPlace.Hidden) Dock(it, it.LastDocked);
+                if (IsMinimized(it.Place)) Minimize(it.Place, false);
+                if (_collapsed) Collapsed = false;
+            }
+            else if (it.Place != DockPlace.Hidden)
+            {
+                Hide(it);
+            }
+
+            Changed?.Invoke();
+        }
 
         public IReadOnlyList<DockItem> Items => _items;
 
@@ -378,6 +432,8 @@ namespace RobotWin.Studio.Shell
             _rightWidth = _defaultRight;
             _bottomHeight = _defaultBottom;
             _bottomHidden = false;
+            _leftMin = _rightMin = false;   // [dock-min]
+            _collapsed = false;
             _leftShown = _rightShown = _bottomShown = false;   // do not capture the current sizes over the defaults
             var first = _items.FirstOrDefault(i => i.Place == DockPlace.Bottom && i.Chip != null);
             _applying = true;
@@ -416,6 +472,8 @@ namespace RobotWin.Studio.Shell
                 _rightStack.Children.Clear();
                 BuildSide(_leftStack, DockPlace.Left);
                 BuildSide(_rightStack, DockPlace.Right);
+                BuildStrip(_leftStrip, DockPlace.Left);   // [dock-min]
+                BuildStrip(_rightStrip, DockPlace.Right);
                 foreach (var it in _items)
                 {
                     if (it.Chip == null) continue;
@@ -437,6 +495,7 @@ namespace RobotWin.Studio.Shell
             }
 
             SyncTabs();
+            Changed?.Invoke();   // [dock-min]
         }
 
         /// <summary>Shows the picked bottom tab; panels elsewhere are always visible.</summary>
@@ -510,26 +569,53 @@ namespace RobotWin.Studio.Shell
             }
         }
 
+        /// <summary>[dock-min] A minimized side's strip: a button per panel with its name read downwards; any of them opens the side again.</summary>
+        private void BuildStrip(StackPanel strip, DockPlace side)
+        {
+            strip.Children.Clear();
+            var open = IconButton(side == DockPlace.Left ? "I.Chevron" : "I.ChevronLeft", 11, "Paneli aç");
+            open.Margin = new Thickness(3, 4, 3, 6);
+            open.Click += (_, _) => Minimize(side, false);
+            strip.Children.Add(open);
+            foreach (var it in _items.Where(i => i.Place == side).OrderBy(i => i.Order))
+            {
+                var label = new TextBlock { Text = it.Title, FontSize = 12, LayoutTransform = new RotateTransform(90), VerticalAlignment = VerticalAlignment.Center };
+                label.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
+                var b = new Button { Content = label, Padding = new Thickness(4, 10, 4, 10), Margin = new Thickness(2, 0, 2, 4), Cursor = Cursors.Hand, ToolTip = it.Title + ": aç" };
+                b.SetResourceReference(FrameworkElement.StyleProperty, "Btn.Ghost");
+                var key = it.Key;
+                b.Click += (_, _) =>
+                {
+                    Minimize(side, false);
+                    Shown?.Invoke(key);
+                };
+                strip.Children.Add(b);
+            }
+        }
+
         private void Sizes()
         {
             bool left = !_collapsed && _items.Any(i => i.Place == DockPlace.Left);
             bool right = !_collapsed && _items.Any(i => i.Place == DockPlace.Right);
+            bool leftMin = left && _leftMin, rightMin = right && _rightMin;
             bool bottom = !_collapsed && !_bottomHidden && _items.Any(i => i.Place == DockPlace.Bottom);
-            Column(_leftCol, left, _leftWidth, 180);
+            Column(_leftCol, left, leftMin ? StripWidth : _leftWidth, leftMin ? StripWidth : 180);
             Column(_leftCol + 1, left, 1, 0);
-            Column(_rightCol, right, _rightWidth, 180);
+            Column(_rightCol, right, rightMin ? StripWidth : _rightWidth, rightMin ? StripWidth : 180);
             Column(_rightCol - 1, right, 1, 0);
-            _leftSplit.Visibility = left ? Visibility.Visible : Visibility.Collapsed;
-            _rightSplit.Visibility = right ? Visibility.Visible : Visibility.Collapsed;
-            _leftStack.Visibility = left ? Visibility.Visible : Visibility.Collapsed;
-            _rightStack.Visibility = right ? Visibility.Visible : Visibility.Collapsed;
+            _leftSplit.Visibility = left && !leftMin ? Visibility.Visible : Visibility.Collapsed;
+            _rightSplit.Visibility = right && !rightMin ? Visibility.Visible : Visibility.Collapsed;
+            _leftStack.Visibility = left && !leftMin ? Visibility.Visible : Visibility.Collapsed;
+            _rightStack.Visibility = right && !rightMin ? Visibility.Visible : Visibility.Collapsed;
+            _leftStrip.Visibility = leftMin ? Visibility.Visible : Visibility.Collapsed;
+            _rightStrip.Visibility = rightMin ? Visibility.Visible : Visibility.Collapsed;
             _bottomRow.MinHeight = bottom ? 36 : 0;
             _bottomRow.Height = new GridLength(bottom ? _bottomHeight : 0);
             _bottomLineRow.Height = new GridLength(bottom ? 1 : 0);
             _bottomArea.Visibility = bottom ? Visibility.Visible : Visibility.Collapsed;
             foreach (var e in _bottomExtras) e.Visibility = bottom ? Visibility.Visible : Visibility.Collapsed;
-            _leftShown = left;
-            _rightShown = right;
+            _leftShown = left && !leftMin;   // a strip's width is not the side's width to remember
+            _rightShown = right && !rightMin;
             _bottomShown = bottom;
 
             void Column(int i, bool on, double width, double min)
@@ -600,17 +686,17 @@ namespace RobotWin.Studio.Shell
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(8, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center };
             DockPanel.SetDock(buttons, System.Windows.Controls.Dock.Right);
             DockItem? Picked() => _items.FirstOrDefault(i => i.Place == DockPlace.Bottom && i.Chip?.IsChecked == true);
-            var pop = IconButton("I.Window", 13, "Bu sekmeyi ayrı pencereye al");
+            var pop = IconButton("I.Window", 12, "Bu sekmeyi ayrı pencereye al");
             pop.Click += (_, _) =>
             {
                 if (Picked() is { } it) Float(it);
             };
-            var more = IconButton("I.More", 13, "Bu sekmenin yeri: sol, sağ, alt bölme, ayrı pencere, gizli");
+            var more = IconButton("I.More", 12, "Bu sekmenin yeri: sol, sağ, alt bölme, ayrı pencere, gizli");
             more.Click += (_, _) =>
             {
                 if (Picked() is { } it) OpenMenu(more, it);
             };
-            var close = IconButton("I.Close", 10, "Bu sekmeyi kapat (Görünüm menüsündeki panel düzeninden geri açılır)");
+            var close = IconButton("I.Close", 11, "Bu sekmeyi kapat (Görünüm menüsündeki panel düzeninden geri açılır)");
             close.Click += (_, _) =>
             {
                 if (Picked() is { } it) Hide(it);
@@ -633,13 +719,15 @@ namespace RobotWin.Studio.Shell
             header.SetResourceReference(Border.BorderBrushProperty, "B.Border");
             header.ToolTip = it.Title + ": başlığı sürükleyerek ayrı pencereye alın, pencereyi sayfanın kenarına bırakarak yerleştirin. Sağ tık: yerleşim";
             var row = new DockPanel();
-            var close = IconButton("I.Close", 10, "Gizle (Panel düzeni menüsünden geri açılır)");
+            var close = IconButton("I.Close", 11, "Gizle (Panel düzeni menüsünden geri açılır)");
             close.Click += (_, _) => Hide(it);
-            var pop = IconButton("I.Window", 13, "Ayrı pencereye al");
+            var pop = IconButton("I.Window", 12, "Ayrı pencereye al");
             pop.Click += (_, _) => Float(it);
-            var more = IconButton("I.More", 13, "Yerleşim: sol, sağ, alt bölme, ayrı pencere");
+            var more = IconButton("I.More", 12, "Yerleşim: sol, sağ, alt bölme, ayrı pencere");
             more.Click += (_, _) => OpenMenu(more, it);
-            foreach (var b in new[] { close, pop, more })
+            var min = IconButton("I.Minimize", 12, "Küçült: bu taraf kenarda adların yazdığı ince bir şeride iner, tıklayınca açılır");   // [dock-min]
+            min.Click += (_, _) => Minimize(it.Place, true);
+            foreach (var b in new[] { close, pop, min, more })
             {
                 DockPanel.SetDock(b, System.Windows.Controls.Dock.Right);
                 row.Children.Add(b);
@@ -1048,6 +1136,7 @@ namespace RobotWin.Studio.Shell
             var s = new DockLayoutState
             {
                 LeftWidth = _leftWidth, RightWidth = _rightWidth, BottomHeight = _bottomHeight, BottomHidden = _bottomHidden,
+                LeftMinimized = _leftMin, RightMinimized = _rightMin,
                 Tab = _items.FirstOrDefault(i => i.Place == DockPlace.Bottom && i.Chip?.IsChecked == true)?.Key
             };
             foreach (var it in _items)
@@ -1100,6 +1189,8 @@ namespace RobotWin.Studio.Shell
             if (s.RightWidth >= 180) _rightWidth = s.RightWidth;
             if (s.BottomHeight >= 36) _bottomHeight = s.BottomHeight;
             _bottomHidden = s.BottomHidden;
+            _leftMin = s.LeftMinimized;   // [dock-min]
+            _rightMin = s.RightMinimized;
             foreach (var it in _items)
             {
                 if (!s.Items.TryGetValue(it.Key, out var st)) continue;
@@ -1143,6 +1234,11 @@ namespace RobotWin.Studio.Shell
         public double BottomHeight { get; set; }
 
         public bool BottomHidden { get; set; }
+
+        /// <summary>[dock-min] The sides minimized to their strips.</summary>
+        public bool LeftMinimized { get; set; }
+
+        public bool RightMinimized { get; set; }
 
         public string? Tab { get; set; }
     }

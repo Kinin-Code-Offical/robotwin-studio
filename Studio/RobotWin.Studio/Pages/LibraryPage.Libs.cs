@@ -182,7 +182,7 @@ namespace RobotWin.Studio.Pages
             var edit = new Button
             {
                 Content = user ? "Düzenle" : "Oluşturucuda aç",
-                Margin = new Thickness(8, 0, 0, 0),
+                Margin = new Thickness(0, 0, 8, 8),   // [align] wrapped rows start at the same edge
                 ToolTip = user ? "Bacaklar, sembol, kılıf, model, parametreler, 3B (Parça oluşturucu)" : "Bu parçayı temel alıp bacaklarını, kılıfını ve modelini değiştirerek yeni parça yap"
             };
             edit.Click += (_, _) =>

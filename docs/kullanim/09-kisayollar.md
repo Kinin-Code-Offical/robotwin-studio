@@ -36,6 +36,7 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | F5 | Simülasyonu başlat / duraklat / devam ettir |
 | Shift+F5 | Simülasyonu durdur |
 | F10 | Menü çubuğu |
+| Ctrl+Space | Tam görünüm: panelleri gizle / geri getir |
 | F11 | Tam ekran (Esc ile çıkılır) |
 | Alt+F4 | Çıkış |
 

@@ -244,7 +244,6 @@ namespace RobotWin.Studio
                     BorderThickness = new Thickness(1),
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Top,
-                    Effect = (System.Windows.Media.Effects.Effect)FindResource("E.Popup")
                 };
                 _notice.SetResourceReference(Border.BackgroundProperty, "B.Overlay");
                 _notice.SetResourceReference(Border.BorderBrushProperty, "B.BorderStrong");

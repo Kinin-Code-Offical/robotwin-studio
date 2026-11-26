@@ -75,7 +75,7 @@ The guide stays in the bottom right corner as a small card. At each step it says
 - **Split view (Ctrl+\\):** shows two pages side by side, e.g. the circuit and the PCB together.
 - **Detach:** **Window → Move this page to a separate window** moves a page to a second window (e.g. a second monitor).
 - **Focus mode:** **View → Focus mode** hides the navigation rail.
-- **Moving panels (world):** on the world page, drag the palette, the inspector or a bottom tab by its header into its own window; drop the window on an edge to dock it left, right or in the bottom panel. The layout is kept. See [World → Arranging the panels](07-world.md#arranging-the-panels).
+- **Moving, minimizing and tearing off panels:** on the world, circuit and PCB pages the side panels (palette, part library, properties, inspector) and the bottom tabs tear off into their own window when dragged by their header; drop the window on an edge to dock it left, right or in the bottom panel. The **Minimize** button in a header folds that side into a thin strip with the panels' names at the edge (as in Visual Studio); a click on the strip opens it again. **Ctrl+Space** is full view: every panel steps aside and the canvas takes the whole window; pressing it again brings the panels back as they were. The layout is kept. See [World → Arranging the panels](07-world.md#arranging-the-panels).
 - **Full screen (F11):** leave with **Esc** or **F11**.
 - **Interface scale:** **View → Interface scale**, 75–150 %.
 

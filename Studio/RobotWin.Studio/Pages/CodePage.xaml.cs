@@ -773,6 +773,8 @@ namespace RobotWin.Studio.Pages
             BuildLog.Text = result.Log;
             _diagnostics = result.Diagnostics.Select(d => d.File == "sketch.ino" ? new CodeDiagnostic(d.Line, d.Column, d.IsError, d.Message, folder.MainFile) : d).ToList();
             ShowDiagnostics();
+            _builtTitle = folder.Title;
+            Shell.ProblemsHub.Notify();   // [problems]
             Problems.ItemsSource = _diagnostics.Count > 0 ? _diagnostics : (System.Collections.IEnumerable)new[] { result.Success ? "Hata yok." : "Derleme başarısız (günlüğe bakın)." };
             if (result.Success && result.Hex != null)
             {
@@ -820,6 +822,24 @@ namespace RobotWin.Studio.Pages
         }
 
         private void ShowDiagnostics() => Editor.Diagnostics = _diagnostics.Where(d => d.File == _file).ToList();
+
+        /// <summary>[problems] The code whose build the diagnostics belong to; null before any build.</summary>
+        private string? _builtTitle;
+
+        /// <summary>[problems] The code's share of the Problems panel: the last build's errors and warnings; null before any build.</summary>
+        public Shell.AreaReport? CodeProblems()
+        {
+            if (_builtTitle == null) return null;
+            var r = new Shell.AreaReport();
+            foreach (var d in _diagnostics)
+            {
+                var at = d;
+                r.Problems.Add(new Shell.Problem(Shell.ProblemsHub.Code, d.IsError ? Shell.ProblemLevel.Error : Shell.ProblemLevel.Warning,
+                    $"{_builtTitle} · {d.File}:{d.Line}", d.Message, () => GoTo(at)));
+            }
+
+            return r;
+        }
 
         private void GoTo(CodeDiagnostic d)
         {

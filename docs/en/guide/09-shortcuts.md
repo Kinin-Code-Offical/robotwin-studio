@@ -36,6 +36,7 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | F5 | Start / pause / resume the simulation |
 | Shift+F5 | Stop the simulation |
 | F10 | Menu bar |
+| Ctrl+Space | Full view: hide / bring back the panels |
 | F11 | Full screen (Esc leaves it) |
 | Alt+F4 | Exit |
 

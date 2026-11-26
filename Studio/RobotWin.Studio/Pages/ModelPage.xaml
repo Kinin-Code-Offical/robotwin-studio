@@ -61,7 +61,7 @@
                     <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="8,0"/>
                     <Button Style="{StaticResource Btn.Ghost}" Padding="8,0" MinHeight="28" Click="OnAddMenu" ToolTip="Ekle (Shift+A)">
                         <StackPanel Orientation="Horizontal">
-                            <t:Icon Data="{StaticResource I.Plus}" Size="14"/>
+                            <t:Icon Data="{StaticResource I.Plus}" Size="16"/>
                             <TextBlock Text="Ekle" Margin="6,0,0,0" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>

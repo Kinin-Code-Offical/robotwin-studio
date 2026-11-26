@@ -25,6 +25,16 @@ namespace RobotWin.Studio.Pages
         {
             _shell = shell;
             InitializeComponent();
+            // [align] the cards share the row's width: as many 168 px columns as fit, then stretched so no strip is left empty
+            Resources["Lib.CardWidth"] = 168.0;
+            PartGrid.SizeChanged += (_, _) =>
+            {
+                double avail = PartGrid.ActualWidth - 26;   // the list's padding and scroll bar
+                if (avail <= 0) return;
+                const double gap = 8, min = 168;
+                int cols = Math.Max(1, (int)((avail + gap) / (min + gap)));
+                Resources["Lib.CardWidth"] = Math.Floor((avail + gap) / cols - gap);
+            };
             Subtitle.Text = $"{Lib.Presets.Count} gerçek parça · {Lib.Parts.Count()} simülasyon modeli · {Lib.Categories.Count()} kategori. Her parçanın elektriksel modeli, PCB kılıfı ve bacak eşleşmesi var.";
             BuildCategoryChips();
 
@@ -171,16 +181,16 @@ namespace RobotWin.Studio.Pages
             Detail.Children.Add(new TextBlock { Text = preset.Description, Style = (Style)FindResource("Text.Body"), Margin = new Thickness(0, 6, 0, 16), TextWrapping = TextWrapping.Wrap });
             AddSpecTable(def, parameters);
 
-            var place = new Button { Style = (Style)FindResource("Btn.Primary"), Content = "Devreye ekle", Padding = new Thickness(18, 8, 18, 8) };
+            var place = new Button { Style = (Style)FindResource("Btn.Primary"), Content = "Devreye ekle", Margin = new Thickness(0, 0, 8, 8) };   // [align] the same height and spacing as its neighbours
             place.Click += (_, _) => _shell.PlacePart(preset.Id);
-            var derive = new Button { Content = "Bundan yeni parça", Margin = new Thickness(8, 0, 0, 0), ToolTip = "Aynı simülasyon modeliyle kendi parametrelerinizle bir parça oluşturun (.rwpart)" };
+            var derive = new Button { Content = "Bundan yeni parça", Margin = new Thickness(0, 0, 8, 8), ToolTip = "Aynı simülasyon modeliyle kendi parametrelerinizle bir parça oluşturun (.rwpart)" };
             derive.Click += (_, _) => ShowEditor(preset);
             var actions = new WrapPanel(); // [libs] wraps when a part has more actions
             actions.Children.Add(place);
             actions.Children.Add(derive);
             if (UserLibrary.PartIds.Contains(preset.Id))
             {
-                var export = new Button { Content = "Dışa aktar", Margin = new Thickness(8, 0, 0, 0), ToolTip = "Bu parçayı .rwpart dosyası olarak kaydet" };
+                var export = new Button { Content = "Dışa aktar", Margin = new Thickness(0, 0, 8, 8), ToolTip = "Bu parçayı .rwpart dosyası olarak kaydet" };
                 export.Click += (_, _) => ExportPart(preset);
                 actions.Children.Add(export);
             }

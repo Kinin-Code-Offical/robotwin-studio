@@ -218,6 +218,7 @@ namespace RobotWin.Studio
             Command("tabs.next", "Sekmeler", "Sonraki sekme", "Ctrl+Tab", () => CycleTab(1));
             Command("tabs.previous", "Sekmeler", "Önceki sekme", "Ctrl+Shift+Tab", () => CycleTab(-1));
             Command("view.fullscreen", "Görünüm", "Tam ekran", "F11", ToggleFullScreen);
+            Command("view.fullview", "Görünüm", "Tam görünüm: panelleri gizle / geri getir", "Ctrl+Space", ToggleFullView);   // [dock-min]
             Command("view.split", "Görünüm", "Bölünmüş görünüm", "Ctrl+\\, Ctrl+<", ToggleSplit);
             PreviewKeyDown += (_, e) =>
             {

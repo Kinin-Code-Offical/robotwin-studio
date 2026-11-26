@@ -4,10 +4,12 @@
              xmlns:t="clr-namespace:RobotWin.Studio.Theme"
              xmlns:pcb="clr-namespace:RobotWin.Studio.Pcb"
              Background="{DynamicResource B.Base}">
-    <Grid>
+    <Grid x:Name="PageRoot">
         <Grid.RowDefinitions>
             <RowDefinition Height="44"/>
             <RowDefinition Height="*"/>
+            <RowDefinition x:Name="DockLineRow" Height="0"/>
+            <RowDefinition x:Name="DockRow" Height="0"/>
         </Grid.RowDefinitions>
 
         <!-- Toolbar: labels, then icons only, then an overflow menu as the page narrows (see ApplyToolbarLevel). -->
@@ -20,7 +22,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel x:Name="ToolbarLeft" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button x:Name="AddPartButton" Click="OnAddPart" ToolTip="Kütüphaneden doğrudan karta parça yerleştir (şemaya da eklenir)">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Plus}" Size="14"/><TextBlock Text="Parça ekle" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Plus}" Size="16"/><TextBlock Text="Parça ekle" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
                     <Popup x:Name="AddPartPopup" StaysOpen="False" Placement="Bottom" PlacementTarget="{Binding ElementName=AddPartButton}" AllowsTransparency="True">
                         <Border Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="8" Width="380">
@@ -31,43 +33,43 @@
                         </Border>
                     </Popup>
                     <Button x:Name="SyncButton" Click="OnSync" Margin="6,0,0,0" ToolTip="Şematikteki değişiklikleri karta aktar (yerleşim korunur)">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Reset}" Size="14"/><TextBlock Text="Güncelle" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Reset}" Size="16"/><TextBlock Text="Güncelle" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
                     <Button x:Name="PlaceButton" Click="OnPlace" Margin="6,0,0,0" ToolTip="Bağlantılara göre otomatik yerleşim (kilitli parçalar yerinde kalır)">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Place}" Size="14"/><TextBlock Text="Yerleştir" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Place}" Size="16"/><TextBlock Text="Yerleştir" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
                     <Button x:Name="AutoRouteButton" Click="OnRoute" Margin="6,0,0,0" ToolTip="Otomatik rota: tüm katmanlarda A* labirent, hat sınıfı genişlik ve boşlukları, iç düzlemlere via">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Route}" Size="14"/><TextBlock Text="Rota çiz" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Route}" Size="16"/><TextBlock Text="Rota çiz" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
                     <Button x:Name="DrcButton" Click="OnDrc" Margin="6,0,0,0" ToolTip="Tasarım kural denetimi (hat sınıfı boşlukları, halka, delik, kenar, serigrafi, bağlantı, dolgu, akım)">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Drc}" Size="14"/><TextBlock Text="DRC" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Drc}" Size="16"/><TextBlock Text="DRC" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
                     <Border x:Name="Sep1" Width="1" Height="22" Background="{DynamicResource B.Border}" Margin="10,0"/>
                     <Ellipse x:Name="ActiveLayerDot" Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <ComboBox x:Name="ActiveLayerBox" Width="118" SelectionChanged="OnActiveLayerPick" ToolTip="Etkin bakır katmanı (PgUp/PgDn)"/>
                     <Button x:Name="FillButton" Click="OnFillZones" Margin="6,0,0,0" ToolTip="Tüm dolgu alanlarını yeniden doldur">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Fill}" Size="14"/><TextBlock Text="Doldur" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Fill}" Size="16"/><TextBlock Text="Doldur" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
                     <ToggleButton x:Name="View3DToggle" Style="{StaticResource Chip}" Content="3D" Margin="8,0,0,0" Click="OnToggle3D" ToolTip="Kartı ve parçaları 3D gösterir; simülasyon sırasında LED'ler yanar, ısınan parçalar kızarır"/>
                 </StackPanel>
                 <StackPanel x:Name="ToolbarRight" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Button Style="{StaticResource Btn.Icon}" ToolTip="Sığdır (F)" Click="OnFit"><t:Icon Data="{StaticResource I.ZoomFit}"/></Button>
+                    <Button Style="{StaticResource Btn.Icon}" ToolTip="Sığdır (F)" Click="OnFit"><t:Icon Data="{StaticResource I.ZoomFit}" Size="16"/></Button>
                     <Button x:Name="SetupButton" Margin="6,0,0,0" Click="OnBoardSetup" ToolTip="Kart ayarları: katman sayısı (2/4/6), kalınlık, bakır ağırlıkları, dielektrik, kör/gömülü via, üretim kuralları">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Stackup}" Size="14"/><TextBlock Text="Kart ayarları" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Stackup}" Size="16"/><TextBlock Text="Kart ayarları" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
                     <Button x:Name="FootprintButton" Margin="6,0,0,0" Click="OnFootprintEditor" ToolTip="Footprint düzenleyici: SMD/THT pedler, serigrafi, courtyard, fab; kullanıcı kütüphanesine kaydet">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Chip}" Size="14"/><TextBlock Text="Footprint" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Chip}" Size="16"/><TextBlock Text="Footprint" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
                     <Button x:Name="ModuleButton" Margin="6,0,0,0" Click="OnSaveAsModule" ToolTip="Bu kartı kütüphaneye modül parça olarak kaydet: başka devrelere tek parça olarak eklenir, içi tam simüle edilir">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Part}" Size="14"/><TextBlock Text="Modül yap" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Part}" Size="16"/><TextBlock Text="Modül yap" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
                     <Button x:Name="KiCadButton" Margin="6,0,0,0" Click="OnExportKiCad" ToolTip="KiCad 8 projesi: .kicad_pro (hat sınıfları), .kicad_sch, .kicad_pcb (tüm katmanlar, yığın, dolgular), netlist, kütüphaneler, SPICE ve Gerber">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Export}" Size="14"/><TextBlock Text="KiCad'e aktar" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Export}" Size="16"/><TextBlock Text="KiCad'e aktar" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
                     <Button x:Name="KiCadInButton" Margin="6,0,0,0" Click="OnImportKiCadLayout" ToolTip="KiCad'de düzenlenen kartın yerleşimini ve yollarını geri al: önce neyin değiştiği listelenir (taşınan, döndürülen parçalar, hat hat yollar, dolgular, delikler), sonra istenirse uygulanır">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Import}" Size="14"/><TextBlock Text="KiCad'den al" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Import}" Size="16"/><TextBlock Text="KiCad'den al" Margin="7,0,0,0" Tag="label"/></StackPanel>
                     </Button>
-                    <Button x:Name="OverflowButton" Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" Click="OnOverflow" ToolTip="Diğer işlemler" Visibility="Collapsed"><t:Icon Data="{StaticResource I.More}"/></Button>
+                    <Button x:Name="OverflowButton" Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" Click="OnOverflow" ToolTip="Diğer işlemler" Visibility="Collapsed"><t:Icon Data="{StaticResource I.More}" Size="16"/></Button>
                     <Popup x:Name="OverflowPopup" StaysOpen="False" Placement="Bottom" PlacementTarget="{Binding ElementName=OverflowButton}" AllowsTransparency="True">
                         <Border Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="6" MinWidth="200">
                             <StackPanel x:Name="OverflowList"/>
@@ -75,11 +77,11 @@
                     </Popup>
                     <Button x:Name="ExportButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="32" Margin="8,0,0,0" Click="OnExport" ToolTip="Üretim dosyaları: tüm bakır katmanlarının Gerber'i, maske, pasta, serigrafi, kenar, PTH/NPTH/kör delikler, BOM ve dizgi (CPL)">
                         <StackPanel Orientation="Horizontal">
-                            <t:Icon Data="{StaticResource I.Export}" Size="15" Foreground="{DynamicResource B.OnPrimary}"/>
+                            <t:Icon Data="{StaticResource I.Export}" Size="16" Foreground="{DynamicResource B.OnPrimary}"/>
                             <TextBlock Text="Üretim" Margin="7,0,0,0" Foreground="{DynamicResource B.OnPrimary}" Tag="label"/>
                         </StackPanel>
                     </Button>
-                    <ToggleButton x:Name="PanelToggle" Style="{StaticResource Toggle.Tool}" Width="32" Height="30" Margin="6,0,0,0" Click="OnPanelToggle" ToolTip="Özellik panelini göster/gizle" Visibility="Collapsed">
+                    <ToggleButton x:Name="PanelToggle" Style="{StaticResource Toggle.Tool}" Width="32" Height="30" Margin="6,0,0,0" Click="OnPanelToggle" ToolTip="Özellik panelini göster / gizle (başlığından küçültülür, taşınır ya da ayrı pencereye alınır)" IsChecked="True">
                         <t:Icon Data="{StaticResource I.Panel}" Size="16"/>
                     </ToggleButton>
                 </StackPanel>
@@ -87,11 +89,14 @@
         </Border>
 
         <Grid x:Name="ContentGrid" Grid.Row="1">
+            <!-- [dock-min] tool strip | left dock | split | board | split | right dock (Shell/DockManager.cs) -->
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="44"/>
+                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="0"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition x:Name="SplitColumn" Width="1"/>
-                <ColumnDefinition x:Name="PanelColumn" Width="320"/>
+                <ColumnDefinition Width="1"/>
+                <ColumnDefinition Width="320"/>
             </Grid.ColumnDefinitions>
 
             <!-- Tool strip -->
@@ -109,9 +114,9 @@
                 </StackPanel>
             </Border>
 
-            <pcb:BoardCanvas x:Name="Canvas" Grid.Column="1"/>
-            <pcb:Board3DView x:Name="View3D" Grid.Column="1" Visibility="Collapsed"/>
-            <Border x:Name="StatusBar" Grid.Column="1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="120,0,10,6" IsHitTestVisible="False">
+            <pcb:BoardCanvas x:Name="Canvas" Grid.Column="3"/>
+            <pcb:Board3DView x:Name="View3D" Grid.Column="3" Visibility="Collapsed"/>
+            <Border x:Name="StatusBar" Grid.Column="3" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="120,0,10,6" IsHitTestVisible="False">
                 <DockPanel LastChildFill="True">
                     <TextBlock x:Name="CursorText" DockPanel.Dock="Right" Style="{StaticResource Text.Mono}" FontSize="12" Foreground="{DynamicResource B.TextMuted}" Margin="12,0,0,0"/>
                     <TextBlock x:Name="HintText" Style="{StaticResource Text.Caption}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right"/>
@@ -119,9 +124,9 @@
             </Border>
 
             <!-- F1 / ? shortcut overlay -->
-            <Border x:Name="HelpOverlay" Grid.Column="1" Visibility="Collapsed" Background="{DynamicResource B.ScrimSoft}" MouseLeftButtonUp="OnHelpClose" Cursor="Hand">
+            <Border x:Name="HelpOverlay" Grid.Column="3" Visibility="Collapsed" Background="{DynamicResource B.ScrimSoft}" MouseLeftButtonUp="OnHelpClose" Cursor="Hand">
                 <Border Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="10"
-                        HorizontalAlignment="Center" VerticalAlignment="Center" Padding="22,18" Margin="16" MaxWidth="900" Effect="{StaticResource E.Popup}">
+                        HorizontalAlignment="Center" VerticalAlignment="Center" Padding="22,18" Margin="16" MaxWidth="900">
                     <DockPanel>
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                             <TextBlock DockPanel.Dock="Right" Text="F1 / ? / Esc: kapat" Style="{StaticResource Text.Caption}" VerticalAlignment="Center"/>
@@ -134,8 +139,7 @@
                 </Border>
             </Border>
 
-            <Border x:Name="Splitter" Grid.Column="2" Background="{DynamicResource B.Border}"/>
-            <Border x:Name="SidePanel" Grid.Column="3" Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0">
+            <Border x:Name="SidePanel" Grid.Column="5" Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0">
                 <TabControl x:Name="Tabs">
                     <TabItem Header="Kart">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -209,5 +213,11 @@
                 </TabControl>
             </Border>
         </Grid>
+
+        <!-- [dock-min] the dock manager's bottom row (the PCB has no bottom tabs yet: it stays closed) -->
+        <DockPanel x:Name="BottomArea" Grid.Row="3" Visibility="Collapsed">
+            <StackPanel x:Name="DockTabs" DockPanel.Dock="Top" Orientation="Horizontal"/>
+            <Grid x:Name="DockHost"/>
+        </DockPanel>
     </Grid>
 </UserControl>

@@ -156,7 +156,6 @@ namespace RobotWin.Studio.Modeling
                 BorderBrush = R<Brush>("B.BorderStrong"),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(14),
-                Effect = R<System.Windows.Media.Effects.Effect>("E.Popup"),
                 Child = root
             };
             head.MouseLeftButtonDown += (_, e) =>

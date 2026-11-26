@@ -274,7 +274,6 @@ namespace RobotWin.Studio.Modeling
                 BorderBrush = (Brush)Application.Current.FindResource("B.BorderStrong"),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(12),
-                Effect = (System.Windows.Media.Effects.Effect)Application.Current.FindResource("E.Popup"),
                 Child = panel
             };
             card.MouseLeftButtonDown += (_, e) =>

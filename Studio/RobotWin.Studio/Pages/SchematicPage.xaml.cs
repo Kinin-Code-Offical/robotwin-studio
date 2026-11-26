@@ -1127,15 +1127,15 @@ namespace RobotWin.Studio.Pages
         private void OnToggleLibrary(object sender, RoutedEventArgs e)
         {
             _libraryOpen = LibraryToggle.IsChecked == true;
-            if (_narrow == true && _libraryOpen) _inspectorOpen = false;
-            ApplyLayout(force: true);
+            if (_narrow == true && _libraryOpen) _dock?.SetVisible("inspector", false);
+            _dock?.SetVisible("library", _libraryOpen);   // [dock-min] wherever it is docked, minimized or not
         }
 
         private void OnToggleInspector(object sender, RoutedEventArgs e)
         {
             _inspectorOpen = InspectorToggle.IsChecked == true;
-            if (_narrow == true && _inspectorOpen) _libraryOpen = false;
-            ApplyLayout(force: true);
+            if (_narrow == true && _inspectorOpen) _dock?.SetVisible("library", false);
+            _dock?.SetVisible("inspector", _inspectorOpen);
         }
 
         /// <summary>
@@ -1150,9 +1150,10 @@ namespace RobotWin.Studio.Pages
             bool narrow = width < NarrowWidth;
             if (_narrow != narrow)
             {
-                // Crossing the threshold resets the panels to the default for that width.
-                _libraryOpen = !narrow;
-                _inspectorOpen = !narrow;
+                // Crossing the threshold resets the panels to the default for that width; the first layout keeps what was saved.
+                bool first = _narrow == null;
+                _libraryOpen = first && _dock != null ? _dock.PlaceOf("library") != DockPlace.Hidden && !narrow : !narrow;
+                _inspectorOpen = first && _dock != null ? _dock.PlaceOf("inspector") != DockPlace.Hidden && !narrow : !narrow;
                 _narrow = narrow;
             }
             else if (!force)
@@ -1160,41 +1161,12 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            LibraryToggle.IsChecked = _libraryOpen;
-            InspectorToggle.IsChecked = _inspectorOpen;
-            void Dock(Border host, Border split, ColumnDefinition col, ColumnDefinition splitCol, int column, bool open, double size, HorizontalAlignment side)
+            // [dock-min] the library and the inspector are dock panels: shown, hidden, minimized or torn off through the dock manager
+            if (_dock != null)
             {
-                if (narrow)
-                {
-                    col.MinWidth = 0;
-                    col.Width = new GridLength(0);
-                    splitCol.Width = new GridLength(0);
-                    split.Visibility = Visibility.Collapsed;
-                    Grid.SetColumn(host, 2);
-                    host.HorizontalAlignment = side;
-                    host.Width = Math.Min(size, width * 0.8);
-                    host.BorderBrush = (Brush)FindResource("B.BorderStrong");
-                    host.BorderThickness = side == HorizontalAlignment.Left ? new Thickness(0, 0, 1, 0) : new Thickness(1, 0, 0, 0);
-                    host.Effect = (System.Windows.Media.Effects.Effect)FindResource("E.Popup");
-                    host.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-                }
-                else
-                {
-                    Grid.SetColumn(host, column);
-                    host.HorizontalAlignment = HorizontalAlignment.Stretch;
-                    host.Width = double.NaN;
-                    host.BorderThickness = new Thickness(0);
-                    host.Effect = null;
-                    host.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-                    split.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-                    splitCol.Width = new GridLength(open ? 1 : 0);
-                    col.MinWidth = open ? 200 : 0;
-                    col.Width = new GridLength(open ? size : 0);
-                }
+                _dock.SetVisible("library", _libraryOpen);
+                _dock.SetVisible("inspector", _inspectorOpen);
             }
-
-            Dock(LibraryHost, LibrarySplit, LibraryColumn, LibrarySplitColumn, 0, _libraryOpen, 272, HorizontalAlignment.Left);
-            Dock(InspectorHost, InspectorSplit, InspectorColumn, InspectorSplitColumn, 4, _inspectorOpen, 288, HorizontalAlignment.Right);
 
             // The toolbar and the instrument dock compress too.
             EditTools.Visibility = width < 820 ? Visibility.Collapsed : Visibility.Visible;

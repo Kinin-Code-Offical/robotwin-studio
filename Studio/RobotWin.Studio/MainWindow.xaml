@@ -141,7 +141,7 @@
                     <Button x:Name="WorkspaceButton" Style="{StaticResource Btn.Icon}" Width="Auto" Height="42" Padding="10,0" Margin="0,0,4,0" Click="OnWorkspaceMenu"
                             ToolTip="Çalışma alanı: göreve hazır yerleşimler ve kaydettikleriniz">
                         <StackPanel Orientation="Horizontal">
-                            <t:Icon Data="{StaticResource I.Panel}" Size="14"/>
+                            <t:Icon Data="{StaticResource I.Panel}" Size="15"/>
                             <TextBlock x:Name="WorkspaceLabel" Text="Çalışma alanı" Margin="7,0,5,0" VerticalAlignment="Center" FontSize="12"/>
                             <t:Icon Data="{StaticResource I.ChevronDown}" Size="10"/>
                         </StackPanel>
@@ -163,7 +163,7 @@
                         <t:Icon Data="{StaticResource I.Minimize}" Size="14"/>
                     </Button>
                     <Button x:Name="MaxButton" Style="{StaticResource Btn.Icon}" Width="44" Height="42" Click="OnMaximize" ToolTip="Ekranı kapla (üzerine gelince Windows yerleşim düzenleri)">
-                        <t:Icon x:Name="MaxIcon" Data="{StaticResource I.Maximize}" Size="13"/>
+                        <t:Icon x:Name="MaxIcon" Data="{StaticResource I.Maximize}" Size="14"/>
                     </Button>
                     <Button x:Name="CloseButton" Width="44" Height="42" Click="OnCloseClick" ToolTip="Kapat">
                         <Button.Style>

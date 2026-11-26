@@ -429,6 +429,17 @@ namespace RobotWin.Studio
                     File.AppendAllLines(contrastPath, lines.Distinct());
                 }
 
+                // [align] --align-report file: icons and labels out of line, toolbar rows of uneven centres, heights or icon sizes
+                if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--align-report").Skip(1).FirstOrDefault() is { } alignPath)
+                {
+                    var lines = new System.Collections.Generic.List<string>();
+                    foreach (var source in PresentationSource.CurrentSources.OfType<PresentationSource>().ToList())
+                        if (source.RootVisual is { } rootVisual)
+                            lines.AddRange(Shell.AlignAudit.Find(rootVisual).Select(f => Shell.AlignAudit.Line(f, page + (fault != null ? ":" + fault : string.Empty))));
+                    lines.AddRange(Shell.AlignAudit.IconCentres(Application.Current.Resources));
+                    File.AppendAllLines(alignPath, lines.Distinct());
+                }
+
                 // [lang] --lang-missing file: the page's texts the pack leaves in Turkish, added to the file (one per line).
                 if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--lang-missing").Skip(1).FirstOrDefault() is { } missingPath)
                 {
