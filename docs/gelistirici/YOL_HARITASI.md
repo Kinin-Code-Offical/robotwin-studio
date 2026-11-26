@@ -100,7 +100,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - kutu ile çakışma;
   - Gerber'in ikinci bir görüntüleyiciyle karşılaştırılması.
 - [~] **Gömülü yazılım:** Uno/Nano AVR emülatörü ve hata ayıklayıcı var. Eksikler:
-  - [~] register ve zaman çizelgesi: hata ayıklayıcıda **Yazmaçlar** sekmesi (`AvrRegisters`, yan etkisiz okuma `Atmega328P.Peek`); sırada pin ve kesme zaman çizelgesi;
+  - [x] register ve zaman çizelgesi: hata ayıklayıcıda **Yazmaçlar** sekmesi (`AvrRegisters`, yan etkisiz okuma `Atmega328P.Peek`) ve **Zaman çizelgesi** sekmesi (`McuTrace`: pin kenarları ve kesme giriş/RETI'leri çevrim damgasıyla, halka bellekte; `TimelineView`);
   - [~] protokol analizörleri: osiloskopta UART, I²C ve SPI çözücü (`Instruments/ProtocolDecoder.cs`). AVR'nin USART'ı TX pinini (D1) bit bit sürüyor. Sırada: RX pininden elektriksel alma, hata enjeksiyonu;
   - ESP32'nin iki çalışma modu (plan: [ESP32_MODLARI.md](ESP32_MODLARI.md)):
     - [x] 1. Çalışma modu ayarı (kart başına, dosyada) + araç zinciri yöneticisi (`arduino-cli` ile RobotWin'in klasörüne Arduino-ESP32 3.3.13) + donanım derlemesi (`.bin`, `.elf`) + karta yükleme (`esptool`) + birleşik imaj; `--esp32-build`, `--esp32-compat`.

@@ -831,7 +831,7 @@ namespace RobotWin.Studio
             if (page == "code") _code.SnapshotBuildAndRun(fault);
             if (fault == "montaj-e2e" && App.SnapshotPath != null) RunMontajCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [assembly]
             if (fault == "guide") StartGuide();   // [guide] the card at its first step
-            if ((fault == "debug-e2e" || fault == "debug-registers") && App.SnapshotPath != null) RunDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"), fault == "debug-registers");   // [debug]
+            if (fault is "debug-e2e" or "debug-registers" or "debug-timeline" && App.SnapshotPath != null) RunDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"), fault.Substring("debug-".Length));   // [debug]
             if (fault == "tabs" && App.SnapshotPath != null) RunTabsCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [tabs]
             if (fault == "keys" && App.SnapshotPath != null) RunKeysCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [keys]
             if (fault == "debug-e2e-circuit" && App.SnapshotPath != null) RunCircuitDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));
@@ -886,7 +886,7 @@ namespace RobotWin.Studio
                 NewWorld(WorldDocument.Load(fault.Split('#')[0]));
                 _world.PrepareSavedWorldSnapshot(fault.Contains('#') ? fault.Split('#')[1] : null, simulate);
             }
-            else if (page == "world" && fault != "debug-e2e" && fault != "debug-registers") _world.PrepareSnapshot(fault, simulate);
+            else if (page == "world" && fault is not ("debug-e2e" or "debug-registers" or "debug-timeline")) _world.PrepareSnapshot(fault, simulate);
             if (page == "help") _help?.PrepareSnapshot(fault);
 
             if (page == "schematic" && simulate != null && double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds))

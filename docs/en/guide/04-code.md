@@ -158,7 +158,13 @@ You can follow Arduino Uno and Nano code line by line. When the board reaches a 
      - on the left, the core: PC, SP, SREG's flags (`I-----Z-`), the X/Y/Z pointers, R0–R31 and the cycle count;
      - on the right, the peripherals' registers by name, grouped (ports, timers, interrupts, ADC, USART, SPI, TWI, EEPROM): value, binary, address and the names of the bits that are set (`RXC0 UDRE0` in `UCSR0A`, say). A 16-bit pair (TCNT1, OCR1A, UBRR0, ADC, SP) is also given as one number;
      - values that changed since the last look are orange, so you see at a glance what a step did to the hardware;
-     - looking does not touch the hardware: a real read takes the byte out of UDR0, latches TCNT1's high byte and clears SPIF; this one does none of that.
+     - looking does not touch the hardware: a real read takes the byte out of UDR0, latches TCNT1's high byte and clears SPIF; this one does none of that;
+   - the **Timeline** tab is a logic analyzer clipped onto the chip:
+     - from the program's first instruction it records every level change of every pin (outputs when the program writes them, inputs when the circuit drives them) and every interrupt's entry and `RETI`, to the cycle;
+     - each pin that moves or drives is a trace, each interrupt serviced (`TIMER0_OVF`, `USART_UDRE`, `INT0`…) a row with a bar for each run of its handler;
+     - the right column measures: a pin's last full period and its high time (`56.6 Hz · high 1.03 ms`), an interrupt's count and longest run (`19× · longest 5.9 µs`);
+     - the wheel zooms around the pointer, dragging scrolls back, a double click returns to now; the pointer's time is read out at the top;
+     - PWM pins driven by a timer are not edges here (the hardware toggles them without the program): their row gives the frequency and duty they have now. While the TWI is on, A4/A5 are not traced bit by bit.
 4. Go on from there:
 
 | Button | Shortcut | What it does |

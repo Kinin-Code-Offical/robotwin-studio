@@ -268,6 +268,7 @@ namespace RobotTwin.CoreSim.Firmware
             int vector = PendingVector();
             if (vector < 0) return false;
             AcknowledgeInterrupt(vector);
+            Trace?.Add(new TraceEvent(Cycles, TraceKind.Enter, (byte)vector, false));
             _sleeping = false;
             PushPc(_pc);
             _i = false;
@@ -684,7 +685,7 @@ namespace RobotTwin.CoreSim.Firmware
             switch (op)
             {
                 case 0x9508: _pc = PopPc(); return 4;                         // RET
-                case 0x9518: _pc = PopPc(); _i = true; _interruptInhibit = 1; return 4; // RETI
+                case 0x9518: _pc = PopPc(); _i = true; _interruptInhibit = 1; Trace?.Add(new TraceEvent(Cycles, TraceKind.Return, 0, false)); return 4; // RETI
                 case 0x9588: if ((_d[0x53] & 1) != 0) _sleeping = true; return 1;     // SLEEP
                 case 0x9598: return 1;                                         // BREAK
                 case 0x95A8: _wdtCounter = 0; return 1;                        // WDR

@@ -328,9 +328,36 @@ namespace RobotTwin.CoreSim.Firmware
                 if (isc == 1 || (isc == 2 && was && !now) || (isc == 3 && !was && now)) _d[EIFR] |= (byte)(1 << n);
             }
 
+            if (Trace != null) TracePins(b, c, d);
             _lastPinB = b;
             _lastPinC = c;
             _lastPinD = d;
+        }
+
+        /// <summary>[timeline] The pin and interrupt recorder, once <see cref="StartTrace"/> has been called.</summary>
+        public McuTrace? Trace { get; private set; }
+
+        /// <summary>[timeline] Starts recording pin edges and interrupts (from the pins' levels now); keeps a running trace.</summary>
+        public McuTrace StartTrace(int capacity = 32768)
+        {
+            if (Trace != null) return Trace;
+            var levels = new bool[PinCount];
+            for (int pin = 0; pin < PinCount; pin++) levels[pin] = PinLevel(_lastPinB, _lastPinC, _lastPinD, pin);
+            Trace = new McuTrace(Cycles, levels, capacity);
+            return Trace;
+        }
+
+        private static bool PinLevel(byte b, byte c, byte d, int pin) =>
+            pin < 8 ? (d & (1 << pin)) != 0 : pin < 14 ? (b & (1 << (pin - 8))) != 0 : (c & (1 << (pin - 14))) != 0;
+
+        private void TracePins(byte b, byte c, byte d)
+        {
+            if (b == _lastPinB && c == _lastPinC && d == _lastPinD) return;
+            for (int pin = 0; pin < PinCount; pin++)
+            {
+                bool now = PinLevel(b, c, d, pin);
+                if (now != PinLevel(_lastPinB, _lastPinC, _lastPinD, pin)) Trace!.Add(new TraceEvent(Cycles, TraceKind.Pin, (byte)pin, now));
+            }
         }
 
         // ================================================================ interrupts

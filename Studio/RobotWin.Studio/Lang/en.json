@@ -7833,7 +7833,14 @@
   "Kesmeler": "Interrupts",
   "Kart çalışırken ATmega328P'nin yazmaçları burada görünür; bir kesme noktasında durduğunda o anki değerleriyle.": "While the board runs, the ATmega328P's registers show here; when it stops at a breakpoint, with their values at that instant.",
   "Değerler kartın durduğu andan; turuncu: son bakıştan beri değişen. Bakmak donanımı etkilemez (UDR0'daki bayt alınmaz, sayaç kilitlenmez).": "Values from the instant the board stopped; orange: changed since the last look. Looking does not touch the hardware (the byte in UDR0 is not taken, no counter is latched).",
-  "Değerler çalışırken okunuyor; turuncu: son bakıştan beri değişen. Bakmak donanımı etkilemez (UDR0'daki bayt alınmaz, sayaç kilitlenmez).": "Values read while it runs; orange: changed since the last look. Looking does not touch the hardware (the byte in UDR0 is not taken, no counter is latched)."
+  "Değerler çalışırken okunuyor; turuncu: son bakıştan beri değişen. Bakmak donanımı etkilemez (UDR0'daki bayt alınmaz, sayaç kilitlenmez).": "Values read while it runs; orange: changed since the last look. Looking does not touch the hardware (the byte in UDR0 is not taken, no counter is latched).",
+  "Zaman çizelgesi": "Timeline",
+  "şimdi": "now",
+  "sabit yüksek": "steady high",
+  "sabit düşük": "steady low",
+  "1 kenar": "1 edge",
+  "Kart çalışırken pinleri ve kesmeleri burada bir mantık analizörü gibi görürsünüz.": "While the board runs, its pins and interrupts show here as on a logic analyzer.",
+  "Bu pencerede değişen pin ya da kesme yok: tekerlekle uzaklaştırın.": "No pin or interrupt changed in this window: zoom out with the wheel."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11023,6 +11030,11 @@
   "'{0}' grubu eklendi": "'{0}' group added",
   "Sapma  {0} mm · yükten {1} mm": "Sag    {0} mm · from the load {1} mm",
   "Sapma  {0} mm": "Sag    {0} mm",
-  "{0} çevrim · t = {1} s": "{0} cycles · t = {1} s"
+  "{0} çevrim · t = {1} s": "{0} cycles · t = {1} s",
+  "{0} kenar": "{0} edges",
+  "{0}× · en uzun {1}": "{0}× · longest {1}",
+  "{0} · yüksek {1}": "{0} · high {1}",
+  "PWM {0} Hz · %{1} (şimdi)": "PWM {0} Hz · {1}% (now)",
+  "Pencere {0} · sağ kenar t = {1} s · tekerlek yakınlaştırır, sürükleme geri kaydırır, çift tık şimdiye döner": "Window {0} · right edge t = {1} s · the wheel zooms, dragging scrolls back, a double click returns to now"
  }
 }

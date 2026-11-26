@@ -104,9 +104,10 @@ namespace RobotWin.Studio
         /// --snapshot --fault debug-e2e: the servo arm's code is built and loaded through the real app, a breakpoint goes on
         /// "angle += step;", the world runs until the Uno reaches it, then a step and a continue. Checks that the world stopped
         /// at the program's instant, the line, the variables, the step's line and the next stop's values; leaves it stopped.
-        /// The Yazmaçlar tab is checked at the stops too; with --fault debug-registers it is the tab left in front.
+        /// The Yazmaçlar and Zaman çizelgesi tabs are checked at the stops too; --fault debug-registers / debug-timeline
+        /// leaves that tab in front.
         /// </summary>
-        internal async void RunDebugCheck(string logPath, bool registers = false)
+        internal async void RunDebugCheck(string logPath, string front = "e2e")
         {
             var log = new StringBuilder();
             int failures = 0;
@@ -182,6 +183,14 @@ namespace RobotWin.Studio
                     var (core, regs, _) = _code.RegistersShown();
                     Check(core.StartsWith("PC 0x", StringComparison.Ordinal) && core.Contains("SREG 0x", StringComparison.Ordinal) && regs > 60, $"Yazmaçlar: {core} · {regs} G/Ç yazmacı");
                     Check(p.Cosim.Mcu.Peek(0x5F) == p.Cosim.Mcu.StatusRegister && (p.Cosim.Mcu.StatusRegister & 0x80) != 0, "SREG'in I bayrağı açık (Arduino çekirdeği kesmeleri açtı)");
+                    if (p.Cosim.Mcu.Trace is { } trace)
+                    {
+                        var d9 = trace.Edges(9, 0, p.Cosim.Mcu.Cycles);
+                        var ovf = trace.Interrupts(0, p.Cosim.Mcu.Cycles).Count(i => i.Vector == 16);
+                        double width = d9.Count >= 2 ? (d9[1].Cycle - d9[0].Cycle) / p.Cosim.Mcu.ClockHz * 1e6 : 0;
+                        Check(d9.Count >= 2 && width > 540 && width < 560 && ovf > 10, $"Zaman çizelgesi: D9'da {d9.Count} kenar, ilk darbe {width:F1} µs (0° = 544 µs), {ovf} TIMER0_OVF");
+                    }
+                    else Check(false, "Zaman çizelgesi: yonganın kaydı yok");
 
                     double before = p.Time();
                     Check(FirmwareDebugger.Step(p, DebugStepKind.Over), "Adım (F10)");
@@ -210,7 +219,8 @@ namespace RobotWin.Studio
                 log.AppendLine("FAIL beklenmeyen hata: " + ex);
             }
 
-            if (registers) _code.ShowRegistersTab();
+            if (front == "registers") _code.ShowRegistersTab();
+            if (front == "timeline") _code.ShowTimelineTab();
             log.AppendLine(failures == 0 ? "TÜMÜ GEÇTİ" : failures + " HATA");
             File.WriteAllText(logPath, log.ToString());
         }

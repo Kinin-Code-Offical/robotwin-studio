@@ -158,6 +158,7 @@ namespace RobotWin.Studio.Firmware
         public static DebugProgram Register(object owner, string key, string where, FirmwareCoSimulation cosim, string hex, Func<double> time, Action resume)
         {
             cosim.AttachDebugger(DebugSymbols.For(hex));
+            cosim.Mcu.StartTrace();   // [timeline] the pins and interrupts from the first instruction
             var p = new DebugProgram(owner, key, where, cosim, time, resume);
             Programs.Add(p);
             ApplyTo(p);

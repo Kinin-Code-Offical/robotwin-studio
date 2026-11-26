@@ -303,7 +303,7 @@ namespace RobotTwin.CoreSim.Modeling
                 else m.AddFace(bottom[i], bottom[j], top[j], top[i]);
             }
 
-            if (bottom.Length > 1) m.AddFace(bottom.Reverse().ToArray());
+            if (bottom.Length > 1) m.AddFace(Enumerable.Reverse(bottom).ToArray());
             if (top.Length > 1) m.AddFace(top.ToArray());
             return m;
         }
@@ -476,7 +476,7 @@ namespace RobotTwin.CoreSim.Modeling
             if (hs.Count == 0)
             {
                 m.AddFace(topIdx[0].ToArray());
-                m.AddFace(bottomIdx[0].Reverse().ToArray());
+                m.AddFace(Enumerable.Reverse(bottomIdx[0]).ToArray());
                 return m;
             }
 

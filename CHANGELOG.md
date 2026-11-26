@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Timeline tab in the debugger:** a logic analyzer inside the ATmega328P (`McuTrace`) records every pin's level changes and every interrupt's entry and RETI by cycle from the program's first instruction; the tab draws them as traces and handler bars, measures each pin's last period and high time and each interrupt's count and longest run, zooms with the wheel and scrolls back by dragging.
+
 - **Registers tab in the debugger:** the ATmega328P's core (PC, SP, SREG flags, X/Y/Z, R0–R31, cycles) and its 75 peripheral registers by name and group, with the set bits named and 16-bit pairs combined; what changed since the last look is orange. Reading for display has none of a real read's side effects.
 
 - **Arm deflection:** each robot axis has a torsional stiffness (its own, or estimated from its rating: about 350 N·m/rad per N·m for an industrial reducer, 6 for a hobby servo), and the cell panel shows how far the tool sags under the weight it holds, and how much of that the payload adds, at the arm's current pose.

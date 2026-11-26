@@ -135,6 +135,19 @@ namespace RobotTwin.CoreSim.Firmware
 
         public static AvrRegister? Find(string name) => Atmega328P.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
 
+        private static readonly string[] VectorNames =
+        {
+            "RESET", "INT0", "INT1", "PCINT0", "PCINT1", "PCINT2", "WDT", "TIMER2_COMPA", "TIMER2_COMPB", "TIMER2_OVF",
+            "TIMER1_CAPT", "TIMER1_COMPA", "TIMER1_COMPB", "TIMER1_OVF", "TIMER0_COMPA", "TIMER0_COMPB", "TIMER0_OVF",
+            "SPI_STC", "USART_RX", "USART_UDRE", "USART_TX", "ADC", "EE_READY", "ANALOG_COMP", "TWI", "SPM_READY",
+        };
+
+        /// <summary>[timeline] An interrupt vector's name as avr-libc gives it (16 → "TIMER0_OVF").</summary>
+        public static string VectorName(int vector) => vector >= 0 && vector < VectorNames.Length ? VectorNames[vector] : "#" + vector;
+
+        /// <summary>[timeline] An Arduino pin's name (0–13 → "D0"…"D13", 14–19 → "A0"…"A5").</summary>
+        public static string PinName(int pin) => pin < 14 ? "D" + pin : "A" + (pin - 14);
+
         /// <summary>The low byte of a 16-bit pair given its high byte (TCNT1H → TCNT1L, SPH → SPL), or null.</summary>
         public static AvrRegister? LowHalf(AvrRegister high) =>
             high.Name.Length > 1 && high.Name.EndsWith("H", StringComparison.Ordinal) ? Find(high.Name.Substring(0, high.Name.Length - 1) + "L") : null;

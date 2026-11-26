@@ -158,7 +158,13 @@ Arduino Uno ve Nano kodunu satır satır izleyebilirsiniz. Kart bir kesme noktas
      - solda çekirdek: PC, SP, SREG'in bayrakları (`I-----Z-`), X/Y/Z işaretçileri, R0–R31, çevrim sayısı;
      - sağda çevre birimlerinin yazmaçları adlarıyla, gruplarına göre (portlar, zamanlayıcılar, kesmeler, ADC, USART, SPI, TWI, EEPROM): değer, ikili hali, adres ve açık olan bitlerin adları (`UCSR0A`'da `RXC0 UDRE0` gibi). 16 bitlik çiftlerin (TCNT1, OCR1A, UBRR0, ADC, SP) değeri tek sayı olarak yazılır;
      - son bakıştan beri değişen değerler turuncudur: bir adımın donanıma ne yaptığı bir bakışta görünür;
-     - bakmak donanımı etkilemez: gerçek okuma UDR0'daki baytı alır, TCNT1'in yüksek baytını kilitler, SPIF'i siler; buradaki okuma hiçbirini yapmaz.
+     - bakmak donanımı etkilemez: gerçek okuma UDR0'daki baytı alır, TCNT1'in yüksek baytını kilitler, SPIF'i siler; buradaki okuma hiçbirini yapmaz;
+   - **Zaman çizelgesi** sekmesi yongaya takılmış bir mantık analizörüdür:
+     - program ilk komutundan beri her pinin seviye değişimini (çıkışları programın yazdığı, girişleri devrenin sürdüğü anda) ve her kesmenin girişini ve `RETI`'sini çevrim çevrim kaydeder;
+     - değişen ya da çıkış olan her pin bir iz, servis edilen her kesme (`TIMER0_OVF`, `USART_UDRE`, `INT0`…) bir satır: işleyicinin çalıştığı süre bir çubuk;
+     - sağ sütun ölçer: pinin son tam periyodu ve yüksek kaldığı süre (`56.6 Hz · yüksek 1.03 ms`), kesmenin sayısı ve en uzun çalışması (`19× · en uzun 5.9 µs`);
+     - tekerlek imlecin altındaki anı sabit tutarak yakınlaştırır, sürükleme geri kaydırır, çift tık şimdiye döner; imlecin zamanı üstte yazar;
+     - zamanlayıcının kendisinin sürdüğü PWM pinleri kenar olarak görünmez (donanım onları program yazmadan çevirir): satırları o anki frekans ve doluluğu yazar. TWI açıkken A4/A5 bayt bayt izlenmez.
 4. Buradan devam edin:
 
 | Düğme | Kısayol | Ne yapar |

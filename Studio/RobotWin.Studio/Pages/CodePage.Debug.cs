@@ -54,6 +54,7 @@ namespace RobotWin.Studio.Pages
                 if (!IsVisible || DebugKey is not { } key || FirmwareDebugger.ProgramFor(key) is not { IsHalted: false }) return;
                 if (BottomTabs.SelectedItem == VariablesTab) ShowVariables();
                 else if (BottomTabs.SelectedItem == RegistersTab) ShowRegisters();
+                else if (BottomTabs.SelectedItem == TimelineTab) ShowTimeline();
             };
             _debugTimer.Start();
         }
@@ -93,7 +94,7 @@ namespace RobotWin.Studio.Pages
                     Editor.RevealLine(place.Line);
                 }
 
-                if (BottomTabs.SelectedItem != RegistersTab) BottomTabs.SelectedItem = VariablesTab;
+                if (BottomTabs.SelectedItem != RegistersTab && BottomTabs.SelectedItem != TimelineTab) BottomTabs.SelectedItem = VariablesTab;
                 UpdateDebug();
                 string why = p.Debugger.Reason == DebugStopReason.Step ? "adım" : "kesme noktası";
                 W.Status = $"{p.Where} durdu ({why}): {StopText(p)} — devre ve dünya da bu anda duruyor.";
@@ -132,6 +133,7 @@ namespace RobotWin.Studio.Pages
                 DebugBar.Visibility = Visibility.Collapsed;
                 ShowVariables();
                 ShowRegisters();
+                ShowTimeline();
                 return;
             }
 
@@ -151,6 +153,7 @@ namespace RobotWin.Studio.Pages
             if (p != null && lines && FirmwareFor(key) is { IsBuildCurrent: false }) DebugState.Text += " · kod son yüklemeden sonra değişti: satırlar kayabilir";
             ShowVariables();
             ShowRegisters();
+            ShowTimeline();
         }
 
         private RobotTwin.CoreSim.Formats.FirmwareSource? FirmwareFor(string key) => _targets.FirstOrDefault(t => t.Key == key)?.Firmware;
