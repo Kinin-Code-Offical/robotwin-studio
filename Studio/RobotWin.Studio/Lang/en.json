@@ -8451,7 +8451,17 @@
   "Bu nesneye bileşen ekleyin: kabuk, basınçlı kap, paraşüt, hava ayarı, arıza, eşleme, yay, rulman, davranış. Aramak için yazın.": "Add a component to this object: shell, pressure vessel, parachute, air settings, fault, coupling, spring, bearing, behaviour. Type to search.",
   "Bileşen ara": "Search components",
   "Arama": "Search",
-  "Eşleşen bileşen yok": "No matching component"
+  "Eşleşen bileşen yok": "No matching component",
+  "▾ Kısıtlar ve sönüm": "▾ Constraints and damping",
+  "▸ Kısıtlar ve sönüm": "▸ Constraints and damping",
+  "Unity'deki Rigidbody ayarları: hızın ve dönüşün saniyede ne kadarının söndüğü (yağ, sıvı, fren) ve parçanın hareket edemeyeceği ya da dönemeyeceği dünya eksenleri": "Unity's Rigidbody settings: the share of speed and spin lost each second (grease, a fluid, a brake) and the world axes the part cannot move along or turn about",
+  "Doğrusal sönüm (1/s)": "Linear damping (1/s)",
+  "Açısal sönüm (1/s)": "Angular damping (1/s)",
+  "Konumu dondur": "Freeze position",
+  "Dönüşü dondur": "Freeze rotation",
+  "Sönüm değişti": "Damping changed",
+  "Kısıt değişti": "Constraint changed",
+  "Görsel": "Artwork"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11874,6 +11884,8 @@
   "{…}: dönüş yapıştırıldı": "{0}: rotation pasted",
   "{…}: dönüş sıfırlandı": "{0}: rotation reset",
   "{…}: zemine indi": "{0}: down to the floor",
-  "{…}: fizik sıfırlandı": "{0}: physics reset"
+  "{…}: fizik sıfırlandı": "{0}: physics reset",
+  "Bu dünya ekseni boyunca hareket etmez ({…})": "Does not move along this world axis ({0})",
+  "Bu dünya ekseni çevresinde dönmez ({…})": "Does not turn about this world axis ({0})"
  }
 }

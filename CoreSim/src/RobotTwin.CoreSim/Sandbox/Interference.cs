@@ -136,6 +136,7 @@ namespace RobotTwin.CoreSim.Sandbox
             var joined = new HashSet<(string, string)>();
             foreach (var j in world.Joints)
             {
+                if (j.ObjectB == null) continue;   // fixed to the world: no second part
                 joined.Add((j.ObjectA, j.ObjectB));
                 joined.Add((j.ObjectB, j.ObjectA));
             }

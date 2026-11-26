@@ -221,6 +221,11 @@ namespace RobotTwin.CoreSim.Sandbox
             body.Orientation = q * it.ShapeTurn;
             body.Position = o.Pose.Position + q.Rotate(it.Centre);
             body.IsStatic = o.IsStatic;
+            // [rigidbody] Unity's damping and frozen axes, from the part's parameters
+            body.LinearDamping = Math.Max(0, Param(o, "rb.damping", 0));
+            body.AngularDamping = Math.Max(0, Param(o, "rb.angdamping", 0));
+            body.LockPosition = AxisMask(o, "rb.lockpos");
+            body.LockRotation = AxisMask(o, "rb.lockrot");
             body.Tag = o;
             Scene.AddBody(body);
             it.Body = body;

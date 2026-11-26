@@ -99,6 +99,13 @@ Every package the app, the simulation core and the headless server use, with its
 on the allowed list. The shipped ones are under MIT (Vortice, SharpGen.Runtime, System.Text.Json and its dependencies
 for the netstandard build).
 
+## Splash photo
+
+The start-up splash shows "A factory filled with lots of orange machines" by Simon Kadula
+(https://unsplash.com/photos/8gr6bObQLOI), used under the Unsplash License (https://unsplash.com/license),
+cropped to 16:9 and re-encoded (`Studio/RobotWin.Studio/Branding/splash-photo.jpg`). It stands in until RobotWin's own
+artwork; the splash credits it on its bottom line.
+
 ## Other components
 
 Add additional third-party notices here as dependencies are introduced.

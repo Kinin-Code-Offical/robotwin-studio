@@ -835,6 +835,11 @@ namespace RobotTwin.CoreSim.Mechanics
                 {
                     st.V = b.Velocity;
                     st.W = b.AngularVelocity;
+                    // [rigidbody] Unity's damping (v / (1 + c·h) each step) and frozen axes
+                    if (b.LinearDamping > 0) st.V *= 1 / (1 + b.LinearDamping * h);
+                    if (b.AngularDamping > 0) st.W *= 1 / (1 + b.AngularDamping * h);
+                    st.V = RigidBody.Unlocked(st.V, b.LockPosition);
+                    st.W = RigidBody.Unlocked(st.W, b.LockRotation);
                     st.InvMass = 1.0 / b.Mass;
                     st.InvI = b.InverseInertiaWorld();
                 }
@@ -865,10 +870,19 @@ namespace RobotTwin.CoreSim.Mechanics
                 var b = Bodies[i];
                 if (b.IsStatic || Asleep(i) || InWeldGroup(i)) continue; // [phys] [weld]
                 ref var st = ref _state[i];
+                st.V = RigidBody.Unlocked(st.V, b.LockPosition);   // [rigidbody] what the contacts and joints pushed along a frozen axis
+                st.W = RigidBody.Unlocked(st.W, b.LockRotation);
                 b.Velocity = st.V;
                 b.AngularVelocity = st.W;
                 var x0 = b.Position;
                 b.IntegratePosition(h);
+                if (b.LockPosition != 0)
+                {
+                    var p = b.Position;
+                    int k = b.LockPosition;
+                    b.Position = new Vec3((k & 1) != 0 ? x0.X : p.X, (k & 2) != 0 ? x0.Y : p.Y, (k & 4) != 0 ? x0.Z : p.Z);
+                }
+
                 st.DX = b.Position - x0;
                 st.DTheta = st.W * h;
             }
@@ -888,8 +902,8 @@ namespace RobotTwin.CoreSim.Mechanics
             {
                 var b = Bodies[i];
                 if (b.IsStatic || Asleep(i) || InWeldGroup(i)) continue; // [phys] [weld]
-                b.Velocity = _state[i].V;
-                b.AngularVelocity = _state[i].W;
+                b.Velocity = RigidBody.Unlocked(_state[i].V, b.LockPosition);
+                b.AngularVelocity = RigidBody.Unlocked(_state[i].W, b.LockRotation);
             }
 
             FinishWeldVelocities();   // [weld]

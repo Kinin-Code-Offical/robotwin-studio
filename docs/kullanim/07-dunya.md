@@ -595,6 +595,7 @@ Her nesnenin denetçisinde **Fizik** bölümü:
 - **Sabit:** nesne zemine veya masaya sabitlenmiştir, hareket etmez.
 - **Malzeme:** fiziğin bildiği her malzeme: PLA, PETG, ABS, PET, Akrilik, Alüminyum, Çelik, Bakır, Kurşun, Karbon, Ahşap, Kontrplak, Balsa, MDF, Karton, Kauçuk, FR4. Sürtünme ve sekme malzemeye göre değişir. Listenin altındaki kart malzemenin sayılarını gösterir: yoğunluk, elastisite modülü, akma dayanımı, ısı iletimi, özgül ısı, ışınım ve yumuşama/erime sıcaklığı.
 - **Doluluk (%)** ve **Kütle (g, 0 = otomatik)**.
+- **Kısıtlar ve sönüm** (Unity'deki Rigidbody ayarları; kullanılınca açık gelir): **Doğrusal sönüm** ve **Açısal sönüm** hızın ve dönüşün saniyede ne kadarının söndüğüdür (1/s; 2 yazınca hız bir saniyede yaklaşık yedide birine iner): yağlı bir kızak, sıvı içinde hareket, bir fren. **Konumu dondur X · Y · Z** parçayı o dünya ekseni boyunca sabit tutar (örneğin Z: düşmez ama kayabilir), **Dönüşü dondur** o eksen çevresinde döndürmez. Kısıtlar temas ve bağlantı kuvvetlerine de uygulanır.
 
 **Görünüş ve yüzey** bölümü (gövdeler ve içe aktarılan modeller):
 

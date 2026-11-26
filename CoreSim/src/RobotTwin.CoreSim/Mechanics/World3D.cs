@@ -167,6 +167,21 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Static bodies never move (infinite mass).</summary>
         public bool IsStatic { get; set; }
 
+        /// <summary>[rigidbody] Unity's Linear Damping: the share of its speed a body loses each second (1/s): grease, a viscous fluid, a brake.</summary>
+        public double LinearDamping { get; set; }
+
+        /// <summary>[rigidbody] Unity's Angular Damping: the share of its spin lost each second (1/s).</summary>
+        public double AngularDamping { get; set; }
+
+        /// <summary>[rigidbody] World axes the body may not move along (Unity's Freeze Position): X = 1, Y = 2, Z = 4.</summary>
+        public int LockPosition { get; set; }
+
+        /// <summary>[rigidbody] World axes the body may not turn about (Unity's Freeze Rotation): X = 1, Y = 2, Z = 4.</summary>
+        public int LockRotation { get; set; }
+
+        /// <summary>A vector with the locked axes' parts taken out.</summary>
+        public static Vec3 Unlocked(Vec3 v, int mask) => mask == 0 ? v : new Vec3((mask & 1) != 0 ? 0 : v.X, (mask & 2) != 0 ? 0 : v.Y, (mask & 4) != 0 ? 0 : v.Z);
+
         /// <summary>Collision geometry; when null the contact/caster points are used.</summary>
         public CollisionShape? Shape { get; set; }
 
@@ -315,7 +330,11 @@ namespace RobotTwin.CoreSim.Mechanics
         public Mat3 InverseInertiaWorld()
         {
             if (IsStatic) return Mat3.Zero;
-            return Mat3.RotatedDiagonal(Orientation * PrincipalAxes, new Vec3(1 / Inertia.X, 1 / Inertia.Y, 1 / Inertia.Z));
+            var inv = Mat3.RotatedDiagonal(Orientation * PrincipalAxes, new Vec3(1 / Inertia.X, 1 / Inertia.Y, 1 / Inertia.Z));
+            if (LockRotation == 0) return inv;
+            // [rigidbody] a frozen axis has no give: no impulse turns the body about it (an infinite inertia there)
+            var keep = Mat3.Diagonal(new Vec3((LockRotation & 1) != 0 ? 0 : 1, (LockRotation & 2) != 0 ? 0 : 1, (LockRotation & 4) != 0 ? 0 : 1));
+            return keep * inv * keep;
         }
 
         /// <summary>Forces → velocities (symplectic Euler, implicit gyroscopic and drag terms); clears the accumulators.</summary>

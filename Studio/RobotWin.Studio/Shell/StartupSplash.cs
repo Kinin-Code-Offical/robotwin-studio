@@ -6,15 +6,15 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Shapes;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace RobotWin.Studio.Shell
 {
     /// <summary>
-    /// [startup] The one window that opens first, before the studio itself (as Unity's editor does): a scene of the
-    /// product (a board's traces leading to a robot arm), its name, what is being loaded right now, how far, and the
-    /// version. It runs on a thread of its own, so it keeps drawing while the main thread builds the library and the
+    /// [startup] The one window that opens first, before the studio itself, laid out as Unity's: the artwork filling it
+    /// (a stock photo until RobotWin's own), the name and version, what is being loaded right now, how far, the
+    /// copyright and the artwork's credit. It runs on a thread of its own, so it keeps drawing while the main thread builds the library and the
     /// pages. It stays on top for at least <see cref="MinimumShown"/> (a start of under a second made it flash by),
     /// then fades and hands over to the studio's window. Flat like the rest of the interface: no gradients, no shadows.
     /// </summary>
@@ -48,7 +48,6 @@ namespace RobotWin.Studio.Shell
         private static readonly Color Base = Color.FromRgb(0x0E, 0x0E, 0x10);
         private static readonly Color Stage = Color.FromRgb(0x13, 0x13, 0x16);
         private static readonly Color Line = Color.FromRgb(0x26, 0x26, 0x2B);
-        private static readonly Color Dot = Color.FromRgb(0x1E, 0x1E, 0x23);
         private static readonly Color Text = Color.FromRgb(0xED, 0xED, 0xEF);
         private static readonly Color Secondary = Color.FromRgb(0xB4, 0xB4, 0xBC);
         private static readonly Color Muted = Color.FromRgb(0x8A, 0x8A, 0x93);
@@ -95,7 +94,7 @@ namespace RobotWin.Studio.Shell
             Dispatcher.Run();
         }
 
-        private const double Width = 720, Height = 396, Pad = 44;
+        private const double Width = 768, Height = 432, Pad = 36, BandHeight = 86;
 
         /// <summary>--snapshot out.png --page splash: the splash as it looks part-way through the start.</summary>
         public static void RenderPreview(string path, double dpiScale)
@@ -116,59 +115,90 @@ namespace RobotWin.Studio.Shell
             enc.Save(fs);
         }
 
+        /// <summary>
+        /// The splash's photo (Branding/splash-photo.jpg, embedded): decoded on the splash's own thread and frozen.
+        /// A stock photo stands in until RobotWin's own artwork (THIRD_PARTY_NOTICES.md names it).
+        /// </summary>
+        private static BitmapSource? Photo()
+        {
+            try
+            {
+                using var s = typeof(StartupSplash).Assembly.GetManifestResourceStream("RobotWin.Studio.Branding.splash-photo.jpg");
+                if (s == null) return null;
+                var img = new BitmapImage();
+                img.BeginInit();
+                img.CacheOption = BitmapCacheOption.OnLoad;
+                img.StreamSource = s;
+                img.EndInit();
+                img.Freeze();
+                return img;
+            }
+            catch (Exception)
+            {
+                return null;   // no picture is no reason not to start
+            }
+        }
+
+        /// <summary>Who made the splash's photo, for its credit line (as Unity's splash names its artwork).</summary>
+        private const string PhotoCredit = "Simon Kadula · Unsplash";
+
+        /// <summary>
+        /// Laid out as Unity's opening screen: the artwork fills the window, the name and version on it at the top left,
+        /// and along the bottom a band with what is being loaded, how far, the copyright and the artwork's credit, over a
+        /// thin bar at the very edge. Flat: a single-tone veil over the photo (no gradient) keeps the text readable.
+        /// </summary>
         private static Parts Build()
         {
             string version = Assembly.GetExecutingAssembly().GetName().Version is { } v ? $"{v.Major}.{v.Minor}.{v.Build}" : string.Empty;
             var ui = new FontFamily("Segoe UI Variable Text, Segoe UI");
             var display = new FontFamily("Segoe UI Variable Display, Segoe UI");
-            const double stageHeight = 250;
+            var root = new Grid { Background = B(Stage) };
 
-            // ---- the stage: plain, the name on it (no drawing: the artwork is the user's to make)
-            var stage = new Canvas { Width = Width, Height = stageHeight, ClipToBounds = true, Background = B(Stage) };
+            // ---- the artwork, full-bleed, under a flat veil
+            if (Photo() is { } photo)
+            {
+                root.Children.Add(new Image { Source = photo, Stretch = Stretch.UniformToFill, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+                root.Children.Add(new Border { Background = B(Base, 0x8C) });
+            }
 
-            // ---- the name
-            var mark = new Image { Width = 56, Height = 56, Source = Branding.Logo.Render(112), HorizontalAlignment = HorizontalAlignment.Left };
-            var title = new TextBlock { Text = "RobotWin Studio", FontFamily = display, FontSize = 32, FontWeight = FontWeights.SemiBold, Foreground = B(Text), Margin = new Thickness(0, 18, 0, 0) };
-            var tagline = new TextBlock
+            // ---- the name, the version, what it does
+            var mark = new Image { Width = 44, Height = 44, Source = Branding.Logo.Render(88), VerticalAlignment = VerticalAlignment.Center };
+            var title = new TextBlock { Text = "RobotWin Studio", FontFamily = display, FontSize = 36, FontWeight = FontWeights.SemiBold, Foreground = B(Text), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(14, 0, 0, 2) };
+            var head = new StackPanel { Orientation = Orientation.Horizontal };
+            head.Children.Add(mark);
+            head.Children.Add(title);
+            var name = new StackPanel { Margin = new Thickness(Pad, 32, Pad, 0), VerticalAlignment = VerticalAlignment.Top };
+            name.Children.Add(head);
+            name.Children.Add(new TextBlock
             {
                 Text = Lang.T("Devre · PCB · Kod · Modelle · Montaj · Dünya"),
-                FontFamily = ui, FontSize = 13.5, Foreground = B(Secondary), Margin = new Thickness(0, 6, 0, 0),
-            };
-            var name = new StackPanel { Margin = new Thickness(Pad, 38, 0, 0) };
-            name.Children.Add(mark);
-            name.Children.Add(title);
-            name.Children.Add(tagline);
+                FontFamily = ui, FontSize = 14, Foreground = B(Text), Margin = new Thickness(58, 6, 0, 0),
+            });
+            name.Children.Add(new TextBlock
+            {
+                Text = Lang.T("Sürüm") + " " + version, FontFamily = ui, FontSize = 12.5, Foreground = B(Text, 0xD0), Margin = new Thickness(58, 4, 0, 0),
+            });
+            root.Children.Add(name);
 
-            var top = new Grid { Height = stageHeight };
-            top.Children.Add(stage);
-            top.Children.Add(name);
-
-            // ---- what is being loaded, how far, the version
-            double trackWidth = Width - 2 * Pad;
+            // ---- the band: the step and its share, the copyright and the credit
             var step = new TextBlock { Text = Lang.T("Başlatılıyor…"), FontFamily = ui, FontSize = 14, Foreground = B(Text), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 0, 60, 0) };
-            var percent = new TextBlock { Text = Lang.Percent(0, "0"), FontFamily = ui, FontSize = 14, Foreground = B(Muted), HorizontalAlignment = HorizontalAlignment.Right };
+            var percent = new TextBlock { Text = Lang.Percent(0, "0"), FontFamily = ui, FontSize = 14, Foreground = B(Secondary), HorizontalAlignment = HorizontalAlignment.Right };
             var status = new Grid();
             status.Children.Add(step);
             status.Children.Add(percent);
-            var fill = new Border { Background = B(Accent), HorizontalAlignment = HorizontalAlignment.Left, Width = 0, CornerRadius = new CornerRadius(2) };
-            var track = new Border { Height = 4, Width = trackWidth, HorizontalAlignment = HorizontalAlignment.Left, Background = B(Line), CornerRadius = new CornerRadius(2), Child = fill, Margin = new Thickness(0, 12, 0, 0) };
-            var foot = new Grid { Margin = new Thickness(0, 22, 0, 0) };
-            foot.Children.Add(new TextBlock { Text = Lang.T("Sürüm") + " " + version, FontFamily = ui, FontSize = 12, Foreground = B(Muted) });
-            foot.Children.Add(new TextBlock
-            {
-                Text = Lang.T("Tek fizikle birlikte simüle edilir"), FontFamily = ui, FontSize = 12, Foreground = B(Muted), HorizontalAlignment = HorizontalAlignment.Right
-            });
-            var bottom = new StackPanel { Margin = new Thickness(Pad, 28, Pad, 0) };
-            bottom.Children.Add(status);
-            bottom.Children.Add(track);
-            bottom.Children.Add(foot);
+            var foot = new Grid { Margin = new Thickness(0, 10, 0, 0) };
+            foot.Children.Add(new TextBlock { Text = "© " + DateTime.Now.Year.ToString(System.Globalization.CultureInfo.InvariantCulture) + " RobotWin Studio", FontFamily = ui, FontSize = 12, Foreground = B(Muted) });
+            foot.Children.Add(new TextBlock { Text = Lang.T("Görsel") + ": " + PhotoCredit, FontFamily = ui, FontSize = 12, Foreground = B(Muted), HorizontalAlignment = HorizontalAlignment.Right });
+            var lines = new StackPanel { Margin = new Thickness(Pad, 18, Pad, 0) };
+            lines.Children.Add(status);
+            lines.Children.Add(foot);
+            root.Children.Add(new Border { Background = B(Base, 0xF0), Height = BandHeight, VerticalAlignment = VerticalAlignment.Bottom, Child = lines });
 
-            var body = new DockPanel { LastChildFill = true };
-            DockPanel.SetDock(top, Dock.Top);
-            body.Children.Add(top);
-            body.Children.Add(new Border { Background = B(Line), Height = 1 });
-            DockPanel.SetDock((UIElement)body.Children[1], Dock.Top);
-            body.Children.Add(bottom);
+            // ---- the bar along the very bottom edge
+            double trackWidth = Width - 2;
+            var fill = new Border { Background = B(Accent), HorizontalAlignment = HorizontalAlignment.Left, Width = 0 };
+            root.Children.Add(new Border { Height = 3, VerticalAlignment = VerticalAlignment.Bottom, Background = B(Line), Child = fill });
+            var body = root;
 
             var frame = new Border
             {

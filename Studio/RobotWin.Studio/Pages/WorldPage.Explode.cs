@@ -420,6 +420,17 @@ namespace RobotWin.Studio.Pages
                 PickGizmo(args[gz + 1] switch { "rotate" => RobotWin.Studio.World.GizmoMode.Rotate, "scale" => RobotWin.Studio.World.GizmoMode.Scale, "all" => RobotWin.Studio.World.GizmoMode.All, _ => RobotWin.Studio.World.GizmoMode.Move });
             }
 
+            if (args.Contains("--rigidbody"))
+            {
+                _rigidbodyOpen = true;   // [rigidbody] the Fizik card's damping and constraints, open, as the picture
+                BuildInspector();
+                Inspector.UpdateLayout();
+                DependencyObject? card = FindButton(Inspector, "▾ Kısıtlar ve sönüm");
+                while (card != null && System.Windows.Media.VisualTreeHelper.GetParent(card) != Inspector)
+                    card = System.Windows.Media.VisualTreeHelper.GetParent(card);
+                if (card is FrameworkElement fe) fe.BringIntoView();
+            }
+
             if (args.Contains("--add-component"))
             {
                 // [components] the Add Component list, open, as the picture

@@ -30,6 +30,8 @@
     <!-- Real part models converted from the makers' STEP files (see THIRD_PARTY_NOTICES.md). -->
     <EmbeddedResource Include="Models3D\Bundled\*.obj" LogicalName="RobotWin.Studio.Models3D.Bundled.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Lang\*.json" LogicalName="RobotWin.Studio.Lang.%(Filename)%(Extension)" />
+    <!-- [startup] the splash's photo (Simon Kadula, Unsplash License; see THIRD_PARTY_NOTICES.md), until our own artwork -->
+    <EmbeddedResource Include="Branding\splash-photo.jpg" LogicalName="RobotWin.Studio.Branding.splash-photo.jpg" />
   </ItemGroup>
 
   <ItemGroup>

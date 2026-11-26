@@ -817,6 +817,7 @@ namespace RobotWin.Studio.Pages
 
             Inspector.Children.Add(NumberField("Kütle (g, 0 = otomatik)", (o.MassKg ?? 0) * 1000, v => Edit("Kütle değişti", () => o.MassKg = v <= 0 ? null : v / 1000), 0, 1e6, "0.#"));
             Inspector.Children.Add(Note("Otomatik kütle: " + EstimateMass(world, o).ToString("0.#", CultureInfo.InvariantCulture) + " g"));
+            RigidbodyFields(o);   // [rigidbody] damping and frozen axes (Pages/WorldPage.Rigidbody.cs)
 
             if (o.Kind == WorldObjectKind.Body)
             {

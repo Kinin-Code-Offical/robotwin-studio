@@ -216,6 +216,12 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 
 Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, sahne ağacının sağ tık menüleri, Add Component'in bütün kategorileri, bileşen menüleri. Montaj ve Dünya aynı sahne editörünü kullanır; buradaki her araç ikisinde birden olur, Parça'nın tutamaçları aynı davranışa getirilir.
 
+### Açılış ekranı
+
+| Araç | Bizde | Durum | Öncelik |
+| --- | --- | --- | --- |
+| Tam kaplayan görsel, sol üstte ürün adı ve sürüm, telif, görselin sahibi, yüklenen proje ve adım, kenarda ince ilerleme çubuğu | aynı düzen; görsel şimdilik lisansı serbest stok fotoğraf (kendi görselimiz gelince değişir) | var | |
+
 ### Sahne araçları
 
 | Araç | Bizde | Durum | Öncelik |
@@ -256,7 +262,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Bileşen ekle: aranabilir, kategorili liste | Bileşen ekle: arama, kategoriler, Enter (bileşenler: kabuk, kap, paraşüt, hava, arıza, eşleme, yay, rulman, davranış) | var | |
 | Bileşen ⋮: sıfırla, kaldır, yukarı / aşağı, kopyala, değerleri yapıştır, yeni olarak yapıştır | yok | yok | 1 |
 | Dönüşüm ⋮: konum / dönüş / ölçek / dünya dönüşümü kopyala ve yapıştır, özelliği sıfırla | konum / dönüş kopyala, yapıştır; dönüşü sıfırla; zemine indir | var | |
-| Fizik gövdesi: kütle, doğrusal / açısal sönüm, kütle merkezi ve eylemsizlik otomatik ya da elle, yerçekimi, kinematik, ara değerleme, çarpışma algılama, konum / dönüş kilitleri (X/Y/Z) | kütle, sabit | kısmi | 1 |
+| Fizik gövdesi: kütle, doğrusal / açısal sönüm, kütle merkezi ve eylemsizlik otomatik ya da elle, yerçekimi, kinematik, ara değerleme, çarpışma algılama, konum / dönüş kilitleri (X/Y/Z) | kütle, sabit, doğrusal / açısal sönüm, konum / dönüş kilitleri (Kısıtlar ve sönüm); kütle merkezi, kinematik sonra | kısmi | 2 |
 | Çarpışma şekilleri: kutu, küre, kapsül, ağ, tekerlek, arazi; tetik | çarpışma şekilleri | kısmi | 2 |
 | Eklemler: menteşe, sabit, yay, karakter, yapılandırılabilir; sınırlar, yaylar, kırılma kuvveti ve torku | menteşe, kızak, sabit, yay ve sönüm, rulman | kısmi | 2 |
 | Kısıtlar: hedefe bak, üst nesne, konum, dönüş, ölçek | yok | yok | 2 |

@@ -44,6 +44,16 @@ namespace RobotTwin.CoreSim.Sandbox
         private static double Param(WorldObject o, string key, double fallback) =>
             o.Parameters.TryGetValue(key, out var s) && double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out double v) ? v : fallback;
 
+        /// <summary>[rigidbody] Axes named in a parameter ("xz") as a mask: X = 1, Y = 2, Z = 4.</summary>
+        internal static int AxisMask(WorldObject o, string key)
+        {
+            if (!o.Parameters.TryGetValue(key, out var s) || string.IsNullOrEmpty(s)) return 0;
+            int m = 0;
+            foreach (char c in s.ToLowerInvariant())
+                m |= c == 'x' ? 1 : c == 'y' ? 2 : c == 'z' ? 4 : 0;
+            return m;
+        }
+
         private void BuildWings()
         {
             _wings.Clear();

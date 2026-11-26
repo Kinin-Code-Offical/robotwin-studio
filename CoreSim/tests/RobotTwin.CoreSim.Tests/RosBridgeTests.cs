@@ -304,6 +304,14 @@ namespace RobotTwin.CoreSim.Tests
             }
 
             Run(0.3);
+            // the trajectory goes out only once the link's subscription has reached the server (a busy CI machine is slow)
+            var subscribed = System.Diagnostics.Stopwatch.StartNew();
+            while (!server.Got.Any(o => (string?)o["op"] == "subscribe" && (string?)o["topic"] == RosWorldLink.JointTrajectoryTopic) && subscribed.Elapsed.TotalSeconds < 60)
+            {
+                link.Step(runner.Time);
+                await Task.Delay(5);
+            }
+
             JsonObject Point(double elbowRad, double shoulderRad, int sec) => new JsonObject
             {
                 ["positions"] = new JsonArray(elbowRad, shoulderRad), ["velocities"] = new JsonArray(0.0, 0.0),
@@ -320,7 +328,7 @@ namespace RobotTwin.CoreSim.Tests
                 }
             });
             var waited = System.Diagnostics.Stopwatch.StartNew();
-            while (link.Trajectories == 0 && waited.Elapsed.TotalSeconds < 10)
+            while (link.Trajectories == 0 && waited.Elapsed.TotalSeconds < 60)
             {
                 link.Step(runner.Time);
                 await Task.Delay(1);

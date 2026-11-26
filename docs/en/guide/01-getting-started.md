@@ -25,7 +25,7 @@ To use an `arduino-cli` of your own, enter its path under **Settings → Compile
 
 ## First launch
 
-A splash screen appears while the app opens: it shows what is being loaded, how far it has got and the version. Then the **Start** page.
+A splash screen appears while the app opens: the product's name and version, on the bottom band what is being loaded and how far it has got, and a thin progress bar along the edge. The photo behind it is a licence-free stock photo standing in until RobotWin's own artwork; its author is credited on the bottom line. Then the **Start** page.
 
 ![Splash screen](../../images/en/splash.png)
 

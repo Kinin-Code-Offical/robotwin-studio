@@ -595,6 +595,8 @@ Every object's inspector has a **Physics** section:
 - **Sabit** (fixed): the object is fixed to the floor or table and does not move.
 - **Material**: every material the physics knows: PLA, PETG, ABS, PET, acrylic, aluminium, steel, copper, lead, carbon, wood, plywood, balsa, MDF, cardboard, rubber, FR4. Friction and bounce depend on the material. The card under the list gives the material's numbers: density, Young's modulus, yield strength, thermal conductivity, specific heat, emissivity and softening/melting temperature.
 
+- **Constraints and damping** (Unity's Rigidbody settings; open by itself once used): **Linear damping** and **Angular damping** are the share of speed and spin lost each second (1/s; at 2 the speed falls to about a seventh in one second): a greased slide, motion in a fluid, a brake. **Freeze position X · Y · Z** holds the part along that world axis (Z, for example: it does not fall but can still slide), **Freeze rotation** keeps it from turning about that axis. The constraints also hold against contact and joint forces.
+
 The **Appearance and surface** section, for bodies and imported models:
 
 - **Colour**: click a swatch, type `#RRGGBB` in **Colour code**, or go back to the material's own colour with **Material colour**.

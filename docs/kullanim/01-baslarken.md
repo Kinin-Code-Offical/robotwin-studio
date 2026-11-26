@@ -25,7 +25,7 @@ Kendi `arduino-cli`'nizi kullanmak isterseniz yolunu **Ayarlar → Derleyiciler*
 
 ## İlk açılış
 
-Uygulama açılırken bir açılış ekranı görünür: o an neyin yüklendiğini, ne kadarının bittiğini ve sürümü gösterir. Ardından **Başlangıç** sayfası gelir.
+Uygulama açılırken bir açılış ekranı görünür: ürünün adı ve sürümü, alt şeritte o an neyin yüklendiği ve ne kadarının bittiği, en altta ince bir ilerleme çubuğu. Arka plandaki fotoğraf RobotWin'in kendi görseli hazır olana kadar duran lisansı serbest bir stok fotoğraftır; sahibi alt satırda yazar. Ardından **Başlangıç** sayfası gelir.
 
 ![Açılış ekranı](../images/splash.png)
 
