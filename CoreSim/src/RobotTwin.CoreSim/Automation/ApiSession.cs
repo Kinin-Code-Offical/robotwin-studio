@@ -381,8 +381,16 @@ namespace RobotTwin.CoreSim.Automation
                 else
                 {
                     var pkg = ProjectPackage.Load(path);
-                    ApplyArena(pkg.Schematic, p);
-                    runner = new VehicleRunner(pkg.Schematic, pkg, options);
+                    // [variants-code] a project with a robot assembly runs as a vehicle; a plain circuit runs with its boards' code
+                    if (pkg.Schematic.Assembly == null || pkg.Schematic.Assembly.Kind == VehicleKind.None)
+                    {
+                        runner = new CircuitRunner(pkg.Schematic, pkg, options, J.Num(p, "ambient", 25.0));
+                    }
+                    else
+                    {
+                        ApplyArena(pkg.Schematic, p);
+                        runner = new VehicleRunner(pkg.Schematic, pkg, options);
+                    }
                 }
             }
             else if (json != null)

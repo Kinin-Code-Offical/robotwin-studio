@@ -206,6 +206,45 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal(16 * 12 * 3, Convert.FromBase64String((string)cam["data"]!).Length);
         }
 
+        /// <summary>[variants-code] A plain circuit project (no robot assembly) loads over the API and runs with its board's code.</summary>
+        [Fact]
+        public void APlainCircuitProjectRunsWithItsBoardsCode()
+        {
+            var lib = RobotTwin.CoreSim.Design.PartLibrary.Default;
+            var sch = new RobotTwin.CoreSim.Design.Schematic { Title = "NeoPixel" };
+            var uno = sch.AddPart(lib, "arduino-uno", new RobotTwin.CoreSim.Design.GridPoint(0, 0));
+            var strip = sch.AddPart(lib, "ws2812-strip", new RobotTwin.CoreSim.Design.GridPoint(50, 0));
+            strip.Parameters["count"] = "3";
+            VehicleTemplates.Tie(sch, lib, uno, "5V", "5V");
+            VehicleTemplates.Tie(sch, lib, uno, "GND1", "GND");
+            VehicleTemplates.Tie(sch, lib, strip, "VDD", "5V");
+            VehicleTemplates.Tie(sch, lib, strip, "GND", "GND");
+            VehicleTemplates.Tie(sch, lib, uno, "D6", "DATA");
+            VehicleTemplates.Tie(sch, lib, strip, "DIN", "DATA");
+            var pkg = new RobotTwin.CoreSim.Formats.ProjectPackage { Schematic = sch };
+            pkg.Firmware.Add(new RobotTwin.CoreSim.Formats.FirmwareSource
+            {
+                BoardRefDes = uno.RefDes,
+                FileName = "neopixel-avr.ino",
+                Hex = System.IO.File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "Fixtures", "neopixel-avr.hex"))
+            });
+            string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "robotwin-api-circuit-" + Guid.NewGuid().ToString("N").Substring(0, 8) + ".rwproj");
+            pkg.Save(path);
+            try
+            {
+                using var s = Session();
+                var load = Call(s, "world.load", new { path })["result"]!;
+                Assert.Equal("circuit", (string)load["kind"]!);
+                Call(s, "sim.step", new { dt = 0.05, steps = 2 });
+                var serial = Call(s, "serial.read", new { board = uno.RefDes })["result"]!;
+                Assert.Contains("shown 2", (string)serial[uno.RefDes]!);
+            }
+            finally
+            {
+                System.IO.File.Delete(path);
+            }
+        }
+
         [Fact]
         public void JsonRpcRoundTripInProcess()
         {

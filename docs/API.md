@@ -108,6 +108,9 @@ firmware ≈ 0.8× (cycle-accurate AVR emulation). Use more processes for throug
 * **Vehicle** (`.rwproj` with a Montaj-page assembly, or `example: "line-follower" | "obstacle-avoider" | "quadcopter"`):
   the robot car / quadcopter of the schematic simulation with its arena. The body is object `vehicle`;
   built-in sensors `odom`, `imu`, `gps` plus one per mounted sensor (by refdes).
+* **Circuit** (`.rwproj` without a robot assembly): the Circuit page's simulation with its boards' code (the project's
+  compiled HEX for Unos / Nanos, its sketches for ESP32s). No objects or actuators; pins, nets, serial, sensors and
+  `circuit.*` work as in the other modes.
 
 ## Method reference
 
