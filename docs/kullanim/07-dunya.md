@@ -560,6 +560,8 @@ ESP32 taslakları kamerayı gerçek `esp_camera` arayüzüyle kullanır: `esp_ca
 
 **Sıcaklık sensörleri de etkiler.** Ortam sıcaklığı (Ortam → Ortam sıcaklığı) havanın yoğunluğunu ve ses hızını belirler: HC-SR04'ün yankısı 0 °C'de 331, 40 °C'de 355 m/s ile döner; 58 µs/cm ile bölen bir taslak 1 m'yi soğukta 104, sıcakta 97 cm okur. IMU'nun sıfır noktaları ve duyarlılığı çipin sıcaklığıyla kayar; her çipin katsayısı kendinedir. Çip, takıldığı yerin sıcaklığından kendi ısısıyla birkaç dakikada yaklaşık 3 °C ısınır: açılışta yapılan jiroskop kalibrasyonu ilk dakikalarda ve yanındaki motor sürücü kartı ısıttığında kayar. MPU-6050'nin TEMP_OUT yazmacı ve Sensörler kartı çipin sıcaklığını gösterir; CSV kaydında `chip_temp_c` sütunu vardır. Pusulanın duyarlılığı °C başına %0,3 düşer, çizgi sensörünün fototransistörü de kendi sıcaklığını izler.
 
+**Duruş füzyonu karşılaştırması** anahtarı açıkken dünyadaki ilk IMU'nun (ve varsa pusulanın) ölçümleri dört duruş kestiricisinden aynı anda geçer: yalnız jiroskop tümlemesi, tümleyen süzgeç, Mahony ve Madgwick. IMU kartı her birinin eğim hatasını (gerçek ve kestirilen düşey arasındaki açı) ve yön hatasını, anlık ve koşu boyunca RMS olarak gösterir. Filtreler sensörün gerçek gürültüsünü, sapmasını, sıcaklık kaymasını ve arıza senaryolarını görür; gerçek duruşu simülasyon bilir. Kayıt da açıksa `fusion_<IMU>.csv` her filtrenin roll/pitch/yaw değerlerini ve hatalarını gerçeğin yanında yazar. Mahony'nin integral terimi jiroskop sapmasını da kestirir.
+
 ![Ultrasonik sensör ve engel](../images/world-sonar.png)
 
 ## Kumandalar, radyo ve USB

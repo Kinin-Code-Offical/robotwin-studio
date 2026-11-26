@@ -22,6 +22,8 @@ namespace RobotWin.Studio.Pages
         private SensorLog? _log;
         private string? _logFolder;
         private bool _logHooked;
+        private CheckBox? _fusionSwitch;
+        private FusionExperiment? _fusion;   // [fusion] read by the IMU's card (Pages/WorldPage.Sense.cs)
 
         private FrameworkElement SensorLogBar()
         {
@@ -40,6 +42,23 @@ namespace RobotWin.Studio.Pages
             };
             DockPanel.SetDock(_logSwitch, Dock.Left);
             bar.Children.Add(_logSwitch);
+            // [fusion] attitude filters run on the IMU's own readings and scored against the true orientation
+            _fusionSwitch = new CheckBox
+            {
+                Content = "Duruş füzyonu karşılaştırması", Style = (Style)FindResource("Switch"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 0, 0),
+                ToolTip = "IMU'nun (ve aynı gövdedeki pusulanın) ölçümleri yalnız jiroskop, tümleyen, Mahony ve Madgwick filtrelerinden geçer; her birinin eğim ve yön hatası simülasyonun bildiği gerçek duruşa göre IMU kartında görünür"
+            };
+            _fusionSwitch.Click += (_, _) =>
+            {
+                if (_fusionSwitch.IsChecked == true && _session.Sensing is { } s) StartFusion(s);
+                if (_fusionSwitch.IsChecked != true)
+                {
+                    _fusion?.Detach();
+                    _fusion = null;
+                }
+            };
+            DockPanel.SetDock(_fusionSwitch, Dock.Left);
+            bar.Children.Add(_fusionSwitch);
             _logOpen = new Button { Content = "Klasörü aç", Style = (Style)FindResource("Btn.Ghost"), Visibility = Visibility.Collapsed, Margin = new Thickness(8, 0, 0, 0), Padding = new Thickness(8, 2, 8, 2) };
             _logOpen.Click += (_, _) =>
             {
@@ -63,10 +82,13 @@ namespace RobotWin.Studio.Pages
                 // The run's log is taken as it stops (a restart's new log is not the one written), written on the UI thread.
                 _session.StateChanged += (_, _) =>
                 {
-                    if (_session.State != SimState.Stopped || _log is not { } done) return;
+                    if (_session.State != SimState.Stopped) return;
+                    var fusion = _fusion;
+                    fusion?.Detach();   // its scores stay on the card until the next run
+                    if (_log is not { } done) return;
                     _log = null;
                     done.Detach();
-                    Dispatcher.BeginInvoke(new Action(() => SaveLog(done)));
+                    Dispatcher.BeginInvoke(new Action(() => SaveLog(done, null, fusion)));
                 };
             }
 
@@ -76,6 +98,25 @@ namespace RobotWin.Studio.Pages
         private void OnLogSensingStarted(WorldSensing sensing)
         {
             if (_logSwitch?.IsChecked == true) StartLog(sensing);
+            if (_fusionSwitch?.IsChecked == true) StartFusion(sensing);
+        }
+
+        /// <summary>[fusion] The filters on the world's first IMU, with the first compass when there is one.</summary>
+        private void StartFusion(WorldSensing sensing)
+        {
+            _fusion?.Detach();
+            _fusion = null;
+            if (World == null) return;
+            var imu = World.Objects.FirstOrDefault(o => o.PartId == "mpu6050");
+            if (imu == null)
+            {
+                W.Status = "IMU bulunamadı: füzyon için dünyaya bir MPU-6050 ekleyin.";
+                return;
+            }
+
+            var compass = World.Objects.FirstOrDefault(o => o.PartId == RobotTwin.CoreSim.Design.SensingParts.CompassId);
+            _fusion = new FusionExperiment(World, imu.Id, compass?.Id);
+            _fusion.Attach(sensing.Sensors);
         }
 
         private void StartLog(WorldSensing sensing)
@@ -88,7 +129,7 @@ namespace RobotWin.Studio.Pages
         }
 
         /// <summary>Writes a stopped run's tables to <paramref name="folder"/> (by default a new one under Documents\RobotWin).</summary>
-        private void SaveLog(SensorLog log, string? folder = null)
+        private void SaveLog(SensorLog log, string? folder = null, FusionExperiment? fusion = null)
         {
             if (log.Rows == 0)
             {
@@ -105,9 +146,14 @@ namespace RobotWin.Studio.Pages
 
             try
             {
-                var files = log.Save(folder);
+                // [fusion] the filters' estimates and errors beside the readings they came from
+                var extra = fusion is { Samples: > 0 }
+                    ? new[] { ("fusion_" + string.Concat((World?.Find(fusion.ImuObjectId)?.Name ?? "imu").Select(ch => char.IsLetterOrDigit(ch) ? ch : '_')), "attitude fusion", fusion.Csv()) }
+                    : Array.Empty<(string, string, string)>();
+                var files = log.Save(folder, extra);
+                int sensors = log.Sensors.Count();
                 _logFolder = folder;
-                if (_logNote != null) _logNote.Text = Shell.Lang.T($"{log.Rows} satır, {files.Count - 1} sensör: {folder}");
+                if (_logNote != null) _logNote.Text = Shell.Lang.T($"{log.Rows} satır, {sensors} sensör: {folder}");
                 if (_logOpen != null) _logOpen.Visibility = Visibility.Visible;
                 W.Status = $"Sensör kaydı yazıldı: {files.Count - 1} CSV, {log.Rows} satır";
             }
@@ -135,6 +181,7 @@ namespace RobotWin.Studio.Pages
         private void SensorLogSnapshotBegin()
         {
             if (_snapshotModes.Contains("csv") && _logSwitch != null) _logSwitch.IsChecked = true;
+            if (_snapshotModes.Contains("fusion") && _fusionSwitch != null) _fusionSwitch.IsChecked = true;
         }
 
         /// <summary>After it: the tables written to the temp folder (never the user's documents) and the panel showing them.</summary>
@@ -143,7 +190,7 @@ namespace RobotWin.Studio.Pages
             if (!_snapshotModes.Contains("csv") || _log is not { } log) return;
             _log = null;
             log.Detach();
-            SaveLog(log, Path.Combine(Path.GetTempPath(), "robotwin-sensorlog-snapshot"));
+            SaveLog(log, Path.Combine(Path.GetTempPath(), "robotwin-sensorlog-snapshot"), _fusion);
         }
     }
 }

@@ -125,7 +125,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - her sensörde menzil, çözünürlük, gecikme ve gürültü modeli;
   - [x] sıcaklık ve kayma: hava yoğunluğu, ses hızı ve viskozite ortam sıcaklığından (HC-SR04 yankısı, kanatlar); IMU'da çipe özgü sıfır ve duyarlılık sıcaklık katsayıları, kendi ısısıyla ısınma (açılış kayması), TEMP_OUT; pusula duyarlılığı %0,3/°C; çizgi sensörü kendi sıcaklığı (`Sandbox/Sensing/NavigationSensors.cs`);
   - [x] arıza senaryoları: IMU (kayma, titreşim, donma, I²C sessizliği), pusula (mıknatıs, sessizlik), GPS (uydu kaybı, yansıma), LiDAR (kirli pencere, takılı motor), çizgi sensörleri (kirli lens, ölü LED); `MachineFaults` ile aynı **Özellik ekle → Arıza senaryosu**;
-  - füzyon deneyleri;
+  - [x] füzyon deneyleri: yalnız jiroskop, tümleyen, Mahony ve Madgwick yan yana, gerçek duruşa göre eğim/yön hatası ve RMS; CSV (`Sandbox/Sensing/AttitudeFilters.cs`, `FusionExperiment.cs`);
   - [x] veri dışa aktarma ve etiketleme: **Sensörler** sekmesinde sensör başına CSV; ölçülenin yanında gerçek değer, etiket sütununda o anki arıza senaryosu (`Sandbox/Sensing/SensorLog.cs`).
 - [ ] **Akademik deney araçları:**
   - deney oluşturucu;

@@ -7756,7 +7756,15 @@
   "Sensör kayıtları": "Sensor logs",
   "Duvar yüksekliği (m)": "Wall height (m)",
   "Duvar yüksekliği değişti": "Wall height changed",
-  "\nçip {0:0.0} °C": "\nchip {0:0.0} °C"
+  "\nçip {0:0.0} °C": "\nchip {0:0.0} °C",
+  "Duruş füzyonu karşılaştırması": "Compare attitude fusion",
+  "IMU'nun (ve aynı gövdedeki pusulanın) ölçümleri yalnız jiroskop, tümleyen, Mahony ve Madgwick filtrelerinden geçer; her birinin eğim ve yön hatası simülasyonun bildiği gerçek duruşa göre IMU kartında görünür": "The IMU's readings (and those of a compass on the same body) go through gyro-only, complementary, Mahony and Madgwick filters; the IMU card shows each one's tilt and heading error against the true attitude the simulation knows",
+  "IMU bulunamadı: füzyon için dünyaya bir MPU-6050 ekleyin.": "No IMU found: add an MPU-6050 to the world for fusion.",
+  "füzyon (°)": "fusion (°)",
+  "eğim": "tilt",
+  "yön": "heading",
+  "Yalnız jiroskop": "Gyro alone",
+  "Tümleyen": "Complementary"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

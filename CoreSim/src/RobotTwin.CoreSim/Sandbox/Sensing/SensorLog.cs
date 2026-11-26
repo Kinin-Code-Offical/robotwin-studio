@@ -149,8 +149,11 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
         /// <summary>A sensor's table as CSV text (null when it published nothing).</summary>
         public string? Csv(string objectId) => _tables.TryGetValue(objectId, out var t) ? t.Text.ToString() : null;
 
-        /// <summary>Writes every table to <paramref name="folder"/> as "name.csv", and a README of what is in them; returns the files.</summary>
-        public List<string> Save(string folder)
+        /// <summary>
+        /// Writes every table to <paramref name="folder"/> as "name.csv", and a README of what is in them; returns the files.
+        /// <paramref name="extra"/>: tables made beside the log from the same run (a fusion experiment's), written with them.
+        /// </summary>
+        public List<string> Save(string folder, params (string Name, string Kind, string Csv)[] extra)
         {
             Directory.CreateDirectory(folder);
             var files = new List<string>();
@@ -165,6 +168,15 @@ namespace RobotTwin.CoreSim.Sandbox.Sensing
                 File.WriteAllText(path, t.Text.ToString(), new UTF8Encoding(false));
                 files.Add(path);
                 readme.Append(t.Name).Append(".csv: ").Append(t.Kind).Append(", ").Append(t.Rows.ToString(CultureInfo.InvariantCulture)).Append(" rows\n");
+            }
+
+            foreach (var (name, kind, csv) in extra)
+            {
+                string path = Path.Combine(folder, name + ".csv");
+                File.WriteAllText(path, csv, new UTF8Encoding(false));
+                files.Add(path);
+                int rows = Math.Max(0, csv.Count(ch => ch == '\n') - 1);
+                readme.Append(name).Append(".csv: ").Append(kind).Append(", ").Append(rows.ToString(CultureInfo.InvariantCulture)).Append(" rows\n");
             }
 
             string read = Path.Combine(folder, "README.txt");

@@ -241,6 +241,8 @@ public class LangTests
     [InlineData("ısıl kapanma: 151 °C (2.4 W kayıp)", "thermal shutdown: 151 °C (2.4 W lost)")]
     [InlineData("Sensör kaydı yazıldı: 3 CSV, 1240 satır", "Sensor log written: 3 CSV files, 1240 rows")]
     [InlineData("çip 28.0 °C", "chip 28.0 °C")]
+    [InlineData("Duruş füzyonu karşılaştırması", "Compare attitude fusion")]
+    [InlineData("Yalnız jiroskop", "Gyro alone")]
     [InlineData("1240 satır, 3 sensör: C:\\Belgeler\\RobotWin\\Robot-20261126-101500", "1240 rows, 3 sensors: C:\\Belgeler\\RobotWin\\Robot-20261126-101500")]
     public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
     {

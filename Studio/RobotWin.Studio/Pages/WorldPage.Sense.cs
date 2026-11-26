@@ -238,6 +238,17 @@ namespace RobotWin.Studio.Pages
                         _text.Text = string.Format(c, Shell.Lang.T("ivme  {0,7:0.00} {1,7:0.00} {2,7:0.00} m/s²\njiro  {3,7:0.000} {4,7:0.000} {5,7:0.000} rad/s\ngerçek ivme z {6:0.00} · jiro z {7:0.000}"),
                             imu.Accel.X, imu.Accel.Y, imu.Accel.Z, imu.Gyro.X, imu.Gyro.Y, imu.Gyro.Z, imu.TrueAccel.Z, imu.TrueGyro.Z);
                         if (!double.IsNaN(imu.TemperatureC)) _text.Text += string.Format(c, Shell.Lang.T("\nçip {0:0.0} °C"), imu.TemperatureC);   // [temp] what moves its zero points
+                        if (_page._fusion is { Samples: > 0 } fx && fx.ImuObjectId == imu.ObjectId)
+                        {
+                            // [fusion] each filter's tilt and heading error against the true orientation, now and RMS
+                            var t = new System.Text.StringBuilder(_text.Text).Append('\n');
+                            t.Append('\n').Append(string.Format(c, "{0,-15}{1,7}{2,7}{3,7}{4,7}", Shell.Lang.T("füzyon (°)"), Shell.Lang.T("eğim"), "RMS", Shell.Lang.T("yön"), "RMS"));
+                            foreach (var sc in fx.Scores)
+                                t.Append('\n').Append(string.Format(c, "{0,-15}{1,7:0.0}{2,7:0.0}{3,7:0.0}{4,7:0.0}", Shell.Lang.T(sc.Filter.Name), sc.TiltDeg, sc.TiltRmsDeg, sc.HeadingDeg, sc.HeadingRmsDeg));
+                            _text.Text = t.ToString();
+                            Root.Width = 340;
+                        }
+
                         break;
                     case GpsReading gps:
                         var f = gps.Fix;

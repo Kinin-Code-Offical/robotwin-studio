@@ -560,6 +560,8 @@ With **Record sensor data (CSV, labelled)** switched on, every reading of every 
 
 **Temperature reaches the sensors.** The ambient temperature (Environment → Ambient temperature) sets the air's density and its speed of sound: an HC-SR04's echo comes back at 331 m/s at 0 °C and 355 m/s at 40 °C, so a sketch dividing by 58 µs/cm reads 1 m as 104 cm in the cold and 97 cm in the heat. An IMU's zero points and sensitivities move with its chip's temperature, each chip by its own coefficients. The chip warms about 3 °C above what it is mounted on over a few minutes, so a gyro calibrated at power-on drifts in the first minutes and again when the motor driver beside it heats the board. The MPU-6050's TEMP_OUT register and the Sensors card show the chip's temperature, and the CSV log has a `chip_temp_c` column. A compass loses 0.3 % of its sensitivity per °C, and a line sensor's phototransistor follows its own temperature.
 
+With **Compare attitude fusion** switched on, the readings of the world's first IMU (and of a compass, if there is one) go through four attitude estimators at once: gyro integration alone, a complementary filter, Mahony and Madgwick. The IMU card shows each one's tilt error (the angle between the true and the estimated vertical) and heading error, now and as RMS over the run. The filters see the sensor's real noise, bias, temperature drift and fault scenarios; the true attitude comes from the simulation. With the log on as well, `fusion_<IMU>.csv` writes every filter's roll, pitch and yaw and their errors beside the truth. Mahony's integral term also estimates the gyro's bias.
+
 ![Ultrasonic sensor and an obstacle](../../images/en/world-sonar.png)
 
 ## Controllers, radio and USB
