@@ -304,6 +304,7 @@ namespace RobotWin.Studio.World
             foreach (var entry in _logFromThread) Log.Add(entry);
             _logFromThread.Clear();
             RadioFrame();   // [radio] controller input / feedback, radio events
+            NetworkNotices();   // [opcua-sec]
             DrainEvents();
             if (_haltedOnThread is { } halted)
             {
@@ -345,6 +346,7 @@ namespace RobotWin.Studio.World
             if (wallDt <= 0) return;
             var budget = Stopwatch.StartNew();
             RadioFrame();   // [radio] controller input / feedback, radio events
+            NetworkNotices();   // [opcua-sec]
             double done = Advance(wallDt * Speed, budget, Shell.UiHeadroom.SimulationBudget(0.022));   // room for the rest of the UI
             _realtime = 0.85 * _realtime + 0.15 * (done / wallDt);
             FrameEnd();
@@ -425,6 +427,7 @@ namespace RobotWin.Studio.World
             foreach (var entry in _logFromThread) Log.Add(entry);
             _logFromThread.Clear();
             RadioFrame();   // [radio]
+            NetworkNotices();   // [opcua-sec]
             Updated?.Invoke(this, EventArgs.Empty);
         }
 

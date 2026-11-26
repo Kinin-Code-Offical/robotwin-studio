@@ -51,6 +51,11 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
         public string Bind { get; }
         public int Port { get; }
 
+        /// <summary>[opcua-sec] The PLC's OPC UA security (CellParts.OpcUaSecurity…), users ("ad:parola, ad:parola:okur") and clients.</summary>
+        public string Security { get; set; } = "yok";
+        public string Users { get; set; } = string.Empty;
+        public bool TrustAllClients { get; set; }
+
         /// <summary>RUN (scanning) or STOP.</summary>
         public bool Running { get; private set; }
 

@@ -1092,6 +1092,13 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(Caption("Parametreler"));
             foreach (var p in def.Parameters)
             {
+                // [uncluttered] a setting that only matters while another is on (the OPC UA port while OPC UA is on)
+                if (p.ShownWhen is { } when)
+                {
+                    string other = resolved.TryGetValue(when.Key, out var ov) ? ov : def.Parameters.FirstOrDefault(x => x.Key == when.Key)?.DefaultValue ?? string.Empty;
+                    if (other.Trim() != when.Value) continue;
+                }
+
                 string current = resolved.TryGetValue(p.Key, out var v) ? v : p.DefaultValue;
                 string key = p.Key;
                 FrameworkElement editor;

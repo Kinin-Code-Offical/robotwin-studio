@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using RobotTwin.CoreSim.Design;
 
 namespace RobotTwin.CoreSim.Industrial.OpcUa
 {
@@ -20,8 +22,12 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
         private readonly Dictionary<UaTagImage, int> _generation = new Dictionary<UaTagImage, int>();
         private readonly Timer _refresh;
 
-        public OpcUaHost(IEnumerable<UaTagImage> images)
+        private readonly System.Collections.Concurrent.ConcurrentQueue<string> _notices = new System.Collections.Concurrent.ConcurrentQueue<string>();
+
+        /// <param name="pkiFolder">[opcua-sec] Where certificates are kept (null: %LOCALAPPDATA%\RobotWinStudio\pki).</param>
+        public OpcUaHost(IEnumerable<UaTagImage> images, string? pkiFolder = null)
         {
+            UaPki? pki = null;
             foreach (var group in images.GroupBy(i => (i.Bind, i.Port)))
             {
                 if (!IPAddress.TryParse(group.Key.Bind, out var address))
@@ -31,7 +37,22 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
                 }
 
                 var space = new UaAddressSpace("urn:robotwin:studio:plc:" + group.Key.Port);
-                var server = new UaServer(space, address, group.Key.Port);
+                var first = group.First();
+                if (group.Any(i => i.Security != first.Security || i.Users != first.Users || i.TrustAllClients != first.TrustAllClients))
+                    Problems.Add($"{group.Key.Port} portundaki PLC'lerin OPC UA güvenlik ayarları farklı; '{first.Name}' PLC'sininki geçerli.");
+                UaServerSecurity security;
+                try
+                {
+                    security = Secure(first, address, group.Key.Port, ref pki, pkiFolder);
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.Cryptography.CryptographicException)
+                {
+                    Problems.Add($"{group.Key.Port}: OPC UA sertifikası hazırlanamadı ({ex.Message}); sunucu güvenliksiz açılmadı.");
+                    continue;
+                }
+
+                var server = new UaServer(space, address, group.Key.Port, "RobotWin Studio", security);
+                server.Notice += _notices.Enqueue;
                 foreach (var image in group)
                 {
                     if (group.Count(i => i.Name == image.Name) > 1) Problems.Add($"{image.Name}: {group.Key.Port} portunda bu adla iki PLC var; biri görünmez.");
@@ -43,7 +64,8 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
                 {
                     server.Start();
                     _servers.Add(server);
-                    Listening.Add($"{server.EndpointUrl} ({string.Join(", ", group.Select(i => i.Name))})");
+                    Listening.Add($"{server.EndpointUrl} ({string.Join(", ", group.Select(i => i.Name))})" +
+                                  (security.Secure ? (security.AllowNone ? "" : security.AllowSign ? ", Basic256Sha256 imza / imza ve şifre" : ", Basic256Sha256 imza ve şifre") : ""));
                 }
                 catch (SocketException ex)
                 {
@@ -53,6 +75,65 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
             }
 
             _refresh = new Timer(_ => Refresh(), null, 250, 250);
+        }
+
+        /// <summary>
+        /// [opcua-sec] A PLC's settings as the server's security: Basic256Sha256 endpoints with the certificate kept for this
+        /// port, the users (with ":okur" read-only), anonymous only when no users are named, and the clients it trusts. A
+        /// user's password goes encrypted with the certificate even when the PLC offers no secure endpoint.
+        /// </summary>
+        private UaServerSecurity Secure(UaTagImage image, IPAddress address, int port, ref UaPki? pki, string? pkiFolder)
+        {
+            var users = ParseUsers(image.Users);
+            bool sign = image.Security == CellParts.OpcUaSecuritySign, encrypt = image.Security == CellParts.OpcUaSecurityEncrypt;
+            var security = new UaServerSecurity
+            {
+                AllowNone = !sign && !encrypt,
+                AllowSign = sign,
+                AllowSignAndEncrypt = sign || encrypt,
+                AllowAnonymous = users.Count == 0
+            };
+            foreach (var u in users) security.Users[u.Name] = (u.Password, u.CanWrite);
+            if (!sign && !encrypt && users.Count == 0)
+            {
+                if (!IPAddress.IsLoopback(address))
+                    Problems.Add($"{port}: OPC UA ağa güvenliksiz ve kullanıcısız açık; ağdaki herkes PLC'yi okuyup yazabilir. PLC'nin 'OPC UA güvenliği' ayarını '{CellParts.OpcUaSecurityEncrypt}' yapın ve kullanıcı tanımlayın.");
+                return security;
+            }
+
+            pki ??= new UaPki(pkiFolder ?? UaPki.DefaultFolder);
+            var hosts = new List<string> { "localhost", Environment.MachineName };
+            if (!address.Equals(IPAddress.Any)) hosts.Add(address.ToString());
+            security.Certificate = pki.Own("urn:robotwin:studio:plc:" + port, "RobotWin PLC " + port, hosts);
+            security.Pki = image.TrustAllClients ? null : pki;
+            return security;
+        }
+
+        /// <summary>"ad:parola, ad2:parola2:okur" (commas, semicolons or lines between them).</summary>
+        public static List<(string Name, string Password, bool CanWrite)> ParseUsers(string text)
+        {
+            var list = new List<(string, string, bool)>();
+            foreach (string item in (text ?? string.Empty).Split(new[] { ',', ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string t = item.Trim();
+                int colon = t.IndexOf(':');
+                if (colon <= 0) continue;
+                string name = t.Substring(0, colon).Trim();
+                string rest = t.Substring(colon + 1);
+                bool readOnly = rest.EndsWith(":okur", StringComparison.OrdinalIgnoreCase) || rest.EndsWith(":ro", StringComparison.OrdinalIgnoreCase);
+                if (readOnly) rest = rest.Substring(0, rest.LastIndexOf(':'));
+                if (name.Length > 0) list.Add((name, rest, !readOnly));
+            }
+
+            return list;
+        }
+
+        /// <summary>[opcua-sec] What the servers said since the last call (a refused certificate, a refused user), for the run's log.</summary>
+        public List<string> TakeNotices()
+        {
+            var list = new List<string>();
+            while (_notices.TryDequeue(out string? n)) list.Add(n);
+            return list;
         }
 
         /// <summary>Where it listens ("opc.tcp://127.0.0.1:4840 (PLC1)") and what could not be opened.</summary>

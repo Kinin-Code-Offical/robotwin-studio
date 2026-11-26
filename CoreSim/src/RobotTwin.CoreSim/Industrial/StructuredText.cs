@@ -655,12 +655,14 @@ namespace RobotTwin.CoreSim.Industrial
         private sealed class UaClientBlock : Block
         {
             public const double NoConnection = 0x8005;
-            private static readonly string[] ReadIn = { "REQ", "URL", "NODE" }, WriteIn = { "REQ", "URL", "NODE", "VALUE", "TEXT" };
+            // [opcua-sec] USER / PASSWORD for a named session, SECURITY 'NONE' (or empty), 'SIGN' or 'SIGNANDENCRYPT' (Basic256Sha256)
+            private static readonly string[] ReadIn = { "REQ", "URL", "NODE", "USER", "PASSWORD", "SECURITY" }, WriteIn = { "REQ", "URL", "NODE", "VALUE", "TEXT", "USER", "PASSWORD", "SECURITY" };
             private static readonly string[] ReadOut = { "DONE", "BUSY", "ERROR", "STATUS", "VALUE", "TEXT" }, WriteOut = { "DONE", "BUSY", "ERROR", "STATUS" };
             private readonly bool _write;
             private bool _last;
             private System.Threading.Tasks.Task<(uint Status, double Value, string Text)>? _pending;
             private OpcUa.UaClient? _client;
+            private string _clientKey = string.Empty;
             private readonly Dictionary<string, OpcUa.UaType> _types = new Dictionary<string, OpcUa.UaType>(StringComparer.Ordinal);
 
             public UaClientBlock(bool write) => _write = write;
@@ -677,8 +679,8 @@ namespace RobotTwin.CoreSim.Industrial
                 {
                     string url = Text("URL").Trim(), node = Text("NODE");
                     double value = this["VALUE"];
-                    string text = Text("TEXT");
-                    _pending = System.Threading.Tasks.Task.Run(() => Request(url, node, value, text));
+                    string text = Text("TEXT"), user = Text("USER"), password = Text("PASSWORD"), security = Text("SECURITY").Trim().ToUpperInvariant();
+                    _pending = System.Threading.Tasks.Task.Run(() => Request(url, node, value, text, user, password, security));
                     this["BUSY"] = 1;
                     this["ERROR"] = 0;
                     this["STATUS"] = 0;
@@ -703,16 +705,26 @@ namespace RobotTwin.CoreSim.Industrial
             }
 
             /// <summary>On a worker thread: one read or write, connecting first when there is no open connection to URL.</summary>
-            private (uint, double, string) Request(string url, string node, double value, string text)
+            private (uint, double, string) Request(string url, string node, double value, string text, string user, string password, string security)
             {
                 if (!OpcUa.UaClient.TryParseNodeId(node, out var id)) return (0x80330000, 0, string.Empty);   // BadNodeIdInvalid
+                var mode = security switch
+                {
+                    "" or "NONE" => OpcUa.UaSecurityMode.None,
+                    "SIGN" => OpcUa.UaSecurityMode.Sign,
+                    "SIGNANDENCRYPT" or "ENCRYPT" => OpcUa.UaSecurityMode.SignAndEncrypt,
+                    _ => (OpcUa.UaSecurityMode)0
+                };
+                if (mode == 0) return (0x80550000, 0, string.Empty);   // BadSecurityPolicyRejected: an unknown SECURITY
+                string key = url + "\n" + user + "\n" + mode;
                 try
                 {
-                    if (_client == null || _client.Url != url || !_client.Connected)
+                    if (_client == null || _clientKey != key || !_client.Connected)
                     {
                         _client?.Dispose();
                         _client = null;
-                        _client = OpcUa.UaClient.Connect(url);
+                        _client = OpcUa.UaClient.Connect(url, 3000, ClientSecurity(mode, user, password));
+                        _clientKey = key;
                     }
 
                     if (!_write)
@@ -732,12 +744,37 @@ namespace RobotTwin.CoreSim.Industrial
 
                     return (_client.Write(id, Typed(type, value, text)), 0, string.Empty);
                 }
-                catch (Exception ex) when (ex is IOException or System.Net.Sockets.SocketException or FormatException or AggregateException or ObjectDisposedException or InvalidOperationException)
+                catch (OpcUa.UaServiceException ex)
+                {
+                    _client?.Dispose();
+                    _client = null;
+                    return (ex.Status, 0, string.Empty);   // [opcua-sec] the server's own reason: a refused user, certificate or policy
+                }
+                catch (Exception ex) when (ex is IOException or System.Net.Sockets.SocketException or FormatException or AggregateException or ObjectDisposedException or
+                                               InvalidOperationException or System.Security.Cryptography.CryptographicException or OpcUa.UaSecurityException or ArgumentException)
                 {
                     _client?.Dispose();
                     _client = null;
                     return (0x80050000, 0, string.Empty);   // BadCommunicationError
                 }
+            }
+
+            private static readonly object CertificateGate = new object();
+            private static System.Security.Cryptography.X509Certificates.X509Certificate2? _certificate;
+
+            /// <summary>
+            /// [opcua-sec] The PLC's client side: its own certificate (made once, kept in the PKI folder's own/) and the server's
+            /// checked against trusted/ (an unknown server is refused and its certificate kept in rejected/ for the user).
+            /// </summary>
+            private static OpcUa.UaClientSecurity ClientSecurity(OpcUa.UaSecurityMode mode, string user, string password)
+            {
+                var security = new OpcUa.UaClientSecurity { Mode = mode, User = user.Length > 0 ? user : null, Password = password };
+                if (mode == OpcUa.UaSecurityMode.None && user.Length == 0) return security;
+                var pki = new OpcUa.UaPki(OpcUa.UaPki.DefaultFolder);
+                lock (CertificateGate) _certificate ??= pki.Own("urn:robotwin:plc", "RobotWin PLC", new[] { "localhost", Environment.MachineName });
+                security.Certificate = _certificate;
+                security.Pki = pki;
+                return security;
             }
 
             private static double Number(OpcUa.Variant v) => v.Value switch
@@ -3240,7 +3277,7 @@ namespace RobotTwin.CoreSim.Industrial
             }
 
             private static StType MemberType(Block b, string member) =>
-                b.TypeOf(member) ?? (member is "URL" or "NODE" or "TEXT" ? StType.String : member is "Q" or "Q1" or "QU" or "QD" or "IN" or "CLK" or "CU" or "CD" or "R" or "LD" or "S" or "S1" or "R1" or "REQ" or "DONE" or "BUSY" or "ERROR" ? StType.Bool
+                b.TypeOf(member) ?? (member is "URL" or "NODE" or "TEXT" or "USER" or "PASSWORD" or "SECURITY" ? StType.String : member is "Q" or "Q1" or "QU" or "QD" or "IN" or "CLK" or "CU" or "CD" or "R" or "LD" or "S" or "S1" or "R1" or "REQ" or "DONE" or "BUSY" or "ERROR" ? StType.Bool
                     : member is "ET" or "PT" ? StType.Time : StType.Int);
 
             /// <summary>[plc-pou] Scale(raw := x, hi := 10.0) or Scale(x, 0.0, 10.0): named arguments, or positional in the order of VAR_INPUT.</summary>

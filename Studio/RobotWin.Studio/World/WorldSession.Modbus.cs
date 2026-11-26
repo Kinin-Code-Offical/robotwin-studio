@@ -36,6 +36,13 @@ namespace RobotWin.Studio.World
             foreach (string problem in _modbus.Problems) AddLog(new SimLogEntry(0, "Modbus", problem, AnalogEventKind.Warning));
         }
 
+        /// <summary>[opcua-sec] What the OPC UA servers said (a refused certificate or user) into the run's log, on the UI thread.</summary>
+        private void NetworkNotices()
+        {
+            if (_opcua == null) return;
+            foreach (string notice in _opcua.TakeNotices()) Log.Add(new SimLogEntry(0, "OPC UA", notice, AnalogEventKind.Warning));
+        }
+
         private void StopModbus()
         {
             _opcua?.Dispose();

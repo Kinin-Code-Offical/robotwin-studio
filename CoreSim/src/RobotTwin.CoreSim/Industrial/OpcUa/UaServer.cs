@@ -4,12 +4,45 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
 namespace RobotTwin.CoreSim.Industrial.OpcUa
 {
     /// <summary>
-    /// [opcua] An OPC UA server over UA TCP with the binary encoding (Part 6), security policy None and anonymous users:
+    /// [opcua-sec] What a server offers: endpoints without security and with Basic256Sha256 (signed, or signed and
+    /// encrypted), anonymous users and/or named users with passwords (read-only or not), and which client certificates it
+    /// trusts. <see cref="Open"/> is the old behaviour: security None, anyone.
+    /// </summary>
+    public sealed class UaServerSecurity
+    {
+        /// <summary>An endpoint without security (discovery over an unsecured channel works either way).</summary>
+        public bool AllowNone { get; set; } = true;
+
+        /// <summary>Basic256Sha256 Sign and SignAndEncrypt endpoints (they need <see cref="Certificate"/>).</summary>
+        public bool AllowSign { get; set; } = true;
+        public bool AllowSignAndEncrypt { get; set; } = true;
+
+        /// <summary>The server's application instance certificate with its private key; null: no secure endpoints.</summary>
+        public X509Certificate2? Certificate { get; set; }
+
+        /// <summary>The client certificates it accepts; null accepts any (a closed test network).</summary>
+        public UaPki? Pki { get; set; }
+
+        public bool AllowAnonymous { get; set; } = true;
+
+        /// <summary>Named users: password, and whether they may write.</summary>
+        public Dictionary<string, (string Password, bool CanWrite)> Users { get; } = new Dictionary<string, (string, bool)>(StringComparer.Ordinal);
+
+        public static UaServerSecurity Open => new UaServerSecurity { AllowSign = false, AllowSignAndEncrypt = false };
+
+        internal bool Secure => Certificate != null && (AllowSign || AllowSignAndEncrypt);
+    }
+
+    /// <summary>
+    /// [opcua] An OPC UA server over UA TCP with the binary encoding (Part 6), [opcua-sec] security policy None or
+    /// Basic256Sha256 (signed, or signed and encrypted) and anonymous or named users:
     /// discovery (GetEndpoints, FindServers), sessions, Browse/BrowseNext, Read, Write, TranslateBrowsePathsToNodeIds,
     /// and subscriptions with monitored items (data changes and keep-alives through Publish), enough for a SCADA, an HMI
     /// or a client such as UaExpert to browse the application's variables, watch them change and write them.
@@ -19,7 +52,9 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
         private const uint BadDecodingError = 0x80070000, BadServiceUnsupported = 0x800B0000, BadSessionIdInvalid = 0x80250000, BadNodeIdUnknown = 0x80340000,
             BadAttributeIdInvalid = 0x80350000, BadNotWritable = 0x803B0000, BadSubscriptionIdInvalid = 0x80280000, BadMonitoredItemIdInvalid = 0x80420000,
             BadNothingToDo = 0x800F0000, BadTcpMessageTypeInvalid = 0x807E0000, BadNoSubscription = 0x80790000, BadMessageNotAvailable = 0x807B0000,
-            BadSecurityPolicyRejected = 0x80550000, BadIdentityTokenInvalid = 0x80200000, BadSessionNotActivated = 0x80270000, BadTooManyPublishRequests = 0x80780000;
+            BadSecurityPolicyRejected = 0x80550000, BadIdentityTokenInvalid = 0x80200000, BadSessionNotActivated = 0x80270000, BadTooManyPublishRequests = 0x80780000,
+            BadSecurityModeRejected = 0x80540000, BadCertificateUriInvalid = 0x80170000, BadUserAccessDenied = 0x801F0000, BadIdentityTokenRejected = 0x80210000,
+            BadApplicationSignatureInvalid = 0x80580000, BadNonceInvalid = 0x80240000, BadCertificateInvalid = 0x80120000;
 
         public const string SecurityPolicyNone = "http://opcfoundation.org/UA/SecurityPolicy#None";
         public const string TransportProfile = "http://opcfoundation.org/UA-Profile/Transport/uatcp-uasc-uabinary";
@@ -32,16 +67,30 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
         private volatile bool _running;
         private int _nextChannel, _nextSession = 1, _nextSubscription = 1;
 
-        public UaServer(UaAddressSpace space, IPAddress address, int port, string name = "RobotWin Studio")
+        public UaServer(UaAddressSpace space, IPAddress address, int port, string name = "RobotWin Studio", UaServerSecurity? security = null)
         {
             Space = space;
             Name = name;
+            Security = security ?? UaServerSecurity.Open;
             _listener = new TcpListener(address, port);
             _publisher = new Thread(PublishLoop) { IsBackground = true, Name = "OPC UA publish" };
         }
 
         public UaAddressSpace Space { get; }
         public string Name { get; }
+        public UaServerSecurity Security { get; }
+
+        /// <summary>[opcua-sec] Said once per cause: a client certificate refused, a user turned away.</summary>
+        public event Action<string>? Notice;
+
+        private readonly HashSet<string> _noticed = new HashSet<string>();
+
+        private void Note(string key, string text)
+        {
+            lock (_noticed)
+                if (!_noticed.Add(key)) return;
+            Notice?.Invoke(text);
+        }
 
         public int Port => ((IPEndPoint)_listener.LocalEndpoint).Port;
 
@@ -128,6 +177,10 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
             public NodeId Token;
             public bool Activated;
             public Connection? Channel;
+            public byte[] ServerNonce = Array.Empty<byte>();
+            public byte[]? ClientCertificate;
+            public string? User;
+            public bool CanWrite = true;
             public readonly Dictionary<uint, Subscription> Subscriptions = new Dictionary<uint, Subscription>();
             public readonly Queue<(Connection Channel, uint RequestId, uint Handle)> Publishes = new Queue<(Connection, uint, uint)>();
             public readonly Dictionary<uint, List<uint>> Acks = new Dictionary<uint, List<uint>>();
@@ -300,6 +353,10 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
             private uint _channelId, _tokenId, _sequence = 1;
             private uint _sendBuffer = 65536;
             private readonly MemoryStream _chunks = new MemoryStream();
+            private UaChannelSecurity _sec = UaChannelSecurity.Unsecured;
+
+            /// <summary>[opcua-sec] The channel's policy, mode and the client's certificate.</summary>
+            public UaChannelSecurity Security => _sec;
 
             public Connection(UaServer server, TcpClient client)
             {
@@ -340,12 +397,12 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
                                 Hello(body);
                                 break;
                             case "OPN":
-                                Open(body);
+                                if (!Open(UaChannelSecurity.Concat(header, body))) return;
                                 break;
                             case "CLO":
                                 return;
                             case "MSG":
-                                Message(body, chunk);
+                                if (!Message(UaChannelSecurity.Concat(header, body), chunk)) return;
                                 break;
                             default:
                                 Error(BadTcpMessageTypeInvalid, "Bilinmeyen ileti türü " + type);
@@ -415,36 +472,94 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
                 }
             }
 
-            private void Open(byte[] body)
+            /// <summary>
+            /// OpenSecureChannel: issue or renew. With Basic256Sha256 the request is decrypted with the server's key and its
+            /// signature checked against the client's certificate (which must be trusted); the answer carries the server's
+            /// nonce, and both sides derive the channel's keys from the two nonces (Part 6 §6.7.4).
+            /// </summary>
+            private bool Open(byte[] message)
             {
-                var r = new UaReader(body);
-                r.UInt32();   // secure channel id (0 for a new one)
-                string? policy = r.String();
-                r.ByteString();   // sender certificate
-                r.ByteString();   // receiver thumbprint
-                r.UInt32();   // sequence number
-                uint requestId = r.UInt32();
-                var typeId = r.NodeId();
-                if (policy != SecurityPolicyNone)
+                var sec = _server.Security;
+                var (_, policy, senderDer, thumb, offset) = UaChannelSecurity.ReadAsymmetricHeader(message);
+                UaChannelSecurity opening;
+                if (policy == SecurityPolicyNone)
                 {
-                    Error(BadSecurityPolicyRejected, "Yalnız SecurityPolicy#None destekleniyor.");
-                    Close();
-                    return;
+                    opening = UaChannelSecurity.Unsecured;
+                }
+                else if (policy == UaSecurityPolicy.Basic256Sha256 && sec.Secure)
+                {
+                    X509Certificate2 client;
+                    try
+                    {
+                        client = UaCertificates.Load(senderDer ?? Array.Empty<byte>());
+                    }
+                    catch (CryptographicException)
+                    {
+                        return Refuse(BadCertificateInvalid, "İstemci sertifikası okunamadı.");
+                    }
+
+                    if (thumb == null || !UaChannelSecurity.FixedTimeEquals(thumb, UaCertificates.Thumbprint(sec.Certificate!)))
+                        return Refuse(BadCertificateInvalid, "İleti bu sunucunun sertifikası için şifrelenmemiş.");
+                    int bits = UaCertificates.KeyBits(client);
+                    if (bits < UaSecurityPolicy.MinKeyBits || bits > UaSecurityPolicy.MaxKeyBits)
+                        return Refuse(BadCertificateInvalid, "İstemci anahtarı " + bits + " bit; Basic256Sha256 2048–4096 bit ister.");
+                    if (_sec.Secured && !UaChannelSecurity.FixedTimeEquals(_sec.Remote!.RawData, client.RawData))
+                        return Refuse(UaSecurityException.BadSecurityChecksFailed, "Kanal başka bir sertifikayla yenilenemez.");
+                    if (sec.Pki != null && !sec.Pki.Trusts(client))
+                    {
+                        string who = client.GetNameInfo(X509NameType.SimpleName, false);
+                        _server.Note("untrusted:" + UaCertificates.ThumbprintHex(client),
+                            $"OPC UA: '{who}' istemcisinin sertifikası güvenilir değil, bağlantı reddedildi; güvenmek için sertifikayı {sec.Pki.RejectedFolder} klasöründen {sec.Pki.TrustedFolder} klasörüne taşıyın");
+                        return Refuse(UaSecurityException.BadCertificateUntrusted, "İstemci sertifikası güvenilir değil.");
+                    }
+
+                    opening = new UaChannelSecurity(policy, UaSecurityMode.SignAndEncrypt, sec.Certificate, client);
+                }
+                else
+                {
+                    return Refuse(BadSecurityPolicyRejected, "Bu güvenlik ilkesi desteklenmiyor: " + policy);
                 }
 
+                byte[] inner;
+                try
+                {
+                    inner = opening.DecodeAsymmetric(message, offset);
+                }
+                catch (UaSecurityException ex)
+                {
+                    return Refuse(ex.Status, ex.Message);
+                }
+
+                var r = new UaReader(inner);
+                r.UInt32();   // sequence number
+                uint requestId = r.UInt32();
+                r.NodeId();   // type
                 var request = RequestHeader(r);
                 r.UInt32();   // client protocol version
                 int requestType = r.Int32();
-                r.Int32();   // security mode
-                r.ByteString();   // client nonce
+                var mode = (UaSecurityMode)r.Int32();
+                byte[] clientNonce = r.ByteString() ?? Array.Empty<byte>();
                 uint lifetime = r.UInt32();
+                if (opening.Secured)
+                {
+                    bool allowed = mode == UaSecurityMode.Sign ? sec.AllowSign : mode == UaSecurityMode.SignAndEncrypt && sec.AllowSignAndEncrypt;
+                    if (!allowed) return Refuse(BadSecurityModeRejected, "Bu güvenlik kipi sunulmuyor.");
+                    if (clientNonce.Length != UaSecurityPolicy.NonceLength) return Refuse(BadNonceInvalid, "İstemci rastgele sayısı 32 bayt olmalı.");
+                    if (_sec.Secured && _sec.Mode != mode) return Refuse(BadSecurityModeRejected, "Kanal başka bir kiple yenilenemez.");
+                }
+                else if (mode != UaSecurityMode.None)
+                {
+                    return Refuse(BadSecurityModeRejected, "Güvenlik ilkesi None iken kip None olmalı.");
+                }
+
                 if (requestType == 0) _channelId = (uint)Interlocked.Increment(ref _server._nextChannel);
                 _tokenId++;
+                // A renewal keeps the channel (and reads the old token until the client moves on).
+                var channel = opening.Secured
+                    ? _sec.Secured ? _sec : new UaChannelSecurity(policy, mode, sec.Certificate, opening.Remote)
+                    : new UaChannelSecurity(SecurityPolicyNone, UaSecurityMode.None, null, null);
+                byte[] serverNonce = opening.Secured ? Random(UaSecurityPolicy.NonceLength) : Array.Empty<byte>();
                 var w = new UaWriter();
-                w.UInt32(_channelId);
-                w.String(SecurityPolicyNone);
-                w.ByteString(null);
-                w.ByteString(null);
                 w.UInt32(_sequence++);
                 w.UInt32(requestId);
                 w.NodeId(NodeId.Ns0(449));
@@ -454,9 +569,34 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
                 w.UInt32(_tokenId);
                 w.DateTime(DateTime.UtcNow);
                 w.UInt32(Math.Max(10000u, Math.Min(lifetime, 3_600_000u)));
-                w.ByteString(new byte[0]);
-                Frame("OPN", 'F', w.ToArray());
-                _ = typeId;
+                w.ByteString(serverNonce);
+                byte[] reply = (opening.Secured ? new UaChannelSecurity(policy, mode, sec.Certificate, opening.Remote) : UaChannelSecurity.Unsecured).EncodeAsymmetric(_channelId, w.ToArray());
+                if (channel.Secured)
+                {
+                    // the client's keys from (server nonce, client nonce), the server's from (client nonce, server nonce)
+                    channel.SetKeys(_tokenId, UaChannelKeys.Derive(clientNonce, serverNonce), UaChannelKeys.Derive(serverNonce, clientNonce));
+                }
+                else
+                {
+                    channel.SetToken(_tokenId);
+                }
+
+                _sec = channel;
+                lock (_send) _stream.Write(reply, 0, reply.Length);
+                return true;
+            }
+
+            private bool Refuse(uint status, string reason)
+            {
+                Error(status, reason);
+                return false;
+            }
+
+            private static byte[] Random(int n)
+            {
+                var b = new byte[n];
+                using (var rng = RandomNumberGenerator.Create()) rng.GetBytes(b);
+                return b;
             }
 
             public void Send(uint responseType, uint requestId, uint handle, uint result, Action<UaWriter> body)
@@ -478,8 +618,9 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
 
             private void SendMessage(uint requestId, byte[] payload)
             {
-                // Chunks within the client's receive buffer: channel id, token id, sequence header, then the payload's part.
-                int room = (int)_sendBuffer - 8 - 4 - 4 - 8;
+                // Chunks within the client's receive buffer: the sequence header and the payload's part, [opcua-sec] signed and
+                // encrypted as the channel is.
+                int room = _sec.MaxBodyPerChunk((int)_sendBuffer);
                 lock (_send)
                 {
                     for (int at = 0; at < payload.Length || at == 0; at += room)
@@ -487,32 +628,39 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
                         int n = Math.Min(room, payload.Length - at);
                         bool last = at + n >= payload.Length;
                         var w = new UaWriter();
-                        w.UInt32(_channelId);
-                        w.UInt32(_tokenId);
                         w.UInt32(_sequence++);
                         w.UInt32(requestId);
                         var part = new byte[n];
                         System.Array.Copy(payload, at, part, 0, n);
                         w.Bytes(part);
-                        Frame("MSG", last ? 'F' : 'C', w.ToArray());
+                        byte[] chunk = _sec.EncodeSymmetric("MSG", last ? 'F' : 'C', _channelId, w.ToArray());
+                        _stream.Write(chunk, 0, chunk.Length);
                         if (last) break;
                     }
                 }
             }
 
-            private void Message(byte[] body, char chunk)
+            private bool Message(byte[] message, char chunk)
             {
-                var r = new UaReader(body);
-                r.UInt32();   // channel id
-                r.UInt32();   // token id
+                byte[] inner;
+                try
+                {
+                    inner = _sec.DecodeSymmetric(message);   // [opcua-sec] checked and decrypted with the token's keys
+                }
+                catch (UaSecurityException ex)
+                {
+                    return Refuse(ex.Status, ex.Message);
+                }
+
+                var r = new UaReader(inner);
                 r.UInt32();   // sequence number
                 uint requestId = r.UInt32();
-                _chunks.Write(body, r.Position, r.Remaining);
-                if (chunk == 'C') return;
+                _chunks.Write(inner, r.Position, r.Remaining);
+                if (chunk == 'C') return true;
                 if (chunk == 'A')
                 {
                     _chunks.SetLength(0);
-                    return;
+                    return true;
                 }
 
                 var payload = _chunks.ToArray();
@@ -527,7 +675,7 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
                 catch (InvalidDataException)
                 {
                     Fault(requestId, 0, BadDecodingError);
-                    return;
+                    return true;
                 }
 
                 try
@@ -538,6 +686,12 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
                 {
                     Fault(requestId, request.Handle, BadDecodingError);
                 }
+                catch (UaSecurityException ex)
+                {
+                    Fault(requestId, request.Handle, ex.Status);
+                }
+
+                return true;
             }
 
             public void Reply(uint requestId, uint handle, uint status) => Fault(requestId, handle, status);
@@ -579,7 +733,19 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
             {
                 case 428: GetEndpoints(c, requestId, h, r); return;
                 case 422: FindServers(c, requestId, h); return;
-                case 461: CreateSession(c, requestId, h, r); return;
+            }
+
+            // [opcua-sec] Without a None endpoint an unsecured channel is for discovery only (Part 4 §5.4).
+            if (!c.Security.Secured && !Security.AllowNone)
+            {
+                c.Reply(requestId, h.Handle, BadSecurityPolicyRejected);
+                return;
+            }
+
+            if (type == 461)
+            {
+                CreateSession(c, requestId, h, r);
+                return;
             }
 
             Session? s;
@@ -611,7 +777,7 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
                     case 533: c.Send(536, requestId, h.Handle, 0, w => { w.Int32(0); w.Int32(0); }); return;   // no continuation points are handed out
                     case 554: Translate(c, requestId, h, r); return;
                     case 631: Read(c, requestId, h, r); return;
-                    case 673: Write(c, requestId, h, r); return;
+                    case 673: Write(c, requestId, h, r, s); return;
                     case 787: CreateSubscription(c, requestId, h, r, s); return;
                     case 793: ModifySubscription(c, requestId, h, r, s); return;
                     case 799: SetPublishingMode(c, requestId, h, r, s); return;
@@ -640,29 +806,41 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
             w.Array(new[] { EndpointUrl }, w.String);
         }
 
-        private void Endpoint(UaWriter w)
+        /// <summary>[opcua-sec] The endpoints offered: (policy, mode, security level).</summary>
+        private List<(string Policy, UaSecurityMode Mode, byte Level)> Endpoints()
+        {
+            var list = new List<(string, UaSecurityMode, byte)>();
+            if (Security.AllowNone) list.Add((SecurityPolicyNone, UaSecurityMode.None, 0));
+            if (Security.Certificate != null && Security.AllowSign) list.Add((UaSecurityPolicy.Basic256Sha256, UaSecurityMode.Sign, 1));
+            if (Security.Certificate != null && Security.AllowSignAndEncrypt) list.Add((UaSecurityPolicy.Basic256Sha256, UaSecurityMode.SignAndEncrypt, 2));
+            return list;
+        }
+
+        private void Endpoint(UaWriter w, (string Policy, UaSecurityMode Mode, byte Level) e)
         {
             w.String(EndpointUrl);
             ApplicationDescription(w);
-            w.ByteString(null);
-            w.Int32(1);   // MessageSecurityMode None
-            w.String(SecurityPolicyNone);
-            w.Int32(1);
-            w.String("anonymous");
-            w.Int32(0);   // UserTokenType Anonymous
-            w.String(null);
-            w.String(null);
-            w.String(null);
+            w.ByteString(Security.Certificate?.RawData);
+            w.Int32((int)e.Mode);
+            w.String(e.Policy);
+            // Anonymous, and named users whose password goes encrypted with the server's certificate (also on a None endpoint).
+            var tokens = new List<(string Id, int Type, string? Policy)>();
+            if (Security.AllowAnonymous) tokens.Add(("anonymous", 0, null));
+            if (Security.Users.Count > 0 && Security.Certificate != null) tokens.Add(("username", 1, UaSecurityPolicy.Basic256Sha256));
+            w.Array(tokens, t =>
+            {
+                w.String(t.Id);
+                w.Int32(t.Type);
+                w.String(null);
+                w.String(null);
+                w.String(t.Policy);
+            });
             w.String(TransportProfile);
-            w.Byte(0);
+            w.Byte(e.Level);
         }
 
         private void GetEndpoints(Connection c, uint requestId, RequestInfo h, UaReader r) =>
-            c.Send(431, requestId, h.Handle, 0, w =>
-            {
-                w.Int32(1);
-                Endpoint(w);
-            });
+            c.Send(431, requestId, h.Handle, 0, w => w.Array(Endpoints(), e => Endpoint(w, e)));
 
         private void FindServers(Connection c, uint requestId, RequestInfo h) =>
             c.Send(425, requestId, h.Handle, 0, w =>
@@ -673,18 +851,53 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
 
         private void CreateSession(Connection c, uint requestId, RequestInfo h, UaReader r)
         {
-            SkipApplicationDescription(r);
+            string? clientUri = r.String();
+            r.String();
+            r.LocalizedText();
+            r.Int32();
+            r.String();
+            r.String();
+            r.Array(r.String);
             r.String();   // server uri
             r.String();   // endpoint url
             r.String();   // session name
-            r.ByteString();   // client nonce
-            r.ByteString();   // client certificate
+            byte[] clientNonce = r.ByteString() ?? Array.Empty<byte>();
+            byte[]? clientCertificate = r.ByteString();
             double timeout = r.Double();
+            var channel = c.Security;
+            string? algorithm = null;
+            byte[]? signature = null;
+            if (channel.Secured)
+            {
+                // [opcua-sec] The session belongs to the channel's application: the same certificate, its URI, a real nonce.
+                if (clientCertificate == null || !UaChannelSecurity.FixedTimeEquals(clientCertificate, channel.Remote!.RawData))
+                {
+                    c.Reply(requestId, h.Handle, BadCertificateInvalid);
+                    return;
+                }
+
+                string? certUri = UaCertificates.ApplicationUri(channel.Remote);
+                if (certUri != null && clientUri != null && certUri != clientUri)
+                {
+                    c.Reply(requestId, h.Handle, BadCertificateUriInvalid);
+                    return;
+                }
+
+                if (clientNonce.Length < UaSecurityPolicy.NonceLength)
+                {
+                    c.Reply(requestId, h.Handle, BadNonceInvalid);
+                    return;
+                }
+
+                algorithm = UaSecurityPolicy.RsaSha256;
+                signature = UaCertificates.Sign(Security.Certificate!, UaChannelSecurity.Concat(clientCertificate, clientNonce));
+            }
+
             Session s;
             lock (_gate)
             {
                 uint id = (uint)_nextSession++;
-                s = new Session { Id = id, Token = new NodeId(1, 0x10000u + id * 7919u), Channel = c };
+                s = new Session { Id = id, Token = new NodeId(1, 0x10000u + id * 7919u), Channel = c, ServerNonce = NewNonce(), ClientCertificate = clientCertificate };
                 _sessions[id] = s;
             }
 
@@ -693,15 +906,21 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
                 w.NodeId(new NodeId(1, s.Id));
                 w.NodeId(s.Token);
                 w.Double(Math.Max(10000, Math.Min(timeout, 3_600_000)));
-                w.ByteString(Guid.NewGuid().ToByteArray().Concat(Guid.NewGuid().ToByteArray()).ToArray());
-                w.ByteString(null);
-                w.Int32(1);
-                Endpoint(w);
+                w.ByteString(s.ServerNonce);
+                w.ByteString(Security.Certificate?.RawData);
+                w.Array(Endpoints(), e => Endpoint(w, e));
                 w.Int32(0);   // server software certificates
-                w.String(null);   // server signature: algorithm
-                w.ByteString(null);   // signature
+                w.String(algorithm);   // server signature: over the client's certificate and nonce
+                w.ByteString(signature);
                 w.UInt32(16u * 1024 * 1024);
             });
+        }
+
+        private static byte[] NewNonce()
+        {
+            var b = new byte[UaSecurityPolicy.NonceLength];
+            using (var rng = RandomNumberGenerator.Create()) rng.GetBytes(b);
+            return b;
         }
 
         private static void SkipApplicationDescription(UaReader r)
@@ -718,7 +937,7 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
         private void ActivateSession(Connection c, uint requestId, RequestInfo h, UaReader r, Session s)
         {
             r.String();   // client signature: algorithm
-            r.ByteString();
+            byte[]? clientSignature = r.ByteString();
             r.Array(() =>
             {
                 r.ByteString();
@@ -727,24 +946,109 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
             });
             r.Array(r.String);   // locale ids
             var token = r.ExtensionObject();
-            if (!token.TypeId.IsNull && token.TypeId != NodeId.Ns0(321))
+            var channel = c.Security;
+            if (channel.Secured)
             {
-                c.Reply(requestId, h.Handle, BadIdentityTokenInvalid);   // only anonymous users
+                // [opcua-sec] The client proves it holds its key: its signature over the server's certificate and last nonce.
+                if (s.ClientCertificate == null || !UaChannelSecurity.FixedTimeEquals(s.ClientCertificate, channel.Remote!.RawData) ||
+                    !UaCertificates.Verify(channel.Remote, UaChannelSecurity.Concat(Security.Certificate!.RawData, s.ServerNonce), clientSignature))
+                {
+                    c.Reply(requestId, h.Handle, BadApplicationSignatureInvalid);
+                    return;
+                }
+            }
+
+            string? user = null;
+            bool canWrite = true;
+            if (token.TypeId.IsNull || token.TypeId == NodeId.Ns0(321))
+            {
+                if (!Security.AllowAnonymous)
+                {
+                    c.Reply(requestId, h.Handle, BadIdentityTokenRejected);
+                    return;
+                }
+            }
+            else if (token.TypeId == NodeId.Ns0(324))
+            {
+                uint status = CheckUser(token.Body ?? Array.Empty<byte>(), s, channel, out user, out canWrite);
+                if (status != 0)
+                {
+                    Note("user:" + (user ?? string.Empty), $"OPC UA: '{user}' kullanıcısı reddedildi (adı ya da parolası yanlış)");
+                    c.Reply(requestId, h.Handle, status);
+                    return;
+                }
+            }
+            else
+            {
+                c.Reply(requestId, h.Handle, BadIdentityTokenInvalid);   // anonymous and user name only
                 return;
             }
 
+            byte[] nonce = NewNonce();
             lock (s)
             {
                 s.Activated = true;
                 s.Channel = c;
+                s.User = user;
+                s.CanWrite = canWrite;
+                s.ServerNonce = nonce;
             }
 
             c.Send(470, requestId, h.Handle, 0, w =>
             {
-                w.ByteString(Guid.NewGuid().ToByteArray().Concat(Guid.NewGuid().ToByteArray()).ToArray());
+                w.ByteString(nonce);
                 w.Int32(0);
                 w.Int32(0);
             });
+        }
+
+        /// <summary>
+        /// [opcua-sec] A UserNameIdentityToken: the password encrypted with the server's certificate (RSA-OAEP over its length,
+        /// the password and the server's last nonce), or in clear only on a signed-and-encrypted channel.
+        /// </summary>
+        private uint CheckUser(byte[] body, Session s, UaChannelSecurity channel, out string? user, out bool canWrite)
+        {
+            canWrite = false;
+            var t = new UaReader(body);
+            t.String();   // policy id
+            user = t.String();
+            byte[] secret = t.ByteString() ?? Array.Empty<byte>();
+            string? algorithm = t.String();
+            string password;
+            if (algorithm == UaSecurityPolicy.RsaOaep && Security.Certificate != null)
+            {
+                byte[] plain;
+                try
+                {
+                    plain = UaCertificates.Decrypt(Security.Certificate, secret);
+                }
+                catch (Exception ex) when (ex is CryptographicException || ex is UaSecurityException)
+                {
+                    return BadIdentityTokenInvalid;
+                }
+
+                if (plain.Length < 4) return BadIdentityTokenInvalid;
+                int length = BitConverter.ToInt32(plain, 0);
+                int n = s.ServerNonce.Length;
+                if (length < n || length > plain.Length - 4) return BadIdentityTokenInvalid;
+                if (!UaChannelSecurity.FixedTimeEquals(UaChannelSecurity.Slice(plain, 4 + length - n, n), s.ServerNonce)) return BadIdentityTokenInvalid;
+                password = System.Text.Encoding.UTF8.GetString(plain, 4, length - n);
+            }
+            else if (string.IsNullOrEmpty(algorithm) && channel.Mode == UaSecurityMode.SignAndEncrypt)
+            {
+                password = System.Text.Encoding.UTF8.GetString(secret);
+            }
+            else
+            {
+                return BadIdentityTokenRejected;   // a password must not cross the network readable
+            }
+
+            if (user == null || !Security.Users.TryGetValue(user, out var known)) return BadUserAccessDenied;
+            var a = System.Text.Encoding.UTF8.GetBytes(password);
+            var b = System.Text.Encoding.UTF8.GetBytes(known.Password);
+            if (!UaChannelSecurity.FixedTimeEquals(a, b)) return BadUserAccessDenied;
+            canWrite = known.CanWrite;
+            return 0;
         }
 
         private void CloseSession(Connection c, uint requestId, RequestInfo h, UaReader r, Session s)
@@ -862,7 +1166,7 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
             };
         }
 
-        private void Write(Connection c, uint requestId, RequestInfo h, UaReader r)
+        private void Write(Connection c, uint requestId, RequestInfo h, UaReader r, Session s)
         {
             var nodes = r.Array(() => (Node: r.NodeId(), Attribute: r.UInt32(), Range: r.String(), Value: r.DataValue()));
             if (nodes.Count == 0)
@@ -871,7 +1175,8 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
                 return;
             }
 
-            var results = nodes.Select(x => WriteAttribute(x.Node, x.Attribute, x.Value)).ToList();
+            // [opcua-sec] a read-only user sees everything and changes nothing
+            var results = nodes.Select(x => s.CanWrite ? WriteAttribute(x.Node, x.Attribute, x.Value) : BadUserAccessDenied).ToList();
             c.Send(676, requestId, h.Handle, 0, w =>
             {
                 w.Array(results, x => w.StatusCode(x));

@@ -91,6 +91,73 @@ IF WrLocked.ERROR THEN LockedStatus := WrLocked.STATUS; END_IF;
 
         private const double UaClientStatusNoConnection = 0x8005;
 
+        /// <summary>
+        /// [opcua-sec] UA_READ with SECURITY, USER and PASSWORD: an unknown server's certificate is refused until the user
+        /// trusts it, then the PLC reads signed and encrypted as a named user; a wrong password and an unknown SECURITY give
+        /// the server's (or the block's) reason in STATUS.
+        /// </summary>
+        [Fact]
+        public void APlcReadsASecuredServerAsANamedUser()
+        {
+            string pki = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "rw-plc-pki-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            UaPki.DefaultFolderOverride = pki;
+            try
+            {
+                var image = new UaTagImage("Line", "127.0.0.1", 0) { Security = RobotTwin.CoreSim.Design.CellParts.OpcUaSecurityEncrypt, Users = "plc:secret, guest:g:okur", TrustAllClients = true };
+                image.Publish(new[] { new UaTagImage.Tag("SPEED", StType.Real, "REAL", true, 12.5) }, true);
+                using var host = new OpcUaHost(new[] { image }, System.IO.Path.Combine(pki, "server"));
+                Assert.Empty(host.Problems);
+                string url = host.Servers[0].EndpointUrl;
+
+                StProgram Read(string user, string password, string security) => Compile($@"
+VAR
+    R : UA_READ;
+    Speed : REAL;
+    Status : DINT;
+END_VAR
+R(REQ := TRUE, URL := '{url}', NODE := 'ns=1;s=Line.SPEED', USER := '{user}', PASSWORD := '{password}', SECURITY := '{security}');
+IF R.DONE THEN Speed := R.VALUE; END_IF;
+IF R.ERROR THEN Status := R.STATUS; END_IF;
+");
+
+                var unknown = Read("plc", "secret", "SIGNANDENCRYPT");
+                ScanUntil(unknown, () => unknown.Read("STATUS") != 0);
+                Assert.Equal(0x801A, unknown.Read("STATUS"));   // BadCertificateUntrusted: the server is not known yet
+                var rejected = System.IO.Directory.GetFiles(System.IO.Path.Combine(pki, "rejected"));
+                Assert.Single(rejected);
+                var server = UaCertificates.Load(System.IO.File.ReadAllBytes(rejected[0]));
+                new UaPki(pki).Trust(server);
+
+                var ok = Read("plc", "secret", "SIGNANDENCRYPT");
+                ScanUntil(ok, () => ok.Read("SPEED") != 0 || ok.Read("STATUS") != 0);
+                Assert.Equal(0, ok.Read("STATUS"));
+                Assert.Equal(12.5, ok.Read("SPEED"));
+
+                var wrong = Read("plc", "nope", "SIGNANDENCRYPT");
+                ScanUntil(wrong, () => wrong.Read("STATUS") != 0);
+                Assert.Equal(0x801F, wrong.Read("STATUS"));   // BadUserAccessDenied
+
+                var odd = Read("plc", "secret", "TLS");
+                ScanUntil(odd, () => odd.Read("STATUS") != 0);
+                Assert.Equal(0x8055, odd.Read("STATUS"));   // BadSecurityPolicyRejected
+
+                var open = Read(string.Empty, string.Empty, string.Empty);
+                ScanUntil(open, () => open.Read("STATUS") != 0);
+                Assert.Equal(0x8055, open.Read("STATUS"));   // no None endpoint: discovery only
+            }
+            finally
+            {
+                UaPki.DefaultFolderOverride = null;
+                try
+                {
+                    System.IO.Directory.Delete(pki, true);
+                }
+                catch (System.IO.IOException)
+                {
+                }
+            }
+        }
+
         [Fact]
         public void NodeIdsAndAddressesAreReadAsUaWritesThem()
         {

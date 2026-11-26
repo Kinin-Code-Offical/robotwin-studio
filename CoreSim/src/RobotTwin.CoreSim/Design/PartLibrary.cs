@@ -60,6 +60,9 @@ namespace RobotTwin.CoreSim.Design
         public string DefaultValue { get; }
         public string Unit { get; }
         public string[]? Choices { get; }
+
+        /// <summary>[uncluttered] Shown only while another parameter has this value (the OPC UA port while OPC UA is on …).</summary>
+        public (string Key, string Value)? ShownWhen { get; init; }
     }
 
     /// <summary>Everything a part builder needs to emit devices for one placed part.</summary>

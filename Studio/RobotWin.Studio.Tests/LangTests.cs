@@ -286,6 +286,8 @@ public class LangTests
     [InlineData("Hafif kurulum · .NET 10 Masaüstü Çalışma Zamanı ile", "Lite installation · with the .NET 10 Desktop Runtime")]
     [InlineData("(simülatör: çizimin süreci beklenmedik biçimde kapandı: yığın taştı (0xC00000FD))", "(simulator: the sketch's process ended unexpectedly: stack overflow (0xC00000FD))")]
     [InlineData("çizim kendi sürecinde çalışıyor (korumalı alan kurulamadı: korumalı alanda (AppContainer) süreç başlatılamadı (Win32 hata kodu 5))", "the sketch runs in its own process (the sandbox could not be set up: the process could not start in the sandbox (AppContainer) (Win32 error 5))")]
+    [InlineData("OPC UA dinleniyor: opc.tcp://127.0.0.1:4840 (Hat1), Basic256Sha256 imza ve şifre", "OPC UA listening: opc.tcp://127.0.0.1:4840 (Hat1), Basic256Sha256 signed and encrypted")]
+    [InlineData("OPC UA: 'SCADA' kullanıcısı reddedildi (adı ya da parolası yanlış)", "OPC UA: user 'SCADA' was refused (wrong name or password)")]
     public void TextsRunsLeftTurkishAreEnglish(string turkish, string english)
     {
         Lang.Load("en");

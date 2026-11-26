@@ -113,7 +113,12 @@ namespace RobotTwin.CoreSim.Sandbox
                 int port = (int)CellParts.Num(p, "opcua_port", 4840);
                 string bind = p.TryGetValue("bind", out var b) && !string.IsNullOrWhiteSpace(b) ? b.Trim() : "127.0.0.1";
                 string name = string.IsNullOrWhiteSpace(o.Name) ? o.Id : o.Name.Trim();
-                plc.OpcUa = new Industrial.OpcUa.UaTagImage(name, bind, Math.Max(0, Math.Min(65535, port)));
+                plc.OpcUa = new Industrial.OpcUa.UaTagImage(name, bind, Math.Max(0, Math.Min(65535, port)))
+                {
+                    Security = p.TryGetValue("opcua_security", out var sec) && !string.IsNullOrWhiteSpace(sec) ? sec.Trim() : CellParts.OpcUaSecurityNone,
+                    Users = p.TryGetValue("opcua_users", out var users) ? users ?? string.Empty : string.Empty,
+                    TrustAllClients = p.TryGetValue("opcua_clients", out var clients) && clients.Trim() == CellParts.OpcUaClientsAll
+                };
                 if (plc.Program != null) PublishOpcUa(plc, plc.Program);
             }
 

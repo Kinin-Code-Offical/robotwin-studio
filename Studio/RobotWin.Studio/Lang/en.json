@@ -8001,7 +8001,14 @@
   "yığın arabelleği taştı (0xC0000409)": "stack buffer overrun (0xC0000409)",
   "yığın (heap) bozuldu (0xC0000374)": "heap corrupted (0xC0000374)",
   "çizim süreci yalnızca Windows x64'te çalışır": "the sketch process runs on Windows x64 only",
-  "çizim süreci beklenmeyen bir yanıt verdi": "the sketch process gave an unexpected answer"
+  "çizim süreci beklenmeyen bir yanıt verdi": "the sketch process gave an unexpected answer",
+  "OPC UA güvenliği": "OPC UA security",
+  "OPC UA kullanıcıları (ad:parola, ad:parola:okur)": "OPC UA users (name:password, name:password:ro for read-only)",
+  "Kabul edilen istemciler": "Accepted clients",
+  "hepsi": "all",
+  "imza": "signed",
+  "imza ve şifre": "signed and encrypted",
+  "güvenilenler": "trusted only"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11299,6 +11306,13 @@
   "korumalı alan (AppContainer) kimliği alınamadı (0x{…})": "the sandbox (AppContainer) identity could not be had (0x{0})",
   "korumalı alanda (AppContainer) süreç başlatılamadı (Win32 hata kodu {…})": "the process could not start in the sandbox (AppContainer) (Win32 error {0})",
   "çizim süreci başlatılamadı (Win32 hata kodu {…})": "the sketch process could not start (Win32 error {0})",
-  "dosyaya korumalı alan izni verilemedi: {…} (Win32 hata kodu {…})": "the sandbox could not be given access to a file: {0} (Win32 error {1})"
+  "dosyaya korumalı alan izni verilemedi: {…} (Win32 hata kodu {…})": "the sandbox could not be given access to a file: {0} (Win32 error {1})",
+  "OPC UA dinleniyor: {…}, Basic256Sha256 imza ve şifre": "OPC UA listening: {0}, Basic256Sha256 signed and encrypted",
+  "OPC UA dinleniyor: {…}, Basic256Sha256 imza / imza ve şifre": "OPC UA listening: {0}, Basic256Sha256 signed / signed and encrypted",
+  "{…} portundaki PLC'lerin OPC UA güvenlik ayarları farklı; '{…}' PLC'sininki geçerli.": "The PLCs on port {0} have different OPC UA security settings; PLC '{1}''s apply.",
+  "{…}: OPC UA sertifikası hazırlanamadı ({…}); sunucu güvenliksiz açılmadı.": "{0}: the OPC UA certificate could not be prepared ({1}); the server was not opened without security.",
+  "{…}: OPC UA ağa güvenliksiz ve kullanıcısız açık; ağdaki herkes PLC'yi okuyup yazabilir. PLC'nin 'OPC UA güvenliği' ayarını 'imza ve şifre' yapın ve kullanıcı tanımlayın.": "{0}: OPC UA is open to the network without security or users; anyone on the network can read and write the PLC. Set the PLC's 'OPC UA security' to 'signed and encrypted' and add users.",
+  "OPC UA: '{…}' istemcisinin sertifikası güvenilir değil, bağlantı reddedildi; güvenmek için sertifikayı {…} klasöründen {…} klasörüne taşıyın": "OPC UA: the certificate of client '{0}' is not trusted, the connection was refused; to trust it, move the certificate from {1} to {2}",
+  "OPC UA: '{…}' kullanıcısı reddedildi (adı ya da parolası yanlış)": "OPC UA: user '{0}' was refused (wrong name or password)"
  }
 }

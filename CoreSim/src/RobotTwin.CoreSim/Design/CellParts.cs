@@ -42,6 +42,12 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>[plc] The PLC's programming languages: its program is in "program" (ST) or "ladder" (LD, as JSON).</summary>
         public const string PlcStructuredText = "Yapısal Metin", PlcLadder = "Merdiven";
 
+        /// <summary>[opcua-sec] The PLC server's security: none, Basic256Sha256 signed (or signed and encrypted), encrypted only.</summary>
+        public const string OpcUaSecurityNone = "yok", OpcUaSecuritySign = "imza", OpcUaSecurityEncrypt = "imza ve şifre";
+
+        /// <summary>[opcua-sec] Which client certificates it accepts: those in pki/trusted, or any (a closed test network).</summary>
+        public const string OpcUaClientsTrusted = "güvenilenler", OpcUaClientsAll = "hepsi";
+
         /// <summary>[plc] The PLC's inputs and outputs, in %IX0.0… / %QX0.0… order.</summary>
         public static readonly string[] PlcInputs = { "I0", "I1", "I2", "I3", "I4", "I5", "I6", "I7" };
         public static readonly string[] PlcOutputs = { "Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7" };
@@ -284,9 +290,13 @@ namespace RobotTwin.CoreSim.Design
                 new ParameterDefinition("step_var", "Adım değişkeni", "Adim", ""),
                 new ParameterDefinition("io_v", "G/Ç gerilimi", "24", "V", new[] { "5", "24" }),
                 new ParameterDefinition("modbus", "Modbus TCP sunucusu", "kapalı", "", new[] { "kapalı", "açık" }),
-                new ParameterDefinition("modbus_port", "Modbus TCP portu", "5021", ""),
+                new ParameterDefinition("modbus_port", "Modbus TCP portu", "5021", "") { ShownWhen = ("modbus", "açık") },
                 new ParameterDefinition("opcua", "OPC UA sunucusu", "kapalı", "", new[] { "kapalı", "açık" }),
-                new ParameterDefinition("opcua_port", "OPC UA portu", "4840", ""),
+                new ParameterDefinition("opcua_port", "OPC UA portu", "4840", "") { ShownWhen = ("opcua", "açık") },
+                // [opcua-sec] Basic256Sha256: the server's certificate is made once and kept (pki/own); clients' in pki/trusted
+                new ParameterDefinition("opcua_security", "OPC UA güvenliği", OpcUaSecurityNone, "", new[] { OpcUaSecurityNone, OpcUaSecuritySign, OpcUaSecurityEncrypt }) { ShownWhen = ("opcua", "açık") },
+                new ParameterDefinition("opcua_users", "OPC UA kullanıcıları (ad:parola, ad:parola:okur)", "", "") { ShownWhen = ("opcua", "açık") },
+                new ParameterDefinition("opcua_clients", "Kabul edilen istemciler", OpcUaClientsTrusted, "", new[] { OpcUaClientsTrusted, OpcUaClientsAll }) { ShownWhen = ("opcua", "açık") },
                 new ParameterDefinition("bind", "Dinlenen adres", "127.0.0.1", "", new[] { "127.0.0.1", "0.0.0.0" }));
             plc.Build = c => BuildIo(c, PlcInputs, PlcOutputs);
             AddPins(plc, PlcInputs, PlcOutputs);
