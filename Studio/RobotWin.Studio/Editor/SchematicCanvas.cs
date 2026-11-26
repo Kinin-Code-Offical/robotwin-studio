@@ -32,7 +32,13 @@ namespace RobotWin.Studio.Editor
         Text,
 
         /// <summary>[highlight] KiCad's Highlight Net tool: a click lights up the net under it (and on the board); the same net or nothing clears it.</summary>
-        Highlight
+        Highlight,
+
+        /// <summary>[shapes] KiCad's schematic graphics: a polyline, a rectangle, a circle, an arc (Editor/SchematicCanvas.Shapes.cs).</summary>
+        Line,
+        Rectangle,
+        Circle,
+        Arc
     }
 
     /// <summary>
@@ -139,6 +145,7 @@ namespace RobotWin.Studio.Editor
             {
                 _tool = value;
                 _wirePoints = null;
+                _shapeDraft = null;   // [shapes]
                 if (value != EditorTool.Place)
                 {
                     _ghost = null;
@@ -253,6 +260,7 @@ namespace RobotWin.Studio.Editor
                                         o is SchematicWire w && !Doc.Wires.Contains(w) ||
                                         o is NetLabel l && !Doc.Labels.Contains(l) ||
                                         o is SchematicNote sn && !Doc.Notes.Contains(sn) ||
+                                        o is SchematicShape sh && !Doc.Shapes.Contains(sh) ||
                                         o is NoConnectFlag nc && !Doc.NoConnects.Contains(nc));
             InvalidateVisual();
         }
@@ -372,7 +380,7 @@ namespace RobotWin.Studio.Editor
                 if (r.Contains(new Point(g.X, g.Y))) return part;
             }
 
-            return null;
+            return HitShape(ToScreen(g));   // [shapes] last: a frame drawn round a block leaves its parts and wires pickable
         }
 
         private Rect LabelRect(NetLabel label)
@@ -475,6 +483,7 @@ namespace RobotWin.Studio.Editor
             for (int i = 0; i < Doc.Labels.Count; i++) DrawLabel(dc, Doc.Labels[i], i < netlist.LabelNets.Count ? netlist.LabelNets[i] : null);
 
             DrawNoConnects(dc);
+            DrawShapes(dc);   // [shapes] (Editor/SchematicCanvas.Shapes.cs)
             DrawNotes(dc);   // [notes]
             DrawEditorOverlay(dc);
 

@@ -171,6 +171,10 @@ namespace RobotWin.Studio.Editor
                 EditorTool.GlobalLabel => "Global etiket · tıklayın",
                 EditorTool.NoConnect => "NC işareti · pin uçlarına tıklayın",
                 EditorTool.Highlight => "Hattı vurgula · pine, tele ya da etikete tıklayın · aynı hatta ya da boşa tıklayınca kalkar",
+                EditorTool.Line => "Çizgi · köşelere tıklayın · çift tık, Enter ya da Esc: bitir",
+                EditorTool.Rectangle => "Dikdörtgen · iki köşeye tıklayın",
+                EditorTool.Circle => "Daire · merkeze, sonra çemberin bir noktasına tıklayın",
+                EditorTool.Arc => "Yay · başlangıca, yayın bir noktasına, sonra bitişe tıklayın",
                 EditorTool.Place => "Yerleştir · R döndür · X/Y aynala · Esc bitir",
                 _ => string.Empty
             };

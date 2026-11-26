@@ -127,7 +127,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Hiyerarşik sayfa, sayfa pini | yok | yok | 3 |
 | Metin, metin kutusu | Metin (T), çerçeveli = metin kutusu | var | |
 | Tablo | yok | yok | 3 |
-| Dikdörtgen, daire, yay, çizgi, Bezier, resim | yok | yok | 2 |
+| Dikdörtgen, daire, yay, çizgi, Bezier, resim | Çiz: çizgi, dikdörtgen, daire, yay (seçilir, taşınır, döndürülür, kopyalanır; KiCad'e gider ve gelir; görüntüye çizilir); Bezier ve resim sonra | kısmi | 3 |
 | Silici | Del | kısmi | 3 |
 | Izgara, birim, imleç, gizli pinler | ızgara var | kısmi | 3 |
 | Kablo açı kipi (90° / 45° / serbest) | var | var | |

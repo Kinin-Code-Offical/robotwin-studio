@@ -119,6 +119,7 @@ namespace RobotTwin.CoreSim.Design
                 case NetLabel l: return GridRect.FromPoint(l.Position);
                 case NoConnectFlag nc: return GridRect.FromPoint(nc.Position);
                 case SchematicNote n: return n.Bounds();   // [notes]
+                case SchematicShape s: return s.Bounds();   // [shapes]
                 default: return null;
             }
         }
@@ -138,7 +139,7 @@ namespace RobotTwin.CoreSim.Design
 
         /// <summary>Everything on the sheet, in drawing order.</summary>
         public static IEnumerable<object> AllItems(Schematic doc) =>
-            doc.Parts.Cast<object>().Concat(doc.Wires).Concat(doc.Labels).Concat(doc.NoConnects).Concat(doc.Notes);
+            doc.Parts.Cast<object>().Concat(doc.Wires).Concat(doc.Labels).Concat(doc.NoConnects).Concat(doc.Notes).Concat(doc.Shapes);
 
         /// <summary>
         /// Box selection. Window mode (dragged left to right) takes items lying completely inside;
@@ -168,6 +169,15 @@ namespace RobotTwin.CoreSim.Design
             {
                 var b = n.Bounds();
                 if (crossing ? rect.Intersects(b) : rect.Contains(b)) result.Add(n);
+            }
+
+            foreach (var s in doc.Shapes)   // [shapes] crossing: any edge the rectangle touches; window: all of it inside
+            {
+                var o = s.Outline();
+                bool hit = crossing
+                    ? o.Count == 1 ? rect.Contains(o[0]) : Enumerable.Range(0, o.Count - 1).Any(i => rect.IntersectsSegment(o[i], o[i + 1]))
+                    : o.All(rect.Contains);
+                if (hit) result.Add(s);
             }
 
             return result;
@@ -224,6 +234,9 @@ namespace RobotTwin.CoreSim.Design
                         case NoConnectFlag nc:
                             nc.Position = RotatePoint(nc.Position, center);
                             break;
+                        case SchematicShape sh:   // [shapes]
+                            for (int i = 0; i < sh.Points.Count; i++) sh.Points[i] = RotatePoint(sh.Points[i], center);
+                            break;
                     }
                 }
             }
@@ -255,6 +268,9 @@ namespace RobotTwin.CoreSim.Design
                     case NoConnectFlag nc:
                         nc.Position = MirrorPoint(nc.Position, center, vertical);
                         break;
+                    case SchematicShape sh:   // [shapes]
+                        for (int i = 0; i < sh.Points.Count; i++) sh.Points[i] = MirrorPoint(sh.Points[i], center, vertical);
+                        break;
                 }
             }
         }
@@ -272,6 +288,9 @@ namespace RobotTwin.CoreSim.Design
                     case NetLabel l: l.Position += delta; break;
                     case NoConnectFlag nc: nc.Position += delta; break;
                     case SchematicNote n: n.Position += delta; break;   // [notes]
+                    case SchematicShape sh:   // [shapes]
+                        for (int i = 0; i < sh.Points.Count; i++) sh.Points[i] += delta;
+                        break;
                 }
             }
         }
@@ -289,6 +308,7 @@ namespace RobotTwin.CoreSim.Design
                     NetLabel l => doc.Labels.Remove(l),
                     NoConnectFlag nc => doc.NoConnects.Remove(nc),
                     SchematicNote note => doc.Notes.Remove(note),
+                    SchematicShape shape => doc.Shapes.Remove(shape),   // [shapes]
                     _ => false
                 };
                 if (removed) n++;
@@ -530,6 +550,7 @@ namespace RobotTwin.CoreSim.Design
         private readonly Dictionary<NetLabel, GridPoint> _labels = new Dictionary<NetLabel, GridPoint>();
         private readonly Dictionary<NoConnectFlag, GridPoint> _flags = new Dictionary<NoConnectFlag, GridPoint>();
         private readonly Dictionary<SchematicNote, GridPoint> _notes = new Dictionary<SchematicNote, GridPoint>();
+        private readonly Dictionary<SchematicShape, List<GridPoint>> _shapes = new Dictionary<SchematicShape, List<GridPoint>>();   // [shapes]
         private readonly Dictionary<SchematicWire, List<GridPoint>> _wires = new Dictionary<SchematicWire, List<GridPoint>>();
         private readonly List<WireStretch> _stretch = new List<WireStretch>();
         private readonly HashSet<GridPoint> _fixedPoints;
@@ -575,7 +596,7 @@ namespace RobotTwin.CoreSim.Design
         }
 
         /// <summary>Everything that moves rigidly (selection plus attached labels and fully attached wires).</summary>
-        public IEnumerable<object> RigidItems => _parts.Keys.Cast<object>().Concat(_wires.Keys).Concat(_labels.Keys).Concat(_flags.Keys).Concat(_notes.Keys);
+        public IEnumerable<object> RigidItems => _parts.Keys.Cast<object>().Concat(_wires.Keys).Concat(_labels.Keys).Concat(_flags.Keys).Concat(_notes.Keys).Concat(_shapes.Keys);
 
         public IEnumerable<SchematicWire> StretchedWires => _stretch.Select(s => s.Wire);
 
@@ -587,6 +608,7 @@ namespace RobotTwin.CoreSim.Design
                 case NetLabel l: _labels[l] = l.Position; break;
                 case NoConnectFlag nc: _flags[nc] = nc.Position; break;
                 case SchematicNote n: _notes[n] = n.Position; break;   // [notes]
+                case SchematicShape sh: _shapes[sh] = new List<GridPoint>(sh.Points); break;   // [shapes]
                 case SchematicWire w: _wires[w] = new List<GridPoint>(w.Points); break;
             }
         }
@@ -597,6 +619,8 @@ namespace RobotTwin.CoreSim.Design
             foreach (var kv in _labels) kv.Key.Position = kv.Value + delta;
             foreach (var kv in _flags) kv.Key.Position = kv.Value + delta;
             foreach (var kv in _notes) kv.Key.Position = kv.Value + delta;
+            foreach (var kv in _shapes)   // [shapes]
+                for (int i = 0; i < kv.Value.Count && i < kv.Key.Points.Count; i++) kv.Key.Points[i] = kv.Value[i] + delta;
             foreach (var kv in _wires) kv.Key.Points = kv.Value.Select(p => p + delta).ToList();
             foreach (var s in _stretch) s.Apply(delta, _fixedPoints);
         }

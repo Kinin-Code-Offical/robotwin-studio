@@ -60,6 +60,8 @@ Labels with the same name are connected; the name `GND` means ground. Right-clic
 
 ## Editing
 
+**Drawing** (like KiCad's schematic graphics): the **Çiz** button's menu in the toolbar offers **Line** (click the corners; double click, Enter or Esc ends it), **Rectangle** (two corners), **Circle** (the centre, then a point on it) and **Arc** (start, a point on it, end). Drawings are a block's frame, a divider or a mechanical sketch; they carry no net and do not change the circuit. They are selected, moved, rotated, mirrored, copied and deleted like everything else, go into the PNG/SVG image and the KiCad schematic (as polyline, rectangle, circle and arc), and come in when a KiCad schematic is opened.
+
 | Key | Function |
 | --- | --- |
 | M / G | Move / drag (with G the wires stretch) |

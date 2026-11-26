@@ -34,15 +34,18 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>[notes] Texts and text boxes.</summary>
         public List<SchematicNote> Notes { get; set; } = new List<SchematicNote>();
 
-        [JsonIgnore]
-        public bool IsEmpty => Parts.Count == 0 && Wires.Count == 0 && Labels.Count == 0 && NoConnects.Count == 0 && Notes.Count == 0;
+        /// <summary>[shapes]</summary>
+        public List<SchematicShape> Shapes { get; set; } = new List<SchematicShape>();
 
         [JsonIgnore]
-        public int Count => Parts.Count + Wires.Count + Labels.Count + NoConnects.Count + Notes.Count;
+        public bool IsEmpty => Parts.Count == 0 && Wires.Count == 0 && Labels.Count == 0 && NoConnects.Count == 0 && Notes.Count == 0 && Shapes.Count == 0;
+
+        [JsonIgnore]
+        public int Count => Parts.Count + Wires.Count + Labels.Count + NoConnects.Count + Notes.Count + Shapes.Count;
 
         /// <summary>Every object of the fragment.</summary>
         [JsonIgnore]
-        public IEnumerable<object> Items => Parts.Cast<object>().Concat(Wires).Concat(Labels).Concat(NoConnects).Concat(Notes);
+        public IEnumerable<object> Items => Parts.Cast<object>().Concat(Wires).Concat(Labels).Concat(NoConnects).Concat(Notes).Concat(Shapes);
 
         private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
         {
@@ -66,6 +69,7 @@ namespace RobotTwin.CoreSim.Design
                     case NetLabel l: f.Labels.Add(new NetLabel { Name = l.Name, Position = l.Position, Global = l.Global }); break;
                     case NoConnectFlag nc: f.NoConnects.Add(new NoConnectFlag { Position = nc.Position }); break;
                     case SchematicNote n: f.Notes.Add(new SchematicNote { Text = n.Text, Position = n.Position, Size = n.Size, Boxed = n.Boxed, Bold = n.Bold }); break;
+                    case SchematicShape sh: f.Shapes.Add(new SchematicShape { Kind = sh.Kind, Points = new List<GridPoint>(sh.Points), Width = sh.Width, Filled = sh.Filled, Dashed = sh.Dashed }); break;   // [shapes]
                 }
             }
 
@@ -102,6 +106,7 @@ namespace RobotTwin.CoreSim.Design
                 f.Labels ??= new List<NetLabel>();
                 f.NoConnects ??= new List<NoConnectFlag>();
                 f.Notes ??= new List<SchematicNote>();
+                f.Shapes ??= new List<SchematicShape>();
                 foreach (var p in f.Parts)
                 {
                     p.Parameters = new Dictionary<string, string>(p.Parameters ?? new Dictionary<string, string>(), StringComparer.OrdinalIgnoreCase);
@@ -168,6 +173,12 @@ namespace RobotTwin.CoreSim.Design
             {
                 doc.NoConnects.Add(nc);
                 result.Items.Add(nc);
+            }
+
+            foreach (var sh in copy.Shapes)   // [shapes]
+            {
+                doc.Shapes.Add(sh);
+                result.Items.Add(sh);
             }
 
             foreach (var n in copy.Notes)   // [notes]

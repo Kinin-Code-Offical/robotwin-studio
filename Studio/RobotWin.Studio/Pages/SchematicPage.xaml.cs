@@ -214,6 +214,31 @@ namespace RobotWin.Studio.Pages
 
         // ================================================================ toolbar
 
+        /// <summary>[shapes] The drawing tools: a menu of line, rectangle, circle and arc (KiCad's graphic tools).</summary>
+        private void OnDrawTool(object sender, RoutedEventArgs e)
+        {
+            var button = (System.Windows.Controls.Primitives.ToggleButton)sender;
+            button.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc;
+            var menu = new ContextMenu { PlacementTarget = button, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+            foreach (var (text, tool, icon) in new[]
+                     {
+                         ("Çizgi", EditorTool.Line, "I.DrawLine"), ("Dikdörtgen", EditorTool.Rectangle, "I.DrawRect"),
+                         ("Daire", EditorTool.Circle, "I.DrawCircle"), ("Yay", EditorTool.Arc, "I.DrawArc")
+                     })
+            {
+                var item = new MenuItem { Header = text, IsChecked = Canvas.Tool == tool, Icon = new RobotWin.Studio.Theme.Icon { Data = (System.Windows.Media.Geometry)FindResource(icon), Size = 14 } };
+                var chosen = tool;
+                item.Click += (_, _) =>
+                {
+                    Canvas.Tool = chosen;
+                    Canvas.Focus();
+                };
+                menu.Items.Add(item);
+            }
+
+            menu.IsOpen = true;
+        }
+
         private void OnToolClick(object sender, RoutedEventArgs e)
         {
             var tool = (string)((FrameworkElement)sender).Tag switch
@@ -237,6 +262,7 @@ namespace RobotWin.Studio.Pages
             ToolNoConnect.IsChecked = Canvas.Tool == EditorTool.NoConnect;
             ToolText.IsChecked = Canvas.Tool == EditorTool.Text;   // [notes]
             ToolHighlight.IsChecked = Canvas.Tool == EditorTool.Highlight;   // [highlight]
+            ToolDraw.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc;   // [shapes]
         }
 
         private void OnRotate(object sender, RoutedEventArgs e) => Canvas.RotateSelection();

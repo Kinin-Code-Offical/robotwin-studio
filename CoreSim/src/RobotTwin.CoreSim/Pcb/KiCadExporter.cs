@@ -977,6 +977,9 @@ namespace RobotTwin.CoreSim.Pcb
                 Grow(s.End.X + s.Dx * labelLength, s.End.Y + s.Dy * labelLength);
             }
 
+            foreach (var sh in schematic.Shapes ?? new List<SchematicShape>())   // [shapes] the sheet's drawings fit on the page too
+                foreach (var q in sh.Outline(16)) Grow(q.X, q.Y);
+
             if (double.IsInfinity(minX))
             {
                 minX = minY = 0;
@@ -1062,6 +1065,32 @@ namespace RobotTwin.CoreSim.Pcb
                     new SNode("project", Q(project),
                         new SNode("path", Q("/" + rootUuid), new SNode("reference", Q(part.RefDes)), new SNode("unit", "1")))));
                 root.Add(symbol);
+            }
+
+            // [shapes] lines, rectangles, circles and arcs as KiCad's schematic graphics
+            var shapes = schematic.Shapes ?? new List<SchematicShape>();
+            for (int i = 0; i < shapes.Count; i++)
+            {
+                var sh = shapes[i];
+                var stroke = new SNode("stroke", new SNode("width", N(sh.Width)), new SNode("type", sh.Dashed ? "dash" : "default"));
+                var fill = new SNode("fill", new SNode("type", sh.Filled ? "outline" : "none"));
+                var id = Uid("schematic:shape:" + i.ToString(CultureInfo.InvariantCulture));
+                SNode At(string head, GridPoint g) => XY(head, Mx(g.X), My(g.Y));
+                switch (sh.Kind)
+                {
+                    case SheetShapeKind.Line when sh.Points.Count >= 2:
+                        root.Add(new SNode("polyline", new SNode("pts", sh.Points.Select(q => At("xy", q))), stroke, id));
+                        break;
+                    case SheetShapeKind.Rectangle when sh.Points.Count >= 2:
+                        root.Add(new SNode("rectangle", At("start", sh.Points[0]), At("end", sh.Points[1]), stroke, fill, id));
+                        break;
+                    case SheetShapeKind.Circle when sh.Points.Count >= 2:
+                        root.Add(new SNode("circle", At("center", sh.Points[0]), new SNode("radius", N(sh.Radius * SchematicGridMm)), stroke, fill, id));
+                        break;
+                    case SheetShapeKind.Arc when sh.Points.Count >= 3:
+                        root.Add(new SNode("arc", At("start", sh.Points[0]), At("mid", sh.Points[1]), At("end", sh.Points[2]), stroke, new SNode("fill", new SNode("type", "none")), id));
+                        break;
+                }
             }
 
             root.Add(new SNode("sheet_instances", new SNode("path", Q("/"), new SNode("page", Q("1")))));

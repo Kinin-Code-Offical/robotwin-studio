@@ -71,8 +71,24 @@ namespace RobotTwin.CoreSim.Formats
     }
 
     /// <summary>One <c>.kicad_sch</c> file as written: its symbols with their definitions, wires, junctions, labels, sheets.</summary>
+    /// <summary>[shapes] A graphic of a KiCad sheet (polyline, rectangle, circle, arc), in the file's millimetres.</summary>
+    public sealed class KiCadSheetShape
+    {
+        public SheetShapeKind Kind { get; set; }
+
+        /// <summary>As <see cref="SchematicShape.Points"/>: a circle's centre then a point on it; an arc's start, middle and end.</summary>
+        public List<(double X, double Y)> Points { get; } = new List<(double, double)>();
+
+        public double Width { get; set; }
+        public bool Dashed { get; set; }
+        public bool Filled { get; set; }
+    }
+
     public sealed class KiCadSchFile
     {
+        /// <summary>[shapes] The sheet's graphics.</summary>
+        public List<KiCadSheetShape> Shapes { get; } = new List<KiCadSheetShape>();
+
         public string Uuid { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Version { get; set; } = string.Empty;
@@ -146,6 +162,9 @@ namespace RobotTwin.CoreSim.Formats
         public List<KiCadDesignSymbol> Symbols { get; } = new List<KiCadDesignSymbol>();
         public List<string> Warnings { get; } = new List<string>();
         public int Sheets { get; set; }
+
+        /// <summary>[shapes] Every sheet's graphics with the path of the sheet they are on.</summary>
+        public List<(string SheetPath, KiCadSheetShape Shape)> SheetShapes { get; } = new List<(string, KiCadSheetShape)>();
 
         /// <summary>Bus segments over every sheet instance.</summary>
         public int Buses { get; set; }
@@ -319,6 +338,7 @@ namespace RobotTwin.CoreSim.Formats
             }
             foreach (var j in root.Children("junction")) file.Junctions.Add(At(j));
             foreach (var n in root.Children("no_connect")) file.NoConnects.Add(At(n));
+            ReadShapes(root, file);   // [shapes]
             foreach (var (head, kind) in new[] { ("label", KiCadLabelKind.Local), ("global_label", KiCadLabelKind.Global), ("hierarchical_label", KiCadLabelKind.Hierarchical) })
             {
                 foreach (var l in root.Children(head))
@@ -353,6 +373,60 @@ namespace RobotTwin.CoreSim.Formats
             }
 
             return file;
+        }
+
+        /// <summary>[shapes] The sheet's polylines, rectangles, circles and arcs (KiCad 6–9 schematic graphics).</summary>
+        private static void ReadShapes(SExpression root, KiCadSchFile file)
+        {
+            void Style(SExpression node, KiCadSheetShape shape)
+            {
+                var stroke = node.Child("stroke");
+                shape.Width = stroke?.Child("width")?.Number(1) ?? 0;
+                shape.Dashed = (stroke?.ChildText("type") ?? "default") is "dash" or "dot" or "dash_dot" or "dash_dot_dot";
+                shape.Filled = (node.Child("fill")?.ChildText("type") ?? "none") is "outline" or "background" or "color";
+            }
+
+            (double X, double Y) P(SExpression? n) => n == null ? (0, 0) : (n.Number(1), n.Number(2));
+            foreach (var n in root.Children("polyline"))
+            {
+                var shape = new KiCadSheetShape { Kind = SheetShapeKind.Line };
+                foreach (var xy in n.Child("pts")?.Children("xy") ?? Enumerable.Empty<SExpression>()) shape.Points.Add(P(xy));
+                if (shape.Points.Count < 2) continue;
+                Style(n, shape);
+                file.Shapes.Add(shape);
+            }
+
+            foreach (var n in root.Children("rectangle"))
+            {
+                var shape = new KiCadSheetShape { Kind = SheetShapeKind.Rectangle };
+                shape.Points.Add(P(n.Child("start")));
+                shape.Points.Add(P(n.Child("end")));
+                Style(n, shape);
+                file.Shapes.Add(shape);
+            }
+
+            foreach (var n in root.Children("circle"))
+            {
+                var c = P(n.Child("center"));
+                double r = n.Child("radius")?.Number(1) ?? 0;
+                if (r <= 0) continue;
+                var shape = new KiCadSheetShape { Kind = SheetShapeKind.Circle };
+                shape.Points.Add(c);
+                shape.Points.Add((c.X + r, c.Y));
+                Style(n, shape);
+                file.Shapes.Add(shape);
+            }
+
+            foreach (var n in root.Children("arc"))
+            {
+                var shape = new KiCadSheetShape { Kind = SheetShapeKind.Arc };
+                shape.Points.Add(P(n.Child("start")));
+                shape.Points.Add(P(n.Child("mid")));
+                shape.Points.Add(P(n.Child("end")));
+                Style(n, shape);
+                shape.Filled = false;
+                file.Shapes.Add(shape);
+            }
         }
 
         private static (double X, double Y) At(SExpression node)
@@ -495,6 +569,7 @@ namespace RobotTwin.CoreSim.Formats
             {
                 design.Sheets++;
                 design.Buses += sheet.Buses;
+                foreach (var shape in sheet.Shapes) design.SheetShapes.Add((path, shape));   // [shapes]
                 depthNow = depth;
 
                 var attach = new List<(double X, double Y, int Item)>();
@@ -756,14 +831,29 @@ namespace RobotTwin.CoreSim.Formats
             // Our symbols are drawn larger than KiCad's: the drawing is spread by how much (the typical part's ratio), and
             // further while two of our pins still meet where KiCad's did not.
             double scale = Spread(mapped.Select(m => (m.Symbol.Definition, m.Def)));
+            double spreadUsed = scale;
             foreach (double step in new[] { 1.0, 1.5, 2.0, 3.0 })
             {
                 var sch = Build(mapped, offsets, netOf, library, scale * step);
                 var clash = Clashes(sch, mapped, netOf, library);
                 result.Schematic = sch;
+                spreadUsed = scale * step;
                 if (clash == null) break;
                 if (step >= 3.0) result.Report.Add("uyarı: " + clash);
             }
+
+            // [shapes] the sheets' graphics, moved and spread as their sheet's parts were
+            foreach (var (sheetPath, shape) in design.SheetShapes)
+            {
+                var (ox, oy) = offsets.TryGetValue(sheetPath, out var o) ? o : (0, 0);
+                double G(double mm) => Math.Round(mm * spreadUsed / (2 * MmPerGridUnit)) / 2;
+                var drawn = new SchematicShape { Kind = shape.Kind, Width = shape.Width > 0 ? shape.Width : 0.15, Dashed = shape.Dashed, Filled = shape.Filled };
+                foreach (var (x, y) in shape.Points) drawn.Points.Add(new GridPoint(G(x + ox), G(y + oy)));
+                if (shape.Kind == SheetShapeKind.Arc && drawn.ArcCircle() == null) drawn.Kind = SheetShapeKind.Line;   // flattened by the grid
+                result.Schematic.Shapes.Add(drawn);
+            }
+
+            if (design.SheetShapes.Count > 0) result.Report.Add($"{design.SheetShapes.Count} çizim (çizgi, dikdörtgen, daire, yay) alındı");
 
             result.Schematic.Title = design.Root.Title.Length > 0 ? design.Root.Title : "KiCad";
             foreach (var w in design.Warnings) result.Report.Add("uyarı: " + w);

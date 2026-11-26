@@ -127,6 +127,112 @@ namespace RobotTwin.CoreSim.Design
         }
     }
 
+    /// <summary>[shapes] What a sheet drawing is (KiCad's schematic graphics).</summary>
+    public enum SheetShapeKind
+    {
+        /// <summary>A polyline through its points.</summary>
+        Line,
+
+        /// <summary>A rectangle between two corners.</summary>
+        Rectangle,
+
+        /// <summary>A circle: its centre and a point on it.</summary>
+        Circle,
+
+        /// <summary>An arc through three points: start, a point on it, end.</summary>
+        Arc
+    }
+
+    /// <summary>
+    /// [shapes] A drawing on the sheet that is not a wire (KiCad's lines, rectangles, circles and arcs): a block's frame,
+    /// a divider, a mechanical outline. It carries no net; it is selected, moved, turned, mirrored, copied and deleted
+    /// like the rest of the sheet.
+    /// </summary>
+    public sealed class SchematicShape
+    {
+        public SheetShapeKind Kind { get; set; }
+
+        /// <summary>Line: its points; rectangle: two corners; circle: centre, then a point on it; arc: start, middle, end.</summary>
+        public List<GridPoint> Points { get; set; } = new List<GridPoint>();
+
+        /// <summary>Stroke width in millimetres (KiCad's default schematic line, 0.15 mm).</summary>
+        public double Width { get; set; } = 0.15;
+
+        /// <summary>Filled with the stroke's colour (rectangles and circles).</summary>
+        public bool Filled { get; set; }
+
+        /// <summary>A dashed stroke (KiCad's dash style).</summary>
+        public bool Dashed { get; set; }
+
+        /// <summary>The circle's radius in grid units.</summary>
+        public double Radius => Points.Count >= 2 ? Math.Sqrt(Sq(Points[1].X - Points[0].X) + Sq(Points[1].Y - Points[0].Y)) : 0;
+
+        private static double Sq(double v) => v * v;
+
+        /// <summary>The arc's circle through its three points, or null when they are on one line.</summary>
+        public (GridPoint Centre, double Radius)? ArcCircle()
+        {
+            if (Points.Count < 3) return null;
+            var (a, b, c) = (Points[0], Points[1], Points[2]);
+            double d = 2 * (a.X * (b.Y - c.Y) + b.X * (c.Y - a.Y) + c.X * (a.Y - b.Y));
+            if (Math.Abs(d) < 1e-12) return null;
+            double a2 = a.X * a.X + a.Y * a.Y, b2 = b.X * b.X + b.Y * b.Y, c2 = c.X * c.X + c.Y * c.Y;
+            var o = new GridPoint((a2 * (b.Y - c.Y) + b2 * (c.Y - a.Y) + c2 * (a.Y - b.Y)) / d, (a2 * (c.X - b.X) + b2 * (a.X - c.X) + c2 * (b.X - a.X)) / d);
+            return (o, Math.Sqrt(Sq(a.X - o.X) + Sq(a.Y - o.Y)));
+        }
+
+        /// <summary>Points along the shape (a closed outline for a rectangle or circle), for bounds, picking and export.</summary>
+        public List<GridPoint> Outline(int segments = 48)
+        {
+            var pts = new List<GridPoint>();
+            switch (Kind)
+            {
+                case SheetShapeKind.Rectangle when Points.Count >= 2:
+                    var (p, q) = (Points[0], Points[1]);
+                    pts.AddRange(new[] { p, new GridPoint(q.X, p.Y), q, new GridPoint(p.X, q.Y), p });
+                    break;
+                case SheetShapeKind.Circle when Points.Count >= 2:
+                    double r = Radius;
+                    for (int k = 0; k <= segments; k++) pts.Add(new GridPoint(Points[0].X + r * Math.Cos(2 * Math.PI * k / segments), Points[0].Y + r * Math.Sin(2 * Math.PI * k / segments)));
+                    break;
+                case SheetShapeKind.Arc when ArcCircle() is { } circle:
+                {
+                    double A(GridPoint g) => Math.Atan2(g.Y - circle.Centre.Y, g.X - circle.Centre.X);
+                    double a0 = A(Points[0]), am = A(Points[1]), a1 = A(Points[2]);
+                    double sweep = a1 - a0, toMid = am - a0;
+                    while (sweep <= -Math.PI) sweep += 2 * Math.PI;
+                    while (sweep > Math.PI) sweep -= 2 * Math.PI;
+                    while (toMid <= -Math.PI) toMid += 2 * Math.PI;
+                    while (toMid > Math.PI) toMid -= 2 * Math.PI;
+                    // the way round that passes the middle point
+                    if (Math.Sign(toMid) != Math.Sign(sweep) || Math.Abs(toMid) > Math.Abs(sweep)) sweep = sweep > 0 ? sweep - 2 * Math.PI : sweep + 2 * Math.PI;
+                    for (int k = 0; k <= segments; k++)
+                    {
+                        double t = a0 + sweep * k / segments;
+                        pts.Add(new GridPoint(circle.Centre.X + circle.Radius * Math.Cos(t), circle.Centre.Y + circle.Radius * Math.Sin(t)));
+                    }
+
+                    break;
+                }
+
+                default:
+                    pts.AddRange(Points);
+                    break;
+            }
+
+            return pts;
+        }
+
+        public GridRect Bounds()
+        {
+            var pts = Outline();
+            if (pts.Count == 0) return new GridRect(0, 0, 0, 0);
+            var r = GridRect.FromPoint(pts[0]);
+            foreach (var p in pts) r = r.Union(p);
+            return r;
+        }
+    }
+
     public sealed class NetConnection
     {
         public NetConnection(string refDes, string pin)
@@ -200,6 +306,9 @@ namespace RobotTwin.CoreSim.Design
 
         /// <summary>[notes] Texts and text boxes on the sheet (no electrical meaning).</summary>
         public List<SchematicNote> Notes { get; set; } = new List<SchematicNote>();
+
+        /// <summary>[shapes] Lines, rectangles, circles and arcs drawn on the sheet (KiCad's schematic graphics).</summary>
+        public List<SchematicShape> Shapes { get; set; } = new List<SchematicShape>();
 
         /// <summary>Optional PCB layout saved alongside the schematic.</summary>
         public Pcb.BoardDocument? Board { get; set; }

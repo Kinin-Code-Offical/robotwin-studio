@@ -120,6 +120,12 @@ namespace RobotWin.Studio.Editor
                 case EditorTool.Highlight:   // [highlight] the net under the click, or off again
                     ToggleHighlightUnderCursor();
                     return;
+                case EditorTool.Line:   // [shapes]
+                case EditorTool.Rectangle:
+                case EditorTool.Circle:
+                case EditorTool.Arc:
+                    ShapeClick(e.ClickCount >= 2);
+                    return;
                 case EditorTool.Text:   // [notes]
                     RequestCommand(SchematicCommand.EditNote, Snap(_mouseGrid));
                     Tool = EditorTool.Select;
@@ -255,6 +261,12 @@ namespace RobotWin.Studio.Editor
                 return;
             }
 
+            if (_shapeDraft != null)   // [shapes] the preview follows the cursor
+            {
+                if (snapMoved) InvalidateVisual();
+                return;
+            }
+
             var oldHover = _hover;
             var oldPin = _hoverPin;
             if (_placingLead != null)
@@ -381,6 +393,7 @@ namespace RobotWin.Studio.Editor
                     else if (_floating != null) CancelFloating();
                     else if (_keyMove) CancelKeyMove();
                     else if (_wirePoints != null) FinishWire();
+                    else if (_shapeDraft != null) FinishShape();   // [shapes] a line ends here; an unfinished rectangle, circle or arc is dropped
                     else if (_tool != EditorTool.Select) Tool = EditorTool.Select;
                     else if (_selection.Count > 0) ClearSelection();
                     else if (_netHighlight != null) HighlightedNet = null;
@@ -407,6 +420,9 @@ namespace RobotWin.Studio.Editor
                     return true;
                 case Key.Enter when _keyMove:
                     CommitKeyMove();
+                    return true;
+                case Key.Enter when _shapeDraft != null:   // [shapes]
+                    FinishShape();
                     return true;
                 case Key.Enter when _wirePoints != null:
                     FinishWire();

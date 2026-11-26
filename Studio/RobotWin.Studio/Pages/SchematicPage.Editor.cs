@@ -1162,6 +1162,20 @@ namespace RobotWin.Studio.Pages
                     Canvas.InvalidateVisual();
                     break;
                 }
+                case "shapes":   // [shapes] a dashed frame round the circuit, a divider, a circle and an arc; the frame selected
+                {
+                    var sb = SchematicEditing.Bounds(SchematicEditing.AllItems(W.Schematic), W.Library);
+                    double x0 = Math.Floor(sb?.MinX ?? 0) - 2, y0 = Math.Floor(sb?.MinY ?? 0) - 2, x1 = Math.Ceiling(sb?.MaxX ?? 20) + 2, y1 = Math.Ceiling(sb?.MaxY ?? 12) + 2;
+                    var frame = new SchematicShape { Kind = SheetShapeKind.Rectangle, Points = { new GridPoint(x0, y0), new GridPoint(x1, y1) }, Dashed = true, Width = 0.25 };
+                    W.Schematic.Shapes.Add(frame);
+                    W.Schematic.Shapes.Add(new SchematicShape { Kind = SheetShapeKind.Line, Points = { new GridPoint(x0, y1 + 3), new GridPoint(x1, y1 + 3) } });
+                    W.Schematic.Shapes.Add(new SchematicShape { Kind = SheetShapeKind.Circle, Points = { new GridPoint(x1 + 5, y0 + 3), new GridPoint(x1 + 7, y0 + 3) }, Filled = true });
+                    W.Schematic.Shapes.Add(new SchematicShape { Kind = SheetShapeKind.Arc, Points = { new GridPoint(x1 + 3, y0 + 9), new GridPoint(x1 + 5, y0 + 7), new GridPoint(x1 + 7, y0 + 9) } });
+                    Canvas.SelectItems(new object[] { frame });
+                    Canvas.InvalidateVisual();
+                    break;
+                }
+
                 case "dock-min":   // [dock-min] the library minimized to its strip
                     _dock?.Minimize(DockPlace.Left, true);
                     break;
