@@ -157,7 +157,7 @@ namespace RobotTwin.CoreSim.Design
             Preset(lib, "light-curtain-900", "Güvenlik Işık Perdesi · 0.9 × 1.2 m", CurtainId, "12 ışın, OSSD çıkışı");
 
             // ---------------------------------------------------------------- [modbus] remote I/O on Modbus TCP
-            var modbus = Part(lib, ModbusIoId, "Modbus TCP Uzak G/Ç Modülü", "IO",
+            var modbus = Part(lib, ModbusIoId, "Modbus Uzak G/Ç Modülü", "IO",
                 "8 sayısal giriş, 8 sayısal çıkış; dünya çalışırken bir Modbus TCP sunucusudur, PLC, HMI ya da SCADA programı gerçek modül gibi bağlanır. " +
                 "Bobin 0–7 → DO1–DO8 (yazılır), ayrık giriş 0–7 ← DI1–DI8 (okunur); giriş yazmacı 0 girişlerin, tutma yazmacı 0 çıkışların bit sözcüğüdür. " +
                 "Dört 0–10 V analog giriş (AI1–AI4 → giriş yazmacı 1–4) ve iki 0–10 V analog çıkış (tutma yazmacı 1–2 → AO1–AO2), milivolt olarak, 12 bit. " +

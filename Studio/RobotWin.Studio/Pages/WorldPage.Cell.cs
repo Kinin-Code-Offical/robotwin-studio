@@ -103,7 +103,7 @@ namespace RobotWin.Studio.Pages
                     CurtainPanel(o);
                     break;
                 case CellParts.ModbusIoId:
-                    Inspector.Children.Add(Caption("Modbus TCP"));
+                    Inspector.Children.Add(Caption(ParamsOf(o).TryGetValue("bus", out var mbBus) && mbBus.Trim() == "rtu" ? "Modbus RTU" : "Modbus TCP"));
                     StatusBlock();
                     break;
                 case CellParts.PhotoId:

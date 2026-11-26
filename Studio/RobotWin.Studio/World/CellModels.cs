@@ -642,11 +642,31 @@ namespace RobotWin.Studio.World
                 }
             }
 
+            // [rtu] [modbus] a second row of plug-in terminals on top, along each long edge beside the label: the serial
+            // header and the analog inputs on the input side, the analog outputs on the output side (blue: analog, grey: serial)
+            var inner = new[] { "RX", "TX" }.Concat(CellParts.ModbusAnalogInputs).ToArray();
+            double innerY = W / 2 - 12;
+            for (int i = 0; i < inner.Length; i++)
+            {
+                double x = -L / 2 + 10 + i * pitch;
+                k.Box(i < 2 ? 0x8A8F96u : 0x3F6E8Fu, x, -innerY, H + 4, 8.6, 6, 8);
+                k.Metal(Steel).CylinderZ(x, -innerY, H + 8, H + 9.2, 2.2, 10);
+            }
+
+            for (int i = 0; i < CellParts.ModbusAnalogOutputs.Length; i++)
+            {
+                double x = -L / 2 + 10 + i * pitch;
+                k.Box(0x3F6E8Fu, x, innerY, H + 4, 8.6, 6, 8);
+                k.Metal(Steel).CylinderZ(x, innerY, H + 8, H + 9.2, 2.2, 10);
+            }
+
             m.Body.Children.Add(k.Build());
             var lamp = LampBrush();
             m.Body.Children.Add(new Model3DGroup { Children = { LampModel(lamp, Assembly3D.Mesh.Box(14 * Mm, 0, (H + 1.5) * Mm, 5 * Mm, 5 * Mm, 2 * Mm)) } });
             AddPins(m, CellParts.ModbusInputs, i => new Point3D((-L / 2 + 10 + i * pitch) * Mm, -(W / 2) * Mm, (H - 14) * Mm));
             AddPins(m, CellParts.ModbusOutputs.Append("GND"), i => new Point3D((-L / 2 + 10 + i * pitch) * Mm, (W / 2) * Mm, (H - 14) * Mm));
+            AddPins(m, inner, i => new Point3D((-L / 2 + 10 + i * pitch) * Mm, -innerY * Mm, (H + 8) * Mm));
+            AddPins(m, CellParts.ModbusAnalogOutputs, i => new Point3D((-L / 2 + 10 + i * pitch) * Mm, innerY * Mm, (H + 8) * Mm));
             return new CellVisual { PartId = CellParts.ModbusIoId, Lamp = lamp };
         }
 
