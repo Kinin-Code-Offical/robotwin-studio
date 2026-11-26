@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fmiModelDescription fmiVersion="2.0" modelName="lag" guid="{5d2a9e47-1c3b-4f60-a2d4-7e1f00c0a9a9}"
+                     description="First-order lag y' = (k u - y) / tau, for the importer's integrator" generationTool="RobotWin tests"
+                     variableNamingConvention="flat" numberOfEventIndicators="0">
+  <ModelExchange modelIdentifier="lag" completedIntegratorStepNotNeeded="true"/>
+  <DefaultExperiment startTime="0" stopTime="1" stepSize="0.001"/>
+  <ModelVariables>
+    <ScalarVariable name="u" valueReference="0" causality="input" variability="continuous"><Real start="0" unit="V"/></ScalarVariable>
+    <ScalarVariable name="y" valueReference="1" causality="output" variability="continuous" initial="exact"><Real start="0" unit="V"/></ScalarVariable>
+    <ScalarVariable name="der(y)" valueReference="2" causality="local" variability="continuous"><Real derivative="2"/></ScalarVariable>
+    <ScalarVariable name="k" valueReference="3" causality="parameter" variability="fixed"><Real start="1"/></ScalarVariable>
+    <ScalarVariable name="tau" valueReference="4" causality="parameter" variability="fixed"><Real start="0.01" unit="s"/></ScalarVariable>
+  </ModelVariables>
+  <ModelStructure>
+    <Outputs>
+      <Unknown index="2"/>
+    </Outputs>
+    <Derivatives>
+      <Unknown index="3"/>
+    </Derivatives>
+  </ModelStructure>
+</fmiModelDescription>

@@ -30,17 +30,15 @@ namespace RobotTwin.CoreSim.Fmi
         {
             var fmu = FmuArchive.Open(fmuBytes);
             var d = fmu.Description;
-            if (d.CoSimulationId.Length == 0)
-                throw new NotSupportedException(d.ModelExchangeOnly
-                    ? $"{d.ModelName}: yalnız model değişimi (Model Exchange) FMU'su; ortak benzetim (Co-Simulation) arabirimi olan bir FMU gerekir."
-                    : $"{d.ModelName}: FMU'nun ortak benzetim arabirimi yok.");
+            if (d.BinaryId.Length == 0)
+                throw new NotSupportedException($"{d.ModelName}: FMU'nun ne ortak benzetim ne model değişimi arabirimi var.");
             if (fmu.BinaryPath == null)
-                throw new NotSupportedException($"{d.ModelName}: FMU'da 64 bit Windows ikilisi yok (binaries/win64/{d.CoSimulationId}.dll).");
+                throw new NotSupportedException($"{d.ModelName}: FMU'da 64 bit Windows ikilisi yok (binaries/win64/{d.BinaryId}.dll).");
             if (!d.Inputs.Concat(d.Outputs).Any(Numeric))
                 throw new NotSupportedException($"{d.ModelName}: FMU'nun sayısal girişi ya da çıkışı yok; devreye bağlanacak bir şey yok.");
 
             var model = new UserModel { Kind = UserModelKind.Fmu, FmuData = Convert.ToBase64String(fmuBytes) };
-            var spec = new UserPartSpec { RefPrefix = "U", Symbol = UserSymbolStyle.Box, BodyLabel = d.ModelName, Model = model, Source = "FMI 2.0 FMU" };
+            var spec = new UserPartSpec { RefPrefix = "U", Symbol = UserSymbolStyle.Box, BodyLabel = d.ModelName, Model = model, Source = d.UsesModelExchange ? "FMI 2.0 FMU (model exchange)" : "FMI 2.0 FMU" };
             int pad = 1;
             void Pin(string name, PinElectricalType type, PinSide side, string description)
             {

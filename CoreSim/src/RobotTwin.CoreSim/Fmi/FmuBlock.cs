@@ -72,10 +72,11 @@ namespace RobotTwin.CoreSim.Fmi
         public override void Accept(AcceptContext ctx)
         {
             if (ctx.IsDc || !_started) return;
-            // Catch the FMU up with the circuit, communication point by communication point.
-            while (_fmu.Time < ctx.Time - 1e-12)
+            // At each communication point the circuit has reached (its breakpoints land on them), one whole step: the
+            // circuit's own steps in between exchange nothing, so the outputs change, and the circuit restarts, only there.
+            while (ctx.Time - _fmu.Time >= CommunicationStep * (1 - 1e-9))
             {
-                double h = Math.Min(CommunicationStep, ctx.Time - _fmu.Time);
+                double h = CommunicationStep;
                 foreach (var (v, node) in _inputs) _fmu.Set(v, ctx.V(node) - ctx.V(_reference));
                 _fmu.Step(h);
                 bool changed = false;

@@ -29,26 +29,102 @@ namespace RobotTwin.CoreSim.Tests
 
         public FmuTests(ITestOutputHelper output) => _out = output;
 
-        private static readonly Lazy<byte[]> Lowpass = new Lazy<byte[]>(BuildLowpass);
+        private static readonly Lazy<byte[]> Lowpass = new Lazy<byte[]>(() => Build("lowpass"));
+        private static readonly Lazy<byte[]> Ball = new Lazy<byte[]>(() => Build("ball"));   // [fmi-me]
+        private static readonly Lazy<byte[]> Lag = new Lazy<byte[]>(() => Build("lag"));   // [fmi-me]
 
-        /// <summary>The test FMU: its C source compiled with MSVC and packed with its description, as an FMU is shipped.</summary>
-        private static byte[] BuildLowpass()
+        /// <summary>A test FMU: its C source compiled with MSVC and packed with its description, as an FMU is shipped.</summary>
+        private static byte[] Build(string name)
         {
             string fixtures = Path.Combine(AppContext.BaseDirectory, "Fixtures", "fmu");
             string dir = Path.Combine(Path.GetTempPath(), "robotwin-fmu-build-" + Guid.NewGuid().ToString("N").Substring(0, 8));
             Directory.CreateDirectory(dir);
-            File.Copy(Path.Combine(fixtures, "lowpass.c"), Path.Combine(dir, "lowpass.c"));
+            File.Copy(Path.Combine(fixtures, name + ".c"), Path.Combine(dir, name + ".c"));
             var env = Esp32Toolchain.GetEnvironment(Esp32Toolchain.FindVcVars(null)!, new StringBuilder());
-            int exit = Esp32Toolchain.Run(env, "cl.exe", "/nologo /O2 /LD lowpass.c /Fe:lowpass.dll", dir, out string output);
+            int exit = Esp32Toolchain.Run(env, "cl.exe", $"/nologo /O2 /LD {name}.c /Fe:{name}.dll", dir, out string output);
             Assert.True(exit == 0, output);
             using var ms = new MemoryStream();
             using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
             {
-                zip.CreateEntryFromFile(Path.Combine(fixtures, "lowpass.xml"), "modelDescription.xml");
-                zip.CreateEntryFromFile(Path.Combine(dir, "lowpass.dll"), "binaries/win64/lowpass.dll");
+                zip.CreateEntryFromFile(Path.Combine(fixtures, name + ".xml"), "modelDescription.xml");
+                zip.CreateEntryFromFile(Path.Combine(dir, name + ".dll"), $"binaries/win64/{name}.dll");
             }
 
             return ms.ToArray();
+        }
+
+        /// <summary>[fmi-me] A bouncing ball solved by our integrator: its bounces where the analysis puts them, ticks on its time events.</summary>
+        [MsvcFact]
+        public void AModelExchangeFmuIsSolvedByOurIntegratorWithItsEvents()
+        {
+            var d = FmuDescription.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "fmu", "ball.xml")));
+            Assert.True(d.UsesModelExchange);
+            Assert.Equal((2, 1, "ball"), (d.ContinuousStates, d.EventIndicators, d.BinaryId));
+
+            var fmu = FmuArchive.Open(Ball.Value);
+            using var ball = new Fmu2Instance(fmu, "ball");
+            Assert.True(ball.ModelExchange);
+            ball.Initialise(0);
+            var h = fmu.Description.Find("h")!;
+            var bounces = fmu.Description.Find("bounces")!;
+            var ticks = fmu.Description.Find("ticks")!;
+            double g = 9.81, e = 0.7;
+            double t1 = Math.Sqrt(2 / g), v1 = Math.Sqrt(2 * g);   // first impact
+            double t2 = t1 + 2 * e * v1 / g;   // second
+            var trace = new List<(double T, double H, double N)>();
+            while (ball.Time < 1.2 - 1e-9)
+            {
+                ball.Step(0.01);
+                trace.Add((ball.Time, ball.Get(h), ball.Get(bounces)));
+            }
+
+            // the bounces come at the analysed times, to the step they fall in
+            double first = trace.First(p => p.N >= 1).T, second = trace.First(p => p.N >= 2).T;
+            _out.WriteLine($"impacts at {first:0.000} s and {second:0.000} s (analysis {t1:0.0000}, {t2:0.0000}); steps {ball.IntegratorSteps}, rejected {ball.RejectedSteps}, state events {ball.StateEvents}, time events {ball.TimeEvents}");
+            Assert.InRange(t1, first - 0.01, first);
+            Assert.InRange(t2, second - 0.01, second);
+            double v2 = e * e * v1, dt = 1.2 - t2;
+            Assert.Equal(v2 * dt - g / 2 * dt * dt, ball.Get(h), 6);   // the height after the second bounce
+            Assert.Equal(2, ball.Get(bounces));
+            Assert.Equal(4, ball.Get(ticks));   // its time events at 0.25, 0.5, 0.75 and 1.0 s
+            Assert.Equal(4, ball.TimeEvents);
+            Assert.All(trace, p => Assert.True(p.H >= -1e-9, $"below the floor at {p.T}: {p.H}"));
+        }
+
+        /// <summary>[fmi-me] A model-exchange lag in the circuit: integrated to the circuit's communication points, as accurate as the co-simulation one.</summary>
+        [MsvcFact]
+        public void AModelExchangeFmuRunsInTheCircuit()
+        {
+            var fmu = FmuArchive.Open(Lag.Value);
+            using (var alone = new Fmu2Instance(fmu, "alone"))
+            {
+                alone.Initialise(0, new Dictionary<string, double> { ["k"] = 2, ["tau"] = 0.05 });
+                alone.Set(fmu.Description.Find("u")!, 1);
+                for (int i = 0; i < 100; i++) alone.Step(0.001);
+                Assert.Equal(2 * (1 - Math.Exp(-2)), alone.Get(fmu.Description.Find("y")!), 6);   // the integrator's own accuracy
+            }
+
+            var c = new AnalogCircuit();
+            int input = c.Node("in"), output = c.Node("out");
+            c.Add(new VoltageSource("V1", input, AnalogCircuit.Ground, 1.0));
+            c.Add(new Resistor("RL", output, AnalogCircuit.Ground, 1000));
+            var d = fmu.Description;
+            var block = c.Add(new FmuBlock("U1", new Fmu2Instance(fmu, "U1"), AnalogCircuit.Ground,
+                new[] { (d.Find("u")!, input) }, new[] { (d.Find("y")!, output) },
+                new Dictionary<string, double> { ["k"] = 2, ["tau"] = 0.05 }));
+            using (block)
+            {
+                var sim = new AnalogSimulator(c);
+                sim.Initialize(InitialState.OperatingPoint);
+                for (int i = 0; i < 100; i++) sim.Step(0.001);
+                double expected = 2 * (1 - Math.Exp(-0.1 / 0.05)) * 1000 / 1001;
+                double v = sim.NodeVoltage(output);
+                _out.WriteLine($"out {v:0.0000} V at 100 ms (expected {expected:0.0000} V); integrator steps {block.Instance.IntegratorSteps}");
+                Assert.InRange(v, expected * 0.98, expected * 1.001);
+            }
+
+            var part = FmuImport.ToCustomPart(Lag.Value);   // a model-exchange FMU becomes a part too
+            Assert.Equal(new[] { "u", "y", "REF" }, part.Definition!.Pins.Select(p => p.Name));
         }
 
         [Fact]

@@ -24,13 +24,13 @@ namespace RobotTwin.CoreSim.Fmi
 
         public FmuDescription Description { get; }
 
-        /// <summary>The co-simulation binary for 64-bit Windows, or null when the FMU has none.</summary>
+        /// <summary>The binary for 64-bit Windows (co-simulation, else [fmi-me] model exchange), or null when the FMU has none.</summary>
         public string? BinaryPath
         {
             get
             {
-                if (Description.CoSimulationId.Length == 0) return null;
-                string path = Path.Combine(Folder, "binaries", "win64", Description.CoSimulationId + ".dll");
+                if (Description.BinaryId.Length == 0) return null;
+                string path = Path.Combine(Folder, "binaries", "win64", Description.BinaryId + ".dll");
                 return File.Exists(path) ? path : null;
             }
         }

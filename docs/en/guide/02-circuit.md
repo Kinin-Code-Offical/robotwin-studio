@@ -133,12 +133,13 @@ Alternatives follow parts by their identity, not their names: renaming a part ke
 
 ## FMU models (FMI 2.0)
 
-An **FMU** (`.fmu`, FMI 2.0 co-simulation) exported from tools such as Modelica, Simulink, 20-sim or OpenModelica runs as a block in the circuit.
+An **FMU** (`.fmu`, FMI 2.0 co-simulation or model exchange) exported from tools such as Modelica, Simulink, 20-sim or OpenModelica runs as a block in the circuit.
 
 - **File → Open…** opens an `.fmu` as a new circuit with its block placed; **External library ▾ → FMU (FMI 2.0, .fmu)…** on the **Library** page adds it to your library as a part. The FMU file is inside the part: it travels with the project.
 - Each **input** of the block is a pin on the left, each **output** a pin on the right; **REF** is the reference the voltages are measured from and driven against (usually joined to GND). An input reads its pin's voltage against REF; an output drives its value onto its pin through 1 Ω.
 - The FMU's parameters are the part's parameters (with their start values); **Communication step** is how often the circuit and the FMU meet (by default the FMU's own step, or 1 ms). At each one the inputs go in, the FMU moves on with its own solver, and the outputs hold until the next.
-- Only co-simulation FMUs with a 64-bit Windows binary (`binaries/win64`) run; model-exchange-only ones are refused with the reason.
+- FMUs with a 64-bit Windows binary (`binaries/win64`) run. A co-simulation FMU steps with its own solver. A model-exchange-only FMU has its states solved by RobotWin's own integrator. That integrator is an adaptive Dormand–Prince 5(4) method; time events and state events (the instant an event indicator changes sign, found by bisection) are handled as FMI 2.0 asks.
+- The circuit and the FMU meet only at the communication points: the inputs are the voltages there, and the outputs hold until the next point (a zero-order hold).
 
 ![An FMU block](../../images/en/fmu-block.png)
 

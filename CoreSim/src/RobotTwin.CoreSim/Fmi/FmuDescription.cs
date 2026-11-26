@@ -62,6 +62,23 @@ namespace RobotTwin.CoreSim.Fmi
         /// <summary>True when the FMU is only for model exchange (it needs the importer's integrator).</summary>
         public bool ModelExchangeOnly { get; set; }
 
+        /// <summary>[fmi-me] The model-exchange binary's name, or empty when the FMU has no model-exchange interface.</summary>
+        public string ModelExchangeId { get; set; } = string.Empty;
+
+        /// <summary>[fmi-me] How many continuous states and event indicators the model has.</summary>
+        public int ContinuousStates { get; set; }
+
+        public int EventIndicators { get; set; }
+
+        /// <summary>[fmi-me] The model needs no fmi2CompletedIntegratorStep after each step.</summary>
+        public bool CompletedIntegratorStepNotNeeded { get; set; }
+
+        /// <summary>The binary this importer runs: the co-simulation one when there is one, else the model-exchange one.</summary>
+        public string BinaryId => CoSimulationId.Length > 0 ? CoSimulationId : ModelExchangeId;
+
+        /// <summary>[fmi-me] Run through model exchange: the FMU gives derivatives, our integrator solves them.</summary>
+        public bool UsesModelExchange => CoSimulationId.Length == 0 && ModelExchangeId.Length > 0;
+
         public bool CanHandleVariableStep { get; set; }
         public double? DefaultStep { get; set; }
         public double? DefaultStop { get; set; }
@@ -110,6 +127,19 @@ namespace RobotTwin.CoreSim.Fmi
                 d.CanHandleVariableStep = string.Equals(A(cs, "canHandleVariableCommunicationStepSize"), "true", StringComparison.OrdinalIgnoreCase);
             }
             else d.ModelExchangeOnly = root.Element("ModelExchange") != null;
+
+            var me = root.Element("ModelExchange");
+            if (me != null)
+            {
+                d.ModelExchangeId = A(me, "modelIdentifier");
+                d.CompletedIntegratorStepNotNeeded = string.Equals(A(me, "completedIntegratorStepNotNeeded"), "true", StringComparison.OrdinalIgnoreCase);
+            }
+
+            // FMI 2.0 counts the states by their derivatives in ModelStructure (1.0's numberOfContinuousStates when there is none)
+            int derivatives = root.Element("ModelStructure")?.Element("Derivatives")?.Elements("Unknown").Count() ?? 0;
+            d.ContinuousStates = derivatives > 0 ? derivatives
+                : int.TryParse(A(root, "numberOfContinuousStates"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int nx) ? Math.Max(0, nx) : 0;
+            d.EventIndicators = int.TryParse(A(root, "numberOfEventIndicators"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int nz) ? Math.Max(0, nz) : 0;
 
             var experiment = root.Element("DefaultExperiment");
             d.DefaultStep = N(experiment, "stepSize");

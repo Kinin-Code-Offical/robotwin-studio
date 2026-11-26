@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Model-exchange FMUs:** an FMI 2.0 FMU with only the model-exchange interface runs in the circuit too, its states solved by our own adaptive Dormand–Prince 5(4) integrator (tolerances scaled by the states' nominal values) with time events, state events located by bisection and step events, as FMI 2.0 describes.
+
+### Fixed
+
+- **FMU blocks exchanged at every circuit step:** the FMU was stepped to each step the circuit took and asked for a restart every time, which held the circuit at its smallest steps (a million integrator steps for 0.1 s of a model-exchange FMU). The circuit and the FMU now meet only at the communication points (102 steps).
+
 ## [1.7.0] - 2026-11-26
 
 ### Added

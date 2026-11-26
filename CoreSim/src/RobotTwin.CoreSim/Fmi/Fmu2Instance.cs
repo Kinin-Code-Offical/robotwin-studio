@@ -11,7 +11,7 @@ namespace RobotTwin.CoreSim.Fmi
     /// the parameters and start values, then stepped: inputs set, <c>fmi2DoStep</c>, outputs read. Each instance loads its
     /// own copy of the binary when another already has it, since an FMU's globals are not always per instance.
     /// </summary>
-    public sealed class Fmu2Instance : IDisposable
+    public sealed partial class Fmu2Instance : IDisposable
     {
         private const int Fmi2CoSimulation = 1;
 
@@ -61,7 +61,7 @@ namespace RobotTwin.CoreSim.Fmi
         private readonly FreeInstance _freeInstance;
         private readonly RealAccess _setReal, _getReal;
         private readonly IntAccess _setInteger, _getInteger, _setBoolean, _getBoolean;
-        private readonly DoStep _doStep;
+        private readonly DoStep? _doStep;   // co-simulation only
         private IntPtr _component;
         private bool _initialised;
 
@@ -81,7 +81,7 @@ namespace RobotTwin.CoreSim.Fmi
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || IntPtr.Size != 8)
                 throw new PlatformNotSupportedException("FMU'nun win64 ikilisi yalnız 64 bit Windows'ta çalışır.");
             Description = fmu.Description;
-            string dll = fmu.BinaryPath ?? throw new InvalidOperationException($"{fmu.Description.ModelName}: FMU'da win64 ikilisi yok (binaries/win64/{fmu.Description.CoSimulationId}.dll).");
+            string dll = fmu.BinaryPath ?? throw new InvalidOperationException($"{fmu.Description.ModelName}: FMU'da win64 ikilisi yok (binaries/win64/{fmu.Description.BinaryId}.dll).");
             lock (Gate)
             {
                 _modulePath = dll;
@@ -97,10 +97,11 @@ namespace RobotTwin.CoreSim.Fmi
                 Loaded.Add(_modulePath);
             }
 
+            ModelExchange = fmu.Description.UsesModelExchange;
             T Bind<T>(string name) where T : Delegate
             {
                 IntPtr p = GetProcAddress(_module, name);
-                if (p == IntPtr.Zero) throw new InvalidOperationException($"FMU ikilisinde {name} yok (FMI 2.0 ortak benzetim arabirimi eksik).");
+                if (p == IntPtr.Zero) throw new InvalidOperationException($"FMU ikilisinde {name} yok (FMI 2.0 {(ModelExchange ? "model değişimi" : "ortak benzetim")} arabirimi eksik).");
                 return Marshal.GetDelegateForFunctionPointer<T>(p);
             }
 
@@ -116,7 +117,8 @@ namespace RobotTwin.CoreSim.Fmi
             _getInteger = Bind<IntAccess>("fmi2GetInteger");
             _setBoolean = Bind<IntAccess>("fmi2SetBoolean");
             _getBoolean = Bind<IntAccess>("fmi2GetBoolean");
-            _doStep = Bind<DoStep>("fmi2DoStep");
+            if (ModelExchange) BindModelExchange(name => GetProcAddress(_module, name));   // [fmi-me]
+            else _doStep = Bind<DoStep>("fmi2DoStep");
 
             // The callbacks live as long as the instance: an FMU may keep the pointer to them.
             _logger = (env, name, status, category, message) =>
@@ -145,7 +147,7 @@ namespace RobotTwin.CoreSim.Fmi
             Marshal.WriteIntPtr(_callbacks, 4 * IntPtr.Size, IntPtr.Zero);
 
             string resources = new Uri(Path.Combine(fmu.Folder, "resources") + Path.DirectorySeparatorChar).AbsoluteUri;
-            _component = instantiate(instanceName, Fmi2CoSimulation, fmu.Description.Guid, resources, _callbacks, 0, 0);
+            _component = instantiate(instanceName, ModelExchange ? Fmi2ModelExchange : Fmi2CoSimulation, fmu.Description.Guid, resources, _callbacks, 0, 0);
             if (_component == IntPtr.Zero)
             {
                 Dispose();
@@ -164,6 +166,7 @@ namespace RobotTwin.CoreSim.Fmi
             Check(_exitInit(_component), "fmi2ExitInitializationMode");
             Time = startTime;
             _initialised = true;
+            if (ModelExchange) StartContinuous();   // [fmi-me] event mode first, then continuous time
         }
 
         public void Set(FmuVariable v, double value)
@@ -220,7 +223,13 @@ namespace RobotTwin.CoreSim.Fmi
         public void Step(double h)
         {
             if (!_initialised) throw new InvalidOperationException("FMU önce Initialise ile başlatılmalı.");
-            Check(_doStep(_component, Time, h, 1), "fmi2DoStep");
+            if (ModelExchange)
+            {
+                IntegrateTo(Time + h);   // [fmi-me] our integrator
+                return;
+            }
+
+            Check(_doStep!(_component, Time, h, 1), "fmi2DoStep");
             Time += h;
         }
 

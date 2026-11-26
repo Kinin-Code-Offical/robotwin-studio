@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fmiModelDescription fmiVersion="2.0" modelName="ball" guid="{3b0f6a52-6f1e-4c55-9d1e-0b5a11c0ba11}"
+                     description="Bouncing ball: h' = v, v' = -g, v := -e v at the floor" generationTool="RobotWin tests"
+                     variableNamingConvention="flat" numberOfEventIndicators="1">
+  <ModelExchange modelIdentifier="ball"/>
+  <DefaultExperiment startTime="0" stopTime="3" stepSize="0.01"/>
+  <ModelVariables>
+    <ScalarVariable name="h" valueReference="0" causality="output" variability="continuous" initial="exact"><Real start="1" unit="m"/></ScalarVariable>
+    <ScalarVariable name="der(h)" valueReference="1" causality="local" variability="continuous"><Real derivative="1"/></ScalarVariable>
+    <ScalarVariable name="v" valueReference="2" causality="output" variability="continuous" initial="exact"><Real start="0" unit="m/s"/></ScalarVariable>
+    <ScalarVariable name="der(v)" valueReference="3" causality="local" variability="continuous"><Real derivative="3"/></ScalarVariable>
+    <ScalarVariable name="g" valueReference="4" causality="parameter" variability="fixed"><Real start="9.81"/></ScalarVariable>
+    <ScalarVariable name="e" valueReference="5" causality="parameter" variability="fixed"><Real start="0.7"/></ScalarVariable>
+    <ScalarVariable name="bounces" valueReference="6" causality="output" variability="discrete" initial="exact"><Integer start="0"/></ScalarVariable>
+    <ScalarVariable name="ticks" valueReference="7" causality="output" variability="discrete" initial="exact"><Integer start="0"/></ScalarVariable>
+    <ScalarVariable name="tick" valueReference="8" causality="parameter" variability="fixed"><Real start="0.25" unit="s"/></ScalarVariable>
+  </ModelVariables>
+  <ModelStructure>
+    <Outputs>
+      <Unknown index="1"/>
+      <Unknown index="3"/>
+      <Unknown index="7"/>
+      <Unknown index="8"/>
+    </Outputs>
+    <Derivatives>
+      <Unknown index="2"/>
+      <Unknown index="4"/>
+    </Derivatives>
+  </ModelStructure>
+</fmiModelDescription>
