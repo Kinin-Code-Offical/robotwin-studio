@@ -25,7 +25,8 @@ namespace RobotTwin.CoreSim.Design
     public static class BomBuilder
     {
         /// <summary>
-        /// Groups the real components (power/ground symbols are left out) by part, preset,
+        /// Groups the real components (power/ground symbols and the bench's instruments — generators, meters, lab supplies,
+        /// fault injectors, which are simulation's tools and not bought for the board — are left out) by part, preset,
         /// value and footprint, references in natural order ("R2" before "R10").
         /// </summary>
         public static List<BomLine> Build(Schematic doc, PartLibrary library)
@@ -35,6 +36,7 @@ namespace RobotTwin.CoreSim.Design
             {
                 var def = library.Find(part.PartId);
                 if (def == null || def.Symbol is SymbolKind.Ground or SymbolKind.PowerRail || Annotator.IsPowerSymbol(part.RefDes)) continue;
+                if (def.Category == StandardParts.Instruments) continue;   // [bom] on the bench, not on the board
                 var parameters = doc.ResolveParameters(library, part);
                 var preset = part.PresetId != null ? library.FindPreset(part.PresetId) : null;
                 string value = ValueText(def, parameters);

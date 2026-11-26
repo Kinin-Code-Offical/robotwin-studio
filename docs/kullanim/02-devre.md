@@ -121,11 +121,20 @@ Alternatifler parçaları adlarıyla değil kimlikleriyle izler: bir parçanın 
 
 Devre sayfasından şunları dışa aktarabilirsiniz:
 
-- Malzeme listesi (BOM, `.csv`)
+- Malzeme listesi (BOM): aşağıda
 - KiCad netlist (`.net`)
 - SPICE netlist (`.cir`)
 - Resim (PNG / SVG)
 - Yazdır / PDF (Ctrl+P)
+
+### Malzeme listesi ve tedarik
+
+**BOM** komutu malzeme listesini bir pencerede açar. Aynı parçalar tek satırdır; ölçü aletleri, jeneratörler ve laboratuvar kaynakları simülasyonun araçlarıdır, karta alınmadıkları için listede yer almaz.
+
+- Her satıra **üretici**, **üretici parça numarası** (MPN), **tedarikçi**, **tedarikçi parça numarası**, **birim fiyat** ve tedarikçinin **en az** satış adedi yazılır. Bunlar projeyle saklanır; modeli olan parçalarda (IRLZ44N, LM7805, 1N5819…) MPN kendiliğinden gelir.
+- **Kart sayısı** verilince her satırın siparişi hesaplanır: kartların istediği adet, tedarikçinin en azından azsa en az kadar sipariş edilir (turuncu). Alt satırda toplam tutar, kart başına tutar ve fiyatı girilmemiş satır sayısı görünür.
+- **CSV kaydet** bütün listeyi kaydeder.
+- **JLCPCB / LCSC**, **Digi-Key** ve **Mouser** o tedarikçinin satırlarını kendi yükleme biçiminde verir: JLCPCB'nin dizgi BOM'u (Comment, Designator, Footprint, LCSC Part #), Digi-Key ve Mouser'ın toplu sepet dosyası.
 
 ## Sonraki adım
 

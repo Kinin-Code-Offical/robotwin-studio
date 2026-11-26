@@ -121,11 +121,20 @@ Alternatives follow parts by their identity, not their names: renaming a part ke
 
 From the circuit page you can export:
 
-- Bill of materials (BOM, `.csv`)
+- Bill of materials (BOM): below
 - KiCad netlist (`.net`)
 - SPICE netlist (`.cir`)
 - Image (PNG / SVG)
 - Print / PDF (Ctrl+P)
+
+### Bill of materials and sourcing
+
+The **BOM** command opens the bill of materials in a window. Identical parts are one line; instruments, generators and lab supplies are simulation's tools, not taken onto the board, so they are not listed.
+
+- Give each line its **manufacturer**, **manufacturer part number** (MPN), **supplier**, **supplier part number**, **unit price** and the supplier's **minimum order**. They are kept with the project; parts with a model (IRLZ44N, LM7805, 1N5819…) get it as their MPN on their own.
+- With **Boards** given, each line's order is worked out: what the boards need, or the supplier's minimum when that is more (in orange). The bottom line gives the total, the cost per board and how many lines have no price yet.
+- **Save CSV** saves the whole list.
+- **JLCPCB / LCSC**, **Digi-Key** and **Mouser** give that supplier's lines in its own upload format: JLCPCB's assembly BOM (Comment, Designator, Footprint, LCSC Part #), and Digi-Key's and Mouser's bulk add files.
 
 ## Next step
 

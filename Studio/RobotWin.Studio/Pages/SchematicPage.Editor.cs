@@ -892,6 +892,8 @@ namespace RobotWin.Studio.Pages
             return dlg.ShowDialog(Window.GetWindow(this)) == true ? dlg.FileName : null;
         }
 
+        private BomWindow? _bomWindow;
+
         private void ExportBom()
         {
             var bom = BomBuilder.Build(Variants.Active(W.Schematic), W.Library);   // [variants] the active alternative's
@@ -901,17 +903,10 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            var path = AskSavePath("CSV (*.csv)|*.csv", ".csv", "-BOM");
-            if (path == null) return;
-            try
-            {
-                File.WriteAllText(path, BomBuilder.ToCsv(bom), new UTF8Encoding(true));
-                W.Status = $"BOM kaydedildi: {bom.Count} satır, {bom.Sum(l => l.Quantity)} parça → {Path.GetFileName(path)}";
-            }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
-            {
-                ShowToast("Kaydedilemedi: " + ex.Message);
-            }
+            // [bom] the list with its sources, costing and the suppliers' order files
+            var window = new BomWindow(Window.GetWindow(this)!, W.Schematic, W.Library, bom, W.BeginChange, () => W.CommitChange("Malzeme listesi güncellendi"));
+            window.Show();
+            _bomWindow = window;
         }
 
         private void ExportText(string filter, string ext, Func<string> build, string what)
@@ -985,6 +980,15 @@ namespace RobotWin.Studio.Pages
                             ?? sch.Parts.FirstOrDefault();
             switch (fault)
             {
+                case "bom":   // [bom] the list with two lines sourced and costed, the window is the picture
+                    ExportBom();
+                    if (_bomWindow != null)
+                    {
+                        _bomWindow.FillForSnapshot();
+                        App.SnapshotTarget = _bomWindow.Content as FrameworkElement;
+                    }
+
+                    return;
                 case "variants":
                 case "variants-window":
                 {

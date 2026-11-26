@@ -7942,7 +7942,27 @@
   "KiCad kartı bu kartla aynı: alınacak değişiklik yok.": "The KiCad board is the same as this one: nothing to import.",
   "Bir KiCad kartı değil (kicad_pcb bekleniyordu).": "Not a KiCad board (kicad_pcb expected).",
   "Kartın dış hattı (Edge.Cuts) yok: koordinatlar olduğu gibi alındı.": "The board has no outline (Edge.Cuts): coordinates are taken as they are.",
-  "Okunamadı": "Could not be read"
+  "Okunamadı": "Could not be read",
+  "Malzeme listesi": "Bill of materials",
+  "Malzeme listesi ve tedarik": "Bill of materials and sourcing",
+  "Her satırın üreticisi, üretici parça numarası, tedarikçisi, fiyatı ve en az sipariş adedi projeyle saklanır (aynı parçalar tek satır). Sipariş, istenen kart sayısı ve tedarikçinin en azına göre hesaplanır.": "Each line's manufacturer, manufacturer part number, supplier, price and minimum order are kept with the project (identical parts are one line). The order is worked out from the number of boards wanted and the supplier's minimum.",
+  "Kart sayısı": "Boards",
+  "Para birimi": "Currency",
+  "Üretici parça no": "MPN",
+  "Tedarikçi": "Supplier",
+  "Tedarikçi parça no": "Supplier part no",
+  "Birim fiyat": "Unit price",
+  "En az": "Min. order",
+  "Sipariş": "Order",
+  "Tutar": "Amount",
+  "Adet/kart": "Qty/board",
+  "Toplam": "Total",
+  "CSV kaydet…": "Save CSV…",
+  "JLCPCB / LCSC…": "JLCPCB / LCSC…",
+  "Digi-Key…": "Digi-Key…",
+  "Mouser…": "Mouser…",
+  "Malzeme listesi güncellendi": "Bill of materials updated",
+  "Tedarikçi adı: LCSC (JLCPCB), Digi-Key ve Mouser için sipariş dosyası da çıkar": "The supplier's name: LCSC (JLCPCB), Digi-Key and Mouser also get an order file"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11197,6 +11217,9 @@
   "Referansı olmayan bir ayak izi atlandı ({0}).": "A footprint without a reference was skipped ({0}).",
   "… ve {0} değişiklik daha": "… and {0} more changes",
   "{0} değişikliği al": "Import {0} changes",
-  "KiCad'den {0} değişiklik alındı: {1}": "Imported {0} changes from KiCad: {1}"
+  "KiCad'den {0} değişiklik alındı: {1}": "Imported {0} changes from KiCad: {1}",
+  "{0} kart: toplam {1} · kart başına {2}": "{0} boards: total {1} · {2} a board",
+  " · {0} satırın fiyatı yok": " · {0} lines without a price",
+  "Kartlar {0} adet istiyor; tedarikçinin en azı {1}": "The boards need {0}; the supplier sells at least {1}"
  }
 }

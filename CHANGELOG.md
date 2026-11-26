@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Bill of materials with sourcing and costing:** the BOM opens in a window where each line gets its manufacturer, MPN (from the part's model when it has one), supplier, supplier part number, unit price and minimum order, kept with the project; the order and cost for a number of boards; a full CSV and JLCPCB/LCSC, Digi-Key and Mouser order files.
+- **Fix:** instruments (generators, meters, lab supplies, fault injectors) were listed in the BOM; they are simulation's tools and stay out of it now.
 - **Import from KiCad:** a board taken to KiCad comes back with the placement and routing done there: the PCB page reads the `.kicad_pcb` (placements by reference, tracks with their arcs, vias, zones, mounting holes, thickness, outline), lists what changed net by net and part by part, and carries it over in one undoable step. A board exported and read back shows no difference.
 - **Vacuum ejector:** a vacuum cup's vacuum can come from a venturi on compressed air: the vacuum it reaches follows its supply pressure, its air leaves the compressor's tank, a weak line drops the part.
 - **Compressor, air tank and double-solenoid valve:** a compressor part (tank, pressure switch with cut-in and cut-out, free air delivery falling with pressure, RUN and PS outputs) that cylinders draw their air from by naming it; the tank's air balance holds to the litre, a compressor that cannot keep up lets the pressure fall and the strokes slow. The cylinder's valve can be a double-solenoid one (SOL out, SOL2 back, stays where it was sent).

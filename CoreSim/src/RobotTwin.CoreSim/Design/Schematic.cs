@@ -185,6 +185,14 @@ namespace RobotTwin.CoreSim.Design
         /// </summary>
         public List<DesignVariant> Variants { get; set; } = new List<DesignVariant>();
 
+        /// <summary>[bom] Where each BOM line is bought (Design/BomSourcing.cs), by the line's identity; and the currency its prices are in.</summary>
+        public Dictionary<string, BomSource> Sourcing { get; set; } = new Dictionary<string, BomSource>(StringComparer.Ordinal);
+
+        public string BomCurrency { get; set; } = "USD";
+
+        /// <summary>[bom] How many boards the costing is for.</summary>
+        public int BomBoards { get; set; } = 1;
+
         /// <summary>[variants] The alternative simulated and listed now, by name; null: the design as drawn.</summary>
         public string? ActiveVariant { get; set; }
 
