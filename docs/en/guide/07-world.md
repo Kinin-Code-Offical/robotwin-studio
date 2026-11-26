@@ -210,7 +210,19 @@ The **limit switch**'s roller lever reaches out along +X. When something pushes 
 
 **Parts → Robot Cell → PLC** is a PLC with eight digital inputs (I0–I7 → `%IX0.0`–`%IX0.7`) and eight outputs (Q0–Q7 ← `%QX0.0`–`%QX0.7`) that runs IEC 61131-3 Structured Text (ST). Every **cycle time** it reads its inputs (1 above half the I/O voltage), runs the program once and writes its outputs. The editor in the inspector checks the program as you write it and shows errors with their line. **Save and download to the PLC** also downloads the program into a running world's PLC (it starts cold). The panel shows RUN/STOP, the scan count, the input and output bits and the variables live; the PLC's lamp is green in RUN and red in STOP.
 
-Supported: `VAR … END_VAR` (with `AT %IX0.0`, `%QX0.0`, `%MW0` addresses), BOOL, INT, DINT, UINT, WORD, REAL, TIME (`T#1s500ms`), 16#FF and 2#1010 numbers; the TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS blocks; `IF … ELSIF … ELSE`, `CASE … OF` (a station's steps), `FOR`, `WHILE`, `REPEAT`, `EXIT`; ABS, SQRT, MIN, MAX, LIMIT, SEL and conversions such as `INT_TO_REAL`. Integers wrap as in a PLC (INT is 16-bit). A program that does not compile, or a fault while running (division by zero, a loop that does not end), puts the PLC in STOP with its outputs off; **Restart** takes it back to RUN. A new PLC comes with an example program: a lamp, a flasher and a pusher station (when a part comes, drive the cylinder out, bring it back when it is out, count when it is back). Turn on its **Modbus TCP server** (port 5021 by default) and a SCADA or HMI connects to the PLC: holding registers are `%MW0`–`%MW255` (writable; the program sees a write at its next scan), discrete inputs `%IX`, coils `%QX`.
+Supported: `VAR … END_VAR` (with `AT %IX0.0`, `%QX0.0`, `%MW0` addresses), BOOL, INT, DINT, UINT, WORD, REAL, TIME (`T#1s500ms`), 16#FF and 2#1010 numbers; the TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS blocks; the Modbus client blocks MB_READ and MB_WRITE (below); `IF … ELSIF … ELSE`, `CASE … OF` (a station's steps), `FOR`, `WHILE`, `REPEAT`, `EXIT`; ABS, SQRT, MIN, MAX, LIMIT, SEL and conversions such as `INT_TO_REAL`. Integers wrap as in a PLC (INT is 16-bit). A program that does not compile, or a fault while running (division by zero, a loop that does not end), puts the PLC in STOP with its outputs off; **Restart** takes it back to RUN. A new PLC comes with an example program: a lamp, a flasher and a pusher station (when a part comes, drive the cylinder out, bring it back when it is out, count when it is back). Turn on its **Modbus TCP server** (port 5021 by default) and a SCADA or HMI connects to the PLC: holding registers are `%MW0`–`%MW255` (writable; the program sees a write at its next scan), discrete inputs `%IX`, coils `%QX`.
+
+**Modbus client.** The PLC reads and writes the world's other Modbus devices (remote I/O modules, other PLCs with Modbus on) over the plant network by their unit ID:
+
+- `MB_READ`: on a rising edge of `REQ` it asks the device at `UNIT` for the value at `ADDR` with `FC` 1 (coil), 2 (discrete input), 3 (holding register) or 4 (input register);
+- `MB_WRITE`: writes `VALUE` with `FC` 5 (coil) or 6 (holding register);
+- `BUSY` until the answer comes back (the plant network's round trip, 5 ms), then `DONE` for one scan (a read's value is in `VALUE`);
+- on a failure, `ERROR` and `STATUS`: the device's exception code (1 function, 2 address, 3 value), or 11 when nothing answered within 200 ms (no such device, or the network is down).
+
+```
+Read(REQ := TRUE, UNIT := 2, FC := 3, ADDR := 1);
+IF Read.DONE THEN Level := Read.VALUE; END_IF
+```
 
 With **Language** set to *Ladder* the program is a ladder diagram (LD): **Open the ladder editor** shows the variables on the left (`VAR … END_VAR`) and the rungs in the middle. Each rung has seven columns of contacts and blocks and the coil column on the right; from the toolbar put on the selected cell a normally open or closed contact, a rising or falling edge, a comparison, TON, TOF, TP, CTU, a wire, a coil, a negated coil, a set or a reset coil; **│ link** draws a vertical link from the cell's right side to the row below (a parallel branch: this is how a seal-in latch is built). The selected cell's variable, parameter (`T#2s`, `5`, `>= 50`) and a counter's reset are in the boxes below. The program is checked as it is drawn; **Generated Structured Text** shows what the rungs turn into. While the world runs, the contacts that pass power and the coils that are TRUE light green.
 
@@ -247,8 +259,20 @@ The **Parts → Robot Cell → Modbus TCP Remote I/O** module has 8 digital inpu
 | Discrete input (02) | 0–7 | DI1–DI8: 1 when the pin's voltage is above half the I/O voltage |
 | Input register (04) | 0 | The inputs' bit word (DI1 = bit 0) |
 | Holding register (03, 06, 16, 23) | 0 | The outputs' bit word; writing it sets the coils |
+| Input register (04) | 1–4 | AI1–AI4: 0–10 V analog inputs, in millivolts (12 bits, 2.44 mV steps; 100 kΩ input) |
+| Holding register (03, 06, 16) | 1–2 | AO1–AO2: 0–10 V analog outputs, in millivolts (12 bits) |
 
 Modules sharing a port are told apart by their unit ID (as devices behind a gateway). The ports opened, and any that could not be, are listed in the **Events** tab.
+
+#### Modbus RTU (serial line)
+
+With **Bus** set to `rtu` (or with the **Modbus RTU Remote I/O** ready-made part) the same table is served by Modbus RTU on the module's 5 V TTL serial header (**RX**, **TX**). Wire an Arduino's TX (D1) to the module's RX and the module's TX to the Arduino's RX (D0), and join their GNDs: the sketch is the master over the cable.
+
+- The **RTU baud rate** (1200–115200) and **RTU frame** (`8E1`, Modbus's default, `8O1`, `8N2`, `8N1`) must match the sketch's `Serial.begin(9600, SERIAL_8E1)`. If they do not, the characters arrive broken and the module does not answer, as a real one would not.
+- A frame ends with 3.5 characters of silence (1.75 ms above 19200 baud); one whose CRC-16 does not hold, that has a broken character or is for another address goes unanswered.
+- Address 0 is a broadcast: carried out, never answered.
+- The answer goes out on TX bit by bit 3.5 characters after the request ends.
+- The inspector shows the answers, the CRC errors and the broken characters; a line fault injector on the RX line shows how errors are counted.
 
 ## Cables
 

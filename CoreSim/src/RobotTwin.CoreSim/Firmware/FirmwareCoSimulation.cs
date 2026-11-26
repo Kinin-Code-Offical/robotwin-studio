@@ -213,14 +213,15 @@ namespace RobotTwin.CoreSim.Firmware
         {
             var frames = Mcu.TxFrames;
             double bit = Mcu.UartBitCycles;
-            frames.RemoveAll(f => f.Cycle + 10 * bit < startCycle);
+            int frameBits = Mcu.UartFrameBits;   // start, data, parity, stop bits as UCSR0B/C set them
+            frames.RemoveAll(f => f.Cycle + frameBits * bit < startCycle);
             PinMode last = pin.Mode is PinMode.OutputHigh or PinMode.OutputLow ? pin.Mode : PinMode.OutputHigh;
             if (pin.Mode != PinMode.OutputHigh && pin.Mode != PinMode.OutputLow) pin.Mode = PinMode.OutputHigh;   // the transmitter idles high
             foreach (var (cycle, value) in frames)
             {
-                for (int k = 0; k < 10; k++)
+                for (int k = 0; k < frameBits; k++)
                 {
-                    bool high = k != 0 && (k == 9 || (value >> (k - 1) & 1) != 0);
+                    bool high = Mcu.UartTxBit(value, k);
                     var mode = high ? PinMode.OutputHigh : PinMode.OutputLow;
                     if (mode == last) continue;
                     double t = _epochTime + ((double)cycle + k * bit - _epochCycles) / Mcu.ClockHz;

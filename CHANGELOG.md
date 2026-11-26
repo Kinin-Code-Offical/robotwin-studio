@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The PLC as a Modbus client:** MB_READ and MB_WRITE blocks in Structured Text read and write the world's other Modbus devices by unit ID over the plant network (function codes 1–6, a 5 ms round trip, DONE / BUSY / ERROR / STATUS with the device's exception code, or 11 when nothing answers).
+- **Analog I/O on the Modbus module:** four 0–10 V inputs (AI1–AI4, input registers 1–4) and two 0–10 V outputs (AO1–AO2, holding registers 1–2), in millivolts through 12-bit converters; the inspector shows them.
+- **Modbus RTU on a wire:** the remote I/O module serves its table by Modbus RTU on a 5 V TTL serial header when its bus is set to RTU (baud rate and frame format chosen): frames end with 3.5 characters of silence, CRC-16 checked, other addresses and broadcasts handled as the specification says, answers sent bit by bit on TX. A real Uno sketch acting as master writes coils, reads the inputs back through a cable, goes unanswered on a broken CRC and another address, and broadcasts.
+- **Fix:** an Arduino's serial pin carried every frame as 8N1 whatever `Serial.begin` set: with 8E1, 8O1 or two stop bits the parity bit never reached the wire. The pin now sends the configured frame.
+
 - **Enclosure check:** the DRC tab's Box switch defines the box the board goes into (inside sizes, the board's place, standoffs, lead length, margin, openings in the walls); the DRC then holds every part's body, top or bottom side, and the through-hole leads to its walls, floor and lid, naming the part and how far it goes in. Connectors leaving through an opening are allowed. Saved with the board.
 
 - **Fabrication files checked against the board:** the Gerber ZIP is read back from disk by an independent RS-274X and Excellon reader (`Pcb/GerberReader.cs`), each layer painted at 20 µm and laid over the same layer painted from the board's geometry; differences are reported with where they are and their area, drill files hole for hole with plating and diameter. Wrong units, a flipped axis, a wrong aperture, an arc turning the wrong way or a missing object are caught before the files go to the maker.

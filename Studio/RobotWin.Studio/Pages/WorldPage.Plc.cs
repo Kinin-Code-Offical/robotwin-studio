@@ -56,7 +56,7 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(check);
             Inspector.Children.Add(Caption("Durum"));
             StatusBlock();
-            Inspector.Children.Add(Note("G/Ç: I0–I7 → %IX0.0–%IX0.7, Q0–Q7 ← %QX0.0–%QX0.7, %MW0–%MW255 bellek sözcükleri. Türler BOOL, INT, DINT, UINT, WORD, REAL, TIME; bloklar TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS."));
+            Inspector.Children.Add(Note("G/Ç: I0–I7 → %IX0.0–%IX0.7, Q0–Q7 ← %QX0.0–%QX0.7, %MW0–%MW255 bellek sözcükleri. Türler BOOL, INT, DINT, UINT, WORD, REAL, TIME; bloklar TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS; Modbus istemcisi MB_READ, MB_WRITE."));
         }
 
         /// <summary>[plc] A ladder PLC: its check, the editor window, restart, and the same live state.</summary>

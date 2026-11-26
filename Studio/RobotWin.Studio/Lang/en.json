@@ -7224,7 +7224,6 @@
   "PLC programı yüklendi: RUN": "PLC program downloaded: RUN",
   "PLC yeniden başlatıldı: RUN": "PLC restarted: RUN",
   "Dünya çalışırken PLC durumu burada görünür.": "The PLC's state shows here while the world runs.",
-  "G/Ç: I0–I7 → %IX0.0–%IX0.7, Q0–Q7 ← %QX0.0–%QX0.7, %MW0–%MW255 bellek sözcükleri. Türler BOOL, INT, DINT, UINT, WORD, REAL, TIME; bloklar TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS.": "I/O: I0–I7 → %IX0.0–%IX0.7, Q0–Q7 ← %QX0.0–%QX0.7, %MW0–%MW255 memory words. Types BOOL, INT, DINT, UINT, WORD, REAL, TIME; blocks TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS.",
   "8 sayısal giriş (I0–I7 → %IX0.0–%IX0.7), 8 sayısal çıkış (Q0–Q7 ← %QX0.0–%QX0.7). Programı Yapısal Metin'dir (ST): BOOL, INT, REAL, TIME; TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS; IF, CASE (istasyon adımları), FOR, WHILE, REPEAT. Her çevrim süresinde girişleri okur, programı bir kez çalıştırır, çıkışları yazar. Derlenmeyen program ya da çalışırken hata (sıfıra bölme, bitmeyen döngü) PLC'yi STOP'a alır, çıkışlar düşer.": "8 digital inputs (I0–I7 → %IX0.0–%IX0.7), 8 digital outputs (Q0–Q7 ← %QX0.0–%QX0.7). Its program is Structured Text (ST): BOOL, INT, REAL, TIME; TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS; IF, CASE (station steps), FOR, WHILE, REPEAT. Every cycle time it reads the inputs, runs the program once and writes the outputs. A program that does not compile, or a fault while running (division by zero, a loop that does not end), puts the PLC in STOP with its outputs off.",
   "Kirli lens": "Dirty lens",
   "Lensteki toz ve yağ ışığı zayıflatır: difüz sensörün menzili düşer, ışın sensörü her zaman kesik görür.": "Dust and oil on the lens weaken the light: a diffuse sensor's range drops, a beam sensor always sees its beam cut.",
@@ -7896,7 +7895,15 @@
   "kartın sol duvara uzaklığı": "board to the left wall",
   "kartın üst duvara uzaklığı": "board to the top wall",
   "ayak yüksekliği": "standoff height",
-  "uç boyu": "lead length"
+  "uç boyu": "lead length",
+  "Veri yolu": "Bus",
+  "RTU baud hızı": "RTU baud rate",
+  "RTU çerçevesi": "RTU frame",
+  "Modbus RTU Uzak G/Ç · 8 DI / 8 DO": "Modbus RTU Remote I/O · 8 DI / 8 DO",
+  "5 V TTL seri (RX/TX), 9600 baud 8E1, adres 1": "5 V TTL serial (RX/TX), 9600 baud 8E1, address 1",
+  "Dünya çalışırken RX ve TX bacaklarından gelen isteklere yanıt verir.": "While the world runs it answers the requests coming in on its RX and TX pins.",
+  "8 sayısal giriş, 8 sayısal çıkış; dünya çalışırken bir Modbus TCP sunucusudur, PLC, HMI ya da SCADA programı gerçek modül gibi bağlanır. Bobin 0–7 → DO1–DO8 (yazılır), ayrık giriş 0–7 ← DI1–DI8 (okunur); giriş yazmacı 0 girişlerin, tutma yazmacı 0 çıkışların bit sözcüğüdür. Dört 0–10 V analog giriş (AI1–AI4 → giriş yazmacı 1–4) ve iki 0–10 V analog çıkış (tutma yazmacı 1–2 → AO1–AO2), milivolt olarak, 12 bit. Veri yolu RTU iken aynı tablo 5 V TTL seri başlıktan (RX, TX) Modbus RTU ile sunulur: bir mikrodenetleyici kablo üzerinden usta olur.": "8 digital inputs, 8 digital outputs; while the world runs it is a Modbus TCP server that a PLC, HMI or SCADA program connects to as to a real module. Coils 0–7 → DO1–DO8 (written), discrete inputs 0–7 ← DI1–DI8 (read); input register 0 is the inputs' bit word, holding register 0 the outputs'. Four 0–10 V analog inputs (AI1–AI4 → input registers 1–4) and two 0–10 V analog outputs (holding registers 1–2 → AO1–AO2), in millivolts, 12 bits. With the bus set to RTU the same table is served by Modbus RTU on the 5 V TTL serial header (RX, TX): a microcontroller is the master over a cable.",
+  "G/Ç: I0–I7 → %IX0.0–%IX0.7, Q0–Q7 ← %QX0.0–%QX0.7, %MW0–%MW255 bellek sözcükleri. Türler BOOL, INT, DINT, UINT, WORD, REAL, TIME; bloklar TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS; Modbus istemcisi MB_READ, MB_WRITE.": "I/O: I0–I7 → %IX0.0–%IX0.7, Q0–Q7 ← %QX0.0–%QX0.7, %MW0–%MW255 memory words. Types BOOL, INT, DINT, UINT, WORD, REAL, TIME; blocks TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS; Modbus client MB_READ, MB_WRITE."
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11122,6 +11129,8 @@
   "'{0}' açıklığı kaldırıldı": "Opening '{0}' removed",
   "Açıklık adı: {0}": "Opening name: {0}",
   "'{0}' açıklığı {1} duvarda": "Opening '{0}' in the {1} wall",
-  "'{0}' açıklığı: {1} {2}": "Opening '{0}': {1} {2}"
+  "'{0}' açıklığı: {1} {2}": "Opening '{0}': {1} {2}",
+  "Modbus RTU : {0} baud {1} · adres {2}": "Modbus RTU : {0} baud {1} · address {2}",
+  "Yanıt      : {0} · CRC hatası {1} · bozuk karakter {2}": "Answered   : {0} · CRC errors {1} · broken characters {2}"
  }
 }

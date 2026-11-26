@@ -666,25 +666,30 @@ namespace RobotTwin.CoreSim.Firmware
         public bool UartTxLevel(ulong cycle)
         {
             double bit = UartBitCycles;
-            int chars = UartCharacterBits, parity = UartParity;
             for (int i = TxFrames.Count - 1; i >= 0; i--)
             {
                 var (start, value) = TxFrames[i];
                 if (cycle < start) continue;
-                int k = (int)((cycle - start) / bit);
-                if (k == 0) return false;                                      // start bit
-                if (k <= chars) return (value >> (k - 1) & 1) != 0;            // data, least significant first
-                if (parity >= 2 && k == chars + 1)
-                {
-                    int ones = 0;
-                    for (int b = 0; b < Math.Min(8, chars); b++) ones += (value >> b) & 1;
-                    return parity == 2 ? ones % 2 != 0 : ones % 2 == 0;        // even: makes the ones even; odd: odd
-                }
-
-                return true;                                                   // stop bits, then idle
+                return UartTxBit(value, (int)((cycle - start) / bit));
             }
 
             return true;
+        }
+
+        /// <summary>[uart] Bit <paramref name="k"/> of the frame carrying <paramref name="value"/> in the configured format (past its end: idle, high).</summary>
+        public bool UartTxBit(byte value, int k)
+        {
+            int chars = UartCharacterBits, parity = UartParity;
+            if (k == 0) return false;                                          // start bit
+            if (k <= chars) return (value >> (k - 1) & 1) != 0;                // data, least significant first
+            if (parity >= 2 && k == chars + 1)
+            {
+                int ones = 0;
+                for (int b = 0; b < Math.Min(8, chars); b++) ones += (value >> b) & 1;
+                return parity == 2 ? ones % 2 != 0 : ones % 2 == 0;            // even: makes the ones even; odd: odd
+            }
+
+            return true;                                                       // stop bits, then idle
         }
 
         private void UartWrite(byte v)

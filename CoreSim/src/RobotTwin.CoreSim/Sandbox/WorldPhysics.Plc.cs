@@ -137,6 +137,8 @@ namespace RobotTwin.CoreSim.Sandbox
             {
                 plc.Pending -= plc.CycleMs;
                 for (int i = 0; i < 8; i++) program.Inputs[i] = PinHigh(plc.InputPins[i], sim);
+                // [mbclient] its MB_READ / MB_WRITE blocks reach the world's other Modbus devices by unit id
+                program.ModbusNetwork ??= unit => _modbus.FirstOrDefault(d => d.Unit == unit && d.Plc != plc)?.Image;
                 SyncPlcModbus(plc, program, true);
                 long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                 bool ok = program.Scan(plc.CycleMs);

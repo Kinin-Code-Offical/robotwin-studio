@@ -210,7 +210,19 @@ Hücre panelindeki **Sapma** satırı, kolun ucunun tuttuğu ağırlık altında
 
 **Parçalar → Robot Hücresi → PLC** sekiz sayısal girişi (I0–I7 → `%IX0.0`–`%IX0.7`) ve sekiz çıkışı (Q0–Q7 ← `%QX0.0`–`%QX0.7`) olan, IEC 61131-3 Yapısal Metin (ST) çalıştıran bir PLC'dir. Her **çevrim süresinde** girişleri okur (G/Ç geriliminin yarısının üstü 1), programı bir kez çalıştırır ve çıkışları yazar. Denetçideki düzenleyicide program yazılırken denetlenir; hata satırıyla birlikte gösterilir. **Kaydet ve PLC'ye yükle** dünya çalışırken programı PLC'ye de yükler (soğuk başlar). Panelde RUN/STOP, tarama sayısı, giriş ve çıkış bitleri ve değişkenler canlı görünür; PLC'nin lambası RUN'da yeşil, STOP'ta kırmızıdır.
 
-Desteklenenler: `VAR … END_VAR` (`AT %IX0.0`, `%QX0.0`, `%MW0` adresleriyle), BOOL, INT, DINT, UINT, WORD, REAL, TIME (`T#1s500ms`), 16#FF ve 2#1010 sayıları; TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS blokları; `IF … ELSIF … ELSE`, `CASE … OF` (istasyonun adımları), `FOR`, `WHILE`, `REPEAT`, `EXIT`; ABS, SQRT, MIN, MAX, LIMIT, SEL ve `INT_TO_REAL` gibi dönüşümler. Tamsayılar PLC'deki gibi taşar (INT 16 bit). Derlenmeyen program ya da çalışırken hata (sıfıra bölme, bitmeyen döngü) PLC'yi STOP'a alır ve çıkışları düşürür; **Yeniden başlat** RUN'a döndürür. Yeni PLC; lamba, flaşör ve bir itici istasyonu (parça gelince silindiri ileri sür, ileride geri çek, geride say) içeren örnek programla gelir. **Modbus TCP sunucusu** açılırsa (öntanımlı port 5021) SCADA ya da HMI PLC'ye bağlanır: tutma yazmaçları `%MW0`–`%MW255` (yazılabilir; program bir sonraki taramada görür), ayrık girişler `%IX`, bobinler `%QX`.
+Desteklenenler: `VAR … END_VAR` (`AT %IX0.0`, `%QX0.0`, `%MW0` adresleriyle), BOOL, INT, DINT, UINT, WORD, REAL, TIME (`T#1s500ms`), 16#FF ve 2#1010 sayıları; TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS blokları; Modbus istemcisi MB_READ ve MB_WRITE (aşağıda); `IF … ELSIF … ELSE`, `CASE … OF` (istasyonun adımları), `FOR`, `WHILE`, `REPEAT`, `EXIT`; ABS, SQRT, MIN, MAX, LIMIT, SEL ve `INT_TO_REAL` gibi dönüşümler. Tamsayılar PLC'deki gibi taşar (INT 16 bit). Derlenmeyen program ya da çalışırken hata (sıfıra bölme, bitmeyen döngü) PLC'yi STOP'a alır ve çıkışları düşürür; **Yeniden başlat** RUN'a döndürür. Yeni PLC; lamba, flaşör ve bir itici istasyonu (parça gelince silindiri ileri sür, ileride geri çek, geride say) içeren örnek programla gelir. **Modbus TCP sunucusu** açılırsa (öntanımlı port 5021) SCADA ya da HMI PLC'ye bağlanır: tutma yazmaçları `%MW0`–`%MW255` (yazılabilir; program bir sonraki taramada görür), ayrık girişler `%IX`, bobinler `%QX`.
+
+**Modbus istemcisi.** PLC, dünyadaki başka Modbus cihazlarını (uzak G/Ç modülleri, Modbus'ı açık başka PLC'ler) tesis ağı üzerinden birim kimliğiyle okur ve yazar:
+
+- `MB_READ`: `REQ`'in yükselen kenarında `UNIT` adresli cihazdan `FC` 1 (bobin), 2 (ayrık giriş), 3 (tutma yazmacı) ya da 4 (giriş yazmacı) ile `ADDR`'deki değeri ister;
+- `MB_WRITE`: `FC` 5 (bobin) ya da 6 (tutma yazmacı) ile `VALUE`'yu yazar;
+- yanıt gelene kadar `BUSY` (tesis ağının gidiş-dönüşü 5 ms), sonra bir tarama boyunca `DONE` (okumada değer `VALUE`'da);
+- hata olursa `ERROR` ve `STATUS`: cihazın istisna kodu (1 işlev, 2 adres, 3 değer) ya da 200 ms'de yanıt gelmezse 11 (cihaz yok ya da ağ kopuk).
+
+```
+Oku(REQ := TRUE, UNIT := 2, FC := 3, ADDR := 1);
+IF Oku.DONE THEN Seviye := Oku.VALUE; END_IF
+```
 
 **Dil** *Merdiven* seçilirse program merdiven diyagramıdır (LD): **Merdiven düzenleyiciyi aç** solda değişkenleri (`VAR … END_VAR`), ortada basamakları gösterir. Her basamak yedi sütun kontak ve bloktan, sağda bobin sütunundan oluşur; araç çubuğundan seçili hücreye normalde açık / kapalı kontak, yükselen / düşen kenar, karşılaştırma, TON, TOF, TP, CTU, tel, bobin, ters bobin, set ve reset bobini konur, **│ bağ** hücrenin sağından alt satıra dikey bağ çizer (paralel kol; tutma devresi böyle kurulur). Seçili hücrenin değişkeni, parametresi (`T#2s`, `5`, `>= 50`) ve sayıcının sıfırlama girişi alttaki kutulardadır. Program çizilirken denetlenir; **Oluşan Yapısal Metin** basamakların neye çevrildiğini gösterir. Dünya çalışırken güç geçiren kontaklar ve TRUE bobinler yeşil yanar.
 
@@ -247,8 +259,20 @@ Böylece yazılımın bozuk ölçüme tepkisi denenir: yönü tümleyen hesabın
 | Ayrık giriş (02) | 0–7 | DI1–DI8: pindeki gerilim G/Ç geriliminin yarısını aşarsa 1 |
 | Giriş yazmacı (04) | 0 | Girişlerin bit sözcüğü (DI1 = bit 0) |
 | Tutma yazmacı (03, 06, 16, 23) | 0 | Çıkışların bit sözcüğü; yazılırsa bobinler ondan alınır |
+| Giriş yazmacı (04) | 1–4 | AI1–AI4: 0–10 V analog giriş, milivolt (12 bit, 2,44 mV adım; giriş direnci 100 kΩ) |
+| Tutma yazmacı (03, 06, 16) | 1–2 | AO1–AO2: 0–10 V analog çıkış, milivolt (12 bit) |
 
 Aynı portu paylaşan modüller birim kimlikleriyle ayrılır (ağ geçidi arkasındaki cihazlar gibi). Açılan portlar ve açılamayanlar **Olaylar** sekmesinde yazar.
+
+#### Modbus RTU (seri hat)
+
+**Veri yolu** `rtu` yapılınca (ya da **Modbus RTU Uzak G/Ç** hazır parçasıyla) aynı tablo modülün 5 V TTL seri başlığından (**RX**, **TX**) Modbus RTU ile sunulur. Bir Arduino'nun TX'ini (D1) modülün RX'ine, modülün TX'ini Arduino'nun RX'ine (D0) bağlayın, GND'leri de birleştirin: çizim kablo üzerinden usta (master) olur.
+
+- **RTU baud hızı** (1200–115200) ve **RTU çerçevesi** (`8E1` Modbus'un öntanımlısı, `8O1`, `8N2`, `8N1`) çizimin `Serial.begin(9600, SERIAL_8E1)` ayarıyla aynı olmalıdır. Uymazsa karakterler bozuk gelir ve modül yanıt vermez, gerçekteki gibi.
+- Bir çerçeve, 3,5 karakterlik sessizlikle (19200 baud üstünde 1,75 ms) biter; CRC-16 tutmayan, bozuk karakterli ya da başka adrese giden çerçeve yanıtsız kalır.
+- Adres 0 yayındır: modül uygular ama yanıt vermez.
+- Yanıt, isteğin sonundan 3,5 karakter sonra TX'ten bit bit çıkar.
+- Denetçide yanıt sayısı, CRC hataları ve bozuk karakterler görünür. Hat arızası enjektörü RX hattına konursa hataların nasıl sayıldığı izlenebilir.
 
 ## Kablolar
 

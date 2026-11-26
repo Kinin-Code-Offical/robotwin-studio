@@ -77,6 +77,10 @@ namespace RobotTwin.CoreSim.Design
         public static readonly string[] ModbusInputs = { "DI1", "DI2", "DI3", "DI4", "DI5", "DI6", "DI7", "DI8" };
         public static readonly string[] ModbusOutputs = { "DO1", "DO2", "DO3", "DO4", "DO5", "DO6", "DO7", "DO8" };
 
+        /// <summary>[modbus] Its 0–10 V analog inputs (input registers 1–4) and outputs (holding registers 1–2), in millivolts at 12 bits.</summary>
+        public static readonly string[] ModbusAnalogInputs = { "AI1", "AI2", "AI3", "AI4" };
+        public static readonly string[] ModbusAnalogOutputs = { "AO1", "AO2" };
+
         public static bool IsCellPart(string? partId) =>
             partId == ArmId || partId == GripperId || partId == VacuumId || partId == ConveyorId || partId == CurtainId ||
             partId == PalletId || partId == FenceId || partId == PedestalId || partId == ModbusIoId || partId == PhotoId || partId == LimitId || partId == CylinderId || partId == PlcId;
@@ -155,14 +159,46 @@ namespace RobotTwin.CoreSim.Design
             // ---------------------------------------------------------------- [modbus] remote I/O on Modbus TCP
             var modbus = Part(lib, ModbusIoId, "Modbus TCP Uzak G/Ç Modülü", "IO",
                 "8 sayısal giriş, 8 sayısal çıkış; dünya çalışırken bir Modbus TCP sunucusudur, PLC, HMI ya da SCADA programı gerçek modül gibi bağlanır. " +
-                "Bobin 0–7 → DO1–DO8 (yazılır), ayrık giriş 0–7 ← DI1–DI8 (okunur); giriş yazmacı 0 girişlerin, tutma yazmacı 0 çıkışların bit sözcüğüdür.",
+                "Bobin 0–7 → DO1–DO8 (yazılır), ayrık giriş 0–7 ← DI1–DI8 (okunur); giriş yazmacı 0 girişlerin, tutma yazmacı 0 çıkışların bit sözcüğüdür. " +
+                "Dört 0–10 V analog giriş (AI1–AI4 → giriş yazmacı 1–4) ve iki 0–10 V analog çıkış (tutma yazmacı 1–2 → AO1–AO2), milivolt olarak, 12 bit. " +
+                "Veri yolu RTU iken aynı tablo 5 V TTL seri başlıktan (RX, TX) Modbus RTU ile sunulur: bir mikrodenetleyici kablo üzerinden usta olur.",
                 new ParameterDefinition("unit", "Birim kimliği", "1", ""),
+                new ParameterDefinition("bus", "Veri yolu", "tcp", "", new[] { "tcp", "rtu" }),
                 new ParameterDefinition("port", "TCP portu", "5020", ""),
                 new ParameterDefinition("bind", "Dinlenen adres", "127.0.0.1", "", new[] { "127.0.0.1", "0.0.0.0" }),
+                new ParameterDefinition("baud", "RTU baud hızı", "9600", "", new[] { "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200" }),
+                new ParameterDefinition("format", "RTU çerçevesi", "8E1", "", new[] { "8E1", "8O1", "8N2", "8N1" }),
                 new ParameterDefinition("io_v", "G/Ç gerilimi", "24", "V", new[] { "5", "24" }));
-            modbus.Build = c => BuildIo(c, ModbusInputs, ModbusOutputs);
+            modbus.Build = c =>
+            {
+                BuildIo(c, ModbusInputs, ModbusOutputs);
+                // [rtu] the TTL serial header on its own 5 V logic supply
+                int gnd = c.Pin("GND"), vlog = c.Internal("VLOG");
+                c.Add(new VoltageSource(c.Sub("VLOG"), vlog, gnd, new DcWaveform(5)) { SeriesResistance = 0.05 });
+                c.Add(new DigitalPin(c.Sub("RX"), c.Pin("RX"), vlog, gnd) { Mode = PinMode.Input });
+                c.Add(new Resistor(c.Sub("RRX"), c.Pin("RX"), vlog, 10e3));   // the line idles high when nothing drives it
+                c.Add(new DigitalPin(c.Sub("TX"), c.Pin("TX"), vlog, gnd) { Mode = PinMode.OutputHigh, DriveResistance = 50 });
+
+                // [modbus] analog: 100 kΩ inputs measured against GND; outputs from a 24 V analog supply, 10 mA-class drivers
+                int vana = c.Internal("VANA");
+                c.Add(new VoltageSource(c.Sub("VANA"), vana, gnd, new DcWaveform(24)) { SeriesResistance = 0.1 });
+                foreach (var ai in ModbusAnalogInputs)
+                {
+                    c.Add(new DigitalPin(c.Sub(ai), c.Pin(ai), vana, gnd) { Mode = PinMode.Input, AbsoluteMaxCurrent = 1.0 });
+                    c.Add(new Resistor(c.Sub("R" + ai), c.Pin(ai), gnd, 100e3));
+                }
+
+                foreach (var ao in ModbusAnalogOutputs)
+                    c.Add(new ControlledSource(c.Sub(ao), c.Pin(ao), vana, gnd, false) { Level = 0, OutputResistance = 10, SupplyCurrent = 1e-3 });
+            };
             AddPins(modbus, ModbusInputs, ModbusOutputs);
+            modbus.Pins.Add(new PinDefinition("RX", "19", -2, 8));
+            modbus.Pins.Add(new PinDefinition("TX", "20", 2, 8));
+            for (int i = 0; i < ModbusAnalogInputs.Length; i++) modbus.Pins.Add(new PinDefinition(ModbusAnalogInputs[i], (21 + i).ToString(System.Globalization.CultureInfo.InvariantCulture), -6, 12 + i * 2));
+            for (int i = 0; i < ModbusAnalogOutputs.Length; i++) modbus.Pins.Add(new PinDefinition(ModbusAnalogOutputs[i], (25 + i).ToString(System.Globalization.CultureInfo.InvariantCulture), 6, 12 + i * 2));
+            modbus.HalfHeight = 19;
             Preset(lib, "modbus-io-8di8do", "Modbus TCP Uzak G/Ç · 8 DI / 8 DO", ModbusIoId, "DIN raya takılır; PLC ve SCADA için port 5020");
+            Preset(lib, "modbus-rtu-io-8di8do", "Modbus RTU Uzak G/Ç · 8 DI / 8 DO", ModbusIoId, "5 V TTL seri (RX/TX), 9600 baud 8E1, adres 1", "bus=rtu");
 
             // ---------------------------------------------------------------- photoelectric sensor and limit switch
             var photo = Part(lib, PhotoId, "Fotoelektrik Sensör", "PE",

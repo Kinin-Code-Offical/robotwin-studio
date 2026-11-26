@@ -248,6 +248,7 @@ public class LangTests
     [InlineData("56,6 Hz · yüksek 1,03 ms", "56,6 Hz · high 1,03 ms")]
     [InlineData("97× · en uzun 5,9 µs", "97× · longest 5,9 µs")]
     [InlineData("14 kenar", "14 edges")]
+    [InlineData("Yanıt      : 6 · CRC hatası 1 · bozuk karakter 0", "Answered   : 6 · CRC errors 1 · broken characters 0")]
     [InlineData("Q1 kapağa 0,6 mm giriyor (gövdesi 15 mm, kartın üstünde 14,4 mm var)", "Q1 goes 0,6 mm into the lid (its body is 15 mm, there are 14,4 mm above the board)")]
     [InlineData("J1 sağ duvara 2,0 mm giriyor", "J1 goes 2,0 mm into the right wall")]
     [InlineData("51 × 36 × 21 mm iç · ayaklar 5 mm · 1 açıklık", "51 × 36 × 21 mm inside · standoffs 5 mm · 1 openings")]

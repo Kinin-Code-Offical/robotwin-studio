@@ -62,6 +62,12 @@ namespace RobotTwin.CoreSim.Industrial
 
         public short[] Memory { get; } = new short[256];
 
+        /// <summary>
+        /// [mbclient] The plant network the program's MB_READ and MB_WRITE blocks reach: a Modbus device's data table by its unit
+        /// id (null: nothing answers at that address). Set by the PLC that runs the program.
+        /// </summary>
+        public Func<int, ModbusImage?>? ModbusNetwork { get; set; }
+
         /// <summary>The program's time (ms), advanced by each scan.</summary>
         public double Clock { get; private set; }
 
@@ -272,6 +278,9 @@ namespace RobotTwin.CoreSim.Industrial
 
             public abstract void Call(double clock);
 
+            /// <summary>A call that needs the program around it (the network a Modbus block talks over).</summary>
+            public virtual void Call(double clock, StProgram program) => Call(clock);
+
             public virtual void Reset() => Members.Clear();
 
             public static Block? Make(string type) => type switch
@@ -286,8 +295,103 @@ namespace RobotTwin.CoreSim.Industrial
                 "CTUD" => new Counter(true, true),
                 "SR" => new Bistable(true),
                 "RS" => new Bistable(false),
+                "MB_READ" => new ModbusClient(false),
+                "MB_WRITE" => new ModbusClient(true),
                 _ => null
             };
+        }
+
+        /// <summary>
+        /// [mbclient] MB_READ and MB_WRITE: a Modbus client request on the plant network. A rising edge of REQ asks the device
+        /// at UNIT: MB_READ with FC 1 (coil), 2 (discrete input), 3 (holding register) or 4 (input register) at ADDR, MB_WRITE
+        /// with FC 5 (coil) or 6 (holding register) of VALUE. BUSY until the answer comes back (5 ms, the round trip of a
+        /// plant network); then DONE for one scan (MB_READ's VALUE holds the word or bit, signed as INT), or ERROR with STATUS:
+        /// the device's exception code (1 function, 2 address, 3 value) or 11 when nothing answered within 200 ms.
+        /// </summary>
+        private sealed class ModbusClient : Block
+        {
+            public const double Latency = 5, Timeout = 200;
+            private static readonly string[] ReadIn = { "REQ", "UNIT", "FC", "ADDR" }, WriteIn = { "REQ", "UNIT", "FC", "ADDR", "VALUE" };
+            private static readonly string[] ReadOut = { "DONE", "BUSY", "ERROR", "STATUS", "VALUE" }, WriteOut = { "DONE", "BUSY", "ERROR", "STATUS" };
+            private readonly bool _write;
+            private bool _last;
+            private double _due = double.NaN;
+            private byte[]? _reply;
+
+            public ModbusClient(bool write) => _write = write;
+
+            public override IReadOnlyCollection<string> Inputs => _write ? WriteIn : ReadIn;
+
+            public override IReadOnlyCollection<string> Outputs => _write ? WriteOut : ReadOut;
+
+            public override void Call(double clock) => Call(clock, null!);
+
+            public override void Call(double clock, StProgram program)
+            {
+                this["DONE"] = 0;
+                bool req = this["REQ"] != 0;
+                if (req && !_last && double.IsNaN(_due))
+                {
+                    int fc = (int)this["FC"], addr = (int)this["ADDR"];
+                    if (fc == 0) fc = _write ? 6 : 3;
+                    var image = program?.ModbusNetwork?.Invoke((int)this["UNIT"]);
+                    bool offline = false;
+                    if (image != null) lock (image.Gate) offline = image.Offline;
+                    if (image == null || offline)
+                    {
+                        _reply = null;
+                        _due = clock + Timeout;
+                    }
+                    else
+                    {
+                        int v = (int)this["VALUE"];
+                        byte[] pdu = _write
+                            ? fc == 5
+                                ? new byte[] { 5, (byte)(addr >> 8), (byte)addr, (byte)(v != 0 ? 0xFF : 0), 0 }
+                                : new byte[] { (byte)fc, (byte)(addr >> 8), (byte)addr, (byte)(v >> 8), (byte)v }
+                            : new byte[] { (byte)fc, (byte)(addr >> 8), (byte)addr, 0, 1 };
+                        _reply = ModbusTcpServer.Answer(image, pdu);
+                        _due = clock + Latency;
+                    }
+
+                    this["BUSY"] = 1;
+                    this["ERROR"] = 0;
+                    this["STATUS"] = 0;
+                }
+
+                _last = req;
+                if (double.IsNaN(_due) || clock < _due) return;
+                _due = double.NaN;
+                this["BUSY"] = 0;
+                if (_reply == null)
+                {
+                    this["ERROR"] = 1;
+                    this["STATUS"] = 11;   // gateway target device failed to respond
+                }
+                else if ((_reply[0] & 0x80) != 0)
+                {
+                    this["ERROR"] = 1;
+                    this["STATUS"] = _reply.Length > 1 ? _reply[1] : 4;
+                }
+                else
+                {
+                    this["DONE"] = 1;
+                    if (!_write && _reply.Length >= 3)
+                    {
+                        this["VALUE"] = _reply[0] <= 2
+                            ? _reply[2] & 1
+                            : _reply.Length >= 4 ? (short)(_reply[2] << 8 | _reply[3]) : 0;
+                    }
+                }
+            }
+
+            public override void Reset()
+            {
+                base.Reset();
+                _last = false;
+                _due = double.NaN;
+                _reply = null;
+            }
         }
 
         /// <summary>TON, TOF, TP: IN, PT → Q, ET (ms), on the program's clock.</summary>
@@ -658,7 +762,7 @@ namespace RobotTwin.CoreSim.Industrial
             {
                 var b = Instance.Block!;
                 foreach (var (name, value) in Inputs) b[name] = value.Eval(p);
-                b.Call(p.Clock);
+                b.Call(p.Clock, p);
                 foreach (var (name, target) in Outputs) target.Set(b[name]);
                 return Flow.Next;
             }
@@ -1039,7 +1143,7 @@ namespace RobotTwin.CoreSim.Industrial
                         }
                         else
                         {
-                            throw new StCompileException(typeTok.Line, $"'{type}' türü yok (BOOL, INT, REAL, TIME, TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS).");
+                            throw new StCompileException(typeTok.Line, $"'{type}' türü yok (BOOL, INT, REAL, TIME, TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS, MB_READ, MB_WRITE).");
                         }
 
                         if (at != null) Bind(v, at, n.Line);
@@ -1507,7 +1611,7 @@ namespace RobotTwin.CoreSim.Industrial
                             var m = Ident("blok çıkışı");
                             if (!v.Block!.Outputs.Contains(m.Text) && !v.Block.Inputs.Contains(m.Text))
                                 throw new StCompileException(m.Line, $"{v.TypeName} bloğunun '{m.Text}' üyesi yok ({string.Join(", ", v.Block.Outputs)}).");
-                            var type = m.Text is "Q" or "Q1" or "QU" or "QD" or "IN" or "CLK" or "CU" or "CD" or "R" or "LD" or "S" or "S1" or "R1" ? StType.Bool
+                            var type = m.Text is "Q" or "Q1" or "QU" or "QD" or "IN" or "CLK" or "CU" or "CD" or "R" or "LD" or "S" or "S1" or "R1" or "REQ" or "DONE" or "BUSY" or "ERROR" ? StType.Bool
                                 : m.Text is "ET" or "PT" ? StType.Time : StType.Int;
                             return new Member { Line = t.Line, Var = v, Name = m.Text, Type = type };
                         }

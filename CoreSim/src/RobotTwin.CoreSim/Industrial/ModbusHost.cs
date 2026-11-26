@@ -18,7 +18,7 @@ namespace RobotTwin.CoreSim.Industrial
 
         public ModbusHost(IEnumerable<WorldPhysics.ModbusDevice> devices)
         {
-            foreach (var group in devices.GroupBy(d => (d.Bind, d.Port)))
+            foreach (var group in devices.Where(d => d.Rtu == null).GroupBy(d => (d.Bind, d.Port)))   // [rtu] serial devices are not on the network
             {
                 if (!IPAddress.TryParse(group.Key.Bind, out var address))
                 {
