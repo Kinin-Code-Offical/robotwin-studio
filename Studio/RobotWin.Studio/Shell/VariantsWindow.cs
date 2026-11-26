@@ -23,6 +23,7 @@ namespace RobotWin.Studio.Shell
         private readonly Action<string?> _select;
         private readonly StackPanel _list = new StackPanel();
         private readonly StackPanel _compare = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
+        private CheckBox? _withCode;
         private readonly Button _compareButton;
         private CancellationTokenSource? _run;
 
@@ -60,6 +61,15 @@ namespace RobotWin.Studio.Shell
                 return v.Name;
             }, "Yeni alternatif eklendi", select: true);
             row.Children.Add(add);
+            _withCode = new CheckBox
+            {
+                Content = "Kartların kodunu da çalıştır",
+                IsChecked = true,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(12, 0, 0, 0),
+                ToolTip = "Uno / Nano'ların derlenmiş kodu ve ESP32'lerin çizimi her alternatifte çalışır (ESP32 çizimleri önce derlenir)"
+            };
+            row.Children.Add(_withCode);
             _compareButton = new Button { Content = "Karşılaştır", Style = R<Style>("Btn.Ghost"), MinWidth = 110, Margin = new Thickness(8, 0, 0, 0) };
             _compareButton.Click += async (_, _) => await Compare();
             row.Children.Add(_compareButton);
@@ -268,14 +278,17 @@ namespace RobotWin.Studio.Shell
             var token = _run.Token;
             var copy = Schematic.FromJson(W.Schematic.ToJson());
             var lib = W.Library;
+            bool code = _withCode?.IsChecked == true;
+            var package = code ? W.Project : null;   // [variants-code] the boards' code: compiled HEX, ESP32 sketches built on the way
+            var options = code ? new RobotTwin.CoreSim.Automation.RunnerOptions { Library = lib, Esp32Builder = RobotWin.Studio.Automation.StudioApiHost.BuildEsp32 } : null;
             double ambient = AppSettings.Current.AmbientTempC;
             _compare.Children.Clear();
             _compare.Children.Add(new TextBlock { Text = "Her alternatif 1 s simüle ediliyor…", Style = R<Style>("Text.Caption") });
             _compareButton.IsEnabled = false;
             try
             {
-                var results = await Task.Run(() => VariantComparison.Run(copy, lib, 1.0, null, ambient, token), token);
-                ShowResults(results);
+                var results = await Task.Run(() => VariantComparison.Run(copy, lib, 1.0, null, ambient, token, options, package), token);
+                ShowResults(results, code);
             }
             catch (OperationCanceledException)
             {
@@ -286,12 +299,19 @@ namespace RobotWin.Studio.Shell
             }
         }
 
-        private void ShowResults(List<VariantResult> results)
+        private void ShowResults(List<VariantResult> results, bool code = false)
         {
             _compare.Children.Clear();
-            _compare.Children.Add(new TextBlock { Text = "Karşılaştırma (aynı 1 s, yalnız devre: kartların kodu burada çalışmaz)", Style = R<Style>("Text.Subtitle"), Margin = new Thickness(0, 0, 0, 6) });
+            _compare.Children.Add(new TextBlock
+            {
+                Text = code ? "Karşılaştırma (aynı 1 s, kartların kodu da çalıştı)" : "Karşılaştırma (aynı 1 s, yalnız devre: kartların kodu burada çalışmaz)",
+                Style = R<Style>("Text.Subtitle"),
+                Margin = new Thickness(0, 0, 0, 6)
+            });
             var grid = new Grid();
-            string[] heads = { "Alternatif", "Parça sayısı", "Ortalama güç", "Tepe güç", "Çekilen yük", "En sıcak parça", "Arıza" };
+            string[] heads = code
+                ? new[] { "Alternatif", "Parça sayısı", "Ortalama güç", "Tepe güç", "Çekilen yük", "En sıcak parça", "Kart çıktısı", "Arıza" }
+                : new[] { "Alternatif", "Parça sayısı", "Ortalama güç", "Tepe güç", "Çekilen yük", "En sıcak parça", "Arıza" };
             for (int c = 0; c < heads.Length; c++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = c == heads.Length - 1 ? new GridLength(1, GridUnitType.Star) : GridLength.Auto });   // the failures wrap in what is left
             grid.RowDefinitions.Add(new RowDefinition());
             for (int c = 0; c < heads.Length; c++) Cell(grid, 0, c, heads[c], true);
@@ -316,7 +336,15 @@ namespace RobotWin.Studio.Shell
                 Cell(grid, row, 3, SiValue.Format(r.PeakSupplyW, "W"), false);
                 Cell(grid, row, 4, r.ChargeMah.ToString("0.###", CultureInfo.InvariantCulture) + " mAh", false);   // as the SI values beside it
                 Cell(grid, row, 5, r.Hottest == null ? "—" : $"{r.Hottest} {r.HottestC.ToString("0.0", CultureInfo.InvariantCulture)} °C", false);
-                Cell(grid, row, 6, r.Failures.Count == 0 ? "—" : string.Join("\n", r.Failures), false);
+                if (code)
+                {
+                    // what each board printed last, so the alternatives' behaviour can be told apart too
+                    var said = r.Serial.Where(kv => kv.Value.Length > 0).Select(kv => kv.Key + ": " + kv.Value.Split('\n').Last()).ToList();
+                    Cell(grid, row, 6, said.Count == 0 ? "—" : string.Join("\n", said), false);
+                }
+
+                var trouble = r.Failures.Concat(r.Notes).ToList();
+                Cell(grid, row, heads.Length - 1, trouble.Count == 0 ? "—" : string.Join("\n", trouble), false);
             }
 
             _compare.Children.Add(grid);

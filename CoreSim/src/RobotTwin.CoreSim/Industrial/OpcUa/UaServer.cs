@@ -93,12 +93,14 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
             var c = new Connection(this, client);
             lock (_gate) _connections.Add(c);
             new Thread(c.Run) { IsBackground = true, Name = "OPC UA client" }.Start();
+            if (!_running) return;
             try
             {
                 _listener.BeginAcceptTcpClient(Accepted, null);
             }
-            catch (ObjectDisposedException)
+            catch (Exception ex) when (ex is ObjectDisposedException || ex is InvalidOperationException || ex is SocketException)
             {
+                // stopped between the check and the call (a program loaded, the world closed): nothing more to accept
             }
         }
 

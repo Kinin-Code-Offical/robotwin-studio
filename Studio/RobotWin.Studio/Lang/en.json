@@ -7978,7 +7978,11 @@
   "OPC UA sunucusu": "OPC UA server",
   "OPC UA portu": "OPC UA port",
   "OPC UA dinleniyor": "OPC UA listening",
-  "1.7.0: İngilizce arayüz, ESP32 emülatörü, mekanizmalar, PLC ve endüstri": "1.7.0: English interface, ESP32 emulator, mechanisms, PLC and industry"
+  "1.7.0: İngilizce arayüz, ESP32 emülatörü, mekanizmalar, PLC ve endüstri": "1.7.0: English interface, ESP32 emulator, mechanisms, PLC and industry",
+  "Kartların kodunu da çalıştır": "Run the boards' code too",
+  "Uno / Nano'ların derlenmiş kodu ve ESP32'lerin çizimi her alternatifte çalışır (ESP32 çizimleri önce derlenir)": "The Unos' / Nanos' compiled code and the ESP32s' sketches run in each alternative (ESP32 sketches are built first)",
+  "Karşılaştırma (aynı 1 s, kartların kodu da çalıştı)": "Comparison (the same 1 s, the boards' code ran too)",
+  "Kart çıktısı": "Board output"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

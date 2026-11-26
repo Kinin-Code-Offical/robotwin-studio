@@ -111,7 +111,7 @@ Aynı devrenin sürümlerini bir arada tutabilirsiniz: bazı parçaların takıl
 
 Seçili alternatif **Simüle et**'in yanındaki listeden değiştirilir. Simüle edilen, malzeme listesine (BOM), üretim dosyalarına (Gerber paketindeki BOM ve dizgi dosyası) ve montaja giren odur. Takılmayan parçanın pedleri kartta kalır; kart bütün alternatifler için birdir.
 
-**Karşılaştır** her alternatifi ve çizildiği hali aynı 1 saniye simüle eder ve yan yana koyar: beslemenin ortalama ve tepe gücü, çekilen yük (mAh), en sıcak parça ve bozulan parçalar. Burada yalnız devre çalışır, kartların kodu çalışmaz.
+**Karşılaştır** her alternatifi ve çizildiği hali aynı 1 saniye simüle eder ve yan yana koyar: beslemenin ortalama ve tepe gücü, çekilen yük (mAh), en sıcak parça ve bozulan parçalar. **Kartların kodunu da çalıştır** seçiliyse (öntanımlı) her alternatifte Uno / Nano'ların derlenmiş kodu ve ESP32'lerin çizimi de çalışır. ESP32 çizimleri önce derlenir. Her kartın son yazdığı satır **Kart çıktısı** sütununda görünür; böylece bir alternatifin kodun davranışını nasıl değiştirdiği de karşılaştırılır. Seçili değilse yalnız devre çalışır.
 
 ![Tasarım alternatifleri](../images/variants-window.png)
 

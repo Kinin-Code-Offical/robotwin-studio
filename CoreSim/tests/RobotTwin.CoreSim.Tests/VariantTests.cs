@@ -1,4 +1,5 @@
 using System.Linq;
+using RobotTwin.CoreSim.Automation;
 using RobotTwin.CoreSim.Design;
 using RobotTwin.CoreSim.Formats;
 using RobotTwin.CoreSim.Mechanics;
@@ -188,6 +189,39 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal(drawn.Parts - 1, results[2].Parts);
             Assert.InRange(drawn.NetV, 1.6, 2.4);   // the LED's forward voltage
             Assert.True(drawn.ChargeMah > 0);
+        }
+
+        /// <summary>[variants-code] With the boards' code running, the alternatives differ as the code makes them: an Uno lights a strip in one, not in the other.</summary>
+        [Fact]
+        public void AlternativesAreComparedWithTheBoardsCodeRunning()
+        {
+            // the Uno on its USB power, the strip on the Uno's own 5 V pin
+            var sch = new Schematic();
+            var uno = sch.AddPart(Lib, "arduino-uno", new GridPoint(30, 0));
+            var strip = sch.AddPart(Lib, "ws2812-strip", new GridPoint(80, 0));
+            strip.Parameters["count"] = "3";
+            uno.Parameters["firmware"] = System.IO.Path.Combine(System.AppContext.BaseDirectory, "Fixtures", "neopixel-avr.hex");
+            VehicleTemplates.Tie(sch, Lib, uno, "5V", "5V");
+            VehicleTemplates.Tie(sch, Lib, uno, "GND1", "GND");
+            VehicleTemplates.Tie(sch, Lib, strip, "VDD", "5V");
+            VehicleTemplates.Tie(sch, Lib, strip, "GND", "GND");
+            VehicleTemplates.Tie(sch, Lib, uno, "D6", "DATA");
+            VehicleTemplates.Tie(sch, Lib, strip, "DIN", "DATA");
+            var bare = new DesignVariant { Name = "Şeritsiz" };
+            bare.Edit(strip).NotFitted = true;
+            sch.Variants.Add(bare);
+
+            var withCode = VariantComparison.Run(sch, Lib, 0.2, null, 25, default, new RunnerOptions());
+            Assert.All(withCode, x => Assert.Null(x.Error));
+            Assert.Contains("shown 2", withCode[0].Serial[uno.RefDes]);   // the code ran in each
+            Assert.Contains("shown 2", withCode[1].Serial[uno.RefDes]);
+            // the strip after the code's second frame: LED0 (20, 10, 30), LED1 half green, LED2 dim blue, ~1 mA each idle: ~18 mA at 5 V
+            double lit = withCode[0].SupplyW - withCode[1].SupplyW;
+            Assert.True(lit is > 0.07 and < 0.11, $"lit {lit:G3} W: {withCode[0].SupplyW:G4} vs {withCode[1].SupplyW:G4}; {string.Join(" | ", withCode[0].Notes)}; {withCode[0].Serial[uno.RefDes]}");
+
+            var circuitOnly = VariantComparison.Run(sch, Lib, 0.2);
+            Assert.True(circuitOnly[0].SupplyW - circuitOnly[1].SupplyW < 0.05, "without the code the strip stays dark");
+            Assert.Empty(circuitOnly[0].Serial);
         }
     }
 }

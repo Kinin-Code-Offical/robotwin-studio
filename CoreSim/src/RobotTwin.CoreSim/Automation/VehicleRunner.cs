@@ -57,7 +57,7 @@ namespace RobotTwin.CoreSim.Automation
 
             foreach (var w in Compiled.Warnings) AddEvent(new RunnerEvent(0, "derleyici", RunnerEventKind.Warning, w));
             Simulator = StartSolver(Compiled.Circuit, Schematic.Assembly?.World?.AmbientC ?? 25.0);
-            AttachFirmware();
+            AttachBoards(Schematic.Parts, Package);
             Mechanics = new MechatronicSystem(Schematic.Assembly!, Schematic, Library, Compiled, Simulator);
             _imuLastVelocity = Vec3.Zero;
             AddEvent(new RunnerEvent(0, "montaj", RunnerEventKind.Info,
@@ -68,74 +68,6 @@ namespace RobotTwin.CoreSim.Automation
         {
             base.Teardown();
             Mechanics = null;
-        }
-
-        private void AttachFirmware()
-        {
-            foreach (var part in Schematic.Parts)
-            {
-                var def = Library.Find(part.PartId);
-                if (def?.Symbol != SymbolKind.Board) continue;
-                bool esp = IsEsp32Part(def.Id);
-                if (!esp && def.Id != "arduino-uno" && def.Id != "arduino-nano") continue;
-                var board = new BoardInfo { ObjectId = part.RefDes, RefDes = part.RefDes, Name = part.RefDes, PartId = def.Id, Mcu = esp ? "esp32" : "atmega328p" };
-                Boards.Add(board);
-                if (!Options.Firmware)
-                {
-                    board.Firmware = "(kapalı)";
-                    continue;
-                }
-
-                part.Parameters.TryGetValue("firmware", out var fw);
-                var embedded = Package?.FirmwareFor(part.RefDes);
-                bool useProject = string.IsNullOrEmpty(fw) || fw!.StartsWith("project", StringComparison.OrdinalIgnoreCase);
-                if (esp)
-                {
-                    string? source = useProject ? embedded?.Source : null;
-                    if (string.IsNullOrWhiteSpace(source) && !string.IsNullOrEmpty(fw))
-                    {
-                        var path = Options.ResolveFirmware(fw);
-                        if (path != null && System.IO.File.Exists(path)) source = System.IO.File.ReadAllText(path);
-                    }
-
-                    board.Firmware = embedded?.FileName ?? fw ?? string.Empty;
-                    if (AttachEsp32(board, source, part.Parameters) is { } e)
-                    {
-                        AttachI2c(e.I2c, part.RefDes, 9.81);
-                        AttachLedStrips(e, part.RefDes);
-                    }
-                    continue;
-                }
-
-                string? hex = FirmwareOverrides.TryGetValue(part.RefDes, out var o) ? o : null;
-                board.Firmware = hex != null ? "(API)" : string.Empty;
-                if (hex == null && useProject && embedded?.Hex != null)
-                {
-                    hex = embedded.Hex;
-                    board.Firmware = embedded.FileName;
-                }
-                else if (hex == null && !string.IsNullOrEmpty(fw))
-                {
-                    var path = Options.ResolveFirmware(fw);
-                    if (path != null && System.IO.File.Exists(path))
-                    {
-                        hex = System.IO.File.ReadAllText(path);
-                        board.Firmware = System.IO.Path.GetFileName(path);
-                    }
-                    else
-                    {
-                        AddEvent(new RunnerEvent(0, part.RefDes, RunnerEventKind.Warning, "Firmware bulunamadı: " + fw));
-                    }
-                }
-
-                if (hex == null) continue;
-                string refDes = part.RefDes;
-                var cosim = AttachAvr(board, hex, () => Simulator == null ? 0 : Compiled!.PinVoltage(Simulator, refDes, "5V"));
-                if (cosim == null) continue;
-                AttachI2c(cosim.I2c, part.RefDes, 9.81);
-                AttachSpi(cosim.Spi, part.RefDes, AvrPin);
-                AttachLedStrips(cosim, part.RefDes);   // [neopixel-avr]
-            }
         }
 
         protected override IEnumerable<(string FullRef, PartDefinition Def, IReadOnlyDictionary<string, string> Parameters)> AllParts()

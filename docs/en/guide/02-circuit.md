@@ -111,7 +111,7 @@ You can keep versions of the same circuit together: alternatives in which some p
 
 The chosen alternative is changed in the list beside **Simulate**. It is the one simulated, and the one that goes into the bill of materials (BOM), the manufacturing files (the BOM and pick-and-place file of the Gerber package) and the assembly. A part that is not fitted keeps its pads on the board; the board is one for every alternative.
 
-**Compare** simulates each alternative and the design as drawn for the same second and puts them side by side: the supply's mean and peak power, the charge drawn (mAh), the hottest part and the parts that failed. Only the circuit runs here, not the boards' code.
+**Compare** simulates each alternative and the design as drawn for the same second and puts them side by side: the supply's mean and peak power, the charge drawn (mAh), the hottest part and the parts that failed. With **Run the boards' code too** ticked (the default), the Unos' / Nanos' compiled code and the ESP32s' sketches run in each alternative too; ESP32 sketches are built first. Each board's last printed line shows in the **Board output** column, so how an alternative changes the code's behaviour is compared as well. Unticked, only the circuit runs.
 
 ![Design alternatives](../../images/en/variants-window.png)
 
