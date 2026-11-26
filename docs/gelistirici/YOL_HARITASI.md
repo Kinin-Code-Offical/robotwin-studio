@@ -235,6 +235,8 @@ Kullanıcı geri bildirimi: ikonlar, düğmeler ve yazılar tam hizada değil; a
     - Kütüphane ayrıntısında farklı yükseklikteki ve kayık düğmeler düzeltildi; kart ızgarası satırı dolduruyor.
 - [x] **Gölge yok:** bütün açılır pencere ve panellerden gölge efekti kaldırıldı (düz renk kuralı).
 
+**Araç envanteri:** [ARAC_ENVANTERI.md](ARAC_ENVANTERI.md): KiCad, SolidWorks ve Blender'ın araçları tek tek, bizdeki durumları (var / kısmi / yok) ve öncelikleriyle. Eksik araçlar bu listeden, gruplar hâlinde kapatılır.
+
 **Sıradakiler (bu sırayla):**
 
 - [~] **Alt araçlar:** altyapı (`Theme/ToolFlyout.cs`: köşe üçgeni, basılı tutma ya da sağ tık, etiketli liste) ve PCB'de çizim grubu (çizgi, dikdörtgen, daire, yay, çokgen; `Pcb/BoardGraphic.cs`: kayıt, Gerber serigrafi, KiCad `gr_*`, DRC) ile delik grubu (montaj deliği, via aracı) ve araç seçenek çubuğu (katman, kalınlık, dolgulu) yapıldı. Kalan:
