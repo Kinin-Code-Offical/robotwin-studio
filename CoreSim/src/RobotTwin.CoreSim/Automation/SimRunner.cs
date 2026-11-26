@@ -590,6 +590,22 @@ namespace RobotTwin.CoreSim.Automation
             bus.Slaves.AddRange(slaves);
         }
 
+        /// <summary>[neopixel-avr] The WS2812B strips whose DIN one of an AVR board's pins drives (Adafruit_NeoPixel's bit-bang).</summary>
+        protected void AttachLedStrips(Firmware.FirmwareCoSimulation cosim, string boardRef)
+        {
+            var c = Compiled!;
+            var strips = Firmware.LedStripWiring.Attach(AllParts().Select(p => (p.FullRef, p.Def)), c.PinNode,
+                g => AvrPin(g) is { } pin ? c.PinNode(boardRef, pin) : -1, Reach,
+                r => c.DevicesOf(r).OfType<Firmware.Devices.Ws2812Load>().FirstOrDefault());
+            foreach (var (pin, strip) in strips)
+            {
+                cosim.AttachLedStrip(pin, strip);
+                AddEvent(new RunnerEvent(0, strip.Id, RunnerEventKind.Info, $"LED şeridi {boardRef} {AvrPin(pin)} hattına bağlandı ({strip.Strip.Count} LED)"));
+            }
+
+            cosim.Log += m => AddEvent(new RunnerEvent(0, boardRef, RunnerEventKind.Warning, m));
+        }
+
         /// <summary>[neopixel] The WS2812B strips whose DIN one of an ESP32's GPIOs drives (same rules as the app).</summary>
         protected void AttachLedStrips(Firmware.Esp32.IEsp32Board esp, string boardRef)
         {

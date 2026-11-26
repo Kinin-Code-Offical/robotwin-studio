@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Model-exchange FMUs:** an FMI 2.0 FMU with only the model-exchange interface runs in the circuit too, its states solved by our own adaptive Dormand–Prince 5(4) integrator (tolerances scaled by the states' nominal values) with time events, state events located by bisection and step events, as FMI 2.0 describes.
 
 - **The pulse counter's glitch filter (ESP32 fast mode):** `pcnt_unit_set_glitch_filter` works as the hardware's: a new level counts only once it has held for the filter's width (whole APB cycles, up to 12.8 µs), so shorter pulses are not counted.
+- **NeoPixel strips on the Uno / Nano:** the strip reads the edges an AVR pin makes cycle by cycle (Adafruit_NeoPixel's bit-bang, or your own) as a WS2812B does: high pulses under 0.5 µs are 0s, longer ones 1s, a low over 50 µs latches; a pulse a WS2812B would not take drops the frame. In the circuit, the world and the batch runner.
 - **The pulse counter counts the chip's own PWM (ESP32 fast mode):** a counter on a pin the sketch drives with LEDC or MCPWM counts that PWM's edges from its timing (frequency and duty changes included), as the GPIO matrix feeds the chip's output to the PCNT on the hardware.
 - **A WS2812B strip checks its data level:** an ESP32's 3.3 V data into a 5 V strip is below the datasheet's VIH = 0.7·VDD; the strip still lights (as most do) and the log says so once with the usual cures; data below half the strip's supply is not read. A chained strip gets its data at the previous strip's supply.
 

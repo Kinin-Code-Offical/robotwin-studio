@@ -358,11 +358,34 @@ namespace RobotTwin.CoreSim.Firmware
             }
 
             if (Trace != null) TracePins(b, c, d, at ?? Cycles);
+            if (_pinWatchers.Count > 0) WatchedPins(b, c, d, at ?? Cycles);
             if (Spi.Slaves.Count > 0) SpiChipSelects(b, c, d);
             if (((_lastPinB ^ b) & 0x04) != 0 && (b & 0x04) == 0) CheckSpiModeFault();   // [spi] SS pulled low
             _lastPinB = b;
             _lastPinC = c;
             _lastPinD = d;
+        }
+
+        private readonly List<(int Pin, Action<bool, ulong> OnEdge)> _pinWatchers = new List<(int, Action<bool, ulong>)>();
+
+        /// <summary>
+        /// [neopixel-avr] Calls <paramref name="onEdge"/> with a pin's new level and the cycle it changed at, edge for edge
+        /// (an addressable LED strip reads the bits a library bit-bangs with exact cycle timing).
+        /// </summary>
+        public void WatchPin(int pin, Action<bool, ulong> onEdge)
+        {
+            if (pin < 0 || pin >= PinCount) throw new ArgumentOutOfRangeException(nameof(pin));
+            _pinWatchers.Add((pin, onEdge ?? throw new ArgumentNullException(nameof(onEdge))));
+        }
+
+        private void WatchedPins(byte b, byte c, byte d, ulong at)
+        {
+            if (b == _lastPinB && c == _lastPinC && d == _lastPinD) return;
+            foreach (var (pin, onEdge) in _pinWatchers)
+            {
+                bool now = PinLevel(b, c, d, pin);
+                if (now != PinLevel(_lastPinB, _lastPinC, _lastPinD, pin)) onEdge(now, at);
+            }
         }
 
         /// <summary>[timeline] The pin and interrupt recorder, once <see cref="StartTrace"/> has been called.</summary>

@@ -11247,6 +11247,7 @@
   "bellek: çizim {…} KB tutuyor (yığın {…} KB, görev yığınları {…} KB); gerçek bir ESP32'de yaklaşık {…} KB boş yığın var, orada bellek biterdi (malloc NULL döner, new çöker)": "memory: the sketch holds {0} KB (heap {1} KB, task stacks {2} KB); a real ESP32 has about {3} KB of free heap, so it would run out there (malloc returns NULL, new crashes)",
   "bellek: çizim {…} KB tutuyor; bu, gerçek bir ESP32'deki boş yığının (~{…} KB) yüzde {…} kadarı, kart üzerinde az yer kaldı": "memory: the sketch holds {0} KB, {2} % of a real ESP32's free heap (~{1} KB); little room is left on the board",
   "{…}: veri {…} V, {…} V'luk şerit bunu okuyamaz (VIH {…} V); seviye dönüştürücü (74AHCT125) kullanın": "{0}: data at {1} V, a {2} V strip cannot read it (VIH {3} V); use a level shifter (74AHCT125)",
-  "{…}: veri {…} V, {…} V'luk şeridin VIH sınırının ({…} V) altında: çoğu şeritte çalışır ama güvencesi yok; seviye dönüştürücü (74AHCT125) ya da ilk LED'i bir diyotla ~4,3 V'tan besleme": "{0}: data at {1} V is below a {2} V strip's VIH ({3} V): it works on most strips but is not guaranteed; use a level shifter (74AHCT125) or feed the first LED from ~4.3 V through a diode"
+  "{…}: veri {…} V, {…} V'luk şeridin VIH sınırının ({…} V) altında: çoğu şeritte çalışır ama güvencesi yok; seviye dönüştürücü (74AHCT125) ya da ilk LED'i bir diyotla ~4,3 V'tan besleme": "{0}: data at {1} V is below a {2} V strip's VIH ({3} V): it works on most strips but is not guaranteed; use a level shifter (74AHCT125) or feed the first LED from ~4.3 V through a diode",
+  "LED şeridi {…} {…} hattına bağlandı ({…} LED)": "LED strip connected to {0} {1} ({2} LEDs)"
  }
 }

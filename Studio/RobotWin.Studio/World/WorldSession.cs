@@ -612,6 +612,7 @@ namespace RobotWin.Studio.World
                     AddLog(new SimLogEntry(0, where, $"Yazılım çalışıyor: {source} (ATmega328P @ 16 MHz)", AnalogEventKind.StateChange));
                     AttachI2c(cosim.I2c, prog);
                     AttachSpi(cosim.Spi, prog, n => n < Atmega328P.PinCount ? RobotTwin.CoreSim.Firmware.AvrRegisters.PinName(n) : null);   // [spi]
+                    AttachLedStrips(cosim, prog);   // [neopixel-avr]
                 }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException || ex is FormatException)
                 {
@@ -809,6 +810,22 @@ namespace RobotWin.Studio.World
                 },
                 SensorContext(), m => AddLog(new SimLogEntry(0, prog.RefDes, m, AnalogEventKind.StateChange)), gpioPin);
             bus.Slaves.AddRange(slaves);
+        }
+
+        /// <summary>[neopixel-avr] The WS2812B strips whose DIN an Uno / Nano pin drives (directly or across cables).</summary>
+        private void AttachLedStrips(FirmwareCoSimulation cosim, WorldProgrammable prog)
+        {
+            var c = Circuit!.Compiled;
+            var strips = RobotTwin.CoreSim.Firmware.LedStripWiring.Attach(AllParts().Select(p => (p.FullRef, p.Def)), c.PinNode,
+                g => g < Atmega328P.PinCount ? c.PinNode(prog.RefDes, RobotTwin.CoreSim.Firmware.AvrRegisters.PinName(g)) : -1, Reach,
+                r => c.DevicesOf(r).OfType<RobotTwin.CoreSim.Firmware.Devices.Ws2812Load>().FirstOrDefault());
+            foreach (var (pin, strip) in strips)
+            {
+                cosim.AttachLedStrip(pin, strip);
+                AddLog(new SimLogEntry(0, strip.Id, $"LED şeridi {prog.RefDes} {RobotTwin.CoreSim.Firmware.AvrRegisters.PinName(pin)} hattına bağlandı ({strip.Strip.Count} LED)", AnalogEventKind.StateChange));
+            }
+
+            cosim.Log += m => AddLog(new SimLogEntry(0, prog.RefDes, m, AnalogEventKind.Warning));
         }
 
         /// <summary>[neopixel] The WS2812B strips whose DIN an ESP32 GPIO drives (directly or across cables): its frames reach them.</summary>

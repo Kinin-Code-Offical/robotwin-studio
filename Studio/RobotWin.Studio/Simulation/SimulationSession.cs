@@ -987,6 +987,7 @@ namespace RobotWin.Studio.Simulation
                     RobotWin.Studio.Firmware.FirmwareDebugger.Register(this, "p:" + refDes, refDes, cosim, hex, () => Time, Resume);   // [debug]
                     AddLog(new SimLogEntry(0, refDes, $"Firmware yüklendi: {source} (ATmega328P @ 16 MHz)", AnalogEventKind.StateChange));
                     AttachI2c(cosim.I2c, part);
+                    AttachLedStrips(cosim, part);   // [neopixel-avr]
                 }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException || ex is UnauthorizedAccessException)
                 {
@@ -1019,6 +1020,27 @@ namespace RobotWin.Studio.Simulation
                 esp.AttachLedStrip(gpio, strip);
                 AddLog(new SimLogEntry(0, strip.Id, $"LED şeridi {board.RefDes} IO{gpio} hattına bağlandı ({strip.Strip.Count} LED)", AnalogEventKind.StateChange));
             }
+        }
+
+        /// <summary>[neopixel-avr] The WS2812B strips whose DIN an Uno / Nano pin drives: Adafruit_NeoPixel's bit-bang reaches them.</summary>
+        private void AttachLedStrips(FirmwareCoSimulation cosim, SchematicPart board)
+        {
+            if (Compiled == null) return;
+            var parts = _workspace.Schematic.Parts
+                .Select(p => (FullRef: p.RefDes, Def: _workspace.Library.Find(p.PartId)))
+                .Where(p => p.Def != null)
+                .Select(p => (p.FullRef, p.Def!));
+            var strips = LedStripWiring.Attach(parts, Compiled.PinNode,
+                g => g < Atmega328P.PinCount ? Compiled.PinNode(board.RefDes, RobotTwin.CoreSim.Firmware.AvrRegisters.PinName(g)) : -1,
+                n => new HashSet<int> { n },
+                r => Compiled.DevicesOf(r).OfType<RobotTwin.CoreSim.Firmware.Devices.Ws2812Load>().FirstOrDefault());
+            foreach (var (pin, strip) in strips)
+            {
+                cosim.AttachLedStrip(pin, strip);
+                AddLog(new SimLogEntry(0, strip.Id, $"LED şeridi {board.RefDes} {RobotTwin.CoreSim.Firmware.AvrRegisters.PinName(pin)} hattına bağlandı ({strip.Strip.Count} LED)", AnalogEventKind.StateChange));
+            }
+
+            cosim.Log += m => AddLog(new SimLogEntry(0, board.RefDes, m, AnalogEventKind.Warning));
         }
 
         private void AttachI2c(I2cBus bus, SchematicPart board)

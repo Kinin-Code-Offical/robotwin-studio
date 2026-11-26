@@ -234,6 +234,7 @@ namespace RobotTwin.CoreSim.Automation
                 if (cosim == null) continue;
                 AttachI2c(cosim.I2c, prog.RefDes, World.Environment.Gravity);
                 AttachSpi(cosim.Spi, prog.RefDes, AvrPin);
+                AttachLedStrips(cosim, prog.RefDes);   // [neopixel-avr]
             }
         }
 

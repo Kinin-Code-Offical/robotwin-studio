@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using RobotTwin.CoreSim.Analog.Devices;
 using RobotTwin.CoreSim.Design;
 
@@ -63,6 +65,43 @@ namespace RobotTwin.CoreSim.Firmware
 
         public bool InBrownOut { get; private set; }
 
+        private readonly Dictionary<int, (Devices.Ws2812Decoder Decoder, List<Devices.Ws2812Load> Strips)> _ledPins =
+            new Dictionary<int, (Devices.Ws2812Decoder, List<Devices.Ws2812Load>)>();
+
+        /// <summary>[neopixel-avr] The strips on the board's pins, and what the boards' log should say about them.</summary>
+        public IEnumerable<(int Pin, Devices.Ws2812Load Strip)> LedStrips => _ledPins.SelectMany(kv => kv.Value.Strips.Select(s => (kv.Key, s)));
+
+        public event Action<string>? Log;
+
+        /// <summary>
+        /// [neopixel-avr] A WS2812B strip whose DIN an Arduino pin drives: the pin's edges, cycle for cycle, are read as the
+        /// strip reads them (<see cref="Devices.Ws2812Decoder"/>) and each latched frame lights the strip, at the board's
+        /// 5 V logic level.
+        /// </summary>
+        public void AttachLedStrip(int pin, Devices.Ws2812Load strip)
+        {
+            if (strip == null) throw new ArgumentNullException(nameof(strip));
+            if (!_ledPins.TryGetValue(pin, out var entry))
+            {
+                entry = (new Devices.Ws2812Decoder(), new List<Devices.Ws2812Load>());
+                var strips = entry.Strips;
+                entry.Decoder.Frame += frame =>
+                {
+                    double high = Mcu.Vcc > 0.5 ? Mcu.Vcc : 5.0;
+                    foreach (var s in strips)
+                    {
+                        s.Receive(frame, high);
+                        if (s.TakeWarning() is { } w) Log?.Invoke(w);
+                    }
+                };
+                var decoder = entry.Decoder;
+                Mcu.WatchPin(pin, (level, cycle) => decoder.Edge(level, cycle / Mcu.ClockHz));
+                _ledPins[pin] = entry;
+            }
+
+            entry.Strips.Add(strip);
+        }
+
         /// <summary>Text the firmware printed on Serial during the last slice.</summary>
         public event Action<string>? SerialOutput;
 
@@ -110,6 +149,7 @@ namespace RobotTwin.CoreSim.Firmware
             long target = (long)_epochCycles + (long)Math.Round((now + dt - _epochTime) * Mcu.ClockHz);
             if (target > (long)Mcu.Cycles) Mcu.RunCycles(target - (long)Mcu.Cycles);
             Mcu.RecordPortWrites = false;
+            foreach (var (decoder, _) in _ledPins.Values) decoder.Poll(Mcu.Cycles / Mcu.ClockHz);   // [neopixel-avr] a frame latched by the quiet line
 
             for (int i = 0; i < _pins.Length; i++)
             {
