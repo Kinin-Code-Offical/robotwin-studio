@@ -156,6 +156,10 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | B | Bağla |
 | Esc | İptal / seçme aracı |
 | W / E / R / Y / Q | Taşı / döndür / ölçekle / hepsi bir arada tutamacı / tutamaçsız (Unity'deki gibi) |
+| Ctrl+C / Ctrl+X / Ctrl+V | Kopyala / kes / yapıştır (takılı olanlarla) |
+| Ctrl+Shift+V | Seçilinin üstüne takılı olarak yapıştır |
+| F2 | Yeniden adlandır |
+| Ctrl+Alt+F | Görünüme taşı |
 | Ctrl+E / Ctrl+Shift+E | 15° döndür / ters yönde |
 | Ctrl+D | Çoğalt |
 | Del | Sil |

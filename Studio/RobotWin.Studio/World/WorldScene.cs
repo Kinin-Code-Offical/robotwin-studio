@@ -400,6 +400,9 @@ namespace RobotWin.Studio.World
             UpdateCamera();
         }
 
+        /// <summary>[hierarchy] Where the view looks (Unity's Move To View puts a part here).</summary>
+        public Point3D ViewTarget => _target;
+
         /// <summary>Frames everything at its current (simulated) place.</summary>
         public void FrameCurrent()
         {

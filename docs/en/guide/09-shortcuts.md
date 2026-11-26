@@ -156,6 +156,10 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | B | Connect |
 | Esc | Cancel / select tool |
 | W / E / R / Y / Q | Move / rotate / scale / all-in-one handles / no handles (as in Unity) |
+| Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste (with what is mounted) |
+| Ctrl+Shift+V | Paste mounted on the selected part |
+| F2 | Rename |
+| Ctrl+Alt+F | Move to view |
 | Ctrl+E / Ctrl+Shift+E | Rotate 15° / the other way |
 | Ctrl+D | Duplicate |
 | Del | Delete |

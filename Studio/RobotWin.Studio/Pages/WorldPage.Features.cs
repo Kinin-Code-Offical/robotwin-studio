@@ -84,14 +84,13 @@ namespace RobotWin.Studio.Pages
             var behaviours = new MenuItem { Header = "Davranış (ifade, hazır davranış, betik)…", ToolTip = "Bu nesneye bir ifade (F.x = …), hazır davranış, eklenti ya da betik ekleyin." };
             menu.Items.Add(behaviours);
 
-            Inspector.Children.Add(Caption("Özellikler"));
-            var add = Action("Özellik ekle ▾", () => { }, "Bu nesneye ek fizik ekleyin: kabuk, basınçlı kap, paraşüt, hava ayarı, davranış.");
+            // [components] Unity's Add Component: a searchable list by category over the same features
+            var add = Action("Bileşen ekle", () => { }, "Bu nesneye bileşen ekleyin: kabuk, basınçlı kap, paraşüt, hava ayarı, arıza, eşleme, yay, rulman, davranış. Aramak için yazın.");
+            add.HorizontalAlignment = HorizontalAlignment.Stretch;
+            add.HorizontalContentAlignment = HorizontalAlignment.Center;
+            add.Margin = new Thickness(0, 10, 0, 6);
             behaviours.Click += (_, _) => BehaviorMenu(world, o.Id, add);
-            add.Click += (_, _) =>
-            {
-                menu.PlacementTarget = add;
-                menu.IsOpen = true;
-            };
+            add.Click += (_, _) => ShowComponentPicker(add, menu);
             Inspector.Children.Add(add);
         }
     }

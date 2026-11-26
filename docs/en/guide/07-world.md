@@ -8,6 +8,8 @@ The **World** page (Ctrl+6) is where everything comes together. Put the boards y
 
 The **Inspector** on the right shows only the sections the selected object really uses: first its name, position and orientation, physics (fixed, material, mass), size and look, then the sections of its kind (board, component, wing linkage, shell, switch, controller). The extra physics a body can be given (**Shell**, **Pressure vessel**, **Recovery parachute**, **Air (custom setting)**, **Behaviour**) appear only when they are on, with **Remove** in their header; the others are under **Properties → Add feature ▾**.
 
+The inspector is made of component cards as in Unity: **Position and orientation**, **Physics**, and sections by the object's kind (kinematics, vehicle, shell …). A click on a card's header folds it (remembered while the app runs). The ⋮ menu in the header: on **Position and orientation**, copy the position / rotation and paste it onto another part, reset the rotation, drop to the floor; on **Physics**, reset; on every card, fold / unfold all. **Add component** opens a searchable list: it filters as you type, categories open their own list, Enter adds the first.
+
 ## Opening a world
 
 - **New world** (Ctrl+Shift+N): an empty 4 × 3 m workshop.
@@ -826,6 +828,10 @@ Save the serial monitor output as `.csv` and import it. Load the same sketch int
 | K | Draw cable |
 | B | Connect |
 | W / E / R / Y / Q | Move / rotate / scale / all-in-one handles / no handles (as in Unity) |
+| Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste (with what is mounted) |
+| Ctrl+Shift+V | Paste mounted on the selected part |
+| F2 | Rename |
+| Ctrl+Alt+F | Move to view |
 | Ctrl+E / Ctrl+Shift+E | Rotate 15° / the other way |
 | Ctrl+D | Duplicate |
 | Del | Delete |
@@ -835,6 +841,10 @@ Save the serial monitor output as `.csv` and import it. Load the same sketch int
 | Esc | Cancel, back to the select tool |
 
 Objects can only be moved while the simulation is stopped. You can also type position and angle into the inspector's **Position and orientation** fields.
+
+### The scene tree's menu
+
+A right click on a row of the **Scene** tab (as in Unity): **Cut**, **Copy**, **Paste**, **Paste mounted on this**, **Rename** (F2, the name turns into a box in the row), **Duplicate**, **Delete**, **Delete only this**, **Focus**, **Move to view**, **Find references in the scene** and **Create ▸** (body shapes, board, part, mechanical, environment). Copying, duplicating and deleting take everything mounted on the part, with the joints, cables and mates among them; a copied arm pastes whole into another world too. A right click on empty room opens paste and create.
 
 ### Move, rotate and scale handles
 

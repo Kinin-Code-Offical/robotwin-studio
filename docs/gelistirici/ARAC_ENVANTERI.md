@@ -237,25 +237,25 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 
 | Araç | Bizde | Durum | Öncelik |
 | --- | --- | --- | --- |
-| Kes, kopyala, yapıştır; alt nesne olarak yapıştır (yerel ya da dünya dönüşümünü koruyarak) | yok | yok | 1 |
-| Yeniden adlandır, çoğalt, sil | Ctrl+D, Del, Denetçi'de ad | kısmi | 1 |
+| Kes, kopyala, yapıştır; alt nesne olarak yapıştır (yerel ya da dünya dönüşümünü koruyarak) | Kes / kopyala / yapıştır (takılı olanlar, bağlantılar, kablolar, ilişkiler); seçilinin üstüne takılı yapıştır | var | |
+| Yeniden adlandır, çoğalt, sil | F2 satırda; çoğalt ve sil takılı olanlarla, "yalnız bunu sil" | var | |
 | Tümünü seç, seçimi kaldır, tersine çevir, alt nesneleri seç; ağaçta çoklu seçim | yok | yok | 1 |
 | Boş nesne, boş alt nesne, boş üst nesne (grup) | yok | yok | 1 |
-| Sağ tıkta Oluştur ▸ türler (gövde şekilleri, ışık, kamera, ses, sensör, kart …) | Palet sekmeleri | kısmi | 1 |
+| Sağ tıkta Oluştur ▸ türler (gövde şekilleri, ışık, kamera, ses, sensör, kart …) | Oluştur ▸ gövde şekilleri ve palet sekmeleri | kısmi | 2 |
 | Etkin / devre dışı (Alt+Shift+A) | yok | yok | 1 |
-| Görünüme taşı, görünümle hizala, görünümü seçime hizala | yok | yok | 2 |
+| Görünüme taşı, görünümle hizala, görünümü seçime hizala | Görünüme taşı, Odakla | kısmi | 3 |
 | Sürükleyerek üst nesne değiştirme | Bağla aracı | kısmi | 2 |
-| Sahnede referansları bul | yok | yok | 2 |
+| Sahnede referansları bul | kablolar, bağlantılar, ilişkiler | var | |
 | Varsayılan üst nesne | yok | yok | 3 |
 
 ### Denetçi (Inspector)
 
 | Araç | Bizde | Durum | Öncelik |
 | --- | --- | --- | --- |
-| Bileşen yığını: her bileşen kendi başlığında (aç / kapa, katla, yardım, ⋮ menüsü) | sabit bölümler | kısmi | 1 |
-| Bileşen ekle: aranabilir, kategorili liste | Özellik ekle ▾ (kabuk, kap, paraşüt, hava, arıza, yay, rulman, davranış) | kısmi | 1 |
+| Bileşen yığını: her bileşen kendi başlığında (aç / kapa, katla, yardım, ⋮ menüsü) | bileşen kartları: katla, ⋮ menüsü (aç / kapa ve yardım sonra) | kısmi | 2 |
+| Bileşen ekle: aranabilir, kategorili liste | Bileşen ekle: arama, kategoriler, Enter (bileşenler: kabuk, kap, paraşüt, hava, arıza, eşleme, yay, rulman, davranış) | var | |
 | Bileşen ⋮: sıfırla, kaldır, yukarı / aşağı, kopyala, değerleri yapıştır, yeni olarak yapıştır | yok | yok | 1 |
-| Dönüşüm ⋮: konum / dönüş / ölçek / dünya dönüşümü kopyala ve yapıştır, özelliği sıfırla | yok | yok | 1 |
+| Dönüşüm ⋮: konum / dönüş / ölçek / dünya dönüşümü kopyala ve yapıştır, özelliği sıfırla | konum / dönüş kopyala, yapıştır; dönüşü sıfırla; zemine indir | var | |
 | Fizik gövdesi: kütle, doğrusal / açısal sönüm, kütle merkezi ve eylemsizlik otomatik ya da elle, yerçekimi, kinematik, ara değerleme, çarpışma algılama, konum / dönüş kilitleri (X/Y/Z) | kütle, sabit | kısmi | 1 |
 | Çarpışma şekilleri: kutu, küre, kapsül, ağ, tekerlek, arazi; tetik | çarpışma şekilleri | kısmi | 2 |
 | Eklemler: menteşe, sabit, yay, karakter, yapılandırılabilir; sınırlar, yaylar, kırılma kuvveti ve torku | menteşe, kızak, sabit, yay ve sönüm, rulman | kısmi | 2 |

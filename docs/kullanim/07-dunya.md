@@ -8,6 +8,8 @@
 
 Sağdaki **Denetçi** seçili nesnenin yalnızca gerçekten kullandığı bölümleri gösterir: önce ad, konum ve yön, fizik (sabitlik, malzeme, kütle), boyut ve görünüş; sonra nesnenin türüne özgü bölümler (kart, bileşen, kanat bağlantısı, kabuk, anahtar, kumanda). Bir gövdeye eklenebilen ek fizikler (**Kabuk**, **Basınçlı kap**, **Kurtarma paraşütü**, **Hava (özel ayar)**, **Davranış**) yalnızca açıksa görünür ve başlıklarında **Kaldır** vardır; diğerleri **Özellikler → Özellik ekle ▾** menüsündedir.
 
+Denetçi Unity'deki gibi bileşen kartlarından oluşur: **Konum ve yön**, **Fizik**, nesnenin türüne göre kinematik, araç, kabuk gibi bölümler. Kartın başlığına tıklamak onu katlar (uygulama açık kaldıkça hatırlanır). Başlıktaki ⋮ menüsü: **Konum ve yön** kartında konumu / dönüşü kopyala ve başka bir parçaya yapıştır, dönüşü sıfırla, zemine indir; **Fizik** kartında sıfırla; her kartta hepsini katla / aç. **Bileşen ekle** aranabilir bir liste açar: yazdıkça süzülür, kategoriler kendi listesini açar, Enter ilkini ekler.
+
 ## Bir dünya açmak
 
 - **Yeni dünya** (Ctrl+Shift+N): 4 × 3 m'lik boş bir atölye.
@@ -826,6 +828,10 @@ Seri monitör çıktısını `.csv` olarak kaydedip içe aktarın. Aynı çizimi
 | K | Kablo çek |
 | B | Bağla |
 | W / E / R / Y / Q | Taşı / döndür / ölçekle / hepsi bir arada tutamacı / tutamaçsız (Unity'deki gibi) |
+| Ctrl+C / Ctrl+X / Ctrl+V | Kopyala / kes / yapıştır (takılı olanlarla) |
+| Ctrl+Shift+V | Seçilinin üstüne takılı olarak yapıştır |
+| F2 | Yeniden adlandır |
+| Ctrl+Alt+F | Görünüme taşı |
 | Ctrl+E / Ctrl+Shift+E | 15° döndür / ters yönde |
 | Ctrl+D | Çoğalt |
 | Del | Sil |
@@ -835,6 +841,10 @@ Seri monitör çıktısını `.csv` olarak kaydedip içe aktarın. Aynı çizimi
 | Esc | İptal, seçme aracına dön |
 
 Nesneler yalnızca simülasyon dururken taşınabilir. Konumu ve açıyı denetçideki **Konum ve yön** alanlarına sayı yazarak da girebilirsiniz.
+
+### Sahne ağacının menüsü
+
+**Sahne** sekmesindeki bir satıra sağ tıklayınca (Unity'deki gibi): **Kes**, **Kopyala**, **Yapıştır**, **Bunun üstüne takılı olarak yapıştır**, **Yeniden adlandır** (F2, ad satırda kutuya döner), **Çoğalt**, **Sil**, **Yalnız bunu sil**, **Odakla**, **Görünüme taşı**, **Sahnede referansları bul** ve **Oluştur ▸** (gövde şekilleri, kart, parça, mekanik, ortam). Kopyalama, çoğaltma ve silme parçaya takılı olan her şeyi, aralarındaki bağlantıları, kabloları ve ilişkileri birlikte alır; kopyalanan bir kol başka bir dünyaya da bütün olarak yapıştırılır. Boş yere sağ tık yapıştırma ve oluşturmayı açar.
 
 ### Taşı, döndür, ölçekle tutamaçları
 

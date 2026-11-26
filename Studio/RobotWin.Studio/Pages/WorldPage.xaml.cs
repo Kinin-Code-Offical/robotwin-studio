@@ -185,6 +185,7 @@ namespace RobotWin.Studio.Pages
         private void BuildPalette()
         {
             Palette.Children.Clear();
+            Palette.ContextMenu = null;   // [hierarchy] the scene tab sets its own
             SearchRow.Visibility = TabParts.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             if (TerrainPalette()) return; // [terrain] Arazi tab
             if (TabScene.IsChecked == true) BuildScenePalette();
@@ -734,9 +735,17 @@ namespace RobotWin.Studio.Pages
 
         // ================================================================ inspector
 
+        /// <summary>The inspector: its sections, then each made a component card (Pages/WorldPage.Components.cs).</summary>
         private void BuildInspector()
         {
+            BuildInspectorSections();
+            CardifyInspector();   // [components]
+        }
+
+        private void BuildInspectorSections()
+        {
             Inspector.Children.Clear();
+            _inspected = World?.Find(Scene.Selected);
             var world = World;
             if (world == null) return;
             _diagValues = null;
@@ -783,12 +792,7 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(Vector3Row("Konum (mm)", o.Pose.X * 1000, o.Pose.Y * 1000, o.Pose.Z * 1000, (x, y, z) =>
                 Edit("Konum değişti", () => world.MoveAssembly(o, x / 1000 - o.Pose.X, y / 1000 - o.Pose.Y, Math.Max(0, z / 1000) - o.Pose.Z))));
             Inspector.Children.Add(Vector3Row("Dönme (°) X · Y · Z", o.Pose.Roll, o.Pose.Pitch, o.Pose.Yaw, (r, p, yw) =>
-                Edit("Yön değişti", () =>
-                {
-                    o.Pose.Roll = r;
-                    o.Pose.Pitch = p;
-                    world.RotateAssembly(o, yw - o.Pose.Yaw);
-                })));
+                Edit("Yön değişti", () => TurnTo(world, o, r, p, yw))));   // [gizmo] what is mounted on it turns too
 
             Inspector.Children.Add(Caption("Fizik"));
             var st = new CheckBox { Content = "Sabit (zemine/masaya sabitlenmiş)", IsChecked = o.IsStatic, Style = (Style)FindResource("Switch"), Margin = new Thickness(0, 0, 0, 6) };
@@ -1459,15 +1463,10 @@ namespace RobotWin.Studio.Pages
             var world = World;
             var o = world?.Find(Scene.Selected);
             if (world == null || o == null) return;
+            // [hierarchy] with what is mounted on it, the joints, cables and mates among them
+            var fragment = WorldFragment.Take(world, new[] { o.Id });
             WorldObject? copy = null;
-            Edit($"{o.Name} çoğaltıldı", () =>
-            {
-                copy = o.Clone();
-                copy.Id = world.NextId("O");
-                copy.Name = world.UniqueName(o.Name);
-                copy.Pose.X += 0.05;
-                world.Objects.Add(copy);
-            });
+            Edit($"{o.Name} çoğaltıldı", () => copy = fragment.PasteInto(world, new RobotTwin.CoreSim.Mechanics.Vec3(0.05, 0, 0)).FirstOrDefault());
             if (copy != null) Scene.Select(copy.Id);
         }
 
@@ -1478,7 +1477,9 @@ namespace RobotWin.Studio.Pages
             var world = World;
             var o = world?.Find(Scene.Selected);
             if (world == null || o == null || DeleteBlocked(o)) return; // [terrain] locked
-            Edit($"{o.Name} silindi", () => world.Remove(o));
+            int mounted = world.MountedOn(o.Id).Count;
+            // [hierarchy] as Unity: what is mounted on it goes with it (the menu also deletes it alone)
+            Edit(mounted > 0 ? $"{o.Name} ve takılı {mounted} parça silindi" : $"{o.Name} silindi", () => WorldFragment.RemoveFrom(world, new[] { o.Id }));
             Scene.Select(null);
         }
 
@@ -1543,6 +1544,21 @@ namespace RobotWin.Studio.Pages
                     break;
                 case Key.D when ctrl:
                     Duplicate();
+                    break;
+                case Key.C when ctrl:   // [hierarchy] the clipboard
+                    CopySelection();
+                    break;
+                case Key.X when ctrl:
+                    CutSelection();
+                    break;
+                case Key.V when ctrl:
+                    PasteClipboard(mods.HasFlag(ModifierKeys.Shift));
+                    break;
+                case Key.F2:
+                    StartRename(Scene.Selected);
+                    break;
+                case Key.F when ctrl && mods.HasFlag(ModifierKeys.Alt):
+                    MoveToView();
                     break;
                 case Key.Z when ctrl:
                     W.Undo();

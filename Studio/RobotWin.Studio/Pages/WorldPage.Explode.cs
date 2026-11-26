@@ -392,6 +392,15 @@ namespace RobotWin.Studio.Pages
             ShowTool(dlg);
         }
 
+        private static Button? FindButton(DependencyObject root, string text)
+        {
+            if (root is Button b && (b.Content as string) == text) return b;
+            int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(root);
+            for (int i = 0; i < n; i++)
+                if (FindButton(System.Windows.Media.VisualTreeHelper.GetChild(root, i), text) is { } found) return found;
+            return null;
+        }
+
         /// <summary>Snapshot flags: --clearance &lt;mm&gt; opens the clearance check; --explode auto|window explodes the world (and opens the window).</summary>
         private void AssemblyToolsSnapshot()
         {
@@ -409,6 +418,34 @@ namespace RobotWin.Studio.Pages
                 Scene.GizmoLocal = !args.Contains("--gizmo-world");
                 Scene.GizmoCenter = args.Contains("--gizmo-center");
                 PickGizmo(args[gz + 1] switch { "rotate" => RobotWin.Studio.World.GizmoMode.Rotate, "scale" => RobotWin.Studio.World.GizmoMode.Scale, "all" => RobotWin.Studio.World.GizmoMode.All, _ => RobotWin.Studio.World.GizmoMode.Move });
+            }
+
+            if (args.Contains("--add-component"))
+            {
+                // [components] the Add Component list, open, as the picture
+                BuildInspector();
+                Inspector.UpdateLayout();
+                var add = FindButton(Inspector, "Bileşen ekle");
+                if (add != null)
+                {
+                    add.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                    if (System.Windows.Media.VisualTreeHelper.GetParent(add) != null && _lastPicker?.Child is FrameworkElement pick)
+                    {
+                        pick.UpdateLayout();
+                        App.SnapshotTarget = pick;
+                    }
+                }
+            }
+
+            if (args.Contains("--scene-rename")) StartRename(Scene.Selected);   // [hierarchy] the row's name as a box
+            if (args.Contains("--scene-menu") && Scene.Selected != null)
+            {
+                // [hierarchy] the selected row's right-click menu, open, as the picture
+                var menu = SceneMenu(Scene.Selected);
+                menu.PlacementTarget = Palette;
+                menu.IsOpen = true;
+                menu.UpdateLayout();
+                App.SnapshotTarget = menu;
             }
 
             int x = Array.IndexOf(args, "--explode");

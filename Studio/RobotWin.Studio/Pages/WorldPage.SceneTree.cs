@@ -40,6 +40,7 @@ namespace RobotWin.Studio.Pages
                 parent[j.ObjectA] = (j.ObjectB!, j.PortB);
             }
 
+            Palette.ContextMenu = SceneMenu(null);   // [hierarchy] paste, create
             var children = world.Objects.ToLookup(o => parent.TryGetValue(o.Id, out var p) ? p.Parent : string.Empty);
             Palette.Children.Add(Caption("Sahne", 6));
             foreach (var root in children[string.Empty].OrderBy(o => Rank(o.Kind)).ThenBy(o => o.Name, StringComparer.CurrentCulture))
@@ -173,7 +174,8 @@ namespace RobotWin.Studio.Pages
             row.Children.Add(icon);
 
             var text = new StackPanel { Margin = new Thickness(0, 5, 0, 5) };
-            text.Children.Add(new TextBlock { Text = title, TextTrimming = TextTrimming.CharacterEllipsis, Foreground = (Brush)FindResource(selected ? "B.Text" : "B.TextSecondary") });
+            if (id != null && id == _renaming && World?.Find(id) is { } renamed) text.Children.Add(RenameBox(renamed));   // [hierarchy] F2
+            else text.Children.Add(new TextBlock { Text = title, TextTrimming = TextTrimming.CharacterEllipsis, Foreground = (Brush)FindResource(selected ? "B.Text" : "B.TextSecondary") });
             text.Children.Add(new TextBlock { Text = subtitle, Style = (Style)FindResource("Text.Caption"), TextTrimming = TextTrimming.CharacterEllipsis });
             Grid.SetColumn(text, 3);
             row.Children.Add(text);
@@ -192,25 +194,20 @@ namespace RobotWin.Studio.Pages
                     click();
                 }
             };
-            if (id != null)
+            if (id != null && World?.Find(id) != null)
             {
-                var menu = new ContextMenu();
-                var focus = new MenuItem { Header = "Odakla" };
-                focus.Click += (_, _) =>
-                {
-                    Scene.Select(id);
-                    Scene.FrameCurrent();
-                };
-                menu.Items.Add(focus);
+                // [hierarchy] Unity's menu (Pages/WorldPage.SceneMenu.cs); a right click also selects the row
+                var menu = SceneMenu(id);
                 if (hasKids)
                 {
                     var fold = new MenuItem { Header = open ? "Alt nesneleri gizle" : "Alt nesneleri göster" };
                     fold.Click += (_, _) => toggle?.Invoke();
-                    menu.Items.Add(fold);
+                    menu.Items.Insert(0, new Separator());
+                    menu.Items.Insert(0, fold);
                 }
 
-                AddToolItems(menu, id);   // [pid] PID tuner, arm kinematics, drive kinematics (Pages/WorldPage.Pid.cs)
                 row.ContextMenu = menu;
+                row.MouseRightButtonDown += (_, _) => Scene.Select(id);
             }
 
             return row;

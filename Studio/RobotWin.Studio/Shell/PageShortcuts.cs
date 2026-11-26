@@ -64,6 +64,12 @@ namespace RobotWin.Studio.Shell
             W("tutamac-olcekle", "Ölçekle tutamacı", "R");
             W("tutamac-hepsi", "Taşı, döndür, ölçekle tutamaçları", "Y");
             W("tutamac-yok", "Yalnız seç (tutamaçsız)", "Q");
+            W("kopyala", "Kopyala (takılı olanlarla)", "Ctrl+C");   // [hierarchy]
+            W("kes", "Kes", "Ctrl+X");
+            W("yapistir", "Yapıştır", "Ctrl+V");
+            W("yapistir-ustune", "Seçilinin üstüne takılı olarak yapıştır", "Ctrl+Shift+V");
+            W("adlandir", "Yeniden adlandır", "F2");
+            W("gorunume-tasi", "Görünüme taşı", "Ctrl+Alt+F");
             W("cogalt", "Çoğalt", "Ctrl+D");
             W("sil", "Sil", "Del");
             W("takip", "Kamera seçili nesneyi izlesin", "T");
