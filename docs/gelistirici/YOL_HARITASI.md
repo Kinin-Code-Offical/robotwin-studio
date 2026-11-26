@@ -237,7 +237,7 @@ Kullanıcı geri bildirimi: ikonlar, düğmeler ve yazılar tam hizada değil; a
 
 **Sıradakiler (bu sırayla):**
 
-- [ ] **Alt araçlar:**
+- [~] **Alt araçlar:** altyapı (`Theme/ToolFlyout.cs`: köşe üçgeni, basılı tutma ya da sağ tık, etiketli liste) ve PCB'de çizim grubu (çizgi, dikdörtgen, daire, yay, çokgen; `Pcb/BoardGraphic.cs`: kayıt, Gerber serigrafi, KiCad `gr_*`, DRC) ile delik grubu (montaj deliği, via aracı) ve araç seçenek çubuğu (katman, kalınlık, dolgulu) yapıldı. Kalan:
   - Gruplu araçlarda köşe üçgeni.
   - Basılı tutunca ya da sağ tıklayınca etiketli ve kısayollu alt araç listesi (Blender gibi; KiCad'in yalnız ikonlu listesinden okunaklı).
   - PCB: yol → tek / fark çifti / uzunluk ayarı; çizim → çizgi / yay / dikdörtgen / daire / çokgen; ölçü → doğrusal / açısal / yarıçap.

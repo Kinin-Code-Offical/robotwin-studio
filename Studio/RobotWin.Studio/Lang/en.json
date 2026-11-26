@@ -8212,7 +8212,28 @@
   "Tam görünüm: paneller gizlendi (Ctrl+Space ile geri gelir)": "Full view: the panels are hidden (Ctrl+Space brings them back)",
   "Paneller geri geldi": "The panels are back",
   "Tam görünüm: panelleri gizle / geri getir": "Full view: hide / bring back the panels",
-  "Özellik panelini göster / gizle (başlığından küçültülür, taşınır ya da ayrı pencereye alınır)": "Show / hide the properties panel (its header minimizes it, moves it or opens it in its own window)"
+  "Özellik panelini göster / gizle (başlığından küçültülür, taşınır ya da ayrı pencereye alınır)": "Show / hide the properties panel (its header minimizes it, moves it or opens it in its own window)",
+  "Çizim: çizgi, dikdörtgen, daire, yay, çokgen (serigrafi, montaj ya da çizim katmanına)": "Draw: line, rectangle, circle, arc, polygon (on the silkscreen, fab or drawing layer)",
+  "Delikler: montaj deliği, via": "Holes: mounting hole, via",
+  "Basılı tutun ya da sağ tıklayın: gruptaki diğer araçlar": "Press and hold or right-click: the group's other tools",
+  "Çokgen": "Polygon",
+  "Via": "Via",
+  "Dolgulu": "Filled",
+  "Üst serigrafi": "Top silkscreen",
+  "Alt serigrafi": "Bottom silkscreen",
+  "Üst montaj (fab)": "Top fab",
+  "Alt montaj (fab)": "Bottom fab",
+  "Çizimler": "Drawings",
+  "Çizgi: başlangıca ve bitişe tıklayın; her bitiş yeni çizginin başı olur · Esc: bitir": "Line: click the start and the end; each end starts the next line · Esc: stop",
+  "Dikdörtgen: iki karşı köşeye tıklayın · Esc: iptal": "Rectangle: click two opposite corners · Esc: cancel",
+  "Daire: merkeze, sonra çevresinden bir noktaya tıklayın · Esc: iptal": "Circle: click the centre, then a point on it · Esc: cancel",
+  "Yay: merkeze, başlangıca ve bitişe tıklayın (saat yönünün tersine) · Esc: iptal": "Arc: click the centre, the start and the end (counter-clockwise) · Esc: cancel",
+  "Çokgen: köşelere tıklayın · çift tık, ilk köşeye tıklamak ya da Enter: kapat · Esc: iptal": "Polygon: click the corners · double-click, the first corner or Enter: close · Esc: cancel",
+  "Via: yere tıklayın (altındaki yolun, pedin ya da dolgunun hattını alır) · Esc: çık": "Via: click a spot (it takes the net of the track, pad or fill under it) · Esc: leave",
+  "Via eklendi (hattı yok: yol bağlanınca alır)": "Via added (no net: it takes one when a track joins it)",
+  "Yeni şekillerin çizildiği katman": "The layer new shapes are drawn on",
+  "Yeni şekillerin çizgi kalınlığı (mm)": "The line width of new shapes (mm)",
+  "Dikdörtgen, daire ve çokgen içi dolu çizilir": "Rectangles, circles and polygons are drawn filled"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11548,6 +11569,14 @@
   "{…} / {…} hat": "{0} / {1} nets",
   "{…} pin": "{0} pins",
   "Hat: {…} · {…} pin": "Net: {0} · {1} pins",
-  "{…}: aç": "{0}: open"
+  "{…}: aç": "{0}: open",
+  "Çizim eklendi: {…} · {…}": "Drawing added: {0} · {1}",
+  "Via eklendi ({…})": "Via added ({0})",
+  "çizgi {…} mm": "line {0} mm",
+  "dikdörtgen {…} × {…} mm": "rectangle {0} × {1} mm",
+  "daire Ø{…} mm": "circle Ø{0} mm",
+  "yay R{…} mm, {…}°": "arc R{0} mm, {1}°",
+  "çokgen, {…} köşe": "polygon, {0} corners",
+  "Serigrafi çizimi ({…}) {…}.{…} pedinin üstünde": "Silkscreen drawing ({0}) over pad {1}.{2}"
  }
 }

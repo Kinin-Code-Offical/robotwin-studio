@@ -18,12 +18,13 @@ namespace RobotWin.Studio.Pcb
         public bool Holes { get; set; } = true;
         public bool Zones { get; set; } = true;
         public bool Dimensions { get; set; } = true;
+        public bool Graphics { get; set; } = true;
         public bool Outline { get; set; } = true;
 
         /// <summary>Every kind on (the filter lets everything through).</summary>
-        public bool All => Parts && Locked && Tracks && Vias && Texts && Holes && Zones && Dimensions && Outline;
+        public bool All => Parts && Locked && Tracks && Vias && Texts && Holes && Zones && Dimensions && Graphics && Outline;
 
-        public void SetAll(bool on) => Parts = Locked = Tracks = Vias = Texts = Holes = Zones = Dimensions = Outline = on;
+        public void SetAll(bool on) => Parts = Locked = Tracks = Vias = Texts = Holes = Zones = Dimensions = Graphics = Outline = on;
 
         /// <summary>The kinds with their labels, in the order the panel lists them, each with its getter and setter.</summary>
         public IEnumerable<(string Label, System.Func<bool> Get, System.Action<bool> Set)> Kinds()
@@ -36,6 +37,7 @@ namespace RobotWin.Studio.Pcb
             yield return ("Montaj delikleri", () => Holes, v => Holes = v);
             yield return ("Dolgu alanları", () => Zones, v => Zones = v);
             yield return ("Ölçüler", () => Dimensions, v => Dimensions = v);
+            yield return ("Çizimler", () => Graphics, v => Graphics = v);
             yield return ("Kart kenarı", () => Outline, v => Outline = v);
         }
 
@@ -49,6 +51,7 @@ namespace RobotWin.Studio.Pcb
             MountingHole => Holes,
             Zone => Zones,
             BoardDimension => Dimensions,
+            BoardGraphic => Graphics,
             BoardCanvas.OutlineSelection => Outline,
             _ => true
         };

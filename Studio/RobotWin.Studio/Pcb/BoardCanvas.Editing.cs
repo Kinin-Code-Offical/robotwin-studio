@@ -151,6 +151,12 @@ namespace RobotWin.Studio.Pcb
                 case PcbTool.Text:
                     TextRequested?.Invoke(this, new PcbPoint(Snap(x), Snap(y)));
                     return;
+                case PcbTool.Line or PcbTool.Rectangle or PcbTool.Circle or PcbTool.Arc or PcbTool.Polygon:   // [graphics]
+                    GraphicClick(x, y, e.ClickCount >= 2);
+                    return;
+                case PcbTool.Via:
+                    ViaClick(x, y);
+                    return;
                 case PcbTool.Hole:
                     BeforeEdit?.Invoke(this, EventArgs.Empty);
                     Board.MountingHoles.Add(new MountingHole { X = Snap(x), Y = Snap(y), Drill = HoleDrill, PadDiameter = HolePad });
@@ -191,6 +197,7 @@ namespace RobotWin.Studio.Pcb
             if (HitVia(x, y) is { } via) yield return via;
             if (HitTrack(x, y) is { } track) yield return track;
             if (HitText(x, y) is { } text) yield return text;
+            if (HitGraphic(x, y) is { } graphic) yield return graphic;   // [graphics]
             if (HitHole(x, y) is { } hole) yield return hole;
             if (HitComponent(x, y) is { } comp) yield return comp;
             if (HitZoneEdge(x, y) is { } zone) yield return zone;
@@ -347,6 +354,7 @@ namespace RobotWin.Studio.Pcb
                 case PcbTool.Outline:
                 case PcbTool.Measure:
                 case PcbTool.Dimension:
+                case PcbTool.Line or PcbTool.Rectangle or PcbTool.Circle or PcbTool.Arc or PcbTool.Polygon:   // [graphics] the preview follows
                     InvalidateVisual();
                     break;
             }
@@ -590,6 +598,13 @@ namespace RobotWin.Studio.Pcb
                 if (window ? In(d.X1, d.Y1) && In(d.X2, d.Y2) : In(d.X1, d.Y1) || In(d.X2, d.Y2)) found.Add(d);
             }
 
+            foreach (var g in board.Graphics)   // [graphics]
+            {
+                if (!GraphicShown(g) || !g.IsComplete) continue;
+                var gb = g.Bounds();
+                if (BoxHit(gb.MinX, gb.MinY, gb.MaxX, gb.MaxY)) found.Add(g);
+            }
+
             foreach (var z in board.Zones)
             {
                 if (z.IsWholeBoard || !Visible(z.Layer)) continue;
@@ -620,6 +635,7 @@ namespace RobotWin.Studio.Pcb
             all.AddRange(board.MountingHoles);
             all.AddRange(board.Dimensions);
             all.AddRange(board.Zones.Where(z => !z.IsWholeBoard));
+            all.AddRange(board.Graphics.Where(GraphicShown));   // [graphics]
             all.RemoveAll(o => !SelectionFilter.Allows(o));   // [select-filter]
             SetSelection(all);
             Say($"{all.Count} öğe seçildi");
@@ -686,6 +702,7 @@ namespace RobotWin.Studio.Pcb
             _moveHoles.Clear();
             _moveDims.Clear();
             _moveZones.Clear();
+            _moveGraphics.Clear();   // [graphics]
             _attachedPads.Clear();
             _attachedVias.Clear();
             _moveTracks.Clear();
@@ -700,6 +717,7 @@ namespace RobotWin.Studio.Pcb
                     case BoardDimension d: _moveDims.Add((d, d.X1, d.Y1, d.X2, d.Y2)); break;
                     case Zone z when !z.IsWholeBoard: _moveZones.Add((z, z.Outline.ToList())); break;
                     case Track t: _moveTracks.Add(t); break;
+                    case BoardGraphic g: _moveGraphics.Add((g, g.Points.ToList())); break;   // [graphics]
                 }
             }
 
@@ -753,6 +771,11 @@ namespace RobotWin.Studio.Pcb
             {
                 t.X = x + dx;
                 t.Y = y + dy;
+            }
+
+            foreach (var (g, pts) in _moveGraphics)   // [graphics]
+            {
+                g.Points = pts.Select(q => new PcbPoint(q.X + dx, q.Y + dy)).ToList();
             }
 
             foreach (var (h, x, y) in _moveHoles)
@@ -819,6 +842,7 @@ namespace RobotWin.Studio.Pcb
             _moving = false;
             bool moved = _moveComps.Any(c => c.C.X != c.X || c.C.Y != c.Y || c.C.Rotation != c.Rotation) || _moveVias.Any(v => v.V.X != v.X || v.V.Y != v.Y) ||
                          _moveTexts.Any(t => t.T.X != t.X || t.T.Y != t.Y) || _moveHoles.Any(h => h.H.X != h.X || h.H.Y != h.Y) ||
+                         _moveGraphics.Any(g => !g.G.Points.SequenceEqual(g.P)) ||
                          _moveDims.Any(d => d.D.X1 != d.X1 || d.D.Y1 != d.Y1) || _moveZones.Any(z => !z.Z.Outline.SequenceEqual(z.Outline)) ||
                          ChangedTracks().Count > 0;
             if (!moved && !_movePaste)
@@ -855,6 +879,7 @@ namespace RobotWin.Studio.Pcb
                             case Track t: b.Tracks.Remove(t); break;
                             case Via v: b.Vias.Remove(v); break;
                             case BoardText x: b.Texts.Remove(x); break;
+                            case BoardGraphic g: b.Graphics.Remove(g); break;
                             case MountingHole h: b.MountingHoles.Remove(h); break;
                             case BoardDimension d: b.Dimensions.Remove(d); break;
                             case Zone z: b.Zones.Remove(z); break;
@@ -1170,6 +1195,7 @@ namespace RobotWin.Studio.Pcb
 
             if (_tool == PcbTool.Route && RouteKey(key, shift)) return;
             if ((_tool == PcbTool.Zone || _tool == PcbTool.Outline) && PolygonKey(key)) return;
+            if (IsGraphicTool(_tool) && GraphicKey(key)) return;   // [graphics]
 
             switch (key)
             {
@@ -1442,6 +1468,7 @@ namespace RobotWin.Studio.Pcb
                         case Zone z: board.Zones.Remove(z); break;
                         case MountingHole h: board.MountingHoles.Remove(h); break;
                         case BoardText x: board.Texts.Remove(x); break;
+                        case BoardGraphic g: board.Graphics.Remove(g); break;   // [graphics]
                         case BoardDimension d: board.Dimensions.Remove(d); break;
                         case OutlineSelection: board.Outline.Clear(); break;
                     }

@@ -108,14 +108,20 @@
                     <ToggleButton x:Name="ToolMeasure" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Measure" Click="OnTool" ToolTip="Ölç (Ctrl+Shift+M): mesafe ve açı"><t:Icon Data="{StaticResource I.Measure}" Size="16"/></ToggleButton>
                     <Border Height="1" Background="{DynamicResource B.Border}" Margin="6,4,6,8"/>
                     <ToggleButton x:Name="ToolText" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Text" Click="OnTool" ToolTip="Serigrafi yazısı (T)"><t:Icon Data="{StaticResource I.Text}" Size="16"/></ToggleButton>
+                    <ToggleButton x:Name="ToolDraw" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Line" Click="OnTool" ToolTip="Çizim: çizgi, dikdörtgen, daire, yay, çokgen (serigrafi, montaj ya da çizim katmanına)"/>
                     <ToggleButton x:Name="ToolDimension" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Dimension" Click="OnTool" ToolTip="Ölçü çizgisi (Ctrl+Shift+H)"><t:Icon Data="{StaticResource I.Dimension}" Size="16"/></ToggleButton>
                     <ToggleButton x:Name="ToolOutline" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Outline" Click="OnTool" ToolTip="Kart kenarını çokgen olarak çiz"><t:Icon Data="{StaticResource I.Outline}" Size="16"/></ToggleButton>
-                    <ToggleButton x:Name="ToolHole" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Hole" Click="OnTool" ToolTip="Montaj deliği yerleştir"><t:Icon Data="{StaticResource I.Hole}" Size="16"/></ToggleButton>
+                    <ToggleButton x:Name="ToolHole" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Hole" Click="OnTool" ToolTip="Delikler: montaj deliği, via"/>
                 </StackPanel>
             </Border>
 
             <pcb:BoardCanvas x:Name="Canvas" Grid.Column="3"/>
             <pcb:Board3DView x:Name="View3D" Grid.Column="3" Visibility="Collapsed"/>
+            <!-- [flyout] the active tool's options (Blender's tool settings, KiCad's auxiliary toolbar) -->
+            <Border x:Name="ToolOptions" Grid.Column="3" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0" Padding="10,6"
+                    Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.Border}" BorderThickness="1" CornerRadius="6" Visibility="Collapsed" Panel.ZIndex="4">
+                <StackPanel x:Name="ToolOptionsRow" Orientation="Horizontal"/>
+            </Border>
             <Border x:Name="StatusBar" Grid.Column="3" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="120,0,10,6" IsHitTestVisible="False">
                 <DockPanel LastChildFill="True">
                     <TextBlock x:Name="CursorText" DockPanel.Dock="Right" Style="{StaticResource Text.Mono}" FontSize="12" Foreground="{DynamicResource B.TextMuted}" Margin="12,0,0,0"/>

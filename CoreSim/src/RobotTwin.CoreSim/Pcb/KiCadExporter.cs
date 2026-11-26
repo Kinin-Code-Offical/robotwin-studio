@@ -99,6 +99,7 @@ namespace RobotTwin.CoreSim.Pcb
 
             root.Add(Outline(board));
             root.Add(Drawings(board));
+            root.Add(GraphicNodes(board));   // [graphics]
 
             for (int i = 0; i < board.Tracks.Count; i++)
             {
@@ -509,6 +510,47 @@ namespace RobotTwin.CoreSim.Pcb
                 yield return new SNode("gr_text", Q(d.Label()), new SNode("at", N(geo.TextX), N(geo.TextY), N(-angle)),
                     new SNode("layer", Q(layer)), Uid("dim:" + i.ToString(CultureInfo.InvariantCulture) + ":text"),
                     new SNode("effects", new SNode("font", new SNode("size", N(d.TextSize), N(d.TextSize)), new SNode("thickness", N(0.12)))));
+            }
+        }
+
+        /// <summary>[graphics] Drawn shapes as KiCad's gr_line / gr_rect / gr_circle / gr_arc / gr_poly on their layers.</summary>
+        private static IEnumerable<SNode> GraphicNodes(BoardDocument board)
+        {
+            for (int i = 0; i < board.Graphics.Count; i++)
+            {
+                var g = board.Graphics[i];
+                if (!g.IsComplete) continue;
+                var p = g.Points;
+                string layer = GraphicLayerName(g.Layer);
+                var fill = new SNode("fill", g.Filled ? "solid" : "none");
+                var uid = Uid("graphic:" + i.ToString(CultureInfo.InvariantCulture));
+                switch (g.Shape)
+                {
+                    case GraphicShape.Line:
+                        yield return new SNode("gr_line", XY("start", p[0].X, p[0].Y), XY("end", p[1].X, p[1].Y), Stroke(g.Width), new SNode("layer", Q(layer)), uid);
+                        break;
+                    case GraphicShape.Rectangle:
+                        yield return new SNode("gr_rect", XY("start", p[0].X, p[0].Y), XY("end", p[1].X, p[1].Y), Stroke(g.Width), fill, new SNode("layer", Q(layer)), uid);
+                        break;
+                    case GraphicShape.Circle:
+                        yield return new SNode("gr_circle", XY("center", p[0].X, p[0].Y), XY("end", p[1].X, p[1].Y), Stroke(g.Width), fill, new SNode("layer", Q(layer)), uid);
+                        break;
+                    case GraphicShape.Arc:
+                    {
+                        var (a0, sweep) = g.ArcAngles();
+                        double r = g.Radius, am = a0 + sweep / 2, a1 = a0 + sweep;
+                        yield return new SNode("gr_arc", XY("start", p[0].X + r * Math.Cos(a0), p[0].Y + r * Math.Sin(a0)), XY("mid", p[0].X + r * Math.Cos(am), p[0].Y + r * Math.Sin(am)),
+                            XY("end", p[0].X + r * Math.Cos(a1), p[0].Y + r * Math.Sin(a1)), Stroke(g.Width), new SNode("layer", Q(layer)), uid);
+                        break;
+                    }
+                    case GraphicShape.Polygon:
+                    {
+                        var pts = new SNode("pts");
+                        foreach (var q in p) pts.Add(XY("xy", q.X, q.Y));
+                        yield return new SNode("gr_poly", pts, Stroke(g.Width), fill, new SNode("layer", Q(layer)), uid);
+                        break;
+                    }
+                }
             }
         }
 

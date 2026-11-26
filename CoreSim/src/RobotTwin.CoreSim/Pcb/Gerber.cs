@@ -279,6 +279,12 @@ namespace RobotTwin.CoreSim.Pcb
                 foreach (var s in Silk.TextStrokes(t)) Emit(s, t.Thickness);
             }
 
+            // [graphics] drawn shapes on this side's legend; a filled one is hatched with strokes of its own width
+            foreach (var g in board.Graphics.Where(g => g.Layer == layer))
+            {
+                foreach (var s in Silk.GraphicStrokes(g)) Emit(s, g.Width);
+            }
+
             return strokes;
         }
 
@@ -455,6 +461,32 @@ namespace RobotTwin.CoreSim.Pcb
             double w = StrokeFont.Measure(comp.RefDes, height);
             StrokeFont.DrawCentered((x1, y1, x2, y2, _) => list.Add(new Segment2(x1, y1, x2, y2)), comp.RefDes,
                 box.MinX + w / 2, box.MinY - 0.4 - height / 2, height, 0.15, 0, comp.Side == CopperLayer.Bottom);
+            return list;
+        }
+
+        /// <summary>[graphics] A drawn shape as legend strokes: its outline, and for a filled one parallel strokes a line width apart across it.</summary>
+        public static List<Segment2> GraphicStrokes(BoardGraphic g)
+        {
+            var list = g.Strokes();
+            if (!g.Filled) return list;
+            var area = g.Area();
+            if (area.Count < 3) return list;
+            double step = Math.Max(0.05, g.Width * 0.8);
+            double y0 = area.Min(p => p.Y), y1 = area.Max(p => p.Y);
+            for (double y = y0 + step / 2; y < y1; y += step)
+            {
+                var xs = new List<double>();
+                for (int i = 0, j = area.Count - 1; i < area.Count; j = i++)
+                {
+                    var a = area[i];
+                    var b = area[j];
+                    if ((a.Y > y) != (b.Y > y)) xs.Add(a.X + (y - a.Y) * (b.X - a.X) / (b.Y - a.Y));
+                }
+
+                xs.Sort();
+                for (int k = 0; k + 1 < xs.Count; k += 2) list.Add(new Segment2(xs[k], y, xs[k + 1], y));
+            }
+
             return list;
         }
 

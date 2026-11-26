@@ -70,6 +70,7 @@ namespace RobotWin.Studio.Pages
             Canvas.UndoRequested += (_, _) => W.Undo();
             Canvas.RedoRequested += (_, _) => W.Redo();
             Canvas.ToolChanged += (_, _) => SyncTools();
+            InitToolGroups();   // [flyout] Pages/PcbPage.Tools.cs
             Canvas.Hint += (_, text) => HintText.Text = text;
             Canvas.CursorMoved += (_, _) => UpdateCursorText();
             Canvas.ActiveLayerChanged += (_, _) => SyncActiveLayer();
@@ -414,8 +415,11 @@ namespace RobotWin.Studio.Pages
         {
             foreach (var tb in ToolStrip.Children.OfType<ToggleButton>())
             {
+                Theme.ToolFlyout.Select(tb, Canvas.Tool.ToString());   // [flyout] a group shows the tool picked by its key too
                 tb.IsChecked = Enum.TryParse<PcbTool>((string)tb.Tag, out var t) && t == Canvas.Tool;
             }
+
+            UpdateToolOptions();
 
             if (Canvas.Tool == PcbTool.Outline || Canvas.Tool == PcbTool.Hole) ShowPanel(0);
         }
@@ -733,6 +737,14 @@ namespace RobotWin.Studio.Pages
                     ShowPanel(3);
                     DrcRulesToggle.IsChecked = true;
                     OnDrcRules(this, new RoutedEventArgs());
+                    break;
+                case "draw":   // [graphics] a logo frame, a filled mark, an arc and a polygon drawn; the rectangle tool with its options
+                    board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Rectangle, Points = { new PcbPoint(3, 3), new PcbPoint(18, 9) }, Width = 0.2 });
+                    board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Circle, Points = { new PcbPoint(10.5, 6), new PcbPoint(12, 6) }, Filled = true });
+                    board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Arc, Layer = GraphicLayer.FabTop, Points = { new PcbPoint(board.Width - 8, board.Height - 8), new PcbPoint(board.Width - 4, board.Height - 8), new PcbPoint(board.Width - 8, board.Height - 4) } });
+                    board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Polygon, Layer = GraphicLayer.Drawings, Points = { new PcbPoint(board.Width - 16, 3), new PcbPoint(board.Width - 6, 3), new PcbPoint(board.Width - 11, 9) } });
+                    Canvas.Refresh();
+                    Canvas.SetTool(PcbTool.Rectangle);
                     break;
                 case "dock-min":   // [dock-min] the properties panel minimized to its strip
                     _dock?.Minimize(DockPlace.Right, true);

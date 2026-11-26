@@ -483,6 +483,9 @@ namespace RobotTwin.CoreSim.Pcb
         public List<MountingHole> MountingHoles { get; set; } = new List<MountingHole>();
         public List<BoardText> Texts { get; set; } = new List<BoardText>();
 
+        /// <summary>[graphics] Lines, rectangles, circles, arcs and polygons drawn on the graphic layers (Pcb/BoardGraphic.cs).</summary>
+        public List<BoardGraphic> Graphics { get; set; } = new List<BoardGraphic>();
+
         /// <summary>[pairs] Differential pairs and length-matched groups the DRC holds the routing to (Pcb/NetLengths.cs).</summary>
         public List<DiffPair> DiffPairs { get; set; } = new List<DiffPair>();
 

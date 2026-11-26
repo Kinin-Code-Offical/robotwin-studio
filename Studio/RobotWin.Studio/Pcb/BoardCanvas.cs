@@ -21,7 +21,15 @@ namespace RobotWin.Studio.Pcb
         Text,
         Dimension,
         Outline,
-        Hole
+        Hole,
+
+        // [graphics] KiCad's drawing tools and the standalone via (Pcb/BoardCanvas.Graphics.cs)
+        Line,
+        Rectangle,
+        Circle,
+        Arc,
+        Polygon,
+        Via
     }
 
     /// <summary>
@@ -268,6 +276,12 @@ namespace RobotWin.Studio.Pcb
             PcbTool.Zone => "Dolgu alanı: köşelere tıklayın · çift tık veya Enter: kapat · Geri: son köşeyi sil · Esc: iptal",
             PcbTool.Measure => "Ölç (Ctrl+Shift+M): iki noktaya tıklayın (pedlere ve vialara yapışır) · Esc: çık",
             PcbTool.Text => "Yazı: serigrafiye yazı koymak için tıklayın",
+            PcbTool.Line => "Çizgi: başlangıca ve bitişe tıklayın; her bitiş yeni çizginin başı olur · Esc: bitir",
+            PcbTool.Rectangle => "Dikdörtgen: iki karşı köşeye tıklayın · Esc: iptal",
+            PcbTool.Circle => "Daire: merkeze, sonra çevresinden bir noktaya tıklayın · Esc: iptal",
+            PcbTool.Arc => "Yay: merkeze, başlangıca ve bitişe tıklayın (saat yönünün tersine) · Esc: iptal",
+            PcbTool.Polygon => "Çokgen: köşelere tıklayın · çift tık, ilk köşeye tıklamak ya da Enter: kapat · Esc: iptal",
+            PcbTool.Via => "Via: yere tıklayın (altındaki yolun, pedin ya da dolgunun hattını alır) · Esc: çık",
             PcbTool.Dimension => "Ölçü çizgisi: başlangıç ve bitişe tıklayın, sonra kaydırıp tıklayın",
             PcbTool.Outline => "Kart kenarı: köşelere tıklayın · çift tık veya Enter: kapat (köşe yarıçapı panelden) · Esc: iptal",
             PcbTool.Hole => "Montaj deliği: yerleştirmek için tıklayın",
@@ -284,6 +298,7 @@ namespace RobotWin.Studio.Pcb
             _router = null;
             _routeStartPad = null;
             _polyPts.Clear();
+            _gfx.Clear();   // [graphics]
             _measureA = _measureB = null;
             _dimA = _dimB = null;
             _drag = DragKind.None;
@@ -387,8 +402,10 @@ namespace RobotWin.Studio.Pcb
             if (ShowPadNames && _scale > 16) DrawPadNames(dc, pads);
             if (ShowSilk) DrawSilk(dc, board);
             if (ShowDrawings) DrawDrawings(dc, board);
+            DrawGraphics(dc, board);   // [graphics] each by its layer's switch
             if (ShowRatsnest) DrawRatsnest(dc, board);
             DrawSelection(dc, board);
+            DrawGraphicPreview(dc);   // [graphics]
 
             // DRC markers.
             foreach (var v in Violations)
@@ -697,6 +714,9 @@ namespace RobotWin.Studio.Pcb
 
                 case MountingHole h:
                     dc.DrawEllipse(null, P(Accent, 1.6), S(h.X, h.Y), Math.Max(h.Drill, h.PadDiameter) / 2 * _scale + 3, Math.Max(h.Drill, h.PadDiameter) / 2 * _scale + 3);
+                    break;
+                case BoardGraphic g:   // [graphics]
+                    DrawSelectedGraphic(dc, g);
                     break;
                 case BoardText t:
                 {

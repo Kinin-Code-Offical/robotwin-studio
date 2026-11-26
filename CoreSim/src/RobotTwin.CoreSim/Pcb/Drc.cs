@@ -513,6 +513,22 @@ namespace RobotTwin.CoreSim.Pcb
                 if (hits > 0) result.Add(($"{comp.RefDes} serigrafisi {hits} pedin üstünden geçiyor (Gerber'de kırpılır)", hx, hy));
             }
 
+            foreach (var g in board.Graphics)   // [graphics] a drawn shape on the legend over a pad is clipped as well
+            {
+                if (g.Layer != GraphicLayer.SilkTop && g.Layer != GraphicLayer.SilkBottom) continue;
+                var side = g.Layer == GraphicLayer.SilkTop ? CopperLayer.Top : CopperLayer.Bottom;
+                var strokes = Silk.GraphicStrokes(g);
+                foreach (var p in pads)
+                {
+                    if (!(p.Pad.IsThroughHole || p.SmdLayer == side)) continue;
+                    if (strokes.Any(s => PadSegmentDistance(p, s.X1, s.Y1, s.X2, s.Y2) < g.Width / 2))
+                    {
+                        result.Add(($"Serigrafi çizimi ({g.Describe()}) {p.Component.RefDes}.{p.Pad.Name} pedinin üstünde", p.X, p.Y));
+                        break;
+                    }
+                }
+            }
+
             foreach (var text in board.Texts)
             {
                 if (text.Layer != GraphicLayer.SilkTop && text.Layer != GraphicLayer.SilkBottom) continue;
