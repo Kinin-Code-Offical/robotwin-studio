@@ -41,7 +41,8 @@ namespace RobotTwin.CoreSim.Tests
                 probe.Stop();
                 _http.Prefixes.Add($"http://localhost:{Port}/");
                 _http.Start();
-                _ = Task.Run(Serve);
+                // its own thread: on a busy CI machine the thread pool can starve the handshake past the client's timeout
+                new Thread(() => Serve().GetAwaiter().GetResult()) { IsBackground = true, Name = "fake rosbridge" }.Start();
             }
 
             private async Task Serve()
@@ -95,7 +96,7 @@ namespace RobotTwin.CoreSim.Tests
             UrdfImport.Import(Path.Combine(AppContext.BaseDirectory, "Fixtures", "rw_arm4.urdf.xacro"), world);
             using var runner = new WorldRunner(world, new RunnerOptions { Firmware = false });
             using var ros = new RosBridgeClient(new Uri($"ws://localhost:{server.Port}/"));
-            await ros.ConnectAsync(TimeSpan.FromSeconds(5));
+            await ros.ConnectAsync(TimeSpan.FromSeconds(20));
             var link = new RosWorldLink(ros, world, runner.Physics!);
             Assert.Contains("j3_elbow", link.JointNames);   // the URDF's own names
 
@@ -148,7 +149,7 @@ namespace RobotTwin.CoreSim.Tests
             UrdfImport.Import(Path.Combine(AppContext.BaseDirectory, "Fixtures", "rw_arm4.urdf.xacro"), world);
             using var runner = new WorldRunner(world, new RunnerOptions { Firmware = false });
             using var ros = new RosBridgeClient(new Uri($"ws://localhost:{server.Port}/"));
-            await ros.ConnectAsync(TimeSpan.FromSeconds(5));
+            await ros.ConnectAsync(TimeSpan.FromSeconds(20));
             var link = new RosWorldLink(ros, world, runner.Physics!);
             const string action = RosWorldLink.DefaultTrajectoryAction;
 
@@ -239,7 +240,7 @@ namespace RobotTwin.CoreSim.Tests
             var world = new WorldDocument();
             using var runner = new WorldRunner(world, new RunnerOptions { Firmware = false });
             using var ros = new RosBridgeClient(new Uri($"ws://localhost:{server.Port}/"));
-            await ros.ConnectAsync(TimeSpan.FromSeconds(5));
+            await ros.ConnectAsync(TimeSpan.FromSeconds(20));
             var link = new RosWorldLink(ros, world, runner.Physics!);
             var sensors = new RobotTwin.CoreSim.Sandbox.Sensing.WorldSensors();
             link.AttachSensors(sensors);
@@ -287,7 +288,7 @@ namespace RobotTwin.CoreSim.Tests
             UrdfImport.Import(Path.Combine(AppContext.BaseDirectory, "Fixtures", "rw_arm4.urdf.xacro"), world);
             using var runner = new WorldRunner(world, new RunnerOptions { Firmware = false });
             using var ros = new RosBridgeClient(new Uri($"ws://localhost:{server.Port}/"));
-            await ros.ConnectAsync(TimeSpan.FromSeconds(5));
+            await ros.ConnectAsync(TimeSpan.FromSeconds(20));
             var link = new RosWorldLink(ros, world, runner.Physics!);
             string elbow = world.Joints.Single(j => j.Name == "j3_elbow").Id, shoulder = world.Joints.Single(j => j.Name == "j2_shoulder").Id;
             double Angle(string id) => runner.Physics!.Scene.Joints.Single(s => s.Id == id).Angle;
@@ -364,7 +365,7 @@ namespace RobotTwin.CoreSim.Tests
 
             using var runner = new WorldRunner(world, new RunnerOptions { Firmware = false });
             using var ros = new RosBridgeClient(new Uri($"ws://localhost:{server.Port}/"));
-            await ros.ConnectAsync(TimeSpan.FromSeconds(5));
+            await ros.ConnectAsync(TimeSpan.FromSeconds(20));
             var link = new RosWorldLink(ros, world, runner.Physics!);
             Assert.Equal(new[] { ("/imu", "imu"), ("/scan", "lidar") }, link.SensorTopics.Select(t => (t.Topic, t.Kind)).OrderBy(t => t.Topic));
             while (runner.Time < 1.0 - 1e-6)
@@ -422,7 +423,7 @@ namespace RobotTwin.CoreSim.Tests
 
             using var runner = new WorldRunner(world, new RunnerOptions { Firmware = false });
             using var ros = new RosBridgeClient(new Uri($"ws://localhost:{server.Port}/"));
-            await ros.ConnectAsync(TimeSpan.FromSeconds(5));
+            await ros.ConnectAsync(TimeSpan.FromSeconds(20));
             var link = new RosWorldLink(ros, world, runner.Physics!);
             var rover = Assert.Single(link.Bases);
             Assert.Equal("base_footprint", rover.Frame);
