@@ -8,7 +8,8 @@ from .client import RobotWinClient, RobotWinError, Server, launch, find_server, 
 __version__ = "1.0.0"
 
 __all__ = ["RobotWinClient", "RobotWinError", "Server", "launch", "find_server", "decode_image", "save_ppm", "save_png",
-           "RobotWinEnv", "EnvSpec", "VectorEnv", "DemoRecorder", "load_demos"]
+           "RobotWinEnv", "EnvSpec", "VectorEnv", "DemoRecorder", "load_demos",
+           "Experiment", "Factor", "Metric", "ExperimentResult", "run_spec"]
 
 
 def __getattr__(name):  # lazy: keep "import robotwin" light and free of optional dependencies
@@ -18,6 +19,9 @@ def __getattr__(name):  # lazy: keep "import robotwin" light and free of optiona
     if name == "VectorEnv":
         from .vector import VectorEnv
         return VectorEnv
+    if name in ("Experiment", "Factor", "Metric", "ExperimentResult", "run_spec"):
+        from . import experiment
+        return getattr(experiment, name)
     if name in ("DemoRecorder", "load_demos"):
         from . import imitation
         return getattr(imitation, name)

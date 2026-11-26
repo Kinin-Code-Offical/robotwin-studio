@@ -114,7 +114,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
     - [ ] Bluepad32 kullanan çizimler için Bluepad32'nin ESP32 çekirdeği (ayrı indirme, onay gerekir); tasarım içindeki kartların çizimleri de `--esp32-compat`'a.
   - RP2040 / STM32;
   - kütüphane uyumluluk matrisi;
-  - derleyici sürümünün projeyle saklanması.
+  - [x] derleyici sürümünün projeyle saklanması: her derleme kartın kodunda neyle derlendiğini saklar ("arduino-cli 1.6.0 · arduino:avr 1.8.8"); başka bir derleyici ya da çekirdekle derlenince günlük söyler (`Firmware/ArduinoCompiler.Toolchain.cs`).
 - [~] **Robotik kontrol:** yukarıdaki kinematik maddesi, ayrıca:
   - [x] yörünge sınırları: her hareket eksenlerin tepe torkuna göre denetlenip (bağlantıların kütle ve eylemsizliği, yerçekimi, sürtünme, tutucudaki parça) gerekirse yavaşlatılıyor; S eğrisi hareketlerde eksen başına jerk sınırı (`Robotics/ArmDynamics.cs`);
   - [x] yol boyunca çarpışma: her hareket başlamadan yolun tamamında (1° adımla) bağlantılar, tutucu ve taşınan parça dünyaya, zemine ve kolun kendisine karşı denetlenir; uyar / durdur / kapalı (`Sandbox/WorldPhysics.ArmPath.cs`);
@@ -127,14 +127,14 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] arıza senaryoları: IMU (kayma, titreşim, donma, I²C sessizliği), pusula (mıknatıs, sessizlik), GPS (uydu kaybı, yansıma), LiDAR (kirli pencere, takılı motor), çizgi sensörleri (kirli lens, ölü LED); `MachineFaults` ile aynı **Özellik ekle → Arıza senaryosu**;
   - [x] füzyon deneyleri: yalnız jiroskop, tümleyen, Mahony ve Madgwick yan yana, gerçek duruşa göre eğim/yön hatası ve RMS; CSV (`Sandbox/Sensing/AttitudeFilters.cs`, `FusionExperiment.cs`);
   - [x] veri dışa aktarma ve etiketleme: **Sensörler** sekmesinde sensör başına CSV; ölçülenin yanında gerçek değer, etiket sütununda o anki arıza senaryosu (`Sandbox/Sensing/SensorLog.cs`).
-- [ ] **Akademik deney araçları:**
-  - deney oluşturucu;
-  - parametre taraması;
-  - toplu ve başsız koşu;
-  - Python ve Jupyter;
-  - güven aralıkları;
-  - otomatik deney raporu;
-  - tohum ve ayarların saklanması.
+- [x] **Akademik deney araçları:** `Automation/Experiment.cs`, **Simülasyon → Deney**, `--experiment` ([13. Deneyler](../kullanim/13-deneyler.md)):
+  - [x] deney oluşturucu;
+  - [x] parametre taraması;
+  - [x] toplu ve başsız koşu;
+  - [x] Python ve Jupyter: `python/robotwin/experiment.py`, `RobotWin.Headless --experiment`, `python/examples/experiment.ipynb`;
+  - [x] güven aralıkları;
+  - [x] otomatik deney raporu;
+  - [x] tohum ve ayarların saklanması.
 - [~] **Endüstriyel otomasyon:** konveyörlü hücre var. Eksikler:
   - [x] fotosel (difüz menzili yansıtmaya bağlı, reflektörlü / karşılıklı ışın, tepki süresi) ve makaralı sınır anahtarı (C–NO / C–NC, ön strok, histerezis);
   - [x] pnömatik: çift etkili silindir ve 5/2 selenoid valf (iki hazne hava kütlesi olarak, ISO 6358 akış, ısıl etki, conta sürtünmesi, çıkış kısmalı hız, uç sensörleri). Sırada: çift bobinli valf, vakum üreteci, kompresör ve tank.

@@ -255,6 +255,11 @@ namespace RobotWin.Studio
                 Navigate("world");
                 _world.OpenAnalysis();
             }, world));
+            m.Items.Add(Item("Deney: parametre taraması…", null, () =>   // [experiment]
+            {
+                Navigate("world");
+                _world.OpenExperiment();
+            }, world));
             m.Items.Add(new Separator());
             var cfg = AppSettings.Current;
             m.Items.Add(Check("Parça hasarı (yanma, sigorta)", null, cfg.EnableDamage, v => { cfg.EnableDamage = v; cfg.Save(); }));

@@ -62,6 +62,20 @@ Paralel: `VectorEnv(spec, n)` (her ortam ayrı sunucu süreci) ya da gymnasium k
 `imitation.record_episodes(env, uzman_politika, "demos/x.jsonl")` gösterimleri JSON Lines olarak kaydeder;
 `load_demos`, `to_arrays`/`save_npz` (numpy), `fit_linear_policy` (saf Python davranış klonlama).
 
+### Deneyler (parametre taraması)
+
+```python
+from robotwin.experiment import Experiment, Factor, Metric
+
+exp = Experiment(world="araba.rwworld", duration=2, repeats=5,
+                 factors=[Factor("environment.AmbientC", [0, 25, 40])],
+                 metrics=[Metric("Plaka.distance", "final", "yol")])
+sonuc = exp.run()          # RobotWin.Headless --experiment, uygulamanın kendi çözücüleri
+kosular, ozet = sonuc.to_pandas()
+```
+
+Her birleşim kendi tohumlarıyla çalışır; `sonuc.metric("yol")` ortalamayı ve %95 güven aralığını verir. Uygulamanın **Deney** penceresinde kaydedilen bir dosya `run_spec("deney.json")` ile çalışır. Jupyter örneği: `examples/experiment.ipynb`.
+
 ### Örnekler (`python/examples`)
 
 | Dosya | Ne gösterir |
@@ -133,6 +147,20 @@ terminate an episode unless `terminate_on_failure=False`.
 
 Parallel training: `VectorEnv(spec, n)` (threads on our side, one server process per env) or
 `make_gym_vector_env(make_spec, n)` / SB3 `SubprocVecEnv` (see `examples/train_ppo.py`).
+
+### Experiments (parameter sweeps)
+
+```python
+from robotwin.experiment import Experiment, Factor, Metric
+
+exp = Experiment(world="car.rwworld", duration=2, repeats=5,
+                 factors=[Factor("environment.AmbientC", [0, 25, 40])],
+                 metrics=[Metric("Plaka.distance", "final", "distance")])
+result = exp.run()        # RobotWin.Headless --experiment, the app's own solvers
+runs, summary = result.to_pandas()
+```
+
+Every combination runs with its own seeds; `result.metric("distance")` gives the mean and its 95 % confidence interval. A file saved from the app's **Experiment** window runs with `run_spec("experiment.json")`. Jupyter example: `examples/experiment.ipynb`.
 
 ### Imitation learning
 

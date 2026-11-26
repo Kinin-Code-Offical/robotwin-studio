@@ -24,6 +24,8 @@ Kullanım / usage:
                     [--world FILE.rwworld | --project FILE.rwproj | --example car|line-follower|obstacle-avoider|quadcopter]
                     [--seed N] [--no-firmware] [--firmware-dir DIR]
   RobotWin.Headless --run SECONDS (--world ... | --example ...) [--dt 0.01] [--seed N]   (toplu koşu / batch run, JSON on stdout)
+  RobotWin.Headless --experiment SPEC.json [--world FILE.rwworld] [--out DIR]
+                    (deney / experiment: runs.csv, summary.csv, report.md, experiment.json; 'progress n/total' on stdout)
 
 --api 0 picks a free port; the line 'ROBOTWIN_API_READY port=<n>' on stdout tells launchers it is listening.
 ";
@@ -46,6 +48,9 @@ Kullanım / usage:
                 Console.WriteLine(Usage);
                 return args.Length == 0 ? 1 : 0;
             }
+
+            // [experiment] a designed experiment (CoreSim Automation/Experiment.cs), before any world is loaded for the API
+            if (Arg("--experiment") is { } specPath) return Experiment(specPath, Arg("--world"), Arg("--out"));
 
             var host = new ApiHostOptions { Backend = "headless", Token = Arg("--token") };
             host.FirmwareSearchPath.Add(Path.Combine(AppContext.BaseDirectory, "Firmware"));
@@ -151,6 +156,50 @@ Kullanım / usage:
             done.Wait();
             server.Stop();
             return 0;
+        }
+
+        /// <summary>
+        /// [experiment] --experiment spec.json [--world file.rwworld] [--out folder]: every combination of the spec's factors
+        /// with its seeded repeats, the metrics reduced per run, statistics per combination. Progress goes to stdout as
+        /// "progress n/total", then "ROBOTWIN_EXPERIMENT_DONE folder=…". 0: every run finished; 1: some failed; 2: no start.
+        /// </summary>
+        private static int Experiment(string specPath, string? worldPath, string? outFolder)
+        {
+            try
+            {
+                var spec = ExperimentSpec.FromJson(File.ReadAllText(specPath));
+                string specDir = Path.GetDirectoryName(Path.GetFullPath(specPath)) ?? ".";
+                string? world = worldPath ?? (spec.WorldFile is { Length: > 0 } wf ? (Path.IsPathRooted(wf) ? wf : Path.Combine(specDir, wf)) : null);
+                if (world == null || !File.Exists(world))
+                {
+                    Console.Error.WriteLine("Dünya dosyası yok / no world file: --world or the spec's worldFile.");
+                    return 2;
+                }
+
+                var doc = RobotTwin.CoreSim.Sandbox.WorldDocument.Load(world);
+                string stem = string.Concat(spec.Name.Split(Path.GetInvalidFileNameChars()));
+                string folder = Path.GetFullPath(outFolder ?? Path.Combine(specDir, stem + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture)));
+                Directory.CreateDirectory(folder);
+                var result = ExperimentRunner.Run(spec, doc, new ConsoleProgress());
+                var utf8 = new System.Text.UTF8Encoding(false);
+                File.WriteAllText(Path.Combine(folder, "runs.csv"), result.RunsCsv(), utf8);
+                File.WriteAllText(Path.Combine(folder, "summary.csv"), result.SummaryCsv(), utf8);
+                File.WriteAllText(Path.Combine(folder, "report.md"), result.Markdown(doc.Title), utf8);
+                spec.WorldFile = Path.GetFullPath(world);
+                File.WriteAllText(Path.Combine(folder, "experiment.json"), spec.ToJson(), utf8);
+                Console.WriteLine("ROBOTWIN_EXPERIMENT_DONE folder=" + folder);
+                return result.Runs.Exists(r => r.Error.Length > 0) ? 1 : 0;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException || ex is JsonException || ex is InvalidDataException)
+            {
+                Console.Error.WriteLine("Deney çalıştırılamadı / experiment failed to start: " + ex.Message);
+                return 2;
+            }
+        }
+
+        private sealed class ConsoleProgress : IProgress<(int Done, int Total)>
+        {
+            public void Report((int Done, int Total) value) => Console.WriteLine($"progress {value.Done}/{value.Total}");
         }
 
         private static int Batch(ApiSession session, double seconds, double dt)

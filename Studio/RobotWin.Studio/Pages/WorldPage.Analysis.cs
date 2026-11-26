@@ -105,6 +105,15 @@ namespace RobotWin.Studio.Pages
         /// <summary>Simülasyon › Analiz / render: opens the render window for a 2 s run.</summary>
         public RenderWindow? OpenAnalysis() => OpenRender();
 
+        /// <summary>[experiment] Simülasyon › Deney: the experiment designer on the open world (World/ExperimentWindow.cs).</summary>
+        public Window? OpenExperiment()
+        {
+            if (World == null || Window.GetWindow(this) is not { } owner) return null;
+            var w = new RobotWin.Studio.World.ExperimentWindow(owner, World);
+            w.Show();
+            return w;
+        }
+
         /// <summary>--analysis in a world snapshot: opens the render window, renders and captures that window.</summary>
         private void AnalysisSnapshot()
         {

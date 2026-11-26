@@ -1806,6 +1806,18 @@ namespace RobotWin.Studio.Pages
                 editor.Show();
                 App.SnapshotTarget = editor.Content as FrameworkElement;
             }
+
+            ExperimentSnapshot();
+        }
+
+        /// <summary>[experiment] ROBOTWIN_EXPERIMENT=1: the experiment designer on this world is the picture; =run also runs a short one.</summary>
+        private void ExperimentSnapshot()
+        {
+            if (Environment.GetEnvironmentVariable("ROBOTWIN_EXPERIMENT") is { Length: > 0 } experiment && OpenExperiment() is RobotWin.Studio.World.ExperimentWindow designer)
+            {
+                if (experiment == "run") designer.RunForSnapshot();
+                App.SnapshotTarget = designer.Content as FrameworkElement;
+            }
         }
 
         public void PrepareSnapshot(string? template, string? simulate)
@@ -1937,6 +1949,7 @@ namespace RobotWin.Studio.Pages
             AnalysisSnapshot();   // [analysis] Pages/WorldPage.Analysis.cs
             FinishTerrainSnapshot(simulate != null); // [terrain]
             PlaneSnapshotFinish();   // [ps5plane] Pages/WorldPage.Plane.cs (after the terrain framing)
+            ExperimentSnapshot();   // [experiment]
         }
     }
 

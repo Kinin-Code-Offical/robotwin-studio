@@ -785,6 +785,14 @@ namespace RobotWin.Studio.Pages
                     tf.BuiltAt = DateTime.UtcNow;
                     tf.BuiltFromHash = FirmwareSource.HashOf(tf.Bundle());
                     tf.Target = fqbn;
+                    // [toolchain] what it was built with, kept in the project; another compiler or core than last time is said
+                    if (await ArduinoCompiler.ToolchainOfAsync(fqbn) is { } toolchain)
+                    {
+                        if (tf.Toolchain is { Length: > 0 } before && !string.Equals(before, toolchain, StringComparison.Ordinal))
+                            BuildLog.Text = Shell.Lang.T($"Not: bu kart en son {before} ile derlenmişti; bu derleme {toolchain} ile.") + "\n\n" + BuildLog.Text;
+                        tf.Toolchain = toolchain;
+                        BuildStatus.ToolTip = toolchain;
+                    }
                     target.Changed($"Derlendi: {target.Title} · {result.FlashBytes} bayt flash, {result.RamBytes} bayt RAM · {result.Duration.TotalSeconds:F1} s");
                 }
 

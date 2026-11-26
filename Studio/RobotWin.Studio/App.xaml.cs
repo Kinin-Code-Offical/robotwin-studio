@@ -113,6 +113,13 @@ namespace RobotWin.Studio
                 return;
             }
 
+            if (Arg("--experiment") is { } experimentSpec)
+            {
+                // [experiment] a designed experiment headless (App.Experiment.cs)
+                Shutdown(ExperimentCommand(experimentSpec, Arg("--experiment-world"), Arg("--experiment-out")));
+                return;
+            }
+
             if (Arg("--esp32-build") is { } esp32Sketch)
             {
                 // [esp32hw] --esp32-build sketch.ino [--esp32-out folder] [--esp32-install]: the hardware-compatible build of

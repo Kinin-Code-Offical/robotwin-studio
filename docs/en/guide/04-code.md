@@ -66,6 +66,8 @@ A sketch can have several files: the main `.ino`, `.h` / `.cpp` files next to it
 
 The other toolbar buttons stop the simulation and reset the board.
 
+Every build writes what it was made with into the board's code in the project: the compiler's and the board core's versions, e.g. `arduino-cli 1.6.0 · arduino:avr 1.8.8` (hover over the build status to see it). When the project is built on another computer or with an updated compiler, the **Compiler** tab says so first: the same code can give a different binary with another avr-gcc.
+
 ## Code completion and signature help
 
 The editor reads the board's real header files:

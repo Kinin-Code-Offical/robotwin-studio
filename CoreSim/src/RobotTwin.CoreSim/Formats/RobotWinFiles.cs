@@ -184,6 +184,12 @@ namespace RobotTwin.CoreSim.Formats
         /// <summary>Hash of <see cref="Source"/> at the time of the build (detects stale builds).</summary>
         public string? BuiltFromHash { get; set; }
 
+        /// <summary>
+        /// [toolchain] What the last build was made with ("arduino-cli 1.1.1 · arduino:avr 1.8.6"): kept with the project so
+        /// a later build with another compiler or core says so, and the same binary can be rebuilt on purpose.
+        /// </summary>
+        public string? Toolchain { get; set; }
+
         /// <summary>[code] The sketch's other files (tabs, headers, src/…), compiled together with the main one.</summary>
         public List<FirmwareFile> Files { get; set; } = new List<FirmwareFile>();
 

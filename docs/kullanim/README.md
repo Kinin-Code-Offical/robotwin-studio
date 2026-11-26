@@ -22,6 +22,7 @@ Bu kılavuz uygulamayı adım adım anlatır. Sırayla okuyabilir ya da doğruda
 | [10. Sık sorulan sorular](10-sss.md) | Sorunlar ve çözümleri |
 | [11. Yenilikler](11-yenilikler.md) | Her sürümde neler geldi, neler değişti ve düzeltildi |
 | [12. Doğrulama](12-dogrulama.md) | Her çözücünün teoriden ve kıyaslama problemlerinden sapması, hata payları |
+| [13. Deneyler](13-deneyler.md) | Parametre taraması, tohumlu tekrarlar, ortalama ve %95 güven aralığı, başsız çalıştırma ve rapor |
 
 ## Beş dakikada ne yapabilirim?
 

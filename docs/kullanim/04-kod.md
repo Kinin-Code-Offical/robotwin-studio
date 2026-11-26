@@ -66,6 +66,8 @@ Bir çizim birden çok dosyadan oluşabilir: ana `.ino`, yanında `.h` / `.cpp` 
 
 Araç çubuğundaki diğer düğmeler simülasyonu durdurur ve kartı resetler.
 
+Her derleme, kartın kodunda neyle derlendiğini projeye yazar: derleyici ve kart çekirdeğinin sürümü, örneğin `arduino-cli 1.6.0 · arduino:avr 1.8.8` (derleme durumunun üstüne gelince görünür). Proje başka bir bilgisayarda ya da güncellenmiş bir derleyiciyle derlenirse **Derleyici** sekmesi önce bunu söyler: aynı kod başka bir avr-gcc ile farklı bir ikili verebilir.
+
 ## Kod tamamlama ve imza yardımı
 
 Editör, kartın gerçek başlık dosyalarını okur:
