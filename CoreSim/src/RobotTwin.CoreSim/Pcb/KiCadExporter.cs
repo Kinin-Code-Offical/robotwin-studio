@@ -527,6 +527,7 @@ namespace RobotTwin.CoreSim.Pcb
 
                 double angle = geo.Angle;
                 if (angle > 90.0001 || angle <= -90) angle += 180;
+                if (d.Label().Length == 0) continue;   // [dims] a centre mark has no text
                 yield return new SNode("gr_text", Q(d.Label()), new SNode("at", N(geo.TextX), N(geo.TextY), N(-angle)),
                     new SNode("layer", Q(layer)), Uid("dim:" + i.ToString(CultureInfo.InvariantCulture) + ":text"),
                     new SNode("effects", new SNode("font", new SNode("size", N(d.TextSize), N(d.TextSize)), new SNode("thickness", N(0.12)))));

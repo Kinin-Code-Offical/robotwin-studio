@@ -48,7 +48,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Via boyutu seçimi | yol / via seçenek çubuğu | var | |
 | Etkin katman | katman listesi | var | |
 | Katman çifti (via ile geçilen) | Katmanlar sekmesinde iki liste; V yol çizerken via koyup çiftin öbürüne, çizmezken etkin katmanı çiftin öbürüne geçirir (saklanır; kartta olmayan çift üst ↔ alt) | var | |
-| Izgara, yakınlık | ızgara panelde, yakınlık yok | kısmi | 2 |
+| Izgara, yakınlık | ızgara panelde; mıknatıs: pedlere, yollara (hiç / çizerken / her zaman), çizimlere ve kenara; elmas işaret | var | |
 | Kilitleri geçersiz kıl | yok | yok | 3 |
 
 ### Sol çubuk (görünüm anahtarları)
@@ -84,7 +84,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Yazı | Yazı | var | |
 | Yazı kutusu, tablo | yok | yok | 3 |
 | Ölçü (hizalı) | Ölçü çizgisi | var | |
-| Ölçü (dik, yarıçap, kılavuz, merkez) | yok | yok | 2 |
+| Ölçü (dik, yarıçap, kılavuz, merkez) | Ölçü aracında Tür: hizalı, dik (yatay/dikey), yarıçap, kılavuz (not), merkez işareti; yazı geçersiz kılma | var | |
 | Silici (tıklananı sil) | Del | kısmi | 3 |
 | Izgara orijini, delik orijini | yok | yok | 3 |
 

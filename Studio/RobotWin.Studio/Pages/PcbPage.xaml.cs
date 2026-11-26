@@ -59,6 +59,9 @@ namespace RobotWin.Studio.Pages
             InitializeComponent();
             Canvas.ShowGrid = AppSettings.Current.PcbGridShown;   // [grid]
             Canvas.ZoneOutlines = AppSettings.Current.PcbZoneOutlines;   // [zone-look]
+            if (Enum.TryParse<MagnetMode>(AppSettings.Current.PcbMagnetPads, out var magnetPads)) Canvas.MagnetPads = magnetPads;   // [magnet]
+            if (Enum.TryParse<MagnetMode>(AppSettings.Current.PcbMagnetTracks, out var magnetTracks)) Canvas.MagnetTracks = magnetTracks;
+            Canvas.MagnetGraphics = AppSettings.Current.PcbMagnetGraphics;
             if (Enum.TryParse<CopperLayer>(AppSettings.Current.PcbLayerPairA, out var pairA)) Canvas.PairA = pairA;   // [layer-pair]
             if (Enum.TryParse<CopperLayer>(AppSettings.Current.PcbLayerPairB, out var pairB)) Canvas.PairB = pairB;
             Canvas.TrackOpacity = AppSettings.Current.PcbTrackOpacity;   // [opacity]
@@ -793,6 +796,31 @@ namespace RobotWin.Studio.Pages
                     Canvas.ZoneOutlines = true;
                     Canvas.Refresh();
                     break;
+
+                case "dims":   // [dims] one of each kind: aligned across the top, orthogonal down the side, a mounting hole's radius and centre, a leader
+                {
+                    board.MountingHoles.Add(new MountingHole { X = 5, Y = 5, Drill = 3.2, PadDiameter = 6 });
+                    board.Dimensions.Add(new BoardDimension { X1 = 0, Y1 = 0, X2 = board.Width, Y2 = 0, Offset = -4 });
+                    board.Dimensions.Add(new BoardDimension { Kind = DimensionKind.Orthogonal, Vertical = true, X1 = board.Width, Y1 = 0, X2 = board.Width, Y2 = board.Height, Offset = 5 });
+                    board.Dimensions.Add(new BoardDimension { Kind = DimensionKind.Center, X1 = 5, Y1 = 5, X2 = 9, Y2 = 5 });
+                    board.Dimensions.Add(new BoardDimension { Kind = DimensionKind.Radial, X1 = 5, Y1 = 5, X2 = 5 + 3 / Math.Sqrt(2), Y2 = 5 + 3 / Math.Sqrt(2), Offset = 4 });
+                    board.Dimensions.Add(new BoardDimension { Kind = DimensionKind.Leader, X1 = board.Width - 6, Y1 = board.Height - 4, X2 = board.Width + 3, Y2 = board.Height + 5, Text = "M3 VİDA" });
+                    Canvas.ShowDrawings = true;
+                    Canvas.Refresh();
+                    Canvas.SelectAll();
+                    Canvas.FitSelection();
+                    Canvas.Select(null);
+                    break;
+                }
+
+                case "magnet":   // [magnet] a line from a pad's centre, the pointer a little off a track's end: caught there
+                {
+                    var pad = board.Pads().First();
+                    var track = board.Tracks.OrderByDescending(t => t.X2).First();
+                    Canvas.SimulateDrawForSnapshot(pad.X + 0.2, pad.Y - 0.2, track.X2 + 0.25, track.Y2 + 0.2);
+                    ShowPanel(0);
+                    break;
+                }
 
                 case "footprints":   // [fp-assign] the Assign Footprints table
                     ShowFootprintTable();
@@ -1773,6 +1801,21 @@ namespace RobotWin.Studio.Pages
             double currentGrid = grids.Select(g => g.Mm).OrderBy(g => Math.Abs(g - Canvas.GridSize)).First();
             BoardPanel.Children.Add(Row("Yakalama ızgarası", Combo(grids.Select(g => g.Mm), currentGrid, v => { Canvas.GridSize = v; Canvas.InvalidateVisual(); UpdateCursorText(); }, v => grids.First(g => g.Mm == v).Label), 110));
 
+            // [magnet] KiCad's Magnetic items: before the grid, the pointer goes to what is near it
+            var modes = new[] { MagnetMode.Never, MagnetMode.Creating, MagnetMode.Always };
+            string ModeName(MagnetMode m) => Lang.T(m switch { MagnetMode.Never => "Hiç", MagnetMode.Creating => "Çizerken", _ => "Her zaman" });
+            void SaveMagnet()
+            {
+                AppSettings.Current.PcbMagnetPads = Canvas.MagnetPads.ToString();
+                AppSettings.Current.PcbMagnetTracks = Canvas.MagnetTracks.ToString();
+                AppSettings.Current.PcbMagnetGraphics = Canvas.MagnetGraphics;
+                AppSettings.Current.Save();
+            }
+
+            BoardPanel.Children.Add(Row("Pedlere yakala", Combo(modes, Canvas.MagnetPads, m => { Canvas.MagnetPads = m; SaveMagnet(); }, ModeName), 110));
+            BoardPanel.Children.Add(Row("Yollara yakala", Combo(modes, Canvas.MagnetTracks, m => { Canvas.MagnetTracks = m; SaveMagnet(); }, ModeName), 110));
+            BoardPanel.Children.Add(Switch("Çizimlere ve kart kenarına yakala", Canvas.MagnetGraphics, v => { Canvas.MagnetGraphics = v; SaveMagnet(); }));
+
             BoardPanel.Children.Add(Overline("Özet"));
             var conn = BoardConnectivity.Build(board);
             int unrouted = conn.Unrouted().Count;
@@ -1907,7 +1950,19 @@ namespace RobotWin.Studio.Pages
                     host.Children.Add(Buttons(Button("Özellikler…", (_, _) => EditItem(x), true), Button("Sil", (_, _) => Canvas.DeleteSelection())));
                     break;
                 case BoardDimension d:
-                    host.Children.Add(new TextBlock { Text = $"Ölçü · {d.Label(Canvas.UseMil)}", Style = S("Text.Subtitle") });
+                    host.Children.Add(new TextBlock { Text = $"{Shell.Lang.T(DimensionKindName(d.Kind))} · {d.Label(Canvas.UseMil)}", Style = S("Text.Subtitle") });
+                    if (d.Kind != DimensionKind.Center)   // [dims] a leader's note, or a value written instead of the measured one (KiCad's override)
+                    {
+                        var note = new TextBox { Text = d.Text ?? string.Empty, ToolTip = Shell.Lang.T(d.Kind == DimensionKind.Leader ? "Kılavuzun notu" : "Boşsa ölçülen değer yazılır") };
+                        note.LostFocus += (_, _) =>
+                        {
+                            string t = note.Text.Trim();
+                            if (t == (d.Text ?? string.Empty)) return;
+                            Edit("Ölçü yazısı", () => d.Text = t.Length == 0 ? null : t);
+                        };
+                        host.Children.Add(Row(d.Kind == DimensionKind.Leader ? "Not" : "Yazı", note));
+                    }
+
                     host.Children.Add(Row("Yazı boyu (mm)", Number(d.TextSize, s => Edit("Ölçü yazısı", () => d.TextSize = s), 0.3, 10)));
                     host.Children.Add(Buttons(Button("Sil", (_, _) => Canvas.DeleteSelection())));
                     break;

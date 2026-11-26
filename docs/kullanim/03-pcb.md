@@ -72,6 +72,8 @@ Araç çubuğundaki **Damla** düğmesi KiCad ve Altium'daki damlaları açar: i
 Sol araç şeridinde köşesinde küçük üçgen olan düğmeler araç gruplarıdır: basılı tutunca ya da sağ tıklayınca gruptaki araçlar adlarıyla açılır, seçilen araç düğmenin yüzü olur.
 
 - **Çizim** grubu: **Çizgi** (her bitiş yeni çizginin başı olur, Esc bitirir), **Dikdörtgen** (iki karşı köşe), **Daire** (merkez, çevreden bir nokta), **Yay** (merkez, başlangıç, bitiş) ve **Çokgen** (köşeler; çift tık, ilk köşe ya da Enter kapatır). Backspace son noktayı geri alır. Tuvalin sol üstündeki seçenek çubuğundan katman (üst / alt serigrafi, üst / alt montaj, çizimler), çizgi kalınlığı ve **Dolgulu** seçilir. Serigrafideki şekiller Gerber'e yazılır (dolgulu olanlar taranarak), KiCad'e `gr_line`, `gr_rect`, `gr_circle`, `gr_arc`, `gr_poly` olarak gider; bir pedin üstüne düşen serigrafi çizimini DRC bildirir. Şekiller seçilir, taşınır (M), silinir; seçim süzgecinde **Çizimler** olarak geçer.
+- **Mıknatıs** (KiCad'in mıknatıslı öğeleri; **Kart** sekmesinde **Izgara ve birim** altında): imleç ızgaradan önce yakınındakine gider: **Pedlere yakala** pedin, via'nın ve deliğin merkezine, **Yollara yakala** yolun ucuna ya da orta çizgisine (her biri **Hiç**, **Çizerken** ya da **Her zaman**), **Çizimlere ve kart kenarına yakala** çizimlerin, ölçülerin ve kenarın köşelerine ve merkezlerine. Yakalanan yerde küçük bir elmas görünür. Çizim araçları, dolgu ve kenar köşeleri, cetvel ve ölçüler kullanır; seçimler saklanır.
+- **Ölçü** aracı (Ctrl+Shift+H), KiCad'in ölçü türleriyle; seçenek çubuğundaki **Tür**: **Hizalı** (iki nokta, sonra çizginin yanı), **Dik (yatay / dikey)** (iki nokta, sonra üstüne ya da altına çekince yatay, yanına çekince dikey uzaklık), **Yarıçap** (merkez, çemberden bir nokta, sonra dışarı; "R 3.00 mm" yazar), **Kılavuz** (okun ucu, sonra yazının yeri; not sorulur) ve **Merkez işareti** (merkez, sonra artının ucu). Seçili ölçünün **Yazı** kutusu ölçülen değerin yerine yazılacak metni (kılavuzda notu) alır, boşsa değer yazılır. Ölçüler çizimde, Çizdir'de, Gerber'de ve KiCad'de aynı çizgilerle çıkar.
 - **Yol** grubu: **Yol** (X) ve **Uzunluk ayarı**. Yol çizerken seçenek çubuğunda yol genişliği (hat sınıfından ya da bir adım), via boyutu ve etkin katman seçilir.
 - **Görünüm çubuğu** (kartın sağ üstü): kartı sığdır, seçime sığdır, yakınlaştır, uzaklaştır; seçimi döndür, öbür yüze çevir, kilitle; **Bul** (Ctrl+F) parçayı tanımlayıcısından ya da değerinden, hattı ve yazıyı bulur, seçince oraya gider (hatta vurgular).
 - **Alanlar** grubu: **Bakır dolgu alanı** (Z) ve **Yasak bölge** (KiCad'in kural alanı). Yasak bölge köşelere tıklanarak çizilir; seçenek çubuğundan neyin yasak olduğu (yol, via, dolgu, parça) ve katmanı (etkin katman ya da bütün katmanlar) seçilir. Dolgu bu alanı boş bırakır, iki yönlendirici de kenarlarını aşmaz, DRC içindeki yolu, viayı, dolguyu ve (isteniyorsa) parçayı **Yasak bölge** hatası olarak bildirir. KiCad'e keepout bölgesi olarak gider. Kırmızı taralı çizilir; kenarından seçilir, taşınır, silinir.
@@ -201,7 +203,7 @@ Tuvalin sağ üstündeki araç kutusundaki ızgara düğmesi ızgarayı gösteri
 | H | Yalnızca etkin katmanı göster / hepsini göster |
 | 1 tuşunun solundaki tuş | İmleçteki hattı vurgula (sol şeritteki göz biçimli **Hattı vurgula** aracı tıklananı vurgular; aynı hatta ya da boşa tıklamak kaldırır) |
 | Ctrl+Shift+M | Ölç |
-| Ctrl+Shift+H | Ölçü çizgisi |
+| Ctrl+Shift+H | Ölçü |
 | T | Serigrafi yazısı |
 | F1 veya ? | Tüm PCB kısayolları |
 | F8 / Shift+F8 | Sonraki / önceki DRC işareti |

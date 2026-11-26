@@ -125,6 +125,11 @@ namespace RobotWin.Studio.Shell
         public bool PcbPlotEdge { get; set; } = true;
         public bool PcbPlotLabel { get; set; } = true;
 
+        /// <summary>[magnet] KiCad's Magnetic items: pads and tracks (Never, Creating, Always), drawings and the edge.</summary>
+        public string PcbMagnetPads { get; set; } = "Always";
+        public string PcbMagnetTracks { get; set; } = "Creating";
+        public bool PcbMagnetGraphics { get; set; } = true;
+
         /// <summary>[zone-look] Whether the PCB editor draws pours by their outline only.</summary>
         public bool PcbZoneOutlines { get; set; }
 

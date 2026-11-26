@@ -8611,7 +8611,26 @@
   "Bağlantı noktası kaldırıldı: teller yalnız kesişiyor": "Junction removed: the wires only cross",
   "Burada tel yok": "No wire here",
   "Burada kesişen ikinci bir tel yok": "No second wire crosses here",
-  "Bağlantı noktası": "Junction"
+  "Bağlantı noktası": "Junction",
+  "Hizalı": "Aligned",
+  "Dik (yatay / dikey)": "Orthogonal (horizontal / vertical)",
+  "Kılavuz": "Leader",
+  "Merkez işareti": "Centre mark",
+  "Hizalı: iki nokta arası · Dik: yalnız yatay ya da dikey · Yarıçap: dairenin · Kılavuz: oklu not · Merkez: artı işareti": "Aligned: between two points · Orthogonal: only across or only up · Radius: a circle's · Leader: a note with an arrow · Centre: a cross",
+  "Dik ölçü: iki noktaya tıklayın, sonra üstüne/altına (yatay) ya da yanına (dikey) çekip tıklayın": "Orthogonal dimension: click two points, then pull above/below (horizontal) or to the side (vertical) and click",
+  "Yarıçap: merkeze, sonra çemberin bir noktasına tıklayın, sonra dışarı çekip tıklayın": "Radius: click the centre, then a point on the circle, then pull outwards and click",
+  "Kılavuz: okun ucuna, sonra yazının yerine tıklayın; not sorulur": "Leader: click the arrow's tip, then where the text goes; it asks for the note",
+  "Merkez işareti: merkeze, sonra işaretin ucuna tıklayın": "Centre mark: click the centre, then the end of the mark",
+  "Kılavuzun notu:": "The leader's note:",
+  "Kılavuzun notu": "The leader's note",
+  "Boşsa ölçülen değer yazılır": "Empty: the measured value is written",
+  "Merkez işareti eklendi": "Centre mark added",
+  "Pedlere yakala": "Snap to pads",
+  "Yollara yakala": "Snap to tracks",
+  "Çizimlere ve kart kenarına yakala": "Snap to drawings and the board edge",
+  "Hiç": "Never",
+  "Çizerken": "While drawing",
+  "Her zaman": "Always"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -12068,6 +12087,8 @@
   "{…} üst nesnesinden ayrıldı": "{0} taken off its parent",
   "{…} katman çizildi → {…}": "{0} layers plotted → {1}",
   "{…} SVG dosyası yazıldı → {…}": "{0} SVG files written → {1}",
-  "Bağlantı noktası: {…} tel birleşti": "Junction: {0} wires joined"
+  "Bağlantı noktası: {…} tel birleşti": "Junction: {0} wires joined",
+  "Kılavuz eklendi: {…}": "Leader added: {0}",
+  "Ölçü eklendi: {…}": "Dimension added: {0}"
  }
 }

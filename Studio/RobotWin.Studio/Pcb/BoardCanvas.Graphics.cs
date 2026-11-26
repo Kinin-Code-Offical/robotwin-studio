@@ -85,7 +85,7 @@ namespace RobotWin.Studio.Pcb
 
         private void GraphicClick(double x, double y, bool doubleClick)
         {
-            var p = new PcbPoint(Snap(x), Snap(y));
+            var p = Magnet(x, y);   // [magnet]
             if (_tool == PcbTool.Polygon && (doubleClick || (_gfx.Count >= 3 && Near(_gfx[0], p))))
             {
                 FinishGraphic();
@@ -190,7 +190,7 @@ namespace RobotWin.Studio.Pcb
         {
             if (!IsGraphicTool(_tool) || _gfx.Count == 0) return;
             var pts = _gfx.ToList();
-            pts.Add(new PcbPoint(Snap(_cursor.X), Snap(_cursor.Y)));
+            pts.Add(Magnet(_cursor.X, _cursor.Y));   // [magnet]
             var g = new BoardGraphic { Shape = ShapeOf(_tool), Layer = GraphicDrawLayer, Width = DrawWidth, Points = pts };
             var pen = new Pen(SymbolRenderer.Brush(A(Accent, (byte)0xD0)), Math.Max(1, DrawWidth * _scale)) { DashStyle = DashStyles.Dash };
             pen.Freeze();
@@ -305,6 +305,7 @@ namespace RobotWin.Studio.Pcb
                         break;
                     case BoardDimension d:
                         Add(d.X1, d.Y1, d.X2, d.Y2);
+                        foreach (var l in d.Geometry().Lines) Add(l.X1, l.Y1, l.X2, l.Y2);   // [dims] its line out to the side and its leader too
                         break;
                 }
             }

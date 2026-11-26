@@ -191,6 +191,16 @@ namespace RobotWin.Studio.Pages
             new TextBlock { Text = text, Style = S("Text.Caption"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(left, 0, 6, 0) };
 
         /// <summary>The options of the tool in use, over the board's top left corner; hidden for tools without any.</summary>
+        /// <summary>[dims] A dimension kind's name.</summary>
+        internal static string DimensionKindName(DimensionKind k) => k switch
+        {
+            DimensionKind.Orthogonal => "Dik (yatay / dikey)",
+            DimensionKind.Radial => "Yarıçap",
+            DimensionKind.Leader => "Kılavuz",
+            DimensionKind.Center => "Merkez işareti",
+            _ => "Hizalı"
+        };
+
         private void UpdateToolOptions()
         {
             ToolOptionsRow.Children.Clear();
@@ -209,6 +219,23 @@ namespace RobotWin.Studio.Pages
             if (Canvas.Tool is PcbTool.Route or PcbTool.Via or PcbTool.DiffPair)
             {
                 RouteOptions();
+                return;
+            }
+
+            if (Canvas.Tool == PcbTool.Dimension)   // [dims] KiCad's dimension kinds
+            {
+                ToolOptions.Visibility = Visibility.Visible;
+                var kinds = new[] { DimensionKind.Aligned, DimensionKind.Orthogonal, DimensionKind.Radial, DimensionKind.Leader, DimensionKind.Center };
+                var kind = Combo(kinds, Canvas.DimKind, k =>
+                {
+                    Canvas.DimKind = k;
+                    Canvas.InvalidateVisual();
+                    W.Status = Shell.Lang.T(Canvas.ToolHint());
+                }, k => Shell.Lang.T(DimensionKindName(k)));
+                kind.Width = 150;
+                kind.ToolTip = Shell.Lang.T("Hizalı: iki nokta arası · Dik: yalnız yatay ya da dikey · Yarıçap: dairenin · Kılavuz: oklu not · Merkez: artı işareti");
+                ToolOptionsRow.Children.Add(Label("Tür"));
+                ToolOptionsRow.Children.Add(kind);
                 return;
             }
 

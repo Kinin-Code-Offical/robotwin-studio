@@ -323,7 +323,14 @@ namespace RobotWin.Studio.Pcb
             PcbTool.Keepout => "Yasak bölge: köşelere tıklayın · çift tık veya Enter: kapat · seçenek çubuğundan katman ve neyin yasak olduğu · Esc: iptal",
             PcbTool.DiffPair => "Fark çifti: bir çiftin (D+/D−, CAN H/L, _P/_N …) pedine tıklayın · tıklayarak ilerleyin, iki yol çiftin aralığıyla birlikte gider · karşı uçtaki çift pedine tıklayınca biter · Enter: burada bitir · Geri: son parça · Esc: iptal",
             PcbTool.Tune => "Uzunluk ayarı: kısa kalan hattın uzun, düz bir parçasına tıklayın; kıvrımlar hattı çiftinin ya da grubunun uzunluğuna getirir · Esc: çık",
-            PcbTool.Dimension => "Ölçü çizgisi: başlangıç ve bitişe tıklayın, sonra kaydırıp tıklayın",
+            PcbTool.Dimension => DimKind switch
+            {
+                DimensionKind.Orthogonal => "Dik ölçü: iki noktaya tıklayın, sonra üstüne/altına (yatay) ya da yanına (dikey) çekip tıklayın",
+                DimensionKind.Radial => "Yarıçap: merkeze, sonra çemberin bir noktasına tıklayın, sonra dışarı çekip tıklayın",
+                DimensionKind.Leader => "Kılavuz: okun ucuna, sonra yazının yerine tıklayın; not sorulur",
+                DimensionKind.Center => "Merkez işareti: merkeze, sonra işaretin ucuna tıklayın",
+                _ => "Ölçü çizgisi: başlangıç ve bitişe tıklayın, sonra kaydırıp tıklayın"
+            },
             PcbTool.Outline => "Kart kenarı: köşelere tıklayın · çift tık veya Enter: kapat (köşe yarıçapı panelden) · Esc: iptal",
             PcbTool.Hole => "Montaj deliği: yerleştirmek için tıklayın",
             PcbTool.Highlight => "Hattı vurgula: bir yola, pede, via'ya ya da dolguya tıklayın · aynı hatta ya da boşa tıklayınca kalkar · Esc: çık",
@@ -474,6 +481,7 @@ namespace RobotWin.Studio.Pcb
             DrawPolygonPreview(dc);
             DrawMeasure(dc);
             DrawDimensionPreview(dc);
+            DrawMagnetMark(dc);   // [magnet]
         }
 
         private StreamGeometry Poly(IReadOnlyList<PcbPoint> pts)
@@ -913,8 +921,7 @@ namespace RobotWin.Studio.Pcb
             foreach (var d in Board.Dimensions)
             {
                 var geo = d.Geometry();
-                var main = geo.Lines[2];
-                if (Geometry.PointSegmentDistance(x, y, main.X1, main.Y1, main.X2, main.Y2) <= 5 / _scale) return d;
+                if (geo.Lines.Any(l => Geometry.PointSegmentDistance(x, y, l.X1, l.Y1, l.X2, l.Y2) <= 5 / _scale)) return d;   // [dims] any of its lines
                 if (Math.Abs(x - geo.TextX) < 2 && Math.Abs(y - geo.TextY) < d.TextSize) return d;
             }
 
@@ -1338,7 +1345,7 @@ namespace RobotWin.Studio.Pcb
 
         private void PolygonClick(double x, double y, bool doubleClick)
         {
-            var p = new PcbPoint(Snap(x), Snap(y));
+            var p = Magnet(x, y);   // [magnet] a zone's or the edge's corner on a pad, a track or a drawing
             if (_tool == PcbTool.Outline) p = new PcbPoint(Math.Max(0, p.X), Math.Max(0, p.Y));
             if (doubleClick || _polyPts.Count >= 3 && Math.Abs(_polyPts[0].X - p.X) * _scale < 6 && Math.Abs(_polyPts[0].Y - p.Y) * _scale < 6)
             {
@@ -1397,7 +1404,7 @@ namespace RobotWin.Studio.Pcb
             if (_tool != PcbTool.Zone && _tool != PcbTool.Outline && _tool != PcbTool.Keepout || _polyPts.Count == 0) return;
             var color = _tool == PcbTool.Zone ? LayerColor(_activeLayer) : _tool == PcbTool.Keepout ? Danger : SubstrateEdge;
             var pen = P(color, 1.6);
-            var cur = new PcbPoint(Snap(_cursor.X), Snap(_cursor.Y));
+            var cur = Magnet(_cursor.X, _cursor.Y);   // [magnet]
             var pts = _polyPts.Concat(new[] { cur }).ToList();
             if (pts.Count >= 3) dc.DrawGeometry(SymbolRenderer.Brush(A(color, (byte)0x30)), null, Poly(pts));
             for (int i = 1; i < pts.Count; i++) dc.DrawLine(pen, S(pts[i - 1].X, pts[i - 1].Y), S(pts[i].X, pts[i].Y));
@@ -1411,17 +1418,6 @@ namespace RobotWin.Studio.Pcb
 
         private PcbPoint? _measureA, _measureB;
         private PcbPoint? _dimA, _dimB;
-
-        private PcbPoint Magnet(double x, double y)
-        {
-            var pad = HitPad(x, y);
-            if (pad != null) return new PcbPoint(pad.Value.X, pad.Value.Y);
-            var via = HitVia(x, y);
-            if (via != null) return new PcbPoint(via.X, via.Y);
-            var hole = HitHole(x, y);
-            if (hole != null) return new PcbPoint(hole.X, hole.Y);
-            return new PcbPoint(Snap(x), Snap(y));
-        }
 
         private void MeasureClick(double x, double y)
         {
@@ -1462,6 +1458,9 @@ namespace RobotWin.Studio.Pcb
             dc.DrawText(ft, new Point(box.X + 6, box.Y + 4));
         }
 
+        /// <summary>[dims] The kind the dimension tool places (KiCad's aligned, orthogonal, radial, leader, centre mark).</summary>
+        public DimensionKind DimKind { get; set; } = DimensionKind.Aligned;
+
         private void DimensionClick(double x, double y)
         {
             var p = Magnet(x, y);
@@ -1473,18 +1472,45 @@ namespace RobotWin.Studio.Pcb
             {
                 if (Math.Abs(p.X - _dimA.Value.X) + Math.Abs(p.Y - _dimA.Value.Y) < 1e-6) return;
                 _dimB = p;
+                if (DimKind is DimensionKind.Leader or DimensionKind.Center) PlaceDimension();   // two clicks are all they need
+                else InvalidateVisual();
+                return;
             }
             else
             {
-                var dim = PreviewDimension()!;
-                BeforeEdit?.Invoke(this, EventArgs.Empty);
-                Board!.Dimensions.Add(dim);
-                _dimA = _dimB = null;
-                Edited($"Ölçü çizgisi eklendi: {dim.Label(UseMil)}");
+                PlaceDimension();
                 return;
             }
 
             InvalidateVisual();
+        }
+
+        private void PlaceDimension()
+        {
+            var dim = PreviewDimension()!;
+            if (dim.Kind == DimensionKind.Leader)
+            {
+                // KiCad asks for the leader's note as it is placed
+                string? note = Window.GetWindow(this) is { } owner ? RobotWin.Studio.Shell.Dialog.Prompt(owner, "Kılavuz", "Kılavuzun notu:", "Not") : "Not";
+                if (note == null)
+                {
+                    _dimA = _dimB = null;
+                    InvalidateVisual();
+                    return;
+                }
+
+                dim.Text = note;
+            }
+
+            BeforeEdit?.Invoke(this, EventArgs.Empty);
+            Board!.Dimensions.Add(dim);
+            _dimA = _dimB = null;
+            Edited(dim.Kind switch
+            {
+                DimensionKind.Leader => $"Kılavuz eklendi: {dim.Label(UseMil)}",
+                DimensionKind.Center => "Merkez işareti eklendi",
+                _ => $"Ölçü eklendi: {dim.Label(UseMil)}"
+            });
         }
 
         private BoardDimension? PreviewDimension()
@@ -1492,12 +1518,32 @@ namespace RobotWin.Studio.Pcb
             if (_dimA == null) return null;
             var a = _dimA.Value;
             var b = _dimB ?? Magnet(_cursor.X, _cursor.Y);
-            var dim = new BoardDimension { X1 = a.X, Y1 = a.Y, X2 = b.X, Y2 = b.Y, Offset = 0 };
-            if (_dimB != null && dim.Length > 1e-9)
+            var dim = new BoardDimension { Kind = DimKind, X1 = a.X, Y1 = a.Y, X2 = b.X, Y2 = b.Y, Offset = DimKind == DimensionKind.Radial ? 3 : 0 };
+            if (_dimB == null || dim.Span < 1e-9) return dim;
+            switch (DimKind)
             {
-                double len = dim.Length;
-                double nx = -(b.Y - a.Y) / len, ny = (b.X - a.X) / len;
-                dim.Offset = Math.Round(((_cursor.X - a.X) * nx + (_cursor.Y - a.Y) * ny) * 4) / 4;
+                case DimensionKind.Orthogonal:
+                {
+                    // KiCad: dragged above or below it measures across, to the side it measures up and down
+                    double mx = (a.X + b.X) / 2, my = (a.Y + b.Y) / 2;
+                    dim.Vertical = Math.Abs(_cursor.X - mx) > Math.Abs(_cursor.Y - my);
+                    dim.Offset = Math.Round((dim.Vertical ? _cursor.X - a.X : _cursor.Y - a.Y) * 4) / 4;
+                    break;
+                }
+
+                case DimensionKind.Radial:
+                {
+                    var (ux, uy) = dim.OffsetDirection();
+                    dim.Offset = Math.Max(1, Math.Round(((_cursor.X - b.X) * ux + (_cursor.Y - b.Y) * uy) * 4) / 4);
+                    break;
+                }
+
+                case DimensionKind.Aligned:
+                {
+                    var (nx, ny) = dim.OffsetDirection();
+                    dim.Offset = Math.Round(((_cursor.X - a.X) * nx + (_cursor.Y - a.Y) * ny) * 4) / 4;
+                    break;
+                }
             }
 
             return dim;
@@ -1507,7 +1553,7 @@ namespace RobotWin.Studio.Pcb
         {
             if (_tool != PcbTool.Dimension) return;
             var dim = PreviewDimension();
-            if (dim == null || dim.Length < 1e-9) return;
+            if (dim == null || dim.Span < 1e-9) return;
             var pen = P(A(Accent, (byte)0xC0), 1);
             foreach (var s in RobotTwin.CoreSim.Pcb.Silk.DimensionStrokes(dim, UseMil)) dc.DrawLine(pen, S(s.X1, s.Y1), S(s.X2, s.Y2));
         }

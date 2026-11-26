@@ -371,7 +371,30 @@ namespace RobotTwin.CoreSim.Pcb
         public bool Mirrored => Layer == GraphicLayer.SilkBottom || Layer == GraphicLayer.FabBottom;
     }
 
-    /// <summary>An aligned dimension between two points, drawn <see cref="Offset"/> mm to the side.</summary>
+    /// <summary>[dims] KiCad's dimension kinds.</summary>
+    public enum DimensionKind
+    {
+        /// <summary>The straight distance between two points, its line parallel to them.</summary>
+        Aligned,
+
+        /// <summary>Only the horizontal (or, <see cref="BoardDimension.Vertical"/>, the vertical) distance.</summary>
+        Orthogonal,
+
+        /// <summary>A circle's radius: point 1 its centre, point 2 on it; a leader out to "R …".</summary>
+        Radial,
+
+        /// <summary>An arrow at point 1, a leader to point 2 and a note (<see cref="BoardDimension.Text"/>).</summary>
+        Leader,
+
+        /// <summary>A centre mark: a cross at point 1, as wide as point 2 is far.</summary>
+        Center
+    }
+
+    /// <summary>
+    /// A dimension (KiCad's aligned, orthogonal, radial, leader and centre mark), drawn <see cref="Offset"/> mm out: to the
+    /// side of the points, above or beside them, or along the radius. Everything that draws it (the editor, the plot, the
+    /// Gerber, KiCad) takes its lines and text from <see cref="Geometry"/>.
+    /// </summary>
     public sealed class BoardDimension
     {
         public double X1 { get; set; }
@@ -382,35 +405,151 @@ namespace RobotTwin.CoreSim.Pcb
         public double TextSize { get; set; } = 1.0;
         public GraphicLayer Layer { get; set; } = GraphicLayer.Drawings;
 
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public DimensionKind Kind { get; set; }
+
+        /// <summary>An orthogonal dimension measures the vertical distance (otherwise the horizontal).</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool Vertical { get; set; }
+
+        /// <summary>A leader's note, or the text written instead of the measured value (KiCad's override).</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Text { get; set; }
+
+        /// <summary>How far apart the two points are (whatever the kind measures).</summary>
         [JsonIgnore]
-        public double Length => Math.Sqrt((X2 - X1) * (X2 - X1) + (Y2 - Y1) * (Y2 - Y1));
+        public double Span => Math.Sqrt((X2 - X1) * (X2 - X1) + (Y2 - Y1) * (Y2 - Y1));
+
+        /// <summary>What the dimension measures (mm): the distance, the horizontal or vertical part, the radius; 0 for a leader or a centre mark.</summary>
+        [JsonIgnore]
+        public double Length => Kind switch
+        {
+            DimensionKind.Orthogonal => Vertical ? Math.Abs(Y2 - Y1) : Math.Abs(X2 - X1),
+            DimensionKind.Leader or DimensionKind.Center => 0,
+            _ => Span
+        };
+
+        /// <summary>The way <see cref="Offset"/> grows (a unit vector; zero when the kind has none).</summary>
+        public (double X, double Y) OffsetDirection()
+        {
+            double span = Math.Max(1e-9, Span);
+            return Kind switch
+            {
+                DimensionKind.Aligned => (-(Y2 - Y1) / span, (X2 - X1) / span),
+                DimensionKind.Orthogonal => Vertical ? (1.0, 0.0) : (0.0, 1.0),
+                DimensionKind.Radial => ((X2 - X1) / span, (Y2 - Y1) / span),
+                _ => (0.0, 0.0)
+            };
+        }
 
         /// <summary>Extension lines, the dimension line, arrow heads and the text anchor (board mm, angle in degrees).</summary>
         public (List<(double X1, double Y1, double X2, double Y2)> Lines, double TextX, double TextY, double Angle) Geometry()
         {
             var lines = new List<(double, double, double, double)>();
-            double dx = X2 - X1, dy = Y2 - Y1, len = Math.Max(1e-9, Length);
-            double ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
-            double sign = Offset < 0 ? -1 : 1;
-            double ax = X1 + nx * Offset, ay = Y1 + ny * Offset, bx = X2 + nx * Offset, by = Y2 + ny * Offset;
-            lines.Add((X1, Y1, ax + nx * 0.5 * sign, ay + ny * 0.5 * sign));
-            lines.Add((X2, Y2, bx + nx * 0.5 * sign, by + ny * 0.5 * sign));
-            lines.Add((ax, ay, bx, by));
-            double head = Math.Min(1.0, len / 4);
-            foreach (var (px, py, sx) in new[] { (ax, ay, 1.0), (bx, by, -1.0) })
+            double gap = TextSize * 0.6 + 0.3;
+
+            // two barbs back from a tip along (ux, uy)
+            void Arrow(double px, double py, double ux, double uy, double head)
             {
-                lines.Add((px, py, px + (ux * sx * 0.94 + nx * 0.34) * head, py + (uy * sx * 0.94 + ny * 0.34) * head));
-                lines.Add((px, py, px + (ux * sx * 0.94 - nx * 0.34) * head, py + (uy * sx * 0.94 - ny * 0.34) * head));
+                double nx = -uy, ny = ux;
+                lines.Add((px, py, px + (ux * 0.94 + nx * 0.34) * head, py + (uy * 0.94 + ny * 0.34) * head));
+                lines.Add((px, py, px + (ux * 0.94 - nx * 0.34) * head, py + (uy * 0.94 - ny * 0.34) * head));
             }
 
-            double angle = Math.Atan2(dy, dx) * 180 / Math.PI;
-            double gap = TextSize * 0.6 + 0.3;
-            return (lines, (ax + bx) / 2 + nx * gap * sign, (ay + by) / 2 + ny * gap * sign, angle);
+            switch (Kind)
+            {
+                case DimensionKind.Orthogonal:
+                {
+                    double sign = Offset < 0 ? -1 : 1;
+                    if (!Vertical)
+                    {
+                        double y = Y1 + Offset, s1 = Math.Sign(y - Y1) == 0 ? sign : Math.Sign(y - Y1), s2 = Math.Sign(y - Y2) == 0 ? sign : Math.Sign(y - Y2);
+                        lines.Add((X1, Y1, X1, y + 0.5 * s1));
+                        lines.Add((X2, Y2, X2, y + 0.5 * s2));
+                        lines.Add((X1, y, X2, y));
+                        double ux = X2 >= X1 ? 1 : -1, head = Math.Min(1.0, Math.Abs(X2 - X1) / 4);
+                        Arrow(X1, y, ux, 0, head);
+                        Arrow(X2, y, -ux, 0, head);
+                        return (lines, (X1 + X2) / 2, y + gap * sign, 0);
+                    }
+                    else
+                    {
+                        double x = X1 + Offset, s1 = Math.Sign(x - X1) == 0 ? sign : Math.Sign(x - X1), s2 = Math.Sign(x - X2) == 0 ? sign : Math.Sign(x - X2);
+                        lines.Add((X1, Y1, x + 0.5 * s1, Y1));
+                        lines.Add((X2, Y2, x + 0.5 * s2, Y2));
+                        lines.Add((x, Y1, x, Y2));
+                        double uy = Y2 >= Y1 ? 1 : -1, head = Math.Min(1.0, Math.Abs(Y2 - Y1) / 4);
+                        Arrow(x, Y1, 0, uy, head);
+                        Arrow(x, Y2, 0, -uy, head);
+                        return (lines, x + gap * sign, (Y1 + Y2) / 2, -90);
+                    }
+                }
+
+                case DimensionKind.Radial:
+                case DimensionKind.Leader:
+                {
+                    // Radial: from the circle out along the radius; leader: from its tip to its elbow. A shoulder under the text.
+                    double tx, ty, ex, ey;
+                    if (Kind == DimensionKind.Radial)
+                    {
+                        var (ux, uy) = OffsetDirection();
+                        double reach = Math.Max(1, Math.Abs(Offset));
+                        tx = X2;
+                        ty = Y2;
+                        ex = X2 + ux * reach;
+                        ey = Y2 + uy * reach;
+                    }
+                    else
+                    {
+                        tx = X1;
+                        ty = Y1;
+                        ex = X2;
+                        ey = Y2;
+                    }
+
+                    double len = Math.Sqrt((ex - tx) * (ex - tx) + (ey - ty) * (ey - ty));
+                    lines.Add((tx, ty, ex, ey));
+                    if (len > 1e-9) Arrow(tx, ty, (ex - tx) / len, (ey - ty) / len, Math.Min(1.0, len / 3));
+                    double side = ex >= tx ? 1 : -1, shoulder = Math.Max(1.0, StrokeFont.Measure(Label(), TextSize) + 0.6);
+                    lines.Add((ex, ey, ex + side * shoulder, ey));
+                    return (lines, ex + side * shoulder / 2, ey - gap, 0);
+                }
+
+                case DimensionKind.Center:
+                {
+                    double r = Math.Max(0.5, Span);
+                    lines.Add((X1 - r, Y1, X1 + r, Y1));
+                    lines.Add((X1, Y1 - r, X1, Y1 + r));
+                    return (lines, X1, Y1, 0);
+                }
+
+                default:
+                {
+                    double dx = X2 - X1, dy = Y2 - Y1, len = Math.Max(1e-9, Span);
+                    double ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
+                    double sign = Offset < 0 ? -1 : 1;
+                    double ax = X1 + nx * Offset, ay = Y1 + ny * Offset, bx = X2 + nx * Offset, by = Y2 + ny * Offset;
+                    lines.Add((X1, Y1, ax + nx * 0.5 * sign, ay + ny * 0.5 * sign));
+                    lines.Add((X2, Y2, bx + nx * 0.5 * sign, by + ny * 0.5 * sign));
+                    lines.Add((ax, ay, bx, by));
+                    double head = Math.Min(1.0, len / 4);
+                    Arrow(ax, ay, ux, uy, head);
+                    Arrow(bx, by, -ux, -uy, head);
+                    double angle = Math.Atan2(dy, dx) * 180 / Math.PI;
+                    return (lines, (ax + bx) / 2 + nx * gap * sign, (ay + by) / 2 + ny * gap * sign, angle);
+                }
+            }
         }
 
-        public string Label(bool mil = false) =>
-            mil ? (Length / 0.0254).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " mil"
-                : Length.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " mm";
+        /// <summary>What is written: the note or the override, else the value (with "R" for a radius); nothing on a centre mark.</summary>
+        public string Label(bool mil = false)
+        {
+            if (!string.IsNullOrWhiteSpace(Text)) return Text!.Trim();
+            if (Kind is DimensionKind.Leader or DimensionKind.Center) return string.Empty;
+            string value = mil ? (Length / 0.0254).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " mil"
+                               : Length.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " mm";
+            return Kind == DimensionKind.Radial ? "R " + value : value;
+        }
     }
 
     /// <summary>A placed pad in board coordinates, with its net.</summary>

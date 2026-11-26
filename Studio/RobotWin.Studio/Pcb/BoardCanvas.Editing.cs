@@ -286,7 +286,7 @@ namespace RobotWin.Studio.Pcb
             if (!add)
             {
                 if (_sel.Count == 1 && hit is Track) _drag = DragKind.Segment;
-                else if (_sel.Count == 1 && hit is BoardDimension d)
+                else if (_sel.Count == 1 && hit is BoardDimension d && d.Kind is not (DimensionKind.Leader or DimensionKind.Center))   // those move whole
                 {
                     _drag = DragKind.Dimension;
                     _dimOffsetStart = d.Offset;
@@ -331,6 +331,8 @@ namespace RobotWin.Studio.Pcb
 
             var (x, y) = ToBoard(p);
             _cursor = (x, y);
+            if (_tool is PcbTool.Measure or PcbTool.Dimension or PcbTool.Zone or PcbTool.Outline or PcbTool.Keepout || IsGraphicTool(_tool)) Magnet(x, y);   // [magnet] the diamond follows
+            else _magnetMark = null;
             CursorMoved?.Invoke(this, EventArgs.Empty);
 
             if (_moving)
@@ -439,9 +441,9 @@ namespace RobotWin.Studio.Pcb
                     break;
                 case DragKind.Dimension when _selected is BoardDimension dim:
                 {
-                    double len = Math.Max(1e-9, dim.Length);
-                    double nx = -(dim.Y2 - dim.Y1) / len, ny = (dim.X2 - dim.X1) / len;
+                    var (nx, ny) = dim.OffsetDirection();   // [dims] across an aligned one, up/down or sideways for an orthogonal one, along a radius
                     dim.Offset = Math.Round((_dimOffsetStart + dx * nx + dy * ny) * 4) / 4;
+                    if (dim.Kind == DimensionKind.Radial) dim.Offset = Math.Max(1, dim.Offset);
                     break;
                 }
 
@@ -988,7 +990,7 @@ namespace RobotWin.Studio.Pcb
                     case Via v: Clipboard.Add(new Via { Net = v.Net, X = v.X, Y = v.Y, Diameter = v.Diameter, Drill = v.Drill, StartLayer = v.StartLayer, EndLayer = v.EndLayer }); break;
                     case BoardText x: Clipboard.Add(new BoardText { Text = x.Text, X = x.X, Y = x.Y, Size = x.Size, Thickness = x.Thickness, Layer = x.Layer, Rotation = x.Rotation }); break;
                     case MountingHole h: Clipboard.Add(new MountingHole { X = h.X, Y = h.Y, Drill = h.Drill, PadDiameter = h.PadDiameter, Net = h.Net }); break;
-                    case BoardDimension d: Clipboard.Add(new BoardDimension { X1 = d.X1, Y1 = d.Y1, X2 = d.X2, Y2 = d.Y2, Offset = d.Offset, TextSize = d.TextSize, Layer = d.Layer }); break;
+                    case BoardDimension d: Clipboard.Add(new BoardDimension { X1 = d.X1, Y1 = d.Y1, X2 = d.X2, Y2 = d.Y2, Offset = d.Offset, TextSize = d.TextSize, Layer = d.Layer, Kind = d.Kind, Vertical = d.Vertical, Text = d.Text }); break;
                     case Zone z when !z.IsWholeBoard: Clipboard.Add(z.CloneSettings()); break;
                     case BoardComponent c: Clipboard.Add(c); break;
                 }
@@ -1045,7 +1047,7 @@ namespace RobotWin.Studio.Pcb
 
                     case BoardDimension d:
                     {
-                        var c = new BoardDimension { X1 = d.X1, Y1 = d.Y1, X2 = d.X2, Y2 = d.Y2, Offset = d.Offset, TextSize = d.TextSize, Layer = d.Layer };
+                        var c = new BoardDimension { X1 = d.X1, Y1 = d.Y1, X2 = d.X2, Y2 = d.Y2, Offset = d.Offset, TextSize = d.TextSize, Layer = d.Layer, Kind = d.Kind, Vertical = d.Vertical, Text = d.Text };
                         board.Dimensions.Add(c);
                         pasted.Add(c);
                         break;
