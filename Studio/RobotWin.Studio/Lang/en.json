@@ -8399,7 +8399,32 @@
   "İnç (in)": "Inch (in)",
   "Düzlemin yeri: yazıp Enter (mm, cm, in, mil yazılabilir) · ↑/↓ 0,1 mm (Shift: 1 mm)": "Where the plane is: type and press Enter (mm, cm, in, mil can be typed) · ↑/↓ 0.1 mm (Shift: 1 mm)",
   "Zamana git (s): yazıp Enter": "Go to a time (s): type and press Enter",
-  "Görev oranı (%): yazıp Enter": "Duty cycle (%): type and press Enter"
+  "Görev oranı (%): yazıp Enter": "Duty cycle (%): type and press Enter",
+  "Taşı tutamacı (W): eksen okları, düzlem kareleri, ortası ekran düzleminde · Alt: ızgarasız": "Move handle (W): axis arrows, plane squares, the middle in the screen plane · Alt: off the grid",
+  "Döndür tutamacı (E): X / Y / Z halkaları, dış halka görüş ekseni, içi serbest · 15° adım, Alt: serbest": "Rotate handle (E): X / Y / Z rings, the outer ring about the view axis, the inside free · 15° steps, Alt: free",
+  "Ölçekle tutamacı (R): eksen küpleri, ortası üç eksen birden (gövdeler ve arazi nesneleri)": "Scale handle (R): axis cubes, the middle on all three axes (bodies and terrain objects)",
+  "Hepsi bir arada (Y): taşı, döndür ve ölçekle tutamaçları birlikte": "All in one (Y): the move, rotate and scale handles together",
+  "Tutamacın yeri: parçanın pivotu ya da şeklinin ortası": "Where the handles sit: the part's pivot or the middle of its shape",
+  "Tutamacın eksenleri: parçanın kendi eksenleri (Yerel) ya da dünyanınki (Dünya)": "The handles' axes: the part's own (Local) or the world's (World)",
+  "Pivot": "Pivot",
+  "Yerel": "Local",
+  "Merkez": "Centre",
+  "15° döndür (Ctrl+E, Ctrl+Shift+E ters)": "Rotate 15° (Ctrl+E, Ctrl+Shift+E the other way)",
+  "Taşı tutamacı (W): okla bir eksende, kareyle bir düzlemde, ortasıyla ekran düzleminde": "Move handle (W): an arrow along an axis, a square in a plane, the middle in the screen plane",
+  "Döndür tutamacı (E): halkayla bir eksen çevresinde, dış halkayla görüş ekseni çevresinde, içiyle serbest": "Rotate handle (E): a ring about an axis, the outer ring about the view axis, the inside freely",
+  "Ölçekle tutamacı (R): küple bir eksende, ortasıyla üç eksende": "Scale handle (R): a cube along an axis, the middle along all three",
+  "Hepsi bir arada (Y): taşı, döndür, ölçekle": "All in one (Y): move, rotate, scale",
+  "Tutamaç yok (Q): yalnız seçim": "No handles (Q): selecting only",
+  "Tutamaç parçanın şeklinin ortasında": "Handles in the middle of the part's shape",
+  "Tutamaç parçanın pivotunda": "Handles on the part's pivot",
+  "Tutamaç eksenleri parçanın kendi eksenleri (ölçek her zaman yereldir)": "Handle axes are the part's own (scale is always local)",
+  "Tutamaç eksenleri dünyanın eksenleri": "Handle axes are the world's",
+  "Taşı tutamacı": "Move handle",
+  "Döndür tutamacı": "Rotate handle",
+  "Ölçekle tutamacı": "Scale handle",
+  "Taşı, döndür, ölçekle tutamaçları": "Move, rotate, scale handles",
+  "Yalnız seç (tutamaçsız)": "Select only (no handles)",
+  "görüş": "view"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11803,6 +11828,13 @@
   "Yuvarla ({…} kenar, {…} parça): {…}{…} mm   ·   fareyi sağa sürükleyin · sayı yazın · tekerlek veya +/−: parça sayısı (1: pah) · Enter onay · Esc iptal": "Round ({0} edges, {1} segments): {2}{3} mm   ·   drag the mouse right · type a number · wheel or +/−: segments (1: chamfer) · Enter confirm · Esc cancel",
   "Pah kır ({…} kenar): {…}{…} mm   ·   fareyi sağa sürükleyin · sayı yazın · tekerlek veya +: yuvarlat · Enter onay · Esc iptal": "Chamfer ({0} edges): {1}{2} mm   ·   drag the mouse right · type a number · wheel or +: round · Enter confirm · Esc cancel",
   "Kenar yuvarlatıldı ({…} parça)": "Edges rounded ({0} segments)",
-  "Kesit: {…} = {…} (yalnız görüntü)": "Section: {0} = {1} (display only)"
+  "Kesit: {…} = {…} (yalnız görüntü)": "Section: {0} = {1} (display only)",
+  "{…}: {…} ekseni çevresinde {…}°": "{0}: {2}° about the {1} axis",
+  "{…}: {…} ekseni çevresinde {…}° ({…}° adım; Alt: serbest)": "{0}: {2}° about the {1} axis ({3}° steps; Alt: free)",
+  "{…}: serbest döndürme {…}°": "{0}: free turn {1}°",
+  "{…}: {…} × {…} × {…} mm": "{0}: {1} × {2} × {3} mm",
+  "{…}: ({…}, {…}, {…}) mm · Δ {…}, {…}, {…}": "{0}: ({1}, {2}, {3}) mm · Δ {4}, {5}, {6}",
+  "{…} döndürüldü ({…}°, {…}°, {…}°)": "{0} rotated ({1}°, {2}°, {3}°)",
+  "{…} ölçeklenemez: bir hazır parçanın boyu modelinden gelir (gövdeler ve arazi nesneleri ölçeklenir)": "{0} cannot be scaled: a ready-made part takes its size from its model (bodies and terrain objects scale)"
  }
 }

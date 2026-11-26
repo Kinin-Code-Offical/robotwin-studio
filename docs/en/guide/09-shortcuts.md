@@ -155,7 +155,8 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | K | Draw cable |
 | B | Connect |
 | Esc | Cancel / select tool |
-| R / Shift+R | Rotate 15° / the other way |
+| W / E / R / Y / Q | Move / rotate / scale / all-in-one handles / no handles (as in Unity) |
+| Ctrl+E / Ctrl+Shift+E | Rotate 15° / the other way |
 | Ctrl+D | Duplicate |
 | Del | Delete |
 | Ctrl+Z / Ctrl+Y | Undo / redo |

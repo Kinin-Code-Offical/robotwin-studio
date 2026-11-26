@@ -101,6 +101,7 @@ namespace RobotWin.Studio.Pages
             InitSdk();   // [sdk] Pages/WorldPage.Sdk.cs
             InitTerrain(); // [terrain] Pages/WorldPage.Terrain.cs
             InitLayout();  // [dock] Pages/WorldPage.Layout.cs (after the sensors tab exists)
+            InitGizmo();   // [gizmo] Pages/WorldPage.Gizmo.cs
         }
 
         private static Workspace W => Workspace.Current;
@@ -1525,8 +1526,20 @@ namespace RobotWin.Studio.Pages
                 case Key.Delete:
                     Delete();
                     break;
-                case Key.R when !ctrl:
+                case Key.E when ctrl:   // the 15° turn (R is Unity's scale handle now)
                     Rotate(mods.HasFlag(ModifierKeys.Shift) ? -15 : 15);
+                    break;
+                case Key.W when !ctrl:   // [gizmo] Unity's handles
+                    PickGizmo(GizmoMode.Move);
+                    break;
+                case Key.E:
+                    PickGizmo(GizmoMode.Rotate);
+                    break;
+                case Key.R when !ctrl:
+                    PickGizmo(GizmoMode.Scale);
+                    break;
+                case Key.Q when !ctrl:
+                    PickGizmo(GizmoMode.None);
                     break;
                 case Key.D when ctrl:
                     Duplicate();
@@ -1536,6 +1549,9 @@ namespace RobotWin.Studio.Pages
                     break;
                 case Key.Y when ctrl:
                     W.Redo();
+                    break;
+                case Key.Y:
+                    PickGizmo(GizmoMode.All);
                     break;
                 case Key.T:
                     FollowToggle.IsChecked = FollowToggle.IsChecked != true;

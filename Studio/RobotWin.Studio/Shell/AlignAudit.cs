@@ -99,7 +99,8 @@ namespace RobotWin.Studio.Shell
             var buttons = line.Where(x => x.C is ButtonBase).ToList();
             var heights = buttons.Select(x => Math.Round(x.C.ActualHeight)).Distinct().OrderBy(h => h).ToList();
             if (heights.Count > 1 && heights[heights.Count - 1] - heights[0] > 2)
-                found.Add(new Finding("satır-yükseklik", RowName(p), heights[heights.Count - 1] - heights[0], "düğme yükseklikleri: " + string.Join(", ", heights.Select(h => h.ToString("0", CultureInfo.InvariantCulture)))));
+                found.Add(new Finding("satır-yükseklik", RowName(p), heights[heights.Count - 1] - heights[0], "düğme yükseklikleri: " + string.Join(", ", heights.Select(h => h.ToString("0", CultureInfo.InvariantCulture)))
+                    + " · en alçak: " + string.Join(", ", buttons.Where(x => Math.Round(x.C.ActualHeight) == heights[0]).Select(x => Name(x.C)).Take(4))));
 
             var sizes = buttons.SelectMany(x => Descendants(x.C).OfType<Theme.Icon>().Where(Shown).Take(1)).Select(i => i.Size).Distinct().OrderBy(s => s).ToList();
             if (sizes.Count > 1 && sizes[sizes.Count - 1] - sizes[0] > 1.5)

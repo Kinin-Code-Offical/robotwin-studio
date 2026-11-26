@@ -212,6 +212,57 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Bileşen çoğaltma | Çoğalt | kısmi | 2 |
 | BOM | var | var | |
 
+## Montaj ve Dünya (Unity sahne editörü)
+
+Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, sahne ağacının sağ tık menüleri, Add Component'in bütün kategorileri, bileşen menüleri. Montaj ve Dünya aynı sahne editörünü kullanır; buradaki her araç ikisinde birden olur, Parça'nın tutamaçları aynı davranışa getirilir.
+
+### Sahne araçları
+
+| Araç | Bizde | Durum | Öncelik |
+| --- | --- | --- | --- |
+| Taşı (W): eksen okları, iki eksenin düzlem kareleri (kameraya bakan çeyrekte), ortası ekran düzleminde | Taşı tutamacı | var | |
+| Döndür (E): X / Y / Z halkaları (ön yarı), görüş halkası, içi serbest, sürüklerken açı dilimi | Döndür tutamacı | var | |
+| Ölçekle (R): eksen küpleri, ortada eşit ölçek | Ölçekle tutamacı (gövdeler, arazi nesneleri) | var | |
+| Hepsi bir arada (Y) | Hepsi bir arada | var | |
+| Dikdörtgen (T) | yok | yok | 3 |
+| Pivot / Center, Global / Local | Pivot / Merkez, Yerel / Dünya | var | |
+| Adımlı sürükleme (taşı 0,25 · döndür 15° · ölçek 1) | ızgara ve 15° varsayılan, Alt serbest | var | |
+| Izgara ve yakalama penceresi: ızgarayı göster, en yakın ızgara, ızgara düzlemi X/Y/Z, saydamlık, ızgara boyu, adım (bağlı X/Y/Z), ızgaranın konumu ve dönüşü, etkin nesneden kopyala, dünyaya sıfırla | ızgara boyu Ayarlar'da | kısmi | 1 |
+| Köşe yakalama (V): köşeden köşeye, köşeden yüzeye, pivotu köşeye | yok | yok | 2 |
+| Yüzeye yakalama (Ctrl+Shift) | arazide yüzeye | kısmi | 2 |
+| Bakışla döndürme (bir yüzeye çevir) | yok | yok | 3 |
+| Kaplama menüsü: araçlar, araç seçenekleri, ızgara ve yakalama, çizim kipleri, görünüm seçenekleri, arama, yön, kameralar | yok | yok | 2 |
+
+### Sahne ağacı (Hierarchy)
+
+| Araç | Bizde | Durum | Öncelik |
+| --- | --- | --- | --- |
+| Kes, kopyala, yapıştır; alt nesne olarak yapıştır (yerel ya da dünya dönüşümünü koruyarak) | yok | yok | 1 |
+| Yeniden adlandır, çoğalt, sil | Ctrl+D, Del, Denetçi'de ad | kısmi | 1 |
+| Tümünü seç, seçimi kaldır, tersine çevir, alt nesneleri seç; ağaçta çoklu seçim | yok | yok | 1 |
+| Boş nesne, boş alt nesne, boş üst nesne (grup) | yok | yok | 1 |
+| Sağ tıkta Oluştur ▸ türler (gövde şekilleri, ışık, kamera, ses, sensör, kart …) | Palet sekmeleri | kısmi | 1 |
+| Etkin / devre dışı (Alt+Shift+A) | yok | yok | 1 |
+| Görünüme taşı, görünümle hizala, görünümü seçime hizala | yok | yok | 2 |
+| Sürükleyerek üst nesne değiştirme | Bağla aracı | kısmi | 2 |
+| Sahnede referansları bul | yok | yok | 2 |
+| Varsayılan üst nesne | yok | yok | 3 |
+
+### Denetçi (Inspector)
+
+| Araç | Bizde | Durum | Öncelik |
+| --- | --- | --- | --- |
+| Bileşen yığını: her bileşen kendi başlığında (aç / kapa, katla, yardım, ⋮ menüsü) | sabit bölümler | kısmi | 1 |
+| Bileşen ekle: aranabilir, kategorili liste | Özellik ekle ▾ (kabuk, kap, paraşüt, hava, arıza, yay, rulman, davranış) | kısmi | 1 |
+| Bileşen ⋮: sıfırla, kaldır, yukarı / aşağı, kopyala, değerleri yapıştır, yeni olarak yapıştır | yok | yok | 1 |
+| Dönüşüm ⋮: konum / dönüş / ölçek / dünya dönüşümü kopyala ve yapıştır, özelliği sıfırla | yok | yok | 1 |
+| Fizik gövdesi: kütle, doğrusal / açısal sönüm, kütle merkezi ve eylemsizlik otomatik ya da elle, yerçekimi, kinematik, ara değerleme, çarpışma algılama, konum / dönüş kilitleri (X/Y/Z) | kütle, sabit | kısmi | 1 |
+| Çarpışma şekilleri: kutu, küre, kapsül, ağ, tekerlek, arazi; tetik | çarpışma şekilleri | kısmi | 2 |
+| Eklemler: menteşe, sabit, yay, karakter, yapılandırılabilir; sınırlar, yaylar, kırılma kuvveti ve torku | menteşe, kızak, sabit, yay ve sönüm, rulman | kısmi | 2 |
+| Kısıtlar: hedefe bak, üst nesne, konum, dönüş, ölçek | yok | yok | 2 |
+| Sabit kuvvet | yok | yok | 2 |
+| Etiket, katman (çarpışma katmanları), statik | yok | yok | 2 |
+
 ## Sıra
 
 Öncelik 1 olanlar şu gruplar hâlinde yapılır:
@@ -227,4 +278,4 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 
 Sonra öncelik 2 ve 3. Her grup bitince bu tablo güncellenir.
 
-Durum: öncelik 1'in bütün grupları bitti (PCB, Şema, Parça, Montaj); sırada öncelik 2.
+Durum: öncelik 1'in ilk grupları bitti (PCB, Şema, Parça, Montaj). Unity incelemesinden çıkan öncelik 1'ler sırada: ızgara ve yakalama penceresi; sahne ağacının sağ tık menüsü, çoklu seçim, boş nesne ve grup, etkin / devre dışı; bileşenli Denetçi, Bileşen ekle, bileşen ve dönüşüm menüleri, fizik gövdesinin bütün alanları.

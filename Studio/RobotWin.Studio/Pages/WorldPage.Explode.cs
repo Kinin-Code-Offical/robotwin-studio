@@ -403,6 +403,14 @@ namespace RobotWin.Studio.Pages
                 OnClearance(this, new RoutedEventArgs());
             }
 
+            int gz = Array.IndexOf(args, "--gizmo");   // [gizmo] --gizmo move|rotate|scale|all [--gizmo-world] [--gizmo-center]
+            if (gz >= 0 && gz + 1 < args.Length)
+            {
+                Scene.GizmoLocal = !args.Contains("--gizmo-world");
+                Scene.GizmoCenter = args.Contains("--gizmo-center");
+                PickGizmo(args[gz + 1] switch { "rotate" => RobotWin.Studio.World.GizmoMode.Rotate, "scale" => RobotWin.Studio.World.GizmoMode.Scale, "all" => RobotWin.Studio.World.GizmoMode.All, _ => RobotWin.Studio.World.GizmoMode.Move });
+            }
+
             int x = Array.IndexOf(args, "--explode");
             if (x < 0 || World is not { } w) return;
             string how = x + 1 < args.Length ? args[x + 1] : "auto";

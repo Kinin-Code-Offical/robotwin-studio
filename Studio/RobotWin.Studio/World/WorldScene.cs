@@ -74,6 +74,7 @@ namespace RobotWin.Studio.World
             _effects.Project = Project;
             _effects.IsHitTestVisible = false;
             Children.Add(_effects);
+            AddGizmoLayer();   // [gizmo] the handles, drawn over the view (World/WorldScene.Gizmo.cs)
             _hint.Foreground = new SolidColorBrush(Color.FromRgb(0x8E, 0x8E, 0x97));   // TextMuted: 5.9:1 on the canvas
             _hint.FontSize = 12;
             _hint.Margin = new Thickness(14, 0, 0, 10);
@@ -1221,6 +1222,7 @@ namespace RobotWin.Studio.World
             _camera.Position = _target - dir * _distance;
             _camera.LookDirection = dir * _distance;
             _camera.UpDirection = new Vector3D(0, 0, 1);
+            _gizmoLayer?.InvalidateVisual();   // [gizmo] the handles follow the camera
         }
 
         private (Point Screen, double Depth, bool Visible) Project(Point3D p)

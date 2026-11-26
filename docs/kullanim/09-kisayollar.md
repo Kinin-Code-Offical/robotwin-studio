@@ -155,7 +155,8 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | K | Kablo çek |
 | B | Bağla |
 | Esc | İptal / seçme aracı |
-| R / Shift+R | 15° döndür / ters yönde |
+| W / E / R / Y / Q | Taşı / döndür / ölçekle / hepsi bir arada tutamacı / tutamaçsız (Unity'deki gibi) |
+| Ctrl+E / Ctrl+Shift+E | 15° döndür / ters yönde |
 | Ctrl+D | Çoğalt |
 | Del | Sil |
 | Ctrl+Z / Ctrl+Y | Geri al / yinele |

@@ -825,7 +825,8 @@ Save the serial monitor output as `.csv` and import it. Load the same sketch int
 | --- | --- |
 | K | Draw cable |
 | B | Connect |
-| R / Shift+R | Rotate 15° / the other way |
+| W / E / R / Y / Q | Move / rotate / scale / all-in-one handles / no handles (as in Unity) |
+| Ctrl+E / Ctrl+Shift+E | Rotate 15° / the other way |
 | Ctrl+D | Duplicate |
 | Del | Delete |
 | Ctrl+Z / Ctrl+Y | Undo / redo |
@@ -834,6 +835,18 @@ Save the serial monitor output as `.csv` and import it. Load the same sketch int
 | Esc | Cancel, back to the select tool |
 
 Objects can only be moved while the simulation is stopped. You can also type position and angle into the inspector's **Position and orientation** fields.
+
+### Move, rotate and scale handles
+
+The handles on the selected part work as in Unity; pick them with the four toolbar buttons or W, E, R, Y, and Q puts them away. They are the same in Assembly and World.
+
+- **Move (W):** an arrow moves along its axis, the coloured squares in the plane of two axes (the square sits in the quarter facing the camera), the middle square in the screen plane.
+- **Rotate (E):** the red, green and blue rings turn about X, Y and Z (the half of a ring facing the camera shows); the outer white ring turns about the view axis and the inside of the rings turns freely. While dragging, the angle turned shows as a yellow slice and its value under the view.
+- **Scale (R):** the cubes at the ends of the axes size along that axis, the middle cube along all three (bodies and terrain objects; ready-made parts take their size from their model).
+- **All in one (Y):** the three together.
+- **Pivot / Centre:** the handles sit on the part's pivot or in the middle of its shape. **Local / World:** their axes are the part's own or the world's (scale is always local).
+
+Moving snaps to the grid and rotating to 15° steps; with **Alt** held it is free. Everything mounted on the part (a servo horn, a sensor, cables) comes with it, and the hinges between them keep their place and axis.
 
 ## Saving
 

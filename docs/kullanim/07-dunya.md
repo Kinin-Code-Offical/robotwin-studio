@@ -50,7 +50,7 @@ Sağdaki **Denetçi** seçili nesnenin yalnızca gerçekten kullandığı bölü
 
 ## Ekranın bölümleri
 
-- **Üst araç çubuğu:** Seç ve taşı, **Kablo çek** (K), **Bağla** (B), döndür, çoğalt, sil, geri al / yinele; **Dünyayı çalıştır**, **10 ms ilerlet**, **Durdur ve başa dön**, hız seçimi; kamera takibi, üstten görünüm, hepsini sığdır.
+- **Üst araç çubuğu:** Seç ve taşı, **Taşı / Döndür / Ölçekle / Hepsi** tutamaçları (W, E, R, Y) ve **Pivot / Yerel** seçenekleri, **Kablo çek** (K), **Bağla** (B), döndür, çoğalt, sil, geri al / yinele; **Dünyayı çalıştır**, **10 ms ilerlet**, **Durdur ve başa dön**, hız seçimi; kamera takibi, üstten görünüm, hepsini sığdır.
 - **Sol panel sekmeleri:** **Sahne**, **Kartlar**, **Parçalar**, **Mekanik**, **Ortam**.
 - **Ortada** 3D görünüm.
 - **Sağda** denetçi: seçili nesnenin adı, konumu, fiziği, kabloları ve bağlantıları.
@@ -825,7 +825,8 @@ Seri monitör çıktısını `.csv` olarak kaydedip içe aktarın. Aynı çizimi
 | --- | --- |
 | K | Kablo çek |
 | B | Bağla |
-| R / Shift+R | 15° döndür / ters yönde döndür |
+| W / E / R / Y / Q | Taşı / döndür / ölçekle / hepsi bir arada tutamacı / tutamaçsız (Unity'deki gibi) |
+| Ctrl+E / Ctrl+Shift+E | 15° döndür / ters yönde |
 | Ctrl+D | Çoğalt |
 | Del | Sil |
 | Ctrl+Z / Ctrl+Y | Geri al / yinele |
@@ -834,6 +835,18 @@ Seri monitör çıktısını `.csv` olarak kaydedip içe aktarın. Aynı çizimi
 | Esc | İptal, seçme aracına dön |
 
 Nesneler yalnızca simülasyon dururken taşınabilir. Konumu ve açıyı denetçideki **Konum ve yön** alanlarına sayı yazarak da girebilirsiniz.
+
+### Taşı, döndür, ölçekle tutamaçları
+
+Seçili parçanın üstündeki tutamaçlar Unity'dekiler gibidir; araç çubuğundaki dört düğmeyle ya da W, E, R, Y ile seçilir, Q onları kaldırır. Montaj'da ve Dünya'da aynıdır.
+
+- **Taşı (W):** bir ok o eksen boyunca, renkli kareler iki eksenin düzleminde (kare kameraya bakan çeyrekte durur), ortadaki kare ekran düzleminde taşır.
+- **Döndür (E):** kırmızı, yeşil, mavi halkalar X, Y, Z çevresinde döndürür (halkanın kameraya bakan yarısı görünür); dış beyaz halka bakış ekseni çevresinde, halkaların içi serbest döndürür. Sürüklerken dönülen açı sarı bir dilimle gösterilir, değer görünümün altında yazar.
+- **Ölçekle (R):** eksen uçlarındaki küpler o eksende, ortadaki küp üç eksende birden boyutlandırır (gövdeler ve arazi nesneleri; hazır parçaların boyu modelinden gelir).
+- **Hepsi bir arada (Y):** üçü birlikte.
+- **Pivot / Merkez:** tutamaç parçanın pivotunda ya da şeklinin ortasında durur. **Yerel / Dünya:** eksenleri parçanınkiler ya da dünyanınkiler (ölçek her zaman yereldir).
+
+Taşıma ızgaraya, döndürme 15° adımlarla yapışır; **Alt** basılıyken serbesttir. Parçaya takılı olan her şey (servo kolu, sensör, kablolar) onunla birlikte gider; aradaki menteşelerin yeri ve ekseni de döner.
 
 ## Kaydetme
 

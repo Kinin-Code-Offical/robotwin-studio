@@ -30,8 +30,14 @@
 
             <!-- ================= Toolbar ================= -->
             <Border Grid.Row="0" Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,0,1">
+                <!-- [gizmo] three columns: the tools, the run controls in the room left in the middle, the view buttons; nothing overlaps -->
                 <Grid Margin="12,0">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- [assembly] Which this is: a project's Montaj or a test world -->
                         <Border x:Name="ModeBadge" CornerRadius="5" Padding="8,3,10,3" Margin="0,0,12,0" VerticalAlignment="Center" BorderThickness="1">
                             <StackPanel Orientation="Horizontal">
@@ -43,6 +49,31 @@
                         <ToggleButton x:Name="ToolSelect" Style="{StaticResource Toggle.Tool}" ToolTip="Seç ve taşı (Esc)" Click="OnTool" Tag="Select" IsChecked="True">
                             <t:Icon Data="{StaticResource I.Pointer}" Size="16"/>
                         </ToggleButton>
+                        <!-- [gizmo] Unity's transform handles: W move, E rotate, R scale, Y all; their place and axes -->
+                        <ToggleButton x:Name="GizmoMove" Style="{StaticResource Toggle.Tool}" Tag="Move" Click="OnGizmo" Margin="2,0,0,0"
+                                      ToolTip="Taşı tutamacı (W): eksen okları, düzlem kareleri, ortası ekran düzleminde · Alt: ızgarasız">
+                            <t:Icon Data="{StaticResource I.Move}" Size="16"/>
+                        </ToggleButton>
+                        <ToggleButton x:Name="GizmoRotate" Style="{StaticResource Toggle.Tool}" Tag="Rotate" Click="OnGizmo"
+                                      ToolTip="Döndür tutamacı (E): X / Y / Z halkaları, dış halka görüş ekseni, içi serbest · 15° adım, Alt: serbest">
+                            <t:Icon Data="{StaticResource I.Rotate}" Size="16"/>
+                        </ToggleButton>
+                        <ToggleButton x:Name="GizmoScale" Style="{StaticResource Toggle.Tool}" Tag="Scale" Click="OnGizmo"
+                                      ToolTip="Ölçekle tutamacı (R): eksen küpleri, ortası üç eksen birden (gövdeler ve arazi nesneleri)">
+                            <t:Icon Data="{StaticResource I.Scale}" Size="16"/>
+                        </ToggleButton>
+                        <ToggleButton x:Name="GizmoAll" Style="{StaticResource Toggle.Tool}" Tag="All" Click="OnGizmo"
+                                      ToolTip="Hepsi bir arada (Y): taşı, döndür ve ölçekle tutamaçları birlikte">
+                            <t:Icon Data="{StaticResource I.Transform}" Size="16"/>
+                        </ToggleButton>
+                        <Border Background="{DynamicResource B.Surface}" CornerRadius="6" Padding="2" Margin="6,0,0,0" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <ToggleButton x:Name="GizmoPlace" Style="{StaticResource Chip}" Content="Pivot" Click="OnGizmoPlace"
+                                              ToolTip="Tutamacın yeri: parçanın pivotu ya da şeklinin ortası"/>
+                                <ToggleButton x:Name="GizmoSpace" Style="{StaticResource Chip}" Content="Yerel" Click="OnGizmoSpace"
+                                              ToolTip="Tutamacın eksenleri: parçanın kendi eksenleri (Yerel) ya da dünyanınki (Dünya)"/>
+                            </StackPanel>
+                        </Border>
                         <ToggleButton x:Name="ToolCable" Style="{StaticResource Toggle.Tool}" ToolTip="Kablo çek: iki pine tıklayın (K)" Click="OnTool" Tag="Cable" Margin="2,0">
                             <t:Icon Data="{StaticResource I.Cable}" Size="16"/>
                         </ToggleButton>
@@ -62,7 +93,7 @@
                             <t:Icon Data="{StaticResource I.Explode}" Size="16"/>
                         </Button>
                         <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="10,0"/>
-                        <Button Style="{StaticResource Btn.Icon}" ToolTip="15° döndür (R, Shift+R ters)" Click="OnRotate"><t:Icon Data="{StaticResource I.Rotate}" Size="16"/></Button>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="15° döndür (Ctrl+E, Ctrl+Shift+E ters)" Click="OnRotate"><t:Icon Data="{StaticResource I.Rotate}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Çoğalt (Ctrl+D)" Click="OnDuplicate"><t:Icon Data="{StaticResource I.Plus}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Sil (Del)" Click="OnDelete"><t:Icon Data="{StaticResource I.Delete}" Size="16"/></Button>
                         <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="10,0"/>
@@ -70,7 +101,7 @@
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Yinele (Ctrl+Y)" Click="OnRedo"><t:Icon Data="{StaticResource I.Redo}" Size="16"/></Button>
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12,0">
                         <Button x:Name="RunButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="28" Click="OnRun" ToolTip="Dünyayı simüle et / duraklat (F5)">
                             <StackPanel Orientation="Horizontal">
                                 <t:Icon x:Name="RunIcon" Data="{StaticResource I.Play}" Size="13" Filled="True" Foreground="{DynamicResource B.OnPrimary}"/>
@@ -89,7 +120,7 @@
                         </ComboBox>
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                         <TextBlock x:Name="SimStatus" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <ToggleButton x:Name="FollowToggle" Style="{StaticResource Toggle.Tool}" ToolTip="Kamera seçili nesneyi takip etsin (T)" Click="OnFollow"><t:Icon Data="{StaticResource I.Eye}" Size="16"/></ToggleButton>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Üstten görünüm" Click="OnTop"><t:Icon Data="{StaticResource I.Layers}" Size="16"/></Button>

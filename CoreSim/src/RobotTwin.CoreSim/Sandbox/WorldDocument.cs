@@ -625,16 +625,50 @@ namespace RobotTwin.CoreSim.Sandbox
         }
 
         /// <summary>Turns an object and everything mounted on it about the vertical axis through the object (degrees).</summary>
-        public void RotateAssembly(WorldObject root, double yawDegrees)
+        public void RotateAssembly(WorldObject root, double yawDegrees) =>
+            RotateAssembly(root, Quat.FromAxisAngle(Vec3.UnitZ, yawDegrees * Math.PI / 180), root.Pose.Position);
+
+        /// <summary>
+        /// [gizmo] Turns an object and everything mounted on it by a rotation about a world point (the move / rotate
+        /// gizmo's pivot or centre): their places, their orientations, and the anchors and axes of the joints among them
+        /// (kept in world coordinates), so a turned robot keeps its hinges where they are on it.
+        /// </summary>
+        public void RotateAssembly(WorldObject root, Quat rotation, Vec3 pivot)
         {
-            double a = yawDegrees * Math.PI / 180, c = Math.Cos(a), s = Math.Sin(a);
-            double cx = root.Pose.X, cy = root.Pose.Y;
-            foreach (var o in new[] { root }.Concat(MountedOn(root.Id)))
+            var parts = new[] { root }.Concat(MountedOn(root.Id)).ToList();
+            var ids = new HashSet<string>(parts.Select(o => o.Id), StringComparer.OrdinalIgnoreCase);
+            foreach (var o in parts)
             {
-                double x = o.Pose.X - cx, y = o.Pose.Y - cy;
-                o.Pose.X = cx + c * x - s * y;
-                o.Pose.Y = cy + s * x + c * y;
-                o.Pose.Yaw = ((o.Pose.Yaw + yawDegrees) % 360 + 360) % 360;
+                var at = pivot + rotation.Rotate(o.Pose.Position - pivot);
+                o.Pose.X = at.X;
+                o.Pose.Y = at.Y;
+                o.Pose.Z = at.Z;
+                var (roll, pitch, yaw) = (rotation * o.Pose.Orientation).Normalized().ToEuler();
+                o.Pose.Roll = Degrees(roll);
+                o.Pose.Pitch = Degrees(pitch);
+                o.Pose.Yaw = (Degrees(yaw) + 360) % 360;
+            }
+
+            foreach (var j in Joints.Where(j => ids.Contains(j.ObjectA)))
+            {
+                if (j.AnchorX != 0 || j.AnchorY != 0 || j.AnchorZ != 0)   // (0, 0, 0): no anchor of its own
+                {
+                    var an = pivot + rotation.Rotate(new Vec3(j.AnchorX, j.AnchorY, j.AnchorZ) - pivot);
+                    j.AnchorX = an.X;
+                    j.AnchorY = an.Y;
+                    j.AnchorZ = an.Z;
+                }
+
+                var ax = rotation.Rotate(new Vec3(j.AxisX, j.AxisY, j.AxisZ));
+                j.AxisX = ax.X;
+                j.AxisY = ax.Y;
+                j.AxisZ = ax.Z;
+            }
+
+            static double Degrees(double radians)
+            {
+                double d = radians * 180 / Math.PI;
+                return Math.Abs(d - Math.Round(d)) < 1e-7 ? Math.Round(d) : d;   // a quarter turn stays 90, not 89.9999999
             }
         }
 
