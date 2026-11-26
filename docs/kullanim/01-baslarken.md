@@ -12,7 +12,7 @@ Bu bölümde RobotWin Studio'yu kurar, ekranın bölümlerini tanır ve ilk proj
 3. **Kurulum biçimini** seçin: bu kullanıcı için (varsayılan, yönetici izni istemez), tüm kullanıcılar için (yönetici ister) ya da **taşınabilir** (yalnız bir klasör, örneğin USB bellekte: kısayol, kayıt defteri girdisi ve dosya türü yok).
 4. Kurulum bitince Başlat menüsünden **RobotWin Studio**'yu açın.
 
-Bileşenleri sonradan eklemek ya da kaldırmak için **Ayarlar → Güncellemeler → Bileşenleri değiştir…**'i (ya da Windows **Ayarlar → Uygulamalar → RobotWin Studio → Değiştir**'i) kullanın. Kaldırmak için Windows **Ayarlar → Uygulamalar** listesini kullanın. İnternetsiz kurmak için sürümün `.rwpack` dosyalarını kurulum dosyasının yanına koyun.
+Bileşenleri sonradan eklemek ya da kaldırmak için **Ayarlar → Güncellemeler → Bileşenleri değiştir…**'i (ya da Windows **Ayarlar → Uygulamalar → RobotWin Studio → Değiştir**'i) kullanın. Kaldırmak için Windows **Ayarlar → Uygulamalar** listesini kullanın. Bir güncelleme yeni sürümü kurduktan sonra onu bir kez dener; yeni sürüm açılmazsa önceki sürümü olduğu gibi geri yükler. İnternetsiz kurmak için sürümün `.rwpack` dosyalarını kurulum dosyasının yanına koyun.
 
 ### Kendi kodunuzu derlemek için
 

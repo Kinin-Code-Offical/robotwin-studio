@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using RobotTwin.CoreSim.Formats;
 using RobotWin.Studio.Branding;
 using RobotWin.Studio.Examples;
@@ -133,7 +134,72 @@ namespace RobotWin.Studio.Pages
             RecentList.Children.Clear();
             var files = RecentFiles.Load();
             RecentEmpty.Visibility = files.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-            foreach (var path in files) RecentList.Children.Add(FileButton(path, Path.GetDirectoryName(path) ?? string.Empty));
+            foreach (var path in files.Take(6)) RecentList.Children.Add(RecentCard(path));
+        }
+
+        /// <summary>
+        /// [home] A recent file as a card: the picture saved in it (the circuit sheet or the world as it was last seen), its
+        /// name, folder and when it was saved; the file type's icon while it has no picture.
+        /// </summary>
+        private FrameworkElement RecentCard(string path)
+        {
+            const double width = 196, height = 122;
+            var picture = new Grid { Width = width, Height = height, Background = (Brush)FindResource("B.Raised"), ClipToBounds = true };
+            picture.Children.Add(new Image { Source = FileIcons.Render(Path.GetExtension(path).ToLowerInvariant(), 64), Width = 40, Height = 40, Opacity = 0.75 });
+            var image = new Image { Stretch = Stretch.UniformToFill, Width = width, Height = height };
+            RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
+            picture.Children.Add(image);
+            var frame = new Border { Child = picture, BorderBrush = (Brush)FindResource("B.Border"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4) };
+            var text = new StackPanel { Width = width, Margin = new Thickness(0, 8, 0, 0) };
+            text.Children.Add(new TextBlock { Text = Path.GetFileNameWithoutExtension(path), Foreground = (Brush)FindResource("B.Text"), FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis });
+            string when = File.Exists(path) ? File.GetLastWriteTime(path).ToString("dd.MM.yyyy HH:mm") : RobotWin.Studio.Shell.Lang.T("dosya bulunamadı");
+            text.Children.Add(new TextBlock { Text = when + " · " + Path.GetFileName(Path.GetDirectoryName(path) ?? string.Empty), Style = (Style)FindResource("Text.Caption"), TextTrimming = TextTrimming.CharacterEllipsis });
+            var stack = new StackPanel();
+            stack.Children.Add(frame);
+            stack.Children.Add(text);
+            var card = new Button
+            {
+                Style = (Style)FindResource("Btn.Ghost"),
+                Padding = new Thickness(6),
+                Margin = new Thickness(-6, 0, 10, 10),
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                Content = stack,
+                ToolTip = path
+            };
+            card.Click += (_, _) => _shell.OpenFile(path);
+            System.Threading.Tasks.Task.Run(() => ReadPreview(path)).ContinueWith(t =>
+            {
+                if (t.Status == System.Threading.Tasks.TaskStatus.RanToCompletion && t.Result != null) image.Source = t.Result;
+            }, System.Threading.Tasks.TaskScheduler.FromCurrentSynchronizationContext());
+            return card;
+        }
+
+        /// <summary>The picture a RobotWin file carries (preview.png in its ZIP), decoded small and frozen; null when it has none.</summary>
+        private static BitmapSource? ReadPreview(string path)
+        {
+            try
+            {
+                if (!File.Exists(path)) return null;
+                using var zip = System.IO.Compression.ZipFile.OpenRead(path);
+                var entry = zip.GetEntry("preview.png");
+                if (entry == null || entry.Length > 8 * 1024 * 1024) return null;
+                var data = new MemoryStream();
+                using (var s = entry.Open()) s.CopyTo(data);
+                data.Position = 0;
+                var bmp = new BitmapImage();
+                bmp.BeginInit();
+                bmp.CacheOption = BitmapCacheOption.OnLoad;
+                bmp.DecodePixelWidth = 400;
+                bmp.StreamSource = data;
+                bmp.EndInit();
+                bmp.Freeze();
+                return bmp;
+            }
+            catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is UnauthorizedAccessException || ex is NotSupportedException ||
+                                       ex is FileFormatException || ex is ArgumentException)
+            {
+                return null;
+            }
         }
 
         private void BuildBackups()

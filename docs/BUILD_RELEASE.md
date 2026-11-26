@@ -38,7 +38,7 @@ Output in `builds\installer\release\`: the setup and the `.rwpack` files. What t
 2. **Components** (Custom only), each with its download size.
 3. **Where and how:** for this user, for all users (the setup restarts itself as administrator and shows its own progress) or **portable** (a folder only: no shortcuts, registry entries or file types); the folder; desktop shortcut, file types, start afterwards. The source line says where the files come from.
 
-Then it downloads what it needs (WinHTTP: the system's proxy, redirects, a broken download goes on where it stopped, six attempts), checks each file's SHA-256 before anything in the installation changes, unpacks, removes what the previous installation had and this one does not (its `install.log`), and writes:
+Then it downloads what it needs (WinHTTP: the system's proxy, redirects, a broken download goes on where it stopped, six attempts), checks each file's SHA-256 before anything in the installation changes, unpacks, removes what the previous installation had and this one does not (its `install.log`), and writes the records below. Over a previous installation every file it replaces or removes is first moved into a hidden `.rollback` folder beside it; then the new app must pass `RobotWinStudio.exe --startup-check` (the runtime starts, the assemblies, resources, part catalogue and language packs load; no window, nothing written; two minutes at most). If it fails, or unpacking stops half way, the new files go and the previous version comes back as it was (shortcuts, registry and file types are not touched yet); if it passes, the rollback folder is deleted. `RW_SETUP_FAIL_CHECK=1` makes the check fail, for testing the rollback. The records:
 
 | File | Purpose |
 | --- | --- |

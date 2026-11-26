@@ -12,7 +12,7 @@ In this chapter you install RobotWin Studio, learn the parts of the screen and o
 3. Choose **how**: for this user (default, no administrator rights), for all users (asks for an administrator) or **portable** (a folder only, e.g. on a USB stick: no shortcuts, registry entries or file types).
 4. When it finishes, open **RobotWin Studio** from the Start menu.
 
-To add or remove components later, use **Settings → Updates → Change components…** (or Windows **Settings → Apps → RobotWin Studio → Modify**). To uninstall, use Windows **Settings → Apps**. To install without the internet, put the release's `.rwpack` files next to the installer.
+To add or remove components later, use **Settings → Updates → Change components…** (or Windows **Settings → Apps → RobotWin Studio → Modify**). To uninstall, use Windows **Settings → Apps**. An update tries the new version once after installing it; if it does not start, the previous version is restored as it was. To install without the internet, put the release's `.rwpack` files next to the installer.
 
 ### To compile your own code
 

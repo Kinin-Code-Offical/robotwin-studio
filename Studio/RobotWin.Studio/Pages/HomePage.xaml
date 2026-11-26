@@ -26,6 +26,10 @@
                 <TextBlock x:Name="Facts" Style="{StaticResource Text.Caption}" Margin="0,20,0,0" TextWrapping="Wrap"/>
                 <ContentControl x:Name="UpdateHost" Focusable="False"/>
 
+                <TextBlock x:Name="RecentTitle" Text="Son çalışmalar" Style="{StaticResource Text.Overline}" Margin="0,40,0,10"/>
+                <WrapPanel x:Name="RecentList"/>
+                <TextBlock x:Name="RecentEmpty" Text="Henüz kaydedilmiş bir proje yok." Style="{StaticResource Text.Caption}"/>
+
                 <TextBlock Text="Dünyalar" Style="{StaticResource Text.Overline}" Margin="0,48,0,6"/>
                 <Border BorderBrush="{DynamicResource B.Border}" BorderThickness="0,1,0,0">
                     <StackPanel x:Name="WorldList"/>
@@ -39,11 +43,7 @@
 
             <StackPanel Grid.Column="2" Margin="0,88,0,0">
                 <ContentControl x:Name="NewsHost" Focusable="False"/>
-                <TextBlock x:Name="RecentTitle" Text="Son açılanlar" Style="{StaticResource Text.Overline}"/>
-                <StackPanel x:Name="RecentList"/>
-                <TextBlock x:Name="RecentEmpty" Text="Henüz kaydedilmiş bir proje yok." Style="{StaticResource Text.Caption}"/>
-
-                <TextBlock x:Name="BackupTitle" Text="Otomatik yedekler" Style="{StaticResource Text.Overline}" Margin="0,32,0,4"/>
+                <TextBlock x:Name="BackupTitle" Text="Otomatik yedekler" Style="{StaticResource Text.Overline}" Margin="0,0,0,4"/>
                 <Border x:Name="CrashNote" Visibility="Collapsed" Background="{DynamicResource B.Raised}" BorderBrush="{DynamicResource B.Warning}" BorderThickness="1"
                         CornerRadius="6" Padding="10,8" Margin="0,2,0,8">
                     <TextBlock x:Name="CrashText" TextWrapping="Wrap" Style="{StaticResource Text.Body}"/>

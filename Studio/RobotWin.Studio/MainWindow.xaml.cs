@@ -175,6 +175,7 @@ namespace RobotWin.Studio
 
             Tabs.ItemsSource = W.Documents;
             W.PreviewProvider = RenderPreview;
+            W.WorldPreviewProvider = doc => _current == "world" && W.ActiveWorld == doc.World ? RenderPreview(_world.Scene) : null;   // [home]
             W.PropertyChanged += OnWorkspaceChanged;
             W.ActiveDocumentChanged += (_, _) => OnActiveDocumentChanged();
             W.Simulation.PropertyChanged += (_, e) =>
@@ -1203,10 +1204,12 @@ namespace RobotWin.Studio
         }
 
         /// <summary>PNG preview of the schematic for the project file.</summary>
-        private byte[]? RenderPreview()
+        private byte[]? RenderPreview() => RenderPreview(_schematic.PreviewElement);
+
+        /// <summary>A picture of a page's view for the file (the start page's cards show it): 640 px wide, as it is on screen.</summary>
+        private static byte[]? RenderPreview(FrameworkElement? el)
         {
-            var el = _schematic.PreviewElement;
-            if (el == null || el.ActualWidth < 20 || el.ActualHeight < 20) return null;
+            if (el == null || !el.IsVisible || el.ActualWidth < 20 || el.ActualHeight < 20) return null;
             int w = 640, h = (int)Math.Round(640 * el.ActualHeight / el.ActualWidth);
             var dv = new DrawingVisual();
             using (var dc = dv.RenderOpen())

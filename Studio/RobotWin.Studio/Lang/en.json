@@ -8008,7 +8008,9 @@
   "hepsi": "all",
   "imza": "signed",
   "imza ve şifre": "signed and encrypted",
-  "güvenilenler": "trusted only"
+  "güvenilenler": "trusted only",
+  "Son çalışmalar": "Recent work",
+  "dosya bulunamadı": "file not found"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

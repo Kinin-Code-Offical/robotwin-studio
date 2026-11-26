@@ -1048,7 +1048,21 @@ static bool WriteAll(const fs::path& target, const char* data, uint64_t n)
     return false;
 }
 
-static std::wstring Unpack(const fs::path& pack, const fs::path& dir, std::vector<std::wstring>& installed, const std::function<void(const std::wstring&, uint64_t)>& done)
+// [rollback] Moves a file of the previous installation into the rollback folder (same volume: a rename), so an update that
+// does not start can be undone. False when it could not be moved (it is then overwritten or deleted as before).
+static bool SetAside(const fs::path& dir, const fs::path& backup, const std::wstring& rel)
+{
+    if (backup.empty()) return false;
+    std::error_code ec;
+    fs::path from = dir / rel, to = backup / rel;
+    if (!fs::exists(from, ec) || fs::exists(to, ec)) return fs::exists(to, ec);
+    fs::create_directories(to.parent_path(), ec);
+    SetFileAttributesW(from.c_str(), FILE_ATTRIBUTE_NORMAL);
+    return MoveFileExW(from.c_str(), to.c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
+}
+
+static std::wstring Unpack(const fs::path& pack, const fs::path& dir, std::vector<std::wstring>& installed, const std::function<void(const std::wstring&, uint64_t)>& done,
+                           const fs::path& backup = fs::path())
 {
     std::wstring corrupt = Tx(L"bileşen dosyası bozuk: ", L"the component file is damaged: ") + pack.wstring();
     std::ifstream f(pack, std::ios::binary);
@@ -1101,6 +1115,7 @@ static std::wstring Unpack(const fs::path& pack, const fs::path& dir, std::vecto
         fs::path target = dir / rel;
         std::error_code ec;
         fs::create_directories(target.parent_path(), ec);
+        SetAside(dir, backup, rel);   // [rollback] the previous version's file waits until the new one has started
         if (!WriteAll(target, data, size))
         {
             err = Tx(L"yazılamadı (dosya kullanımda olabilir): ", L"could not write (the file may be in use): ") + target.wstring();
@@ -1234,7 +1249,7 @@ static bool CloseRunningCopies(const std::wstring& dir, DWORD timeoutMs)
 // What the previous installation had and this one does not: its files (install.log), then the folders they leave
 // empty. A copy unpacked by an older setup with .NET inside kept no list when portable; its runtime beside the exe
 // would make the new exe start in that old self-contained way, so those files go by name.
-static void RemoveLeftovers(const fs::path& dir, const std::vector<std::wstring>& previous, const std::vector<std::wstring>& now)
+static void RemoveLeftovers(const fs::path& dir, const std::vector<std::wstring>& previous, const std::vector<std::wstring>& now, const fs::path& backup = fs::path())
 {
     std::set<std::wstring> keep;
     for (auto& r : now) keep.insert(Lower(r));
@@ -1260,7 +1275,7 @@ static void RemoveLeftovers(const fs::path& dir, const std::vector<std::wstring>
     {
         fs::path p = dir / r;
         SetFileAttributesW(p.c_str(), FILE_ATTRIBUTE_NORMAL);
-        if (DeleteFileW(p.c_str())) removed++;
+        if (SetAside(dir, backup, r) || DeleteFileW(p.c_str())) removed++;   // [rollback] aside while the update is unproven
         for (fs::path d = fs::path(r).parent_path(); !d.empty(); d = d.parent_path()) folders.insert(d.wstring());
     }
 
@@ -1297,6 +1312,50 @@ static void RunAndWait(const std::wstring& exe, const std::wstring& args)
         WaitForSingleObject(sei.hProcess, 120000);
         CloseHandle(sei.hProcess);
     }
+}
+
+// [rollback] Runs the installed app's --startup-check (no window, nothing written) and returns its exit code; a hang
+// past the time limit is ended and counts as a failure (0xFFFFFFFF).
+static DWORD StartupCheck(const std::wstring& exe, DWORD timeoutMs)
+{
+    std::wstring cmd = L"\"" + exe + L"\" --startup-check";
+    STARTUPINFOW si{ sizeof(si) };
+    PROCESS_INFORMATION pi{};
+    std::wstring cwd = fs::path(exe).parent_path().wstring();
+    if (!CreateProcessW(exe.c_str(), cmd.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, cwd.c_str(), &si, &pi)) return GetLastError() | 0x80000000u;
+    DWORD code = 0xFFFFFFFF;
+    if (WaitForSingleObject(pi.hProcess, timeoutMs) == WAIT_OBJECT_0) GetExitCodeProcess(pi.hProcess, &code);
+    else TerminateProcess(pi.hProcess, 0xFFFFFFFF);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    return code;
+}
+
+// [rollback] The new version's files go and the previous version's come back from the rollback folder.
+static void Restore(const fs::path& dir, const fs::path& backup, const std::vector<std::wstring>& written)
+{
+    std::error_code ec;
+    for (auto& r : written)
+    {
+        if (!SafeRelative(r)) continue;
+        fs::path f = dir / r;
+        if (SamePath(f, SelfPath())) continue;
+        SetFileAttributesW(f.c_str(), FILE_ATTRIBUTE_NORMAL);
+        DeleteFileW(f.c_str());
+    }
+
+    std::vector<fs::path> files;
+    for (auto& e : fs::recursive_directory_iterator(backup, ec))
+        if (e.is_regular_file(ec)) files.push_back(e.path());
+    for (auto& f : files)
+    {
+        fs::path to = dir / fs::relative(f, backup, ec);
+        if (SamePath(to, SelfPath())) continue;
+        fs::create_directories(to.parent_path(), ec);
+        MoveFileExW(f.c_str(), to.c_str(), MOVEFILE_REPLACE_EXISTING);
+    }
+
+    fs::remove_all(backup, ec);
 }
 
 // Starts the installed app. When this setup runs elevated (all-users install), the app is started through
@@ -1459,9 +1518,21 @@ static std::wstring Install(const Options& o)
     std::error_code ec;
     fs::create_directories(dir, ec);
     if (ec) return Tx(L"Klasör oluşturulamadı: ", L"Could not create the folder: ") + o.dir;
+    // [rollback] Over a previous installation, what it replaces is set aside until the new version has started once.
+    fs::path backup;
+    if (prev.found)
+    {
+        backup = dir / L".rollback";
+        fs::remove_all(backup, ec);
+        fs::create_directories(backup, ec);
+        if (ec) backup.clear();
+        else SetFileAttributesW(backup.c_str(), FILE_ATTRIBUTE_HIDDEN);
+    }
+
+    std::vector<std::wstring> written;   // what this run wrote (a restore takes back exactly these)
     std::vector<std::wstring> installed;
     std::vector<size_t> firstOf(parts.size() + 1, 0);
-    uint64_t written = 0;
+    uint64_t bytesWritten = 0;
     double start = dlFraction(download);
     for (size_t i = 0; i < parts.size(); i++)
     {
@@ -1476,10 +1547,21 @@ static std::wstring Install(const Options& o)
         std::wstring name = PartName(parts[i]->id), nth = L" " + std::to_wstring(i + 1) + L"/" + std::to_wstring(parts.size()) + L": ";
         std::wstring err = Unpack(packs[i], dir, installed, [&](const std::wstring& rel, uint64_t bytes)
         {
-            written += bytes;
-            Report(Tx(L"Kuruluyor", L"Installing") + nth + name, rel, start + (0.96 - start) * (double)written / (double)std::max<uint64_t>(1, unpacked));
-        });
-        if (!err.empty()) return name + L": " + err;
+            bytesWritten += bytes;
+            written.push_back(rel);
+            Report(Tx(L"Kuruluyor", L"Installing") + nth + name, rel, start + (0.96 - start) * (double)bytesWritten / (double)std::max<uint64_t>(1, unpacked));
+        }, backup);
+        if (!err.empty())
+        {
+            // [rollback] half a new version is no version: the previous one comes back
+            if (!backup.empty())
+            {
+                Restore(dir, backup, written);
+                return name + L": " + err + Tx(L" Önceki sürüm geri yüklendi.", L" The previous version was restored.");
+            }
+
+            return name + L": " + err;
+        }
         Note(L"✓ " + name + Tx(L" kuruldu", L" installed"));
     }
 
@@ -1487,10 +1569,19 @@ static std::wstring Install(const Options& o)
     firstOf[parts.size()] = installed.size();
     installed.push_back(L"Uninstall.exe");
     installed.push_back(L"install.json");
-    RemoveLeftovers(dir, previous, installed);
+    RemoveLeftovers(dir, previous, installed, backup);
 
     // 4. The uninstaller (this program), the record of the installation, the list of its files.
     Report(Tx(L"Kayıtlar yazılıyor…", L"Writing the records…"), L"", 0.97);
+    for (const wchar_t* record : { L"install.json", L"install.log", L"Uninstall.exe" })
+    {
+        if (!backup.empty() && !SamePath(dir / record, SelfPath()))
+        {
+            CopyFileW((dir / record).c_str(), (backup / record).c_str(), FALSE);   // [rollback] the previous records too
+            written.push_back(record);
+        }
+    }
+
     fs::path un = dir / L"Uninstall.exe";
     if (!SamePath(SelfPath(), un))
     {
@@ -1508,6 +1599,32 @@ static std::wstring Install(const Options& o)
     }
 
     WriteBytes(dir / L"install.log", Utf8(log));
+
+    // [rollback] The new version must start (its runtime, assemblies, resources, catalogue and language packs load) before
+    // the previous one is let go; if it does not, the previous one comes back and nothing else is changed.
+    std::wstring exePath = (dir / ExeName).wstring();
+    Report(Tx(L"Yeni sürüm deneniyor…", L"Trying the new version…"), L"", 0.975);
+    DWORD check = StartupCheck(exePath, 120000);
+    wchar_t forced[8] = {};
+    if (GetEnvironmentVariableW(L"RW_SETUP_FAIL_CHECK", forced, 8) > 0 && forced[0] == L'1') check = 0xDEAD;   // tests: a new version that does not start
+    Trace(L"startup check: " + std::to_wstring(check));
+    if (check != 0)
+    {
+        wchar_t hex[16];
+        swprintf_s(hex, L"0x%08X", check);
+        if (!backup.empty())
+        {
+            Restore(dir, backup, written);
+            return std::wstring(Tx(L"Yeni sürüm açılamadı (", L"The new version did not start (")) + hex + Tx(L"); önceki sürüm geri yüklendi, hiçbir şey değişmedi.", L"); the previous version was restored, nothing changed.");
+        }
+
+        Note(std::wstring(Tx(L"Uyarı: kurulan uygulama denemede açılamadı (", L"Warning: the installed app did not start in the check (")) + hex + L")");
+    }
+    else if (!backup.empty())
+    {
+        fs::remove_all(backup, ec);   // proven: the previous version can go
+    }
+
     if (o.userLang && !o.lang.empty() && o.lang != UserLanguage()) SetUserLanguage(o.lang);   // only a change touches their settings
 
     // 5. Shortcuts, Apps & features, file types.

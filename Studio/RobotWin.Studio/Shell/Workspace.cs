@@ -349,6 +349,9 @@ namespace RobotWin.Studio.Shell
         /// <summary>Renders a PNG preview of the project for the file (set by the main window).</summary>
         public Func<byte[]?>? PreviewProvider { get; set; }
 
+        /// <summary>[home] A picture of a world as its page shows it (null when it is not on screen: the stored one stays).</summary>
+        public Func<OpenDocument, byte[]?>? WorldPreviewProvider { get; set; }
+
         /// <summary>Raised when a board's firmware source or build changes.</summary>
         public event EventHandler? FirmwareChanged;
 
@@ -857,6 +860,14 @@ namespace RobotWin.Studio.Shell
             }
 
             if (!string.Equals(doc.FilePath, path, StringComparison.OrdinalIgnoreCase)) doc.World.Title = Path.GetFileNameWithoutExtension(path);   // [tabs]
+            try
+            {
+                if (WorldPreviewProvider?.Invoke(doc) is { } preview) doc.World.Preview = preview;   // [home] the start page shows it
+            }
+            catch (InvalidOperationException)
+            {
+            }
+
             Backups.KeepPrevious(path);   // [backup]
             doc.World.Save(path);
             doc.FilePath = path;
@@ -980,10 +991,14 @@ namespace RobotWin.Studio.Shell
 
         public static int Limit { get; set; } = 10;
 
+        /// <summary>[home] A snapshot's own list (--recent a;b), so a picture of the start page shows cards without the user's list.</summary>
+        public static IReadOnlyList<string>? Override { get; set; }
+
         public static IReadOnlyList<string> Load()
         {
             try
             {
+                if (Override != null) return Override.Where(File.Exists).ToList();
                 if (Unattended.Active || !File.Exists(StorePath)) return Array.Empty<string>();
                 var list = new List<string>();
                 foreach (var line in File.ReadAllLines(StorePath))

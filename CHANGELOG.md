@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Recent work as cards on the start page:** each recent file shows the picture saved in it (the circuit sheet, or the world as its page showed it: worlds now save one too), its name, folder and time; a file without one shows its type icon.
+- **Updates roll back when the new version does not start:** the setup moves what it replaces into a hidden `.rollback` folder, runs the new app's `--startup-check` (runtime, assemblies, resources, catalogue, language packs), and restores the previous version as it was when the check fails or unpacking stops half way.
 - **A documentation check:** CI fails when a document names a file that is not in the repository, another .NET version than the projects target, or a menu step the app does not show (the Turkish guide against the app, the English one against the English pack). Its first run found the FAQ pointing to a settings section by an old name.
 - **A dependency and licence inventory:** `docs/DEPENDENCIES.md` lists every NuGet package the app, the core and the headless server use (version, licence read from the package itself) and the bundled runtimes and components; CI fails when it is out of date or a licence is not on the allowed list.
 - **OPC UA security:** a PLC's OPC UA server offers Basic256Sha256 (signed, or signed and encrypted) with a certificate made once and kept, named users (read-only ones too; passwords always encrypted with the server's certificate) and a trusted / rejected list of client certificates; UA_READ / UA_WRITE take SECURITY, USER and PASSWORD and check the server's certificate the same way. Checked both ways against an independent stack (FreeOpcUa asyncua).

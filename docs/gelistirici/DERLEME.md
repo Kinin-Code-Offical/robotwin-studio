@@ -50,7 +50,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.
 2. **Bileşenler** (yalnız Özel'de), her biri indirme boyutuyla.
 3. **Nereye ve nasıl:** bu kullanıcı için, tüm kullanıcılar için (kurulum programı kendini yönetici olarak yeniden başlatır ve kendi ilerlemesini gösterir) ya da **taşınabilir** (yalnız bir klasör: kısayol, kayıt defteri girdisi ve dosya türü yok); klasör; masaüstü kısayolu, dosya türleri, sonra başlat. Kaynak satırı dosyaların nereden geleceğini söyler.
 
-Sonra gerekeni indirir (WinHTTP: sistemin vekil sunucusu, yönlendirmeler, kopan indirme kaldığı yerden sürer, altı deneme), kurulumda bir şey değişmeden önce her dosyanın SHA-256'sını denetler, açar, önceki kurulumda olup bunda olmayanı (onun `install.log`'u) kaldırır ve şunları yazar:
+Sonra gerekeni indirir (WinHTTP: sistemin vekil sunucusu, yönlendirmeler, kopan indirme kaldığı yerden sürer, altı deneme), kurulumda bir şey değişmeden önce her dosyanın SHA-256'sını denetler, açar, önceki kurulumda olup bunda olmayanı (onun `install.log`'u) kaldırır ve aşağıdaki kayıtları yazar. Önceki bir kurulumun üstüne kurarken değiştirdiği ya da kaldırdığı her dosyayı önce yanındaki gizli `.rollback` klasörüne taşır; sonra yeni uygulamanın `RobotWinStudio.exe --startup-check`'ten geçmesi gerekir (çalışma zamanı açılır; derlemeler, kaynaklar, parça kataloğu ve dil paketleri yüklenir; pencere açılmaz, hiçbir şey yazılmaz; en çok iki dakika). Geçemezse ya da açma yarıda kalırsa yeni dosyalar gider ve önceki sürüm olduğu gibi geri gelir (kısayollar, kayıt defteri ve dosya türlerine daha dokunulmamıştır); geçerse geri dönüş klasörü silinir. `RW_SETUP_FAIL_CHECK=1` denetimi başarısız sayar (geri dönüşü sınamak için). Kayıtlar:
 
 | Dosya | Amaç |
 | --- | --- |

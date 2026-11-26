@@ -65,6 +65,28 @@ namespace RobotWin.Studio
                 return;
             }
 
+            // [rollback] Called by the installer after it installed: the runtime starts, the app's assemblies, its resources,
+            // the part catalogue and the language packs load. 0 when they do; nothing is shown and nothing is written.
+            if (args.Contains("--startup-check"))
+            {
+                int code = 0;
+                try
+                {
+                    code = System.Linq.Enumerable.Any(RobotTwin.CoreSim.Design.PartLibrary.Default.Parts) ? 0 : 3;
+                    foreach (var (id, _) in Shell.Lang.Available()) Shell.Lang.Load(id);
+                    Shell.Lang.Load("tr");
+                    if (FindResource("Btn.Ghost") == null) code = 4;
+                    _ = new System.Windows.Controls.Button { Style = (Style)FindResource("Btn.Ghost") };   // the theme's styles parse
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    code = 2;
+                }
+
+                Shutdown(code);
+                return;
+            }
+
             if (Arg("--export-logo") is { } logoDir)
             {
                 Logo.Export(logoDir);
@@ -227,6 +249,7 @@ namespace RobotWin.Studio
             {
                 IsSnapshot = true;
                 SnapshotPath = snapshotPath;
+                if (Arg("--recent") is { } recent) Shell.RecentFiles.Override = recent.Split(';');   // [home] cards in the picture
                 if (Arg("--page") == "model")
                 {
                     // 3D modeller: rendered on its own while it is not part of MainWindow's navigation.
