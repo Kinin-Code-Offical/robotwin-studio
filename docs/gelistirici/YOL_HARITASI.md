@@ -162,6 +162,67 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
 - [ ] Yeni MCU aileleri.
 - [x] İngilizce arayüz ve dil paketleri (varsayılan dil İngilizce).
 
+## D. v1.7.0 dış değerlendirmesinden kabul edilenler (26 Kasım 2026)
+
+Bir dış inceleme raporunun (UI/UX, güvenlik, doğrulama) önerilerinden projenin bütünlüğüne uyanlar. Elenen ya da değiştirilenler en altta, nedenleriyle. Var olanlar işaretli; uygulamalar örnek alınır, arayüzleri ya da marka varlıkları kopyalanmaz. Dış uygulamaları indirme izni var (karşılaştırma ve doğrulama için).
+
+### D1. Temel ve güvenlik (P0)
+
+- [ ] **.NET 10 LTS'ye geçiş:** .NET 9'un desteği 10 Kasım 2026'da bitti. Bütün projeler (CoreSim net10.0 + netstandard2.1, Studio, testler, Headless, SDK şablonu), kurulum (.NET bileşeni), Vortice, OCCT köprüsü, ESP32/Arduino derleme araçları ve CI birlikte; tam test, kontrast ve kurulum denetimi.
+- [ ] **ESP32 hızlı modunun yalıtılması:** derlenen çizim DLL'i bugün uygulamanın kendi sürecinde çalışıyor; güvenilmeyen bir proje dosyası kod çalıştırabilir. Ayrı süreç (kısıtlı belirteç, iş nesnesiyle CPU/bellek sınırı, zaman aşımı), yalnız simülasyon verisi taşıyan IPC; başkasından gelen projede kod çalıştırmadan önce açık onay. Aynı ilke eklentiler ve FMU ikilileri için.
+- [~] **OPC UA güvenliği:** Basic256Sha256 (imza ve şifreleme), sertifika üretimi ve güveni, kullanıcı/şifre, erişim yetkileri; güvenli varsayılanlar (dinleme yalnız yerel ağ arayüzünde, anonim kapalı). Sunucu ve PLC istemcisi var, güvenlik yok.
+- [ ] **Kurulum güvenliği:** bileşen SHA-256 denetimi var. Eklenecek: bağımlılıkların sürüm ve lisans dökümü (CI'da), güncellemeden sonra güvenli geri dönüş. Kod imzalama bir sertifika gerektirir: kullanıcının kararı.
+- [ ] **Belgelerin sürümle tutarlılığı:** belgelerde mevcut sürümle çelişen bilgileri bulan bir denetim (eski ekran adları, kaldırılmış özellikler, sürüm numaraları).
+
+### D2. Ortak arayüz düzeni (P1)
+
+- [~] **Gelişmiş komut paleti:** kelime kelime eşleşme (fiil + nesne, Türkçe ekler: "MOSFET ekle", "servo motorun akımını izle"), aktif sayfaya ve seçime göre süzme; "DRC çalıştır", "seçili parçayı PCB'de göster", "… akımını izle", "montaj ilişkilerini denetle", "kesit görünümü" komutları.
+- [ ] **Çalışma alanı profilleri ve panel düzenleri:** Elektronik, PCB, Gömülü, Mekanik, Robotik, Endüstri, Analiz, Sunum; DockManager üzerinde tek tıkla düzen, kullanıcının kendi kaydettiği düzenler, küçük ekranda (≤1366 px) daha az açık yan panel, boş alt panelin sahneyi daraltmaması, sayfalar arasında bağlamın (seçim, yakınlık) korunması.
+- [ ] **Tutarlı araç çubukları:** her editörde aynı sırada ortak grup (seç, taşı, döndür, sil, geri al/yinele, yakınlaştır/sığdır, çalıştır/duraklat, özellikler, görünüm), editöre özel komutlar ayrı grupta; aynı kısayollar.
+- [ ] **Tasarım token'ları ve tipografi ölçeği:** renk kaynakları (yüzey, sınır, metin, seçim, odak, hata, uyarı, başarı, devre dışı) ve beş yazı boyutu tek yerden; sabit renk ve boyutların taranması. Teknik renkler (gerilim, akım, sıcaklık, katman) durum renklerinden ayrı.
+- [ ] **Erişilebilirlik ve DPI:** %100/%125/%150/%200 ölçekte bütün sayfaların anlık görüntü denetimi; kontrast denetiminin 3B üstündeki etiketleri ve özel çizimleri de kapsaması; klavye ile gezinme.
+- [ ] **Başlangıç ekranı:** üç ana işlem (yeni, aç, örnek keşfet); örnekler kart olarak: projenin kendi çiziminden üretilen önizleme (süs görseli değil), zorluk, kullanılan alanlar, gereken araç zinciri, rehber var mı; açmadan önce kısa bilgi ekranı (bileşenler, ne öğretir, "Aç" / "Rehberi başlat"). Son projeler, yedekler, yenilikler var.
+
+### D3. Editörler (P1)
+
+- [ ] **Devre:** seçilen parçanın canlı değerleri denetçide (MOSFET: VGS, ID, güç, sıcaklık, sınırlara uzaklık; servo: hedef/gerçek açı, akım, tork); simülasyon katmanları aç/kapa (gerilim, akım, güç kaybı, sıcaklık, dijital, arıza noktaları). Şema üstü ERC işaretleri var; seçilen hatanın akım yolunu vurgulama eklenecek.
+- [ ] **PCB:** yönlendirirken bağlam çubuğu (katman, genişlik, via, boşluk kuralı, ağ, anlık uzunluk, DRC durumu); etkileşimli diferansiyel çift yönlendirme; DRC sorun gezgini önem sırasıyla (kritik, üretim, bağlanmamış, uzunluk, mekanik); üretim hazırlık ekranı (DRC, DFM, bağlantı bütünlüğü, Gerber karşılaştırması, delik, BOM, CPL, ölçüler; yapılmayan denetimler açıkça). DRC'den yere gitme var.
+- [ ] **Kod ve hata ayıklayıcı:** çağrı yığını ve yerel değişkenler (DWARF), kesme olayları, birleşik görünüm (kod, değişkenler, yazmaçlar, zaman çizelgesi, seri); kod satırı ↔ fiziksel parça vurgusu; çalışma modu rozeti (ESP32 hızlı / donanım uyumlu / gerçek kart) her zaman görünür.
+- [ ] **CAD:** ölçüm araçları (yüzeyler arası mesafe, çap, delik merkezleri, açı, paralellik, çakışma); kesit görünümü ve patlatılmış görünüm (modelleyici, montaj, dünya); düzenlenebilir özellik geçmişi (eskiz → ekstrüzyon → delik → pah/radyüs, parametre değişince sonrakiler yeniden üretilir). Mimari: hassas CAD geometrisi (OCCT BREP) ile çizim ağı ayrı tutulur; ağ tek kaynak olmaz. Kademeli plan.
+- [ ] **Montaj:** iki yüzey seçilince olası ilişkilerin önerilmesi; tek montaj doğrulama raporu (çakışma, bağlantı hatası, kablo boyu, vida/delik hizası, PCB–muhafaza). Serbestlik gösterimi var.
+- [ ] **Dünya:** seçilen nesnenin teknik vurgusu (bağlı kablolar ve eklemler, tork yönü, sensör görüş alanı, kütle merkezi, çarpışma sınırları, hareket sınırları); seçilen parçanın değerleri sahnede etiket olarak; kolun hedefe neden ulaşamadığının açıklanması (erişim, çarpışma, tork, eklem sınırı); seçim süzgeçleri (mekanik, elektronik, kablo, sensör, bağlantı).
+- [ ] **Ölçü aletleri:** osiloskop ve mantık analizörü tek zaman ekseninde; çözülen UART/I²C/SPI çerçevesine tıklayınca dalga biçimi ve parça vurgusu; birden çok koşunun üst üste karşılaştırılması; referans/tolerans bantları; kanal adı ve rengi; CSV ve görüntü dışa aktarma.
+- [ ] **PLC/HMI:** PLC çalışma alanı düzeni (bloklar, editör, özellikler, izleme); HMI'ye sürükle-bırak bileşen tasarımı (buton, lamba, gösterge, trend, alarm, motor kontrolü). Merdivende canlı değerler ve HMI panel bağlama var.
+- [ ] **Analiz:** analiz sihirbazı (malzeme, sabit yüzeyler, yükler, ağ, çöz, incele, güvenilirlik); renk ölçeğinde birim, min/maks ve sabit ölçek seçeneği; güvenilirlik özeti (ağ boyu, yakınsama ve GCI, zaman adımı, artıklar, varsayımlar, referans çözüm); sonuçların yan yana karşılaştırılması.
+- [ ] **Kütüphane:** her parçada model durumu rozetleri (3B model, elektriksel model, mekanik model, firmware bağlantısı, veri sayfasıyla karşılaştırma: var / kısmi / yok), üretici, parça numarası, kaynak ve lisans.
+
+### D4. Birleşik mühendislik deneyimi (P1)
+
+- [ ] **Proje sağlık merkezi (Sorunlar paneli):** bütün denetimler (ERC, DRC, DFM, derleme, proje denetimi, montaj, model sınırları) tek panelde; seviye: hata, uyarı, bilgi, doğrulanmamış; alan başına durum (Devre tamam, PCB 2 uyarı …); sorun seçilince editörü açar, nesneyi seçer, nedeni açıklar, varsa düzeltmeyi önerir, düzelince yeniden denetler.
+- [ ] **Her yöne CrossProbe:** kalıcı parça kimliği üzerinden ortak seçim: şema ↔ PCB ↔ 3B kart / dünya ↔ firmware'deki pin ↔ simülasyon değerleri; PCB'de seçince şemada da.
+- [ ] **Birleşik zaman çizelgesi (seviye 1):** firmware olayları, kesmeler, GPIO, devre ölçümleri, servo açıları, konum, çarpışmalar, PLC durumları, sensörler tek zaman ekseninde, kayıttan. Seviye 2 (tutarlı anlık görüntülerle geri sarma, deterministik yeniden yürütme): P2.
+
+### D5. Doğrulama ve performans (P0/P1)
+
+- [ ] **Doğrulama raporu:** her referans test için kaynak, model, başlangıç koşulları, sonuç, mutlak ve bağıl hata, kabul sınırı, geçerlilik aralığı, sürüm; uygulama içinden ve belgelerde. Eksik testler: MOSFET anahtarlama, regülatör yük tepkisi, motor kalkış akımı, step motor adım kaybı, çekme çubuğu, kanal akışı, kanat profili, silindir.
+- [ ] **ESP32 uyumluluk matrisi:** AVR'deki gibi, her özellik için araç zinciri, kart, test düzeyi, bilinen sınırlar; Arduino çekirdek sürümleri ve üçüncü taraf kütüphaneler.
+- [ ] **Üretim güvenilirliği:** empedans ve katman yapısı hesabı, üreticiye özgü DFM kural setleri, bağımsız Gerber okuyucusuyla (gerbv) karşılaştırma.
+- [ ] **Büyük sahne ölçütleri:** 1000 parça, yüzlerce kablo, birden çok MCU; kare başına GPU/CPU/fizik/firmware/devre/kablo/bellek ve %95/%99/en kötü kare süresi; grafik kalitesi profilleri fizik doğruluğundan ayrı. Performans gerileme denetimi (`--perf-check`) var.
+
+### D6. Ekosistem ve öğrenme (P2)
+
+- [ ] **Eklenti sistemi:** önce güvenlik modeli (izinler, yalıtım, imza), sonra kararlı API ve sürüm uyumluluk politikası.
+- [ ] **Öğrenme yolu:** beş seviye (elektronik temelleri, gömülü, mekanik ve PCB, robotik, endüstri), uygulamalı görevlerle; "İlk robotun" rehberinin devamı.
+- [ ] **Katkı:** "good first issue" etiketleri, katkı ve eklenti rehberi, test şablonları.
+
+### Elenenler ve değiştirilenler
+
+- Örnek kartlarına ayrı çizilmiş görsel yok: önizleme projenin kendisinden üretilir (süs görseli kullanıcının işi).
+- Kullanım ölçümleri telemetriyle toplanmaz (gizlilik); yerel kullanılabilirlik denemeleri ve görev listeleriyle.
+- Kod imzalama sertifikası satın alma gerektirir: kullanıcının kararı.
+- Gerçek PLC/robot donanımını süren bir özellik eklendiğinde ek onay ve emniyet; bugün yok.
+- "Sahne modları" ayrı bir sistem değil: çalışma alanı profillerinin dünya sayfasındaki karşılığı.
+
 ## C. Büyük sürümden önce
 
 - [ ] Çok aşamalı test ve hata avı: birim, uçtan uca, uzun koşu, bellek.
