@@ -108,8 +108,23 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
             var c = new UaClient(url, security);
             try
             {
-                var connect = c._tcp.ConnectAsync(host, port);
-                if (!connect.Wait(timeoutMs)) throw new IOException($"{url} yanıt vermedi.");
+                // A blocking connect on a thread of its own: an async one completes through the thread pool, which a busy run
+                // (a heavy world, a test run) can keep waiting past the timeout.
+                Exception? failed = null;
+                var connector = new System.Threading.Thread(() =>
+                {
+                    try
+                    {
+                        c._tcp.Connect(host, port);
+                    }
+                    catch (Exception ex) when (ex is SocketException || ex is ObjectDisposedException || ex is ArgumentException)
+                    {
+                        failed = ex;
+                    }
+                }) { IsBackground = true, Name = "OPC UA connect" };
+                connector.Start();
+                if (!connector.Join(timeoutMs)) throw new IOException($"{url} yanıt vermedi.");
+                if (failed != null) throw new IOException($"{url}: {failed.Message}", failed);
                 c._tcp.ReceiveTimeout = c._tcp.SendTimeout = timeoutMs;
                 c._s = c._tcp.GetStream();
                 c.Hello();

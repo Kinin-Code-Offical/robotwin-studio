@@ -166,6 +166,21 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
 
 Bir dış inceleme raporunun (UI/UX, güvenlik, doğrulama) önerilerinden projenin bütünlüğüne uyanlar. Elenen ya da değiştirilenler en altta, nedenleriyle. Var olanlar işaretli; uygulamalar örnek alınır, arayüzleri ya da marka varlıkları kopyalanmaz. Dış uygulamaları indirme izni var (karşılaştırma ve doğrulama için).
 
+## E. Çalışma planı (26 Kasım 2026)
+
+Kalan: 33 açık, 24 kısmi madde. Hepsi yaklaşık 100 saat; aşağıdaki kesintilerle **yaklaşık 60–65 saat**. Kurallar: her sprint kendi testleriyle biter, tam test paketi sprint sonunda bir kez; arayüz işinden önce referans uygulamalar incelenir (VS Code, Rider, Fusion, Blender, FreeCAD, KiCad; Wokwi, STM32CubeIDE, QEMU), indirilenler iş bitince silinir; düz renkler, degrade yok.
+
+| Sprint | İçerik | Süre |
+| --- | --- | --- |
+| S1 | D1'in sonu: başkasından gelen projede doğrudan çalışacak kod (FMU ikilisi, C# betiği) için açık onay; CI yeşil | ~4 sa |
+| S2 | D2 ortak arayüz: tasarım belirteçleri ve tipografi, araç çubuğu standardı, çalışma alanı profilleri (Fusion/Blender gibi), DPI ve erişilebilirlik denetimi, başlangıç ekranında örnek kartları | ~10 sa |
+| S3 | D4: sorunlar paneli (VS Code gibi), her sayfadan çapraz gösterme, birleşik zaman çizelgesi düzey 1 | ~9 sa |
+| S4 | D3 editörler, en çok kullanılandan başlayarak: devrede canlı değerler ve katmanlar, hata ayıklayıcıda çağrı yığını ve yereller (Rider gibi), PCB'de DRC gezgini ve üretime hazırlık, dünyada vurgular ve etiketler, kütüphane rozetleri, analiz sihirbazı; CAD'de ölçüm, kesit ve patlatma (özellik geçmişi düzey 1) | ~20 sa |
+| S5 | D5: doğrulama raporu, ESP32 uyumluluk matrisi, büyük sahne ölçümleri, üretim güvenilirliği; P1'in kısmi maddelerinden kalanlar (MCPWM yakalama/arıza/eş zamanlama, işleme iş parçacığı ve LOD) | ~10 sa |
+| S6 | C. Büyük sürümden önce: referans programlarla karşılaştırmalar (indir, karşılaştır, sil), tam test, belgeler ve görüntüler, büyük sürüm | ~9 sa |
+
+Büyük sürümden sonraya kalanlar (süreyi kısaltan kesinti): D6 eklenti ekosistemi ve öğrenme yolu, yeni MCU aileleri, Xtensa FPU, FMI 3.0 ve FMU dışa aktarma, hidrolik ve esnek yapılar. Kod imzalama bir sertifika ister: kullanıcının kararı.
+
 ### D1. Temel ve güvenlik (P0)
 
 - [x] **.NET 10 LTS'ye geçiş:** .NET 9'un desteği 10 Kasım 2026'da bitti. Bütün projeler net10.0'da (CoreSim ayrıca netstandard2.1), C# 14'e sabit (yerelde daha yeni bir SDK da aynı dili derler); kurulumun .NET bileşeni ve çalışma zamanı denetimi, güncelleyici, betik derleyicisi (aynı ana sürümün SDK'sı ya da başvuru paketi kurulu daha yenisi), CI ve SDK şablonu .NET 10'da; tam test, kontrast ve kurulum denetimi.
