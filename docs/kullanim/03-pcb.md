@@ -68,6 +68,8 @@ Dolgu, boşluk, ısıl bağlantı (thermal relief), öncelik ve ada temizleme ku
 Sol araç şeridinde köşesinde küçük üçgen olan düğmeler araç gruplarıdır: basılı tutunca ya da sağ tıklayınca gruptaki araçlar adlarıyla açılır, seçilen araç düğmenin yüzü olur.
 
 - **Çizim** grubu: **Çizgi** (her bitiş yeni çizginin başı olur, Esc bitirir), **Dikdörtgen** (iki karşı köşe), **Daire** (merkez, çevreden bir nokta), **Yay** (merkez, başlangıç, bitiş) ve **Çokgen** (köşeler; çift tık, ilk köşe ya da Enter kapatır). Backspace son noktayı geri alır. Tuvalin sol üstündeki seçenek çubuğundan katman (üst / alt serigrafi, üst / alt montaj, çizimler), çizgi kalınlığı ve **Dolgulu** seçilir. Serigrafideki şekiller Gerber'e yazılır (dolgulu olanlar taranarak), KiCad'e `gr_line`, `gr_rect`, `gr_circle`, `gr_arc`, `gr_poly` olarak gider; bir pedin üstüne düşen serigrafi çizimini DRC bildirir. Şekiller seçilir, taşınır (M), silinir; seçim süzgecinde **Çizimler** olarak geçer.
+- **Yol** grubu: **Yol** (X) ve **Uzunluk ayarı**. Yol çizerken seçenek çubuğunda yol genişliği (hat sınıfından ya da bir adım), via boyutu ve etkin katman seçilir.
+- **Görünüm çubuğu** (kartın sağ üstü): kartı sığdır, seçime sığdır, yakınlaştır, uzaklaştır; seçimi döndür, öbür yüze çevir, kilitle; **Bul** (Ctrl+F) parçayı tanımlayıcısından ya da değerinden, hattı ve yazıyı bulur, seçince oraya gider (hatta vurgular).
 - **Delikler** grubu: **Montaj deliği** ve **Via**. Via aracı tıklanan yere bir via koyar; altındaki yolun, pedin ya da dolgunun hattını alır (dikiş viaları için).
 
 ## Tasarım kural denetimi (DRC)

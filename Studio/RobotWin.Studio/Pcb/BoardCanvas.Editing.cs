@@ -1507,8 +1507,8 @@ namespace RobotWin.Studio.Pcb
             }
 
             BeforeEdit?.Invoke(this, EventArgs.Empty);
-            var cls = board.ClassFor(net);
-            var via = new Via { Net = net, X = vx, Y = vy, Diameter = cls.ViaDiameter, Drill = cls.ViaDrill };
+            var size = ViaFor(board, net);   // [flyout] the options bar's via, or the net class's
+            var via = new Via { Net = net, X = vx, Y = vy, Diameter = size.Diameter, Drill = size.Drill };
             board.Vias.Add(via);
             Select(via);
             Edited($"Via eklendi{(net.Length > 0 ? " (" + net + ")" : string.Empty)}");

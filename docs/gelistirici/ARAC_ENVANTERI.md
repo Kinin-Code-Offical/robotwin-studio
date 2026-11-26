@@ -26,11 +26,11 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Kart ayarları (katman yığını, kurallar) | Kart ayarları… | var | |
 | Yazdır, çizdir (PDF/SVG) | yalnız Gerber, KiCad | kısmi | 2 |
 | Geri al, yinele | Ctrl+Z / Ctrl+Y, araç çubuğunda | var | |
-| Bul (parça, hat, yazı) | yok | yok | 1 |
-| Yakınlaştır, uzaklaştır, sığdır, nesnelere sığdır, seçime sığdır | Sığdır düğmesi, tekerlek | kısmi | 1 |
-| Döndür, çevir (alt/üst), aynala | R, F tuşları, sağ tık | kısmi (araç çubuğunda yok) | 1 |
+| Bul (parça, hat, yazı) | Bul (Ctrl+F), görünüm çubuğunda | var | |
+| Yakınlaştır, uzaklaştır, sığdır, nesnelere sığdır, seçime sığdır | görünüm çubuğu (kartın sağ üstü) | var | |
+| Döndür, çevir (alt/üst), aynala | görünüm çubuğu, R, F | var | |
 | Grupla, grubu çöz | yok | yok | 2 |
-| Kilitle, kilidi aç | L tuşu, sağ tık | kısmi | 1 |
+| Kilitle, kilidi aç | görünüm çubuğu, L | var | |
 | Şemadan güncelle | Güncelle | var | |
 | Ayak izi kütüphanesi, ayak izi düzenleyici | ayak izi seçici, Footprint düzenleyici | var | |
 | DRC | DRC (önem, istisna, gezinme, rapor) | var | |
@@ -44,8 +44,8 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 
 | Araç | Bizde | Durum | Öncelik |
 | --- | --- | --- | --- |
-| Yol genişliği seçimi | W ile döner, liste yok | kısmi | 1 |
-| Via boyutu seçimi | hat sınıfından | kısmi | 1 |
+| Yol genişliği seçimi | yol seçenek çubuğu, W | var | |
+| Via boyutu seçimi | yol / via seçenek çubuğu | var | |
 | Etkin katman | katman listesi | var | |
 | Katman çifti (via ile geçilen) | yok | yok | 2 |
 | Izgara, yakınlık | ızgara panelde, yakınlık yok | kısmi | 2 |

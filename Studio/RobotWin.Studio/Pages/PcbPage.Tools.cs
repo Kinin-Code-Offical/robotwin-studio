@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using RobotTwin.CoreSim.Pcb;
@@ -76,6 +78,45 @@ namespace RobotWin.Studio.Pages
             ToolOptions.Visibility = Visibility.Visible;
         }
 
+        /// <summary>
+        /// [flyout] The routing options (KiCad's auxiliary toolbar): the track width (the net class's or one of the steps) and
+        /// the via (the class's or a common size), the active layer beside them.
+        /// </summary>
+        private void RouteOptions()
+        {
+            var board = Board;
+            var widths = new List<double?> { null };
+            widths.AddRange(Canvas.TrackWidthSteps().Select(w => (double?)w));
+            var width = Combo(widths, Canvas.RouteWidth, w => Canvas.RouteWidth = w, w => w is { } v ? Fmt(v) + " mm" : Shell.Lang.T("Hat sınıfından"));
+            width.Width = 130;
+            width.ToolTip = "Yeni yolların genişliği; W / Shift+W çizerken değiştirir";
+            var vias = new List<(double D, double Drill)?> { null };
+            foreach (var c in board.NetClasses) vias.Add((c.ViaDiameter, c.ViaDrill));
+            foreach (var v in new[] { (0.6, 0.3), (0.8, 0.4), (1.0, 0.5), (1.2, 0.6) }) vias.Add(v);
+            var distinct = vias.Distinct().ToList();
+            var via = Combo(distinct, Canvas.RouteVia, v => Canvas.RouteVia = v, v => v is { } x ? $"Ø{Fmt(x.Item1)} / {Fmt(x.Item2)} mm" : Shell.Lang.T("Hat sınıfından"));
+            via.Width = 150;
+            via.ToolTip = "Yeni viaların çapı ve deliği; kart kurallarının altındakileri DRC bildirir";
+            var layer = Combo(board.CopperLayers(), Canvas.ActiveLayer, l => Canvas.ActiveLayer = l, l => Shell.Lang.T(PcbLayers.DisplayName(l)));
+            layer.Width = 130;
+            layer.ToolTip = "Etkin katman (PgUp / PgDn)";
+            if (Canvas.Tool == PcbTool.Route)
+            {
+                ToolOptionsRow.Children.Add(Label("Genişlik", 0));
+                ToolOptionsRow.Children.Add(width);
+            }
+
+            ToolOptionsRow.Children.Add(Label("Via", Canvas.Tool == PcbTool.Route ? 12 : 0));
+            ToolOptionsRow.Children.Add(via);
+            if (Canvas.Tool == PcbTool.Route)
+            {
+                ToolOptionsRow.Children.Add(Label("Katman"));
+                ToolOptionsRow.Children.Add(layer);
+            }
+
+            ToolOptions.Visibility = Visibility.Visible;
+        }
+
         private static TextBlock Label(string text, double left = 12) =>
             new TextBlock { Text = text, Style = S("Text.Caption"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(left, 0, 6, 0) };
 
@@ -86,6 +127,12 @@ namespace RobotWin.Studio.Pages
             if (Canvas.Tool == PcbTool.Tune)
             {
                 TuneOptions();
+                return;
+            }
+
+            if (Canvas.Tool is PcbTool.Route or PcbTool.Via)
+            {
+                RouteOptions();
                 return;
             }
 

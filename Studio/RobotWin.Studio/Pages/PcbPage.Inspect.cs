@@ -140,5 +140,85 @@ namespace RobotWin.Studio.Pages
             LayersPanel.Children.Add(grid);
             if (!filter.All) LayersPanel.Children.Add(Caption("Kapalı türler çizilir ve denetlenir, yalnızca seçilemez.", 2));
         }
+
+        // ================================================================ [headsup] the view bar and find
+
+        private void OnHeadsFit(object sender, RoutedEventArgs e) => Canvas.Fit();
+
+        private void OnHeadsFitSelection(object sender, RoutedEventArgs e) => Canvas.FitSelection();
+
+        private void OnHeadsZoomIn(object sender, RoutedEventArgs e) => Canvas.ZoomBy(1.25);
+
+        private void OnHeadsZoomOut(object sender, RoutedEventArgs e) => Canvas.ZoomBy(0.8);
+
+        private void OnHeadsRotate(object sender, RoutedEventArgs e) => Canvas.RotateSelection();
+
+        private void OnHeadsFlip(object sender, RoutedEventArgs e) => Canvas.FlipSelection();
+
+        private void OnHeadsLock(object sender, RoutedEventArgs e) => Canvas.ToggleLock();
+
+        /// <summary>KiCad's Find (Ctrl+F): parts by designator or value, nets, board texts; a pick selects and shows it.</summary>
+        public void OnHeadsFind(object sender, RoutedEventArgs e)
+        {
+            FindPopup.IsOpen = true;
+            FindBox.Focus();
+            FindBox.SelectAll();
+            OnFindChanged(FindBox, null!);
+        }
+
+        private void OnFindChanged(object sender, TextChangedEventArgs? e)
+        {
+            var board = Board;
+            string q = FindBox.Text.Trim();
+            FindList.Items.Clear();
+            if (q.Length == 0) return;
+            bool Has(string? s) => !string.IsNullOrEmpty(s) && s!.IndexOf(q, StringComparison.CurrentCultureIgnoreCase) >= 0;
+            void Add(string kind, string text, object target)
+            {
+                var row = new DockPanel();
+                var k = new TextBlock { Text = Shell.Lang.T(kind), Style = S("Text.Caption"), Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+                DockPanel.SetDock(k, Dock.Right);
+                row.Children.Add(k);
+                row.Children.Add(new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+                FindList.Items.Add(new ListBoxItem { Content = row, Tag = target });
+            }
+
+            foreach (var c in board.Components.Where(c => Has(c.RefDes) || Has(c.Value)).Take(40)) Add("parça", $"{c.RefDes} · {c.Value}", c);
+            foreach (var n in board.NetNames().Where(Has).Take(40)) Add("hat", n, n);
+            foreach (var t in board.Texts.Where(t => Has(t.Text)).Take(20)) Add("yazı", t.Text, t);
+            if (FindList.Items.Count == 0) FindList.Items.Add(new ListBoxItem { Content = Shell.Lang.T("Bulunamadı"), IsEnabled = false });
+        }
+
+        private void OnFindKey(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter && FindList.Items.Count > 0)
+            {
+                FindList.SelectedIndex = 0;
+                e.Handled = true;
+            }
+            else if (e.Key == System.Windows.Input.Key.Down && FindList.Items.Count > 0)
+            {
+                FindList.Focus();
+                FindList.SelectedIndex = Math.Max(0, FindList.SelectedIndex);
+                e.Handled = true;
+            }
+        }
+
+        private void OnFindPick(object sender, SelectionChangedEventArgs e)
+        {
+            if (FindList.SelectedItem is not ListBoxItem { Tag: { } target }) return;
+            Show3D(false);
+            switch (target)
+            {
+                case string net:
+                    Canvas.SetHighlight(net);
+                    W.Status = Shell.Lang.T($"{net} hattı vurgulanıyor");
+                    break;
+                default:
+                    Canvas.Select(target);
+                    Canvas.FitSelection();
+                    break;
+            }
+        }
     }
 }

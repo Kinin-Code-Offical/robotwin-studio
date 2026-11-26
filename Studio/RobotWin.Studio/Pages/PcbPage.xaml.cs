@@ -105,6 +105,11 @@ namespace RobotWin.Studio.Pages
                 {
                     e.Handled = true;   // [drc-policy] F8 / Shift+F8: next / previous marker
                 }
+                else if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+                {
+                    OnHeadsFind(this, new RoutedEventArgs());   // [headsup] KiCad's Find
+                    e.Handled = true;
+                }
             };
             _fillTimer.Tick += (_, _) => AutoFill();
             W.DocumentReplaced += (_, _) =>
@@ -365,9 +370,10 @@ namespace RobotWin.Studio.Pages
                 board.Tracks.Add(new Track { Net = net, Layer = seg.Layer, X1 = seg.X1, Y1 = seg.Y1, X2 = seg.X2, Y2 = seg.Y2, Width = r.Width > 0 ? r.Width : cls.TrackWidth });
             }
 
+            var viaSize = Canvas.ViaFor(board, net);   // [flyout] the options bar's via, or the class's
             foreach (var v in r.Vias)
             {
-                board.Vias.Add(new Via { Net = net, X = v.X, Y = v.Y, Diameter = cls.ViaDiameter, Drill = cls.ViaDrill, StartLayer = v.From, EndLayer = v.To });
+                board.Vias.Add(new Via { Net = net, X = v.X, Y = v.Y, Diameter = viaSize.Diameter, Drill = viaSize.Drill, StartLayer = v.From, EndLayer = v.To });
             }
 
             string from = r.StartPad?.Component.RefDes ?? "yol", to = r.EndPad?.Component.RefDes ?? "yol";

@@ -992,7 +992,7 @@ namespace RobotWin.Studio.Pcb
 
                 _routeLayer = layer;
                 if (layer != _activeLayer) ActiveLayer = layer;
-                _router = new InteractiveRouter(board, _routeNet);
+                _router = new InteractiveRouter(board, _routeNet, RouteWidth);   // [flyout] the options bar's width, or the net class's
                 _routePts.Add((start, layer));
                 _preview.Clear();
                 Say($"{(_routeNet.Length > 0 ? _routeNet : "yeni hat")} · {_router.Width:0.###} mm ({board.ClassNameFor(_routeNet)}) · {PcbLayers.DisplayName(layer)}");

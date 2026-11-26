@@ -68,6 +68,8 @@ Filling follows the clearance, thermal relief, priority and island-removal rules
 Buttons in the left tool strip with a small triangle in their corner are tool groups: press and hold or right-click to list the group's tools by name; the one picked becomes the button's face.
 
 - **Draw** group: **Line** (each end starts the next line, Esc stops), **Rectangle** (two opposite corners), **Circle** (centre, a point on it), **Arc** (centre, start, end) and **Polygon** (corners; double-click, the first corner or Enter closes it). Backspace takes the last point back. The options bar at the canvas' top left sets the layer (top / bottom silkscreen, top / bottom fab, drawings), the line width and **Filled**. Shapes on the silkscreen go into the Gerber (filled ones hatched) and to KiCad as `gr_line`, `gr_rect`, `gr_circle`, `gr_arc`, `gr_poly`; DRC reports a silkscreen drawing over a pad. Shapes are picked, moved (M) and deleted; the selection filter lists them as **Drawings**.
+- **Track** group: **Track** (X) and **Length tuning**. While routing, the options bar sets the track width (the net class's or a step), the via size and the active layer.
+- **View bar** (the board's top right): fit the board, fit the selection, zoom in, zoom out; rotate the selection, flip it to the other side, lock it; **Find** (Ctrl+F) finds a part by designator or value, a net and a text, and goes there when picked (a net is highlighted).
 - **Holes** group: **Mounting hole** and **Via**. The via tool puts a via where you click; it takes the net of the track, pad or fill under it (for stitching vias).
 
 ## Design rule check (DRC)

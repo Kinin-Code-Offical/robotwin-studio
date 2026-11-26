@@ -8252,7 +8252,22 @@
   "45° köşe": "45° corners",
   "Dik köşe": "Square corners",
   "elle verilen": "given by hand",
-  "kart kenarına çok yakın": "too close to the board edge"
+  "kart kenarına çok yakın": "too close to the board edge",
+  "Hat sınıfından": "From the net class",
+  "Yeni yolların genişliği; W / Shift+W çizerken değiştirir": "The width of new tracks; W / Shift+W change it while routing",
+  "Yeni viaların çapı ve deliği; kart kurallarının altındakileri DRC bildirir": "The diameter and drill of new vias; DRC reports those under the board's rules",
+  "Etkin katman (PgUp / PgDn)": "Active layer (PgUp / PgDn)",
+  "Kartı sığdır (Home)": "Fit the board (Home)",
+  "Seçime sığdır": "Fit the selection",
+  "Yakınlaştır (+)": "Zoom in (+)",
+  "Uzaklaştır (−)": "Zoom out (−)",
+  "Seçimi döndür (R)": "Rotate the selection (R)",
+  "Seçili parçaları öbür yüze çevir (F)": "Flip the selected parts to the other side (F)",
+  "Seçimi kilitle / kilidi aç (L)": "Lock / unlock the selection (L)",
+  "Bul: parça, değer, hat, yazı (Ctrl+F)": "Find: part, value, net, text (Ctrl+F)",
+  "Parça, değer, hat ya da yazı": "Part, value, net or text",
+  "hat": "net",
+  "Bulunamadı": "Not found"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -11610,6 +11625,7 @@
   "{…} yoluna çok yakın": "too close to the {0} track",
   "{…}.{…} pedine çok yakın": "too close to pad {0}.{1}",
   "{…} viasına çok yakın": "too close to the {0} via",
-  "{…} / {…} mm · fark {…} mm ({…} ps) · %{…} yan yana": "{0} / {1} mm · difference {2} mm ({3} ps) · {4}% side by side"
+  "{…} / {…} mm · fark {…} mm ({…} ps) · %{…} yan yana": "{0} / {1} mm · difference {2} mm ({3} ps) · {4}% side by side",
+  "{…} hattı vurgulanıyor": "{0} net highlighted"
  }
 }

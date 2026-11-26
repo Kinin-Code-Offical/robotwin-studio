@@ -220,21 +220,89 @@ namespace RobotWin.Studio.Pcb
             Edited(result.Message + $" · gecikme {ps:0} ps");
         }
 
-        // ---------------------------------------------------------------- via tool
+        // ---------------------------------------------------------------- [headsup] the view bar's actions
 
-        /// <summary>A via where clicked, on the net of the track, pad or zone under it (none: it stays unconnected until routed).</summary>
-        private void ViaClick(double x, double y)
+        /// <summary>Zooms about the canvas' centre (the view bar's + and −).</summary>
+        public void ZoomBy(double factor) => Zoom(new Point(ActualWidth / 2, ActualHeight / 2), factor);
+
+        /// <summary>Frames the selection (KiCad's "zoom to selection"); the whole board when nothing is selected.</summary>
+        public void FitSelection()
         {
             var board = Board;
-            if (board == null) return;
-            double sx = Snap(x), sy = Snap(y);
-            string net = HitTrack(x, y)?.Net ?? HitPad(x, y)?.Net
-                         ?? board.Zones.FirstOrDefault(z => !string.IsNullOrEmpty(z.Net) && z.FilledRegions.Any(r => r.Contains(sx, sy)))?.Net
-                         ?? HighlightNet ?? string.Empty;
-            var cls = board.ClassFor(net);
-            BeforeEdit?.Invoke(this, EventArgs.Empty);
-            board.Vias.Add(new Via { X = sx, Y = sy, Net = net, Diameter = cls.ViaDiameter, Drill = cls.ViaDrill, StartLayer = CopperLayer.Top, EndLayer = CopperLayer.Bottom });
-            Edited(net.Length > 0 ? $"Via eklendi ({net})" : "Via eklendi (hattı yok: yol bağlanınca alır)");
+            if (board == null || ActualWidth < 10) return;
+            double x0 = double.MaxValue, y0 = double.MaxValue, x1 = double.MinValue, y1 = double.MinValue;
+            void Add(double ax, double ay, double bx, double by)
+            {
+                x0 = Math.Min(x0, Math.Min(ax, bx));
+                y0 = Math.Min(y0, Math.Min(ay, by));
+                x1 = Math.Max(x1, Math.Max(ax, bx));
+                y1 = Math.Max(y1, Math.Max(ay, by));
+            }
+
+            foreach (var o in _sel)
+            {
+                switch (o)
+                {
+                    case BoardComponent c when FootprintLibrary.Get(c.FootprintId) is { } fp:
+                        var cy = c.Courtyard(fp);
+                        Add(cy.MinX, cy.MinY, cy.MaxX, cy.MaxY);
+                        break;
+                    case Track t:
+                        Add(t.X1, t.Y1, t.X2, t.Y2);
+                        break;
+                    case Via v:
+                        Add(v.X - v.Diameter, v.Y - v.Diameter, v.X + v.Diameter, v.Y + v.Diameter);
+                        break;
+                    case BoardText t:
+                        Add(t.X - t.Size, t.Y - t.Size, t.X + t.Size, t.Y + t.Size);
+                        break;
+                    case MountingHole h:
+                        Add(h.X - h.Drill, h.Y - h.Drill, h.X + h.Drill, h.Y + h.Drill);
+                        break;
+                    case BoardGraphic g when g.IsComplete:
+                        var gb = g.Bounds();
+                        Add(gb.MinX, gb.MinY, gb.MaxX, gb.MaxY);
+                        break;
+                    case Zone z when !z.IsWholeBoard:
+                        foreach (var p in z.Outline) Add(p.X, p.Y, p.X, p.Y);
+                        break;
+                    case BoardDimension d:
+                        Add(d.X1, d.Y1, d.X2, d.Y2);
+                        break;
+                }
+            }
+
+            if (x0 > x1)
+            {
+                Fit();
+                return;
+            }
+
+            double w = Math.Max(2, x1 - x0), h2 = Math.Max(2, y1 - y0);
+            _scale = Math.Max(1, Math.Min(160, Math.Min((ActualWidth - 160) / w, (ActualHeight - 160) / h2)));
+            _offset = new Vector(ActualWidth / 2 - (x0 + x1) / 2 * _scale, ActualHeight / 2 - (y0 + y1) / 2 * _scale);
+            InvalidateVisual();
         }
+
+        // ---------------------------------------------------------------- [flyout] routing options
+
+        /// <summary>The width new tracks are routed at (mm); null: each net's class decides (KiCad's "use net class width").</summary>
+        public double? RouteWidth { get; set; }
+
+        /// <summary>The via new vias get (diameter, drill; mm); null: the net's class decides.</summary>
+        public (double Diameter, double Drill)? RouteVia { get; set; }
+
+        /// <summary>A via of the net's class, or the one the options bar chose.</summary>
+        public (double Diameter, double Drill) ViaFor(BoardDocument board, string net)
+        {
+            if (RouteVia is { } v) return v;
+            var cls = board.ClassFor(net);
+            return (cls.ViaDiameter, cls.ViaDrill);
+        }
+
+        // ---------------------------------------------------------------- via tool
+
+        /// <summary>A via where clicked, on the net of the copper under it, checked against the clearance and drill rules (<see cref="PlaceVia"/>).</summary>
+        private void ViaClick(double x, double y) => PlaceVia(x, y);
     }
 }

@@ -117,6 +117,30 @@
 
             <pcb:BoardCanvas x:Name="Canvas" Grid.Column="3"/>
             <pcb:Board3DView x:Name="View3D" Grid.Column="3" Visibility="Collapsed"/>
+            <!-- [headsup] view and edit actions over the board, as SolidWorks' heads-up view toolbar -->
+            <Border x:Name="HeadsUp" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,10,0" Padding="4,2"
+                    Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.Border}" BorderThickness="1" CornerRadius="6" Panel.ZIndex="4">
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource Btn.Icon}" Click="OnHeadsFit" ToolTip="Kartı sığdır (Home)"><t:Icon Data="{StaticResource I.ZoomFit}" Size="16"/></Button>
+                    <Button Style="{StaticResource Btn.Icon}" Click="OnHeadsFitSelection" ToolTip="Seçime sığdır"><t:Icon Data="{StaticResource I.FitSelection}" Size="16"/></Button>
+                    <Button Style="{StaticResource Btn.Icon}" Click="OnHeadsZoomIn" ToolTip="Yakınlaştır (+)"><t:Icon Data="{StaticResource I.ZoomIn}" Size="16"/></Button>
+                    <Button Style="{StaticResource Btn.Icon}" Click="OnHeadsZoomOut" ToolTip="Uzaklaştır (−)"><t:Icon Data="{StaticResource I.ZoomOut}" Size="16"/></Button>
+                    <Border Width="1" Margin="4,6" Background="{DynamicResource B.Border}"/>
+                    <Button Style="{StaticResource Btn.Icon}" Click="OnHeadsRotate" ToolTip="Seçimi döndür (R)"><t:Icon Data="{StaticResource I.Rotate}" Size="16"/></Button>
+                    <Button Style="{StaticResource Btn.Icon}" Click="OnHeadsFlip" ToolTip="Seçili parçaları öbür yüze çevir (F)"><t:Icon Data="{StaticResource I.FlipSide}" Size="16"/></Button>
+                    <Button Style="{StaticResource Btn.Icon}" Click="OnHeadsLock" ToolTip="Seçimi kilitle / kilidi aç (L)"><t:Icon Data="{StaticResource I.Lock}" Size="16"/></Button>
+                    <Border Width="1" Margin="4,6" Background="{DynamicResource B.Border}"/>
+                    <Button Style="{StaticResource Btn.Icon}" Click="OnHeadsFind" ToolTip="Bul: parça, değer, hat, yazı (Ctrl+F)"><t:Icon Data="{StaticResource I.Search}" Size="16"/></Button>
+                </StackPanel>
+            </Border>
+            <Popup x:Name="FindPopup" Placement="Bottom" PlacementTarget="{Binding ElementName=HeadsUp}" StaysOpen="False" AllowsTransparency="True" HorizontalOffset="-200">
+                <Border Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="8" Width="320">
+                    <StackPanel>
+                        <TextBox x:Name="FindBox" Tag="Parça, değer, hat ya da yazı" TextChanged="OnFindChanged" KeyDown="OnFindKey"/>
+                        <ListBox x:Name="FindList" MaxHeight="320" Margin="0,6,0,0" SelectionChanged="OnFindPick" BorderThickness="0"/>
+                    </StackPanel>
+                </Border>
+            </Popup>
             <!-- [flyout] the active tool's options (Blender's tool settings, KiCad's auxiliary toolbar) -->
             <Border x:Name="ToolOptions" Grid.Column="3" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0" Padding="10,6"
                     Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.Border}" BorderThickness="1" CornerRadius="6" Visibility="Collapsed" Panel.ZIndex="4">
