@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Enclosure check:** the DRC tab's Box switch defines the box the board goes into (inside sizes, the board's place, standoffs, lead length, margin, openings in the walls); the DRC then holds every part's body, top or bottom side, and the through-hole leads to its walls, floor and lid, naming the part and how far it goes in. Connectors leaving through an opening are allowed. Saved with the board.
+
 - **Fabrication files checked against the board:** the Gerber ZIP is read back from disk by an independent RS-274X and Excellon reader (`Pcb/GerberReader.cs`), each layer painted at 20 µm and laid over the same layer painted from the board's geometry; differences are reported with where they are and their area, drill files hole for hole with plating and diameter. Wrong units, a flipped axis, a wrong aperture, an arc turning the wrong way or a missing object are caught before the files go to the maker.
 
 - **Serial reception from the wire:** the Uno's USART receiver reads D0 as the circuit drives it, timed between the circuit's steps: start-bit check, three-sample majority per bit, 5–8 data bits, parity and stop bits from UCSR0B/C, frame (FE0), parity (UPE0) and overrun (DOR0) errors through a two-character buffer and the shift register. One board's TX wired to another's RX now carries what it prints. The transmitter sends the configured frame too (parity bit, two stop bits, 5–8 data bits); it always sent 8N1 before.

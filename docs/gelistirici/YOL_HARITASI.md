@@ -97,7 +97,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
   - [x] diferansiyel çift ve uzunluk eşleme: **Hatlar** sekmesinde çiftler (adlarından bulunur) ve uzunluk grupları; via gövdeleriyle yol uzunluğu, çift farkı ve yan yana gidiş, DRC uyarıları (`Pcb/NetLengths.cs`); çift olarak yol çizme yok;
   - [x] DFM ve DFT: DRC sekmesinde **Üretim ve test** anahtarı (`Pcb/Dfm.cs`): asit tuzağı, maske köprüsü, pedde via, kenara yakın SMD, fidüsyel, mezar taşı riski, serigrafi, delik çeşidi; test erişimi, kapsam ve prob aralığı;
   - tedarikçili BOM;
-  - kutu ile çakışma;
+  - [x] kutu ile çakışma: DRC sekmesinde **Kutu** (`Pcb/Enclosure.cs`): iç ölçüler, kartın yeri, ayaklar, uç boyu, duvardaki açıklıklar; her parçanın gövdesi ve delikli uçlar duvarlara, tabana ve kapağa göre (kaç mm girdiğiyle), kartla birlikte kaydediliyor;
   - [x] Gerber'in ikinci bir görüntüleyiciyle karşılaştırılması: kendi bağımsız RS-274X / Excellon okuyucumuz (`Pcb/GerberReader.cs`) dışa aktarılan ZIP'i diskten okuyup her katmanı kartın kendi geometrisinden çizilen resmiyle piksel piksel karşılaştırıyor, delikleri tek tek eşliyor (`Pcb/GerberCheck.cs`); dışa aktarmadan hemen sonra çalışıyor.
 - [~] **Gömülü yazılım:** Uno/Nano AVR emülatörü ve hata ayıklayıcı var. Eksikler:
   - [x] register ve zaman çizelgesi: hata ayıklayıcıda **Yazmaçlar** sekmesi (`AvrRegisters`, yan etkisiz okuma `Atmega328P.Peek`) ve **Zaman çizelgesi** sekmesi (`McuTrace`: pin kenarları ve kesme giriş/RETI'leri çevrim damgasıyla, halka bellekte; `TimelineView`);

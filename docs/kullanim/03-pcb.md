@@ -92,6 +92,23 @@ Hatalar listede görünür; birine tıklayınca kartta o yer gösterilir.
 
 Bunlar hata değil uyarıdır: kurala uymayan kart üretilebilir, ama daha pahalıya ya da daha düşük verimle.
 
+### Kutu
+
+**DRC** sekmesindeki **Kutu** anahtarı kartın gireceği kutuyu tanımlar. Açılınca kartın ve parçalarının birkaç milimetre payla sığdığı bir kutu önerilir; ölçüler iç ölçülerdir:
+
+- uzunluk kartın X'i, genişlik Y'si boyunca, yükseklik tabandan kapağa;
+- kartın sol üst köşesinin iç sol ve üst duvarlara uzaklığı;
+- ayak yüksekliği (tabandan kartın altına) ve delikli parçaların kesilmiş uçlarının boyu;
+- pay: bir duvara bundan yakın kalan gövde uyarılır.
+
+DRC her parçanın gövdesini (avlusunun alanı, ayak izinin yüksekliği kadar; alt yüzdeki parçalarda kartın altına doğru) duvarlara, tabana ve kapağa göre denetler:
+
+- giren her şey hatadır ("Q1 kapağa 0,6 mm giriyor (gövdesi 15 mm, kartın üstünde 14,4 mm var)");
+- payın içinde kalan uyarıdır;
+- delikli parçaların uçları tabana değiyorsa ya da kart kutuya sığmıyorsa yine hatadır.
+
+Bir konnektör duvardan dışarı çıkacaksa (USB soketi, DC jakı) **Duvardaki açıklıklar** altında o duvara bir açıklık ekleyin: konumu kartın koordinatıyla, alt kenarı tabandan. Gövdesi açıklığın içinde kalan parça duvara girmiş sayılmaz. Kutu kartla birlikte kaydedilir; ayarlar kapalıyken tek satırlık özet görünür.
+
 ### Fark çiftleri ve uzunluk eşleme
 
 **Hatlar** sekmesinde **Fark çiftleri** bölümü birlikte gitmesi gereken iki hattı tutar (USB D+/D−, CAN H/L). **Adlarından bul**, adı `+`/`-`, `_P`/`_N` ya da `H`/`L` ile biten hatları çift yapar. Her çiftin yanında yollanmış iki uzunluk, farkları ve yolun ne kadarının çiftin aralığında yan yana gittiği görünür; **Aralık** ve **En çok fark** (USB 2.0 tam hızda ~2,5 mm, yüksek hızda ~1,25 mm) ayarlanır. **Uzunluk grupları** aynı anda varması gereken hatları (paralel veri yolu, saat ve verisi) bir toleransla tutar. Bir hattın uzunluğu yollarıyla geçtiği viaların gövdesidir (kartın kalınlığının iki katman arasındaki payı). DRC, farkı sınırı aşan çifti, yolunun %60'ından azı yan yana giden çifti ve yayılımı toleransı aşan grubu uyarır. **Yol uzunlukları** her hattın uzunluğunu listeler.

@@ -428,6 +428,9 @@ namespace RobotTwin.CoreSim.Pcb
 
             // ---------------------------------------------------------- [pairs] the board's differential pairs and length groups
             v.AddRange(NetLengths.Check(board));
+
+            // ---------------------------------------------------------- [enclosure] the box the board goes into, when it has one
+            if (board.Enclosure != null) v.AddRange(EnclosureCheck.Check(board, board.Enclosure));
             return v;
         }
 

@@ -156,7 +156,9 @@
                                     <Button Click="OnDrc" Margin="0,0,8,6" Style="{StaticResource Btn.Primary}">DRC çalıştır</Button>
                                     <CheckBox x:Name="RefillBeforeDrc" Style="{StaticResource Switch}" IsChecked="True" Content="Önce doldur" Margin="0,0,0,6" VerticalAlignment="Center"/>
                                     <CheckBox x:Name="DfmCheck" Style="{StaticResource Switch}" IsChecked="False" Content="Üretim ve test (DFM/DFT)" Margin="14,0,0,6" VerticalAlignment="Center" ToolTip="DRC ile birlikte üretici ve dizgi hattının bakacağı şeyler: asit tuzakları, maske köprüleri, pedde via, kenara yakın SMD, fidüsyel, mezar taşı riski, serigrafi, delik çeşidi; test probunun erişebildiği hatlar"/>
+                                    <CheckBox x:Name="EnclosureSwitch" Style="{StaticResource Switch}" IsChecked="False" Content="Kutu" Margin="14,0,0,6" VerticalAlignment="Center" Checked="OnEnclosureSwitch" Unchecked="OnEnclosureSwitch" ToolTip="Kartın gireceği kutu: parçaların gövdeleri ve delikli uçlar duvarlara, tabana ve kapağa göre denetlenir"/>
                                 </WrapPanel>
+                                <StackPanel x:Name="EnclosurePanel" Visibility="Collapsed" Margin="0,0,0,8"/>
                                 <TextBlock x:Name="DrcSummary" Style="{StaticResource Text.Body}" Margin="0,4,0,8"/>
                             </StackPanel>
                             <ListBox x:Name="DrcList" SelectionChanged="OnDrcPick" ScrollViewer.HorizontalScrollBarVisibility="Disabled">

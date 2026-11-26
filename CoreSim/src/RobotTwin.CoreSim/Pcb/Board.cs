@@ -484,6 +484,9 @@ namespace RobotTwin.CoreSim.Pcb
         public List<DiffPair> DiffPairs { get; set; } = new List<DiffPair>();
 
         public List<LengthGroup> LengthGroups { get; set; } = new List<LengthGroup>();
+
+        /// <summary>[enclosure] The box the board is built into (Pcb/Enclosure.cs); null when none is given. The DRC holds the parts to it.</summary>
+        public BoardEnclosure? Enclosure { get; set; }
         public List<BoardDimension> Dimensions { get; set; } = new List<BoardDimension>();
 
         /// <summary>

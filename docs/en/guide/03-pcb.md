@@ -92,6 +92,23 @@ With **Manufacture and test (DFM/DFT)** switched on, the DRC also adds, as warni
 
 These are warnings, not errors: a board that breaks them can be made, at a higher cost or a lower yield.
 
+### Enclosure
+
+The **Box** switch in the **DRC** tab defines the box the board goes into. Switching it on suggests a box the board and its parts fit with a few millimetres to spare. The sizes are inside sizes:
+
+- the length along the board's X, the width along its Y, the height from the floor to the lid;
+- how far the board's top-left corner sits from the inner left and top walls;
+- the standoff height (floor to the board's underside) and the length of the trimmed through-hole leads;
+- the margin: a body closer than this to a wall is warned about.
+
+The DRC holds every part's body (its courtyard's area, as tall as its footprint's height; under the board for bottom-side parts) to the walls, the floor and the lid:
+
+- whatever goes into them is an error ("Q1 goes 0.6 mm into the lid (its body is 15 mm, there are 14.4 mm above the board)");
+- whatever stays within the margin is a warning;
+- through-hole leads touching the floor, or a board that does not fit the box, are errors too.
+
+If a connector comes out through a wall (a USB socket, a DC jack), add an opening on that wall under **Openings in the walls**: its position in the board's coordinates, its lower edge from the floor. A part whose body stays inside the opening does not count as going into the wall. The box is saved with the board; with its settings folded away, a one-line summary shows.
+
 ### Differential pairs and length matching
 
 In the **Nets** tab, **Differential pairs** holds two nets that must run together (USB D+/D−, CAN H/L). **Find by name** pairs the nets whose names end in `+`/`-`, `_P`/`_N` or `H`/`L`. Beside each pair are its two routed lengths, their difference and how much of the route runs side by side at the pair's gap; **Gap** and **Largest difference** (about 2.5 mm for USB 2.0 full speed, 1.25 mm for high speed) are set there. **Length groups** hold nets that must arrive together (a parallel bus, a clock and its data) within a tolerance. A net's length is its tracks plus the barrels of the vias it changes layer through (the board's thickness between the two layers). The DRC warns about a pair longer than its limit on one side, a pair less than 60 % of whose route runs side by side, and a group spread wider than its tolerance. **Track lengths** lists every net's length.

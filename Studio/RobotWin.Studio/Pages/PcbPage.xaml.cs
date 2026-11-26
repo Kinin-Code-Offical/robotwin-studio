@@ -727,6 +727,13 @@ namespace RobotWin.Studio.Pages
                     RunDrcNow();
                     ShowPanel(3);
                     break;
+                case "enclosure":   // [enclosure] a box made around it, its lid 4 mm too low and one opening
+                    board.Enclosure = BoardEnclosure.Around(board);
+                    board.Enclosure.InnerHeight -= 4;
+                    board.Enclosure.Openings.Add(new EnclosureOpening { Name = "USB", Wall = EnclosureWall.Left, Position = board.Height / 2, Width = 12, Bottom = board.Enclosure.Standoff, Height = 7 });
+                    RunDrcNow();
+                    ShowPanel(3);
+                    break;
                 case "pairs":   // [pairs] two of its nets as a pair, three as a group; the Nets tab scrolled to them
                 {
                     var nets = NetLengths.Measure(board).OrderByDescending(kv => kv.Value).Select(kv => kv.Key).ToList();
@@ -1968,6 +1975,7 @@ namespace RobotWin.Studio.Pages
                 DrcSummary.Text += Shell.Lang.T($"\nTest kapsamı %{dfm.Coverage * 100:0} ({dfm.TestableNets}/{dfm.Nets} hat)");
 
             DrcList.ItemsSource = _violations.OrderByDescending(v => v.Severity).ThenBy(v => v.Rule, StringComparer.Ordinal).Select(v => new DrcItem(v)).ToList();
+            UpdateEnclosurePanel(board);   // [enclosure]
         }
     }
 
