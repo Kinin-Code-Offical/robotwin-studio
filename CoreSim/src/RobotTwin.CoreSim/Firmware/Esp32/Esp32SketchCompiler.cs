@@ -41,6 +41,13 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         /// <summary>The sketch DLL (unique name per build, so an older one can stay loaded).</summary>
         public string? DllPath { get; set; }
 
+        /// <summary>
+        /// [isolation] The sketch host the DLL runs in, in a process of its own (built with the ESP32 layer and cached with
+        /// it); also named in <c>&lt;dll&gt;.host</c> beside the DLL. Null when it could not be built: the sketch then runs in
+        /// the app's process.
+        /// </summary>
+        public string? HostPath { get; set; }
+
         public List<CompilerDiagnostic> Diagnostics { get; } = new List<CompilerDiagnostic>();
         public string Log { get; set; } = string.Empty;
 
@@ -72,6 +79,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
     public sealed class Esp32SketchCompiler
     {
         private const string ResourcePrefix = "esp32hal/";
+        /// <summary>[isolation] The sketch host: a plain console program on the static runtime, nothing else to load.</summary>
+        private const string HostFlags = "/nologo /O2 /EHsc /std:c++17 /utf-8 /MT /W3";
+
         private const string CommonFlags = "/nologo /O2 /EHsc /std:c++17 /utf-8 /MT /W3 /wd4996 /wd4244 /wd4267 /wd4305 /wd4018 /wd4838 /wd4309 /wd4068 /diagnostics:column";
 
         private static readonly object ShimGate = new object();
@@ -312,6 +322,11 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 if (result.Success)
                 {
                     result.DllPath = dllPath;
+                    if (shim.Value.Host != null)
+                    {
+                        result.HostPath = shim.Value.Host;
+                        File.WriteAllText(dllPath + Esp32SketchHost.SidecarExtension, shim.Value.Host, new UTF8Encoding(false));
+                    }
                 }
                 else if (!result.Errors.Any())
                 {
@@ -419,7 +434,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
         // ------------------------------------------------------------------ shim library
 
-        private (string IncludeDir, string Library)? EnsureShim(IReadOnlyDictionary<string, string> env, StringBuilder log, Esp32BuildResult result)
+        private (string IncludeDir, string Library, string? Host)? EnsureShim(IReadOnlyDictionary<string, string> env, StringBuilder log, Esp32BuildResult result)
         {
             var sources = LoadShimSources(out string origin);
             if (sources.Count == 0)
@@ -437,11 +452,12 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             string dir = Path.Combine(CacheDirectory, hash);
             string include = Path.Combine(dir, "include");
             string lib = Path.Combine(dir, "rw_esp32hal.lib");
+            string host = Path.Combine(dir, Esp32SketchHost.FileName);
             log.AppendLine("ESP32 katmanı: " + origin + " -> " + dir);
             if (File.Exists(lib))
             {
                 result.ShimFromCache = true;
-                return (include, lib);
+                return (include, lib, File.Exists(host) ? host : null);
             }
 
             var sw = Stopwatch.StartNew();
@@ -456,7 +472,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                         if (File.Exists(lib))
                         {
                             result.ShimFromCache = true;
-                            return (include, lib);
+                            return (include, lib, File.Exists(host) ? host : null);
                         }
 
                         string temp = dir + ".tmp-" + Guid.NewGuid().ToString("N").Substring(0, 8);
@@ -493,6 +509,19 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                             return null;
                         }
 
+                        // [isolation] the sketch host, built with the layer it runs; without it sketches run in the app's process
+                        string hostSource = Path.Combine(tempInclude, "host", "rw_sketch_host.cpp");
+                        if (File.Exists(hostSource))
+                        {
+                            string hostObj = Path.Combine(temp, "hostobj");
+                            Directory.CreateDirectory(hostObj);
+                            exit = Esp32Toolchain.Run(env, "cl.exe", HostFlags + " /I\"" + tempInclude + "\" /Fo\"" + hostObj + "\\\\\" \"" + hostSource +
+                                "\" /Fe\"" + Path.Combine(temp, Esp32SketchHost.FileName) + "\" /link /NOLOGO /INCREMENTAL:NO", temp, out output);
+                            log.AppendLine("çizim süreci (yalıtım) derlemesi: çıkış kodu " + exit.ToString(CultureInfo.InvariantCulture));
+                            if (exit != 0) log.Append(output);
+                            try { Directory.Delete(hostObj, true); } catch (IOException) { }
+                        }
+
                         try { Directory.Delete(objDir, true); } catch (IOException) { }
                         Directory.CreateDirectory(CacheDirectory);
                         try
@@ -514,7 +543,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
             result.ShimBuildTime = sw.Elapsed;
             log.AppendLine(string.Format(CultureInfo.InvariantCulture, "ESP32 katmanı {0:F2} s'de derlendi", sw.Elapsed.TotalSeconds));
-            return File.Exists(lib) ? (include, lib) : ((string, string)?)null;
+            return File.Exists(lib) ? (include, lib, File.Exists(host) ? host : null) : ((string, string, string?)?)null;
         }
 
         /// <summary>Shim files keyed by relative path ("Arduino.h", "freertos/task.h").</summary>

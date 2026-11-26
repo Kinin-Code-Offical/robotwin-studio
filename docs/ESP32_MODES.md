@@ -7,8 +7,8 @@ The same ESP32 sketch runs two ways: today's **fast simulation** and a **hardwar
 | Topic | Today |
 | --- | --- |
 | Compile | `ArduinoSketchPreprocessor` turns the `.ino` into C++; MSVC (`cl.exe /LD`) builds it into a Windows x64 DLL against `rw_esp32hal.lib` (`CoreSim/.../Firmware/Esp32/Esp32SketchCompiler.cs`). The HAL sources live in `CoreSim/native/esp32hal/`; the library is cached by hash. |
-| Load | The DLL is opened in-process with `LoadLibraryW` (`Esp32Native.cs`). Contract: `rw_init`, `rw_run_until`, `rw_pin_changed`, `rw_serial_rx` …, ABI version 2 (`rw_host_api.h`). |
-| Coverage | GPIO, interrupts, ADC/DAC/touch, LEDC/analogWrite/tone, timers, Serial 0–2, Wire 0–1, SPI, Wi-Fi (TCP/UDP/server), BLE, Bluepad32, FreeRTOS (tasks, queues, semaphores, notifications), task watchdog, camera, EEPROM, deep sleep. No ESP-NOW. |
+| Load | The DLL runs in a process of its own, `rw_sketch_host.exe` (`CoreSim/native/esp32hal/host/`, built and cached with the HAL), in an AppContainer inside a job: no network, none of the user's files, a 1 GB memory limit, no child processes, killed with the app. The host and the app share one section: the sketch's writes are queued with its time, its pin reads come from a snapshot taken before each slice, I2C bytes and radio / SPI requests wait for the app's answer (`Esp32SketchProcess.cs`); everything the host writes is checked before use. A sketch that ends its process only reboots its board. Without a host (an older build) the DLL is opened in-process with `LoadLibraryW` (`Esp32Native.cs`). Contract: `rw_init`, `rw_run_until`, `rw_pin_changed`, `rw_serial_rx` …, ABI version 2 (`rw_host_api.h`). |
+| Coverage | GPIO, interrupts, ADC/DAC/touch, LEDC/analogWrite/tone, timers, Serial 0–2, Wire 0–1, SPI, Wi-Fi (TCP/UDP/server), BLE, Bluepad32, FreeRTOS (tasks, queues, semaphores, notifications), task watchdog, camera, EEPROM, deep sleep, ESP-NOW, PCNT, MCPWM, RMT (NeoPixel). |
 | Wiring | Every GPIO is bound to the board's `DigitalPin` (`Esp32CoSimulation.cs`); I2C through `I2cBus`, SPI through `SpiBus`, radio through `Esp32RadioBridge`. |
 | Time | Lockstep with simulation time: the world calls `rw_run_until` in 100 µs slices. No instruction counting; each HAL call "spends" a fixed time. `getCycleCount` = uptime × MHz. |
 | Limits | No instruction-level timing; a 64-bit Windows memory model (8-byte pointers, no 520 KB SRAM limit); none of ESP-IDF's own behaviour (caches, flash, partitions, interrupt priorities); in headless runs on Linux the board runs without firmware. |
@@ -17,9 +17,9 @@ We also have an emulator to follow: the cycle-counted ATmega328P (`Firmware/Atme
 
 ## Mode 1: fast simulation (today's, stays)
 
-- MSVC + RobotWin's Arduino HAL, an in-process DLL. The default.
+- MSVC + RobotWin's Arduino HAL, a DLL in its own sandboxed process. The default.
 - Strengths: robotic scenes with many ESP32s (drones, vehicle fleets, radio networks), compiles in seconds, the full API including Wi-Fi/BLE/gamepads.
-- To add: ESP-NOW; pointer-size and memory-budget warnings (the sketch's static memory, measured with Mode 2's compiler, is shown, to catch arrays that would overflow on the real board).
+- In: ESP-NOW, and the memory budget (the sketch's heap and task stacks counted against a real chip's ~289 KB of free heap, with a warning near it and past it). To add: pointer-size warnings (the sketch's static memory, measured with Mode 2's compiler, to catch arrays that would overflow on the real board).
 
 ## Mode 2: hardware-compatible build
 

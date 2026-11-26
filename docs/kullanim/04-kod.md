@@ -220,6 +220,7 @@ Desteklenenler:
 - `Serial`, `Wire` (I²C), `EEPROM`, `Servo` / `ESP32Servo`
 - `WiFi` (dünya içinde sanal ağ; İnternet yok), BLE (temel özellikler), **Bluepad32** (PS5, PS4, Xbox kumandaları)
 - **ESP-NOW** (`esp_now.h`): kartlar arasında yönlendiricisiz kısa mesajlar (en çok 250 bayt). Gerçek sürücüdeki gibi önce `WiFi.mode(WIFI_STA)`, sonra `esp_now_init()`; tek adrese gönderim yalnız `esp_now_add_peer` ile eklenen eşe yapılır (yayın adresi FF:FF:FF:FF:FF:FF de eş olarak eklenir). Çerçeveler dünyanın radyo ortamında mesafe, duvar ve sönümlenmeyle iletilir. Tek adrese gönderim alındı onayı beklenip 7 kez yeniden denenir, gönderme geri çağrısı başarıyı ya da başarısızlığı bildirir. Yayın her zaman başarılı sayılır. ESP-IDF 4 ve 5 geri çağrı biçimlerinin ikisi de olur.
+- **Yalıtım:** hızlı modda her çizim kendi korumalı sürecinde çalışır. Ağa ve dosyalarınıza erişemez. Çizim çökse ya da sürecini kapatsa bile uygulama açık kalır, yalnızca o kart yeniden başlar ve olay günlüğü nedenini yazar. Başkasından aldığınız bir projenin ESP32 kodu da böylece bilgisayarınıza dokunamaz.
 - **Bellek bütçesi:** hızlı mod bilgisayarın belleğinde çalışır; çizimin `malloc`/`new` ayırmaları ve görev yığınları gerçek kartın yığınından sayılır (`ESP.getFreeHeap()` de buna göre düşer). Çizim gerçek bir ESP32'nin ~289 KB'lık boş yığınına yaklaşınca ve aşınca olay günlüğü uyarır: kartta orada bellek biterdi.
 
 - `SPI`: SPI cihazları (MCP3008 ADC, SPI'lı BMP280 …) devredeki SPI veri yoluna bağlanır.

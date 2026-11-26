@@ -7,8 +7,8 @@ Aynı ESP32 çizimi iki yolla çalışır: bugünkü **hızlı simülasyon** ve 
 | Konu | Bugünkü durum |
 | --- | --- |
 | Derleme | `.ino`, `ArduinoSketchPreprocessor` ile C++'a çevrilir; MSVC (`cl.exe /LD`) onu `rw_esp32hal.lib`'e karşı bir Windows x64 DLL'i yapar (`CoreSim/.../Firmware/Esp32/Esp32SketchCompiler.cs`). HAL kaynakları `CoreSim/native/esp32hal/` içindedir, kütüphane karma ile önbelleğe alınır. |
-| Yükleme | DLL aynı süreçte `LoadLibraryW` ile açılır (`Esp32Native.cs`). Sözleşme: `rw_init`, `rw_run_until`, `rw_pin_changed`, `rw_serial_rx` …, ABI sürüm 2 (`rw_host_api.h`). |
-| Kapsam | GPIO, kesmeler, ADC/DAC/dokunma, LEDC/analogWrite/tone, zamanlayıcılar, Serial 0–2, Wire 0–1, SPI, Wi-Fi (TCP/UDP/sunucu), BLE, Bluepad32, FreeRTOS (görev, kuyruk, semafor, bildirim), görev bekçisi, kamera, EEPROM, derin uyku. ESP-NOW yok. |
+| Yükleme | DLL kendi sürecinde, `rw_sketch_host.exe` içinde çalışır (`CoreSim/native/esp32hal/host/`, HAL ile birlikte derlenip önbelleğe alınır); bu süreç bir iş nesnesinin içinde AppContainer'dadır: ağ yok, kullanıcının dosyaları yok, 1 GB bellek sınırı, alt süreç yok, uygulamayla birlikte kapanır. Host ile uygulama tek bir paylaşılan bölümü kullanır: çizimin yazmaları zamanıyla sıraya girer, pin okumaları her dilimden önce alınan anlık görüntüden gelir, I2C baytları ve radyo / SPI istekleri uygulamanın yanıtını bekler (`Esp32SketchProcess.cs`); host'un yazdığı her şey kullanılmadan önce denetlenir. Sürecini sonlandıran çizim yalnızca kendi kartını yeniden başlatır. Host yoksa (eski bir derleme) DLL aynı süreçte `LoadLibraryW` ile açılır (`Esp32Native.cs`). Sözleşme: `rw_init`, `rw_run_until`, `rw_pin_changed`, `rw_serial_rx` …, ABI sürüm 2 (`rw_host_api.h`). |
+| Kapsam | GPIO, kesmeler, ADC/DAC/dokunma, LEDC/analogWrite/tone, zamanlayıcılar, Serial 0–2, Wire 0–1, SPI, Wi-Fi (TCP/UDP/sunucu), BLE, Bluepad32, FreeRTOS (görev, kuyruk, semafor, bildirim), görev bekçisi, kamera, EEPROM, derin uyku, ESP-NOW, PCNT, MCPWM, RMT (NeoPixel). |
 | Bağlantı | Her GPIO kartın `DigitalPin`'ine bağlı (`Esp32CoSimulation.cs`); I2C `I2cBus`, SPI `SpiBus`, radyo `Esp32RadioBridge` üzerinden. |
 | Zaman | Simülasyon zamanıyla kilitli adım: dünya 100 µs'lik dilimlerle `rw_run_until` çağırır. Komut sayımı yok; her HAL çağrısı sabit bir süre "harcar". `getCycleCount` = çalışma süresi × MHz. |
 | Sınırlar | Komut düzeyinde zamanlama yok; 64 bit Windows bellek modeli (işaretçi 8 bayt, 520 KB SRAM sınırı yok); ESP-IDF'in kendi davranışı (önbellek, flaş, bölümler, kesme önceliği) yok; Linux'ta başsız koşuda kart yazılımsız çalışır. |
@@ -17,9 +17,9 @@ Ayrıca örnek alınacak bir emülatörümüz var: döngü sayımlı ATmega328P 
 
 ## Mod 1: Hızlı simülasyon (bugünkü, kalıyor)
 
-- MSVC + RobotWin Arduino HAL, süreç içi DLL. Varsayılan mod.
+- MSVC + RobotWin Arduino HAL, kendi korumalı sürecinde bir DLL. Varsayılan mod.
 - Güçlü yanı: çok sayıda ESP32'li robotik sahne (dron, araç filosu, radyo ağı), saniyeler içinde derleme, Wi-Fi/BLE/kumanda dahil tam API.
-- Eklenecekler: ESP-NOW; işaretçi boyutu ve bellek bütçesi uyarıları (gerçek kartta taşacak dizileri yakalamak için çizimin statik bellek kullanımı Mod 2'nin derleyicisiyle ölçülüp gösterilir).
+- Var: ESP-NOW ve bellek bütçesi (çizimin yığını ve görev yığınları gerçek yonganın ~289 KB boş yığınından sayılır; yaklaşınca ve aşınca uyarı). Eklenecek: işaretçi boyutu uyarıları (gerçek kartta taşacak dizileri yakalamak için çizimin statik bellek kullanımı Mod 2'nin derleyicisiyle ölçülüp gösterilir).
 
 ## Mod 2: Donanım uyumlu derleme
 

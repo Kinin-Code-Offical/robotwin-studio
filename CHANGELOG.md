@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **ESP32 sketches in a sandbox:** in the fast mode each sketch runs in a process of its own, in an AppContainer inside a job: it cannot reach the network or your files, a sketch that crashes or ends its process only reboots its board (the app stays up), and the results are exactly those of the in-app run (same serial text, same pin edges). The event log says where each sketch runs.
 - **A command palette that understands sentences:** Ctrl+K matches word by word in any order and past Turkish case endings ("MOSFET ekle", "servo motorun akımını izle", "add MOSFET"), puts the open page's commands first and lists only what can run now; new commands: run the DRC, show the selected part on the PCB, watch any part's current on the oscilloscope, check the assembly mates.
 - **Model-exchange FMUs:** an FMI 2.0 FMU with only the model-exchange interface runs in the circuit too, its states solved by our own adaptive Dormand–Prince 5(4) integrator (tolerances scaled by the states' nominal values) with time events, state events located by bisection and step events, as FMI 2.0 describes.
 

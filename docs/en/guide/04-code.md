@@ -220,6 +220,7 @@ Supported:
 - `Serial`, `Wire` (I²C), `EEPROM`, `Servo` / `ESP32Servo`
 - `WiFi` (a virtual network inside the world; no Internet), BLE (basic features), **Bluepad32** (PS5, PS4, Xbox controllers)
 - **ESP-NOW** (`esp_now.h`): short messages between boards without a router (250 bytes at most). As with the real driver, first `WiFi.mode(WIFI_STA)`, then `esp_now_init()`. A unicast send goes only to a peer added with `esp_now_add_peer` (the broadcast address FF:FF:FF:FF:FF:FF is added as a peer too). Frames cross the world's radio medium with its distance, walls and fading. A unicast send waits for its acknowledgement and is retried up to 7 times, and the send callback reports success or failure. A broadcast always reports success. Both the ESP-IDF 4 and 5 callback forms are accepted.
+- **Isolation:** in the fast mode each sketch runs in its own sandboxed process. It cannot reach the network or your files. If a sketch crashes or closes its process, the app stays open: only that board restarts and the event log says why. So the ESP32 code of a project you got from someone else cannot touch your PC either.
 - **Memory budget:** the fast mode runs on the PC's memory. The sketch's `malloc`/`new` allocations and task stacks are counted against a real board's heap, and `ESP.getFreeHeap()` drops by them too. The event log warns when the sketch nears a real ESP32's ~289 KB of free heap and when it passes it: the board would have run out of memory there.
 
 - `SPI`: SPI devices (the MCP3008 ADC, a BMP280 on SPI …) connect to the SPI bus in the circuit.

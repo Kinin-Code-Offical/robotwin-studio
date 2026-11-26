@@ -100,7 +100,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
     /// netstandard2.1 as well). Each instance owns its own copy of the module's globals:
     /// when the same file is already loaded by another instance, a private copy is loaded.
     /// </summary>
-    internal sealed class Esp32SketchModule : IDisposable
+    internal sealed class Esp32SketchModule : IEsp32SketchModule
     {
         private static readonly object Gate = new object();
         private static readonly Dictionary<string, int> LoadedPaths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -143,18 +143,18 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 LoadedPaths[_loadedPath] = LoadedPaths.TryGetValue(_loadedPath, out int n) ? n + 1 : 1;
             }
 
-            AbiVersion = Get<Esp32Abi.AbiVersionFn>("rw_abi_version");
-            Init = Get<Esp32Abi.InitFn>("rw_init");
-            Start = Get<Esp32Abi.StartFn>("rw_start");
-            RunUntil = Get<Esp32Abi.RunUntilFn>("rw_run_until");
-            Stop = Get<Esp32Abi.StopFn>("rw_stop");
-            PinChanged = Get<Esp32Abi.PinChangedFn>("rw_pin_changed");
-            SerialRx = Get<Esp32Abi.SerialRxFn>("rw_serial_rx");
-            Now = Get<Esp32Abi.NowFn>("rw_now_ns");
-            StatusMessageRaw = Get<Esp32Abi.StatusMessageFn>("rw_status_message");
+            _abiVersion = Get<Esp32Abi.AbiVersionFn>("rw_abi_version");
+            _init = Get<Esp32Abi.InitFn>("rw_init");
+            _start = Get<Esp32Abi.StartFn>("rw_start");
+            _runUntil = Get<Esp32Abi.RunUntilFn>("rw_run_until");
+            _stop = Get<Esp32Abi.StopFn>("rw_stop");
+            _pinChanged = Get<Esp32Abi.PinChangedFn>("rw_pin_changed");
+            _serialRx = Get<Esp32Abi.SerialRxFn>("rw_serial_rx");
+            _now = Get<Esp32Abi.NowFn>("rw_now_ns");
+            _statusMessage = Get<Esp32Abi.StatusMessageFn>("rw_status_message");
             IntPtr memory = Kernel32.GetProcAddress(_handle, "rw_memory");
-            MemoryRaw = memory == IntPtr.Zero ? null : Marshal.GetDelegateForFunctionPointer<Esp32Abi.MemoryFn>(memory);
-            int abi = AbiVersion();
+            _memory = memory == IntPtr.Zero ? null : Marshal.GetDelegateForFunctionPointer<Esp32Abi.MemoryFn>(memory);
+            int abi = _abiVersion();
             if (abi != Esp32Abi.Version)
             {
                 Dispose();
@@ -162,30 +162,37 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             }
         }
 
-        public Esp32Abi.AbiVersionFn AbiVersion { get; }
-        public Esp32Abi.InitFn Init { get; }
-        public Esp32Abi.StartFn Start { get; }
-        public Esp32Abi.RunUntilFn RunUntil { get; }
-        public Esp32Abi.StopFn Stop { get; }
-        public Esp32Abi.PinChangedFn PinChanged { get; }
-        public Esp32Abi.SerialRxFn SerialRx { get; }
-        public Esp32Abi.NowFn Now { get; }
-        private Esp32Abi.StatusMessageFn StatusMessageRaw { get; }
+        private readonly Esp32Abi.AbiVersionFn _abiVersion;
+        private readonly Esp32Abi.InitFn _init;
+        private readonly Esp32Abi.StartFn _start;
+        private readonly Esp32Abi.RunUntilFn _runUntil;
+        private readonly Esp32Abi.StopFn _stop;
+        private readonly Esp32Abi.PinChangedFn _pinChanged;
+        private readonly Esp32Abi.SerialRxFn _serialRx;
+        private readonly Esp32Abi.NowFn _now;
+        private readonly Esp32Abi.StatusMessageFn _statusMessage;
+        private readonly Esp32Abi.MemoryFn? _memory;
 
-        private Esp32Abi.MemoryFn? MemoryRaw { get; }
+        public int Init(ref Esp32Abi.HostApi api, ref Esp32Abi.Config config) => _init(ref api, ref config);
+        public int Start(ulong startNs) => _start(startNs);
+        public int RunUntil(ulong timeNs) => _runUntil(timeNs);
+        public void Stop() => _stop();
+        public void PinChanged(int gpio, int level, ulong timeNs) => _pinChanged(gpio, level, timeNs);
+        public int SerialRx(int port, byte[] data, int length) => _serialRx(port, data, length);
+        public ulong Now() => _now();
 
         /// <summary>[mem-budget] The sketch's heap allocations and its tasks' stacks (bytes), or null for a build without it.</summary>
         public (long Heap, long Stacks)? Memory()
         {
-            if (MemoryRaw == null) return null;
-            MemoryRaw(out ulong heap, out ulong stacks);
+            if (_memory == null) return null;
+            _memory(out ulong heap, out ulong stacks);
             return ((long)heap, (long)stacks);
         }
 
         public string StatusMessage()
         {
             var buffer = new byte[4096];
-            int n = StatusMessageRaw(buffer, buffer.Length);
+            int n = _statusMessage(buffer, buffer.Length);
             if (n <= 0) return string.Empty;
             return Encoding.UTF8.GetString(buffer, 0, Math.Min(n, buffer.Length));
         }

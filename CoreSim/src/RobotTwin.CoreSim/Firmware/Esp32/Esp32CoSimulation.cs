@@ -50,6 +50,15 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
 
         /// <summary>Replay a single output edge or pulse inside a slice at its exact time (one-shot PWM) instead of at the slice boundary.</summary>
         public bool ExactOutputEdges { get; set; } = true;
+
+        /// <summary>
+        /// [isolation] Runs the sketch in a process of its own (its host is built with the ESP32 layer), so a sketch that
+        /// crashes or ends its process only reboots its board. False: in the app's process, as before.
+        /// </summary>
+        public bool Isolate { get; set; } = true;
+
+        /// <summary>[isolation] The sketch's process in an AppContainer as well: no network, none of the user's files.</summary>
+        public bool Sandbox { get; set; } = true;
     }
 
     public enum Esp32BoardState
@@ -169,7 +178,12 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         private readonly byte[] _radioOut = new byte[8192];
         private Esp32Abi.HostApi _api;
 
-        private Esp32SketchModule? _module;
+        private IEsp32SketchModule? _module;
+        private readonly Esp32Callbacks _callbacks;
+        private bool _isolationNoted;
+
+        /// <summary>[isolation] Where the sketch ran at its last boot: in its own sandboxed process, in its own process, or in the app's.</summary>
+        public Esp32Isolation Isolation { get; private set; }
         private double _vdd = 3.3;
         private bool _enHigh = true;
         private bool _resetRequested;
@@ -227,6 +241,13 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             _systemEvent = OnSystemEvent;
             Spi.Warning += m => Note("SPI: " + m);
             _radioRequest = OnRadioRequest;
+            _callbacks = new Esp32Callbacks
+            {
+                Log = _log, PinMode = _pinMode, DigitalWrite = _digitalWrite, DigitalRead = _digitalRead, AnalogRead = _analogRead,
+                PwmWrite = _pwmWrite, DacWrite = _dacWrite, TouchRead = _touchRead, SerialBegin = _serialBegin, SerialWrite = _serialWrite,
+                I2cStart = _i2cStart, I2cWrite = _i2cWrite, I2cRead = _i2cRead, I2cStop = _i2cStop, SystemEvent = _systemEvent,
+                RadioRequest = _radioRequest
+            };
             _api = new Esp32Abi.HostApi
             {
                 AbiVersion = Esp32Abi.Version,
@@ -493,7 +514,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                         ",boot:0x13 (SPI_FAST_FLASH_BOOT)\r\nconfigsip: 0, SPIWP:0xee\r\nmode:DIO, clock div:1\r\nentry 0x400805e4\r\n");
             }
 
-            _module = new Esp32SketchModule(DllPath);
+            _module = LoadSketch();
             var cfg = new Esp32Abi.Config
             {
                 StructSize = (uint)Marshal.SizeOf<Esp32Abi.Config>(),
@@ -527,6 +548,43 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             BootCount++;
             _everRan = true;
             LastBootTime = time;
+        }
+
+        /// <summary>
+        /// [isolation] The sketch in its own process when it can be (its host beside the build), otherwise in the app's; the
+        /// log says once where it runs and, when the sandbox or the process could not be had, why.
+        /// </summary>
+        private IEsp32SketchModule LoadSketch()
+        {
+            string? host = Options.Isolate ? Esp32SketchHost.Find(DllPath) : null;
+            if (host != null)
+            {
+                try
+                {
+                    var process = new Esp32SketchProcess(DllPath, host, _callbacks, Options.Sandbox);
+                    if (!_isolationNoted)
+                    {
+                        _isolationNoted = true;
+                        Note(process.Isolation == Esp32Isolation.Sandbox
+                            ? "çizim kendi korumalı sürecinde çalışıyor (ağ ve kullanıcı dosyaları kapalı)"
+                            : "çizim kendi sürecinde çalışıyor" + (process.SandboxNote != null ? " (korumalı alan kurulamadı: " + process.SandboxNote + ")" : string.Empty));
+                    }
+
+                    Isolation = process.Isolation;
+                    return process;
+                }
+                catch (Esp32IsolationException ex)
+                {
+                    if (!_isolationNoted)
+                    {
+                        _isolationNoted = true;
+                        Note("çizim kendi sürecinde başlatılamadı (" + ex.Message + "); uygulamanın içinde çalışıyor");
+                    }
+                }
+            }
+
+            Isolation = Esp32Isolation.InProcess;
+            return new Esp32SketchModule(DllPath);
         }
 
         /// <summary>Simulation time of the last (re)boot.</summary>
