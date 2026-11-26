@@ -12015,6 +12015,9 @@
   "{…} hattı vurgulanıyor (aynı hatta ya da boşa tıklayınca kalkar)": "{0} highlighted (click the same net or empty space to clear)",
   "{…} çizim (çizgi, dikdörtgen, daire, yay) alındı": "{0} drawings (lines, rectangles, circles, arcs) taken in",
   "{…}: köşesi {…} köşesine oturdu": "{0}: its corner meets {1}'s corner",
-  "{…}; eğiklik {…} mm (en çok {…} mm), kıvrımlar eşinden uzak yanda": "{0}; skew {1} mm (at most {2} mm), bumps on the side away from the partner"
+  "{…}; eğiklik {…} mm (en çok {…} mm), kıvrımlar eşinden uzak yanda": "{0}; skew {1} mm (at most {2} mm), bumps on the side away from the partner",
+  "{…} nesne · {…} kablo · {…} mekanik bağlantı. Bir nesneye bağlanan (vidalanan, kola / mile takılan) her şey onun altında görünür; bir satırı başka bir satırın üstüne sürüklemek onu oraya sabitler, boş yere bırakmak ayırır.": "{0} objects · {1} cables · {2} mechanical joints. Everything attached to an object (screwed on, mounted on a horn / shaft) appears under it; dragging a row onto another row fixes it there, dropping it on empty room frees it.",
+  "{…} → {…} altına alındı": "{0} → put under {1}",
+  "{…} üst nesnesinden ayrıldı": "{0} taken off its parent"
  }
 }

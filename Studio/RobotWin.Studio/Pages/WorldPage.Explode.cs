@@ -425,6 +425,9 @@ namespace RobotWin.Studio.Pages
             if (also >= 0 && also + 1 < args.Length && World?.Objects.FirstOrDefault(x => x.Name.Contains(args[also + 1], StringComparison.CurrentCultureIgnoreCase)) is { } extra)
                 Scene.ToggleSelect(extra.Id);
             if (args.Contains("--empty-parent")) CreateEmptyParent();   // [empty] the selection under a new empty
+            int rp = Array.IndexOf(args, "--reparent");   // [reparent] --reparent <part name>: the selection's row dropped on that part's row
+            if (rp >= 0 && rp + 1 < args.Length && Scene.Selected is { } dragged && World?.Objects.FirstOrDefault(x => x.Name.Contains(args[rp + 1], StringComparison.CurrentCultureIgnoreCase)) is { } under)
+                Reparent(dragged, under.Id);
             int vs = Array.IndexOf(args, "--vertex-snap");   // [vertex-snap] --vertex-snap <part name>: the selection's corner onto its corner
             if (vs >= 0 && vs + 1 < args.Length && World?.Objects.FirstOrDefault(x => x.Name.Contains(args[vs + 1], StringComparison.CurrentCultureIgnoreCase)) is { } corner)
                 Scene.SnapSelectedCornerOnto(corner.Id);

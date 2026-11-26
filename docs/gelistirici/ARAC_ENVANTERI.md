@@ -250,7 +250,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Sağ tıkta Oluştur ▸ türler (gövde şekilleri, ışık, kamera, ses, sensör, kart …) | Oluştur ▸ boş nesneler, gövde şekilleri, Parça ▸ kategoriler (kütüphanenin her hazır parçası: sensör, kamera, motor …) ve palet sekmeleri; ışık ve ses türü sonra | kısmi | 3 |
 | Etkin / devre dışı (Alt+Shift+A) | adın solunda kutu, Alt+Shift+A, ağaç menüsü; kapalı nesne ve üstündekiler sahneden ve çalıştırmadan çıkar (fizik, devre, sensörler), ağaçta soluk | var | |
 | Görünüme taşı, görünümle hizala, görünümü seçime hizala | Görünüme taşı, Odakla | kısmi | 3 |
-| Sürükleyerek üst nesne değiştirme | Bağla aracı | kısmi | 2 |
+| Sürükleyerek üst nesne değiştirme | ağaçta satırı satıra bırak: sabit bağlantı; boş yere bırak: ayır; mekanik bağlantılar korunur | var | |
 | Sahnede referansları bul | kablolar, bağlantılar, ilişkiler | var | |
 | Varsayılan üst nesne | yok | yok | 3 |
 

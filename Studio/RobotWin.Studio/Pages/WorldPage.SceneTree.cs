@@ -22,10 +22,11 @@ namespace RobotWin.Studio.Pages
         private void BuildScenePalette()
         {
             _treeOrder.Clear();   // [multiselect] the rows' order, for a Shift+click range
+            TreeRootDrop();   // [reparent] a row dropped on empty room leaves its parent
             var world = World;
             if (world == null) return;
             Palette.Children.Add(Note($"{world.Objects.Count} nesne · {world.Cables.Count} kablo · {world.Joints.Count} mekanik bağlantı. " +
-                                      "Bir nesneye bağlanan (vidalanan, kola / mile takılan) her şey onun altında görünür."));
+                                      "Bir nesneye bağlanan (vidalanan, kola / mile takılan) her şey onun altında görünür; bir satırı başka bir satırın üstüne sürüklemek onu oraya sabitler, boş yere bırakmak ayırır."));
             if (world.Objects.Count == 0)
             {
                 Palette.Children.Add(Note("Dünya boş. Kartlar, Parçalar veya Mekanik sekmesinden nesne ekleyin."));
@@ -184,6 +185,7 @@ namespace RobotWin.Studio.Pages
             Grid.SetColumn(text, 3);
             row.Children.Add(text);
 
+            TreeRowDrag(row, id);   // [reparent] Unity's drag onto another row (Pages/WorldPage.TreeDrag.cs)
             row.MouseEnter += (_, _) => { if (!selected) row.Background = (Brush)FindResource("B.Hover"); };
             row.MouseLeave += (_, _) => { if (!selected) row.Background = Brushes.Transparent; };
             row.MouseLeftButtonUp += (_, e) =>
