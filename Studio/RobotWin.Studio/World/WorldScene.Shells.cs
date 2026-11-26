@@ -98,8 +98,8 @@ namespace RobotWin.Studio.World
 
         private Matrix3D ExplodedMatrix(string id, Matrix3D current)
         {
-            if (_explode == null || !_explode.TryGetValue(id, out var off)) return current;
-            current.Translate(off);
+            if (_explode != null && _explode.TryGetValue(id, out var off)) current.Translate(off);
+            if (_steps != null && _steps.TryGetValue(id, out var step)) current.Translate(step);   // [explode] World/WorldScene.Explode.cs
             return current;
         }
 

@@ -721,6 +721,7 @@ namespace RobotWin.Studio.Pages
                     ShowPanel(1);
                     break;
                 case "drc":
+                case "problems":   // [problems] a DRC marker for the Problems window
                     board.Tracks.Add(new Track { Net = board.NetNames().First(), Layer = CopperLayer.Top, X1 = 2, Y1 = 2, X2 = board.Width / 2, Y2 = board.Height / 2, Width = 0.3 });
                     RunDrcNow();
                     if (DrcList.Items.Count > 0) DrcList.SelectedIndex = 0;
@@ -770,6 +771,33 @@ namespace RobotWin.Studio.Pages
                     Canvas.SetTool(PcbTool.Tune);
                     UpdatePanel();
                     ShowPanel(2);
+                    break;
+                }
+                case "diffpair":   // [diffroute] a USB pair between two headers, found from its names (D+/D−), laid by the pair router
+                {
+                    board.Tracks.Clear();
+                    board.Vias.Clear();
+                    double y = board.Height - 4;
+                    foreach (var (refDes, x) in new[] { ("J8", 5.0), ("J9", board.Width - 5) })
+                    {
+                        var j = new BoardComponent { RefDes = refDes, FootprintId = "HDR-1x2", Value = "USB", X = x, Y = y };
+                        j.PadNets["1"] = "USB_D+";
+                        j.PadNets["2"] = "USB_D-";
+                        board.Components.Add(j);
+                    }
+
+                    Canvas.Refresh();
+                    var pair = DiffPairRouting.PairOf(board, "USB_D+");
+                    if (pair != null)
+                    {
+                        pair.Gap = 0.25;
+                        board.DiffPairs.Add(pair);
+                        double m = DiffPairRouting.PadsNear(board, pair, 5, y) is { } two ? (two.P.Y + two.N.Y) / 2 : y;
+                        Canvas.SnapshotDiffPair(pair, new PcbPoint(5, y), new PcbPoint(board.Width - 5, y),
+                            new[] { new PcbPoint(14, m), new PcbPoint(17, m - 3), new PcbPoint(27, m - 3), new PcbPoint(30, m) });
+                    }
+
+                    UpdateToolOptions();
                     break;
                 }
                 case "draw":   // [graphics] a logo frame, a filled mark, an arc and a polygon drawn; the rectangle tool with its options

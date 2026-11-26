@@ -132,6 +132,8 @@ In the **Nets** tab, **Differential pairs** holds two nets that must run togethe
 
 **Length tuning (meanders):** in the routing tool's group (press and hold the track button). Click a long straight segment of the short net; it gets 45° meanders up to the length of its pair's other half or of its length group's longest net. The meanders keep the net class's clearance to other copper and to the board edge; when they do not fit, it says why (which track or pad is too close). The options bar sets the target (pair / group or a length in mm), the amplitude, the maximum amplitude, the spacing of the legs and the corners. It can be undone.
 
+**Differential pair route:** in the routing tool's group (press and hold the track button). Click a pad of a pair (D+/D−, `_P`/`_N`, CAN H/L): both of its pads are taken. Each click adds a leg to the pair's centreline (straight, then 45°); the two tracks run on either side of it at the pair's **Gap**, mitred at the corners, and leave their pads at 45° to join the pair. Both lengths and their difference show beside the cursor. A click on the pair's pads at the other end puts the tracks down; **Enter** or a double click finishes where it is, **Backspace** takes the last leg back, **Esc** drops it. A pair too close to another net's copper, or whose ends are in opposite order (the tracks would cross), is drawn red and not placed. A pair found from its names joins the board's pairs when it is placed, and the DRC holds it to its gap and skew. At corners the inner track is the shorter: when the skew is over the limit, the length tuner evens it out. The options bar sets the width and the layer.
+
 ## 3D view
 
 **3D** shows the board with its parts in 3D. While simulating, LEDs light up and hot parts glow.

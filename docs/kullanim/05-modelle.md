@@ -82,6 +82,10 @@ Delik açmak, cep oymak veya parçaları birleştirmek için:
 
 Araç nesneleri işlemden sonra kaldırılır; sonuç yine kapalı (su geçirmez) bir gövdedir.
 
+### Delik sihirbazı
+
+**Kes, kırp, birleştir** bölümündeki **Delik sihirbazı…** (SolidWorks'teki gibi) deliği çapla değil vida ölçüsüyle açar: **Tür** (geçiş deliği, silindir başlı vida yuvası, 90° havşa, kılavuz deliği, ısıyla gömme somun), **Ölçü** (M2–M8), **Geçme** (sıkı / normal / gevşek, ISO 273) ve **Derinlik** (0: boydan boya; gömme somunda somunun boyu). Ölçüler standartlardandır: silindir başlı yuva DIN 974-1, havşa ISO 15065, kılavuz çapları kaba diş. **Yüzeye yerleştir**'den sonra her tıklama tıklanan yüzeye, yüzeyin dik yönünde bir delik açar; sağ tık bitirir. Her delik geri alınabilir.
+
 ## Dilimleme
 
 Bir nesneyi iki parçaya ayırmak için nesneyi seçin ve **K**'ye (ya da **Dilimle**) basın. Ekranda kesme çizgisinin başına ve sonuna tıklayın: nesne o çizgi boyunca, bakış yönünde kesilir. İki parça da kesit yüzüyle kapatılır, yani ikisi de kapalı gövdedir. Kesitteki delikler açık kalır (boru kesilince halka kesit çıkar). Sonra parçalardan birini seçip **G** ile taşıyabilir, **R** ile döndürebilirsiniz.
@@ -102,14 +106,15 @@ Seçim: **Alt+tık** (sürüklemeden) tıklanan kenarın halkasını seçer, yü
 | I | İçe öteleme (inset) |
 | K | Bıçak: ekrana çizilen çizgi boyunca keser (seçim varsa yalnız seçili yüzleri). **C** kipi değiştirir: kes / sağ tarafı sil / sol tarafı sil; silinen tarafın açıklığı kapatılır |
 | Ctrl+R | Halka kesim: fareyle bir kenarın üzerine gelin, dörtgen halkası boyunca yeni kenar halkaları eklenir; tekerlek veya +/− kesim sayısını değiştirir |
-| Ctrl+B | Pah kır (bevel): seçili kenarların yerine düz pah yüzü; fareyle genişlik ya da mm yazın. Üç pahın buluştuğu köşeye köşe yüzü eklenir |
+| Ctrl+B | Pah kır (bevel): seçili kenarların yerine düz pah yüzü; fareyle genişlik ya da mm yazın. Üç pahın buluştuğu köşeye köşe yüzü eklenir. Tekerlek ya da **+** parça sayısını artırır: pah yuvarlanır |
+| Yuvarla (radyüs) | SolidWorks'teki radyüs: seçili kenarlar iki yüze teğet dairesel bir yayla yuvarlanır (8 parçayla başlar, tekerlekle değişir); her kenarı yuvarlanmış köşe küre parçasıyla kapanır, gövde kapalı kalır |
 | F | Yüz doldur |
 | M | Birleştir |
 | P | Seçimi ayrı nesne yap |
 | X veya Del | Sil |
 | Shift+N | Normalleri yeniden hesapla |
 
-**Kalınlık ver** yüzeye içe doğru et kalınlığı verir: açık bir yüzey kalın bir duvar olur, kapalı bir gövde içi boş kabuğa döner (örneğin üst yüzü silinmiş kutu → tepsi). Köşelerde kalınlık eşit kalır.
+**Kalınlık ver** yüzeye içe doğru et kalınlığı verir: açık bir yüzey kalın bir duvar olur, kapalı bir gövde içi boş kabuğa döner (örneğin üst yüzü silinmiş kutu → tepsi). Köşelerde kalınlık eşit kalır. **Kabuk** (SolidWorks'teki gibi) aynısını seçili yüzleri açarak yapar: yüz modunda (3) açılacak yüzleri seçin (kutunun üstü, bir yan), **Kabuk**'a basıp duvar kalınlığını sürükleyin ya da yazın; gövde açık ağızlı, eşit duvarlı bir muhafaza olur.
 
 **Alt böl**, **Yumuşat** (Catmull–Clark), mesafeye göre birleştirme, üçgenleme ve normalleri ters çevirme gibi işlemler panelde ve sağ tık menüsündedir.
 
@@ -132,6 +137,7 @@ Basılan bir malzemedeki (PLA, PETG, ABS, Naylon) parçanın denetçisinde **3B 
 
 - **Katı** (Z), **Tel** kafes (Shift+Z), **X-ray** (Alt+Z), **Kenarlar**.
 - **Ölç** aracı: iki noktaya tıklayın, mesafeyi gösterir (köşelere yapışır).
+- **Kesit** (SolidWorks'teki kesit görünümü): bütün nesneler X, Y ya da Z boyunca bir düzlemle kesilir, kameraya bakan yarı kaldırılır ve kesit yüzü kendi renginde dolu gösterilir; duvarlar, delikler ve kaburgalar görünür. Görünümün üstündeki çubukta eksen seçilir, kaydırıcı düzlemi modelin içinden geçirir, **Ters** öbür yarıyı gösterir. Yalnız görüntüdür: nesneler değişmez; düzenleme modundaki nesne kesilmez.
 
 ## Kaydetme ve dışa aktarma
 

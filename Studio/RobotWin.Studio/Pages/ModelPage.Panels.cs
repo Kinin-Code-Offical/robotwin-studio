@@ -316,6 +316,7 @@ namespace RobotWin.Studio.Pages
             wrap.Children.Add(SmallButton("Fark (kırp)", () => _ed.Boolean(BooleanOp.Difference), "Hedeften, ona geçen araç nesnelerinin hacmini oyar (iç içe geçen kısım kırpılır)"));
             wrap.Children.Add(SmallButton("Birleşim", () => _ed.Boolean(BooleanOp.Union), "İç içe geçen nesneleri tek kapalı gövdede birleştirir"));
             wrap.Children.Add(SmallButton("Kesişim", () => _ed.Boolean(BooleanOp.Intersection), "Yalnız nesnelerin ortak hacmi kalır"));
+            wrap.Children.Add(SmallButton("Delik sihirbazı…", OpenHoleWizard, "Vida ölçüsüne göre delik: geçiş, silindir başlı, havşa başlı, kılavuz, ısıyla gömme somun (SolidWorks'teki gibi); yüzeye tıklayarak yerleştirin"));
             Props.Children.Add(wrap);
             Caption(objs.Count > 1
                 ? "Boolean hedefi en son seçilen (etkin) nesnedir; diğerleri araçtır ve işlemden sonra kaldırılır."
@@ -1090,7 +1091,13 @@ namespace RobotWin.Studio.Pages
             wrap.Children.Add(SmallButton("Bıçak  K", () => _vp.StartModal(ModalKind.Knife), "Ekrana çizdiğiniz çizgi boyunca keser (seçim varsa yalnız seçili yüzleri). C ile kip: kes / sağ tarafı sil / sol tarafı sil; silinen taraf kapatılır"));
             wrap.Children.Add(SmallButton("Halka kes  Ctrl+R", () => _vp.StartModal(ModalKind.LoopCut), "Fareyle bir kenarın üzerine gelin: dörtgen halkası boyunca yeni kenar halkaları ekler; tekerlek kesim sayısını değiştirir"));
             wrap.Children.Add(SmallButton("Pah kır  Ctrl+B", () => _vp.StartModal(ModalKind.Bevel), "Seçili kenarların yerine düz pah yüzü koyar; fareyle genişliği ayarlayın veya mm yazın"));
+            wrap.Children.Add(SmallButton("Yuvarla (radyüs)", () =>
+            {
+                _vp.NextBevelSegments = 8;
+                _vp.StartModal(ModalKind.Bevel);
+            }, "SolidWorks'teki radyüs: seçili kenarlar iki yüze teğet bir yayla yuvarlanır; fareyle ya da mm yazarak yarıçapı, tekerlekle parça sayısını ayarlayın"));
             wrap.Children.Add(SmallButton("Kalınlık ver", () => _vp.StartModal(ModalKind.Solidify), "Yüzeye içe doğru et kalınlığı verir: açık yüzey kalın bir duvar, kapalı gövde içi boş kabuk olur"));
+            wrap.Children.Add(SmallButton("Kabuk", StartShell, "SolidWorks'teki kabuk: seçili yüzler açılır, gövdenin geri kalanı içe doğru duvar kalınlığı alır (kutu, kapak, muhafaza)"));
             wrap.Children.Add(SmallButton("Alt böl", _ed.Subdivide));
             wrap.Children.Add(SmallButton("Yumuşat", _ed.SmoothSubdivide, "Catmull–Clark: tüm ağ"));
             wrap.Children.Add(SmallButton("Birleştir  M", _ed.MergeAtCenter));

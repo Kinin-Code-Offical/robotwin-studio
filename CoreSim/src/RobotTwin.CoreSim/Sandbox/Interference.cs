@@ -46,7 +46,7 @@ namespace RobotTwin.CoreSim.Sandbox
     /// </summary>
     public static class Interference
     {
-        private sealed class Solid
+        internal sealed class Solid
         {
             public string Id = string.Empty;
             public ConvexHull Hull = null!;
@@ -58,30 +58,8 @@ namespace RobotTwin.CoreSim.Sandbox
         public static List<InterferencePair> Find(WorldDocument world, IWorldGeometry geometry, InterferenceOptions? options = null)
         {
             options ??= new InterferenceOptions();
-            var solids = new List<Solid>();
-            foreach (var o in world.Objects)
-            {
-                var g = geometry.GeometryOf(o);
-                var local = g.Hull is { Count: >= 4 } hull ? hull : BoxCorners(g.Min, g.Max);
-                if (local.Count < 4) continue;
-                var pts = local.Select(o.Pose.ToWorld).ToList();
-                var h = ConvexHull.Compute(pts);
-                if (h.IsDegenerate) continue;
-                solids.Add(new Solid
-                {
-                    Id = o.Id, Hull = h,
-                    Min = new Vec3(pts.Min(p => p.X), pts.Min(p => p.Y), pts.Min(p => p.Z)),
-                    Max = new Vec3(pts.Max(p => p.X), pts.Max(p => p.Y), pts.Max(p => p.Z))
-                });
-            }
-
-            var joined = new HashSet<(string, string)>();
-            foreach (var j in world.Joints)
-            {
-                joined.Add((j.ObjectA, j.ObjectB));
-                joined.Add((j.ObjectB, j.ObjectA));
-            }
-
+            var solids = SolidsOf(world, geometry);
+            var joined = JoinedPairs(world);
             double tol = options.TouchingCounts ? 1e-5 : -1e-6;
             double step = Math.Max(1e-5, options.ResolutionMm / 1000);
             var result = new List<InterferencePair>();
@@ -127,6 +105,42 @@ namespace RobotTwin.CoreSim.Sandbox
             }
 
             return result.OrderByDescending(r => r.VolumeMm3).ToList();
+        }
+
+        /// <summary>Every object as its convex solid in its pose (its model's hull, or its box); flat ones are left out.</summary>
+        internal static List<Solid> SolidsOf(WorldDocument world, IWorldGeometry geometry)
+        {
+            var solids = new List<Solid>();
+            foreach (var o in world.Objects)
+            {
+                var g = geometry.GeometryOf(o);
+                var local = g.Hull is { Count: >= 4 } hull ? hull : BoxCorners(g.Min, g.Max);
+                if (local.Count < 4) continue;
+                var pts = local.Select(o.Pose.ToWorld).ToList();
+                var h = ConvexHull.Compute(pts);
+                if (h.IsDegenerate) continue;
+                solids.Add(new Solid
+                {
+                    Id = o.Id, Hull = h,
+                    Min = new Vec3(pts.Min(p => p.X), pts.Min(p => p.Y), pts.Min(p => p.Z)),
+                    Max = new Vec3(pts.Max(p => p.X), pts.Max(p => p.Y), pts.Max(p => p.Z))
+                });
+            }
+
+            return solids;
+        }
+
+        /// <summary>The pairs a joint ties together, both ways round.</summary>
+        internal static HashSet<(string, string)> JoinedPairs(WorldDocument world)
+        {
+            var joined = new HashSet<(string, string)>();
+            foreach (var j in world.Joints)
+            {
+                joined.Add((j.ObjectA, j.ObjectB));
+                joined.Add((j.ObjectB, j.ObjectA));
+            }
+
+            return joined;
         }
 
         private static int Cells(double extent, double step) => Math.Max(1, Math.Min(48, (int)Math.Ceiling(Math.Max(0, extent) / step)));

@@ -611,11 +611,12 @@ namespace RobotWin.Studio.World
                     double e = 0.0012;
                     var box = new Model3DGroup();
                     foreach (var (a, c) in BoxEdges(b)) box.Children.Add(new GeometryModel3D(Edge(a, c, e), accent));
-                    box.Transform = new MatrixTransform3D(sel.Current);
+                    box.Transform = new MatrixTransform3D(ExplodedMatrix(sel.Object.Id, sel.Current));   // [explode] the box goes where the part is shown
                     g.Children.Add(box);
                 }
             }
 
+            AppendGap(g);   // [clearance] World/WorldScene.Explode.cs
             AppendGizmo(g); // [terrain] move/rotate/scale gizmo
             _overlay.Content = g;
 
@@ -776,7 +777,7 @@ namespace RobotWin.Studio.World
                 if (selected) r *= 1.8;   // selected: thicker and lit in the accent colour
 
                 // [phys] along the rope (drapes over parts, pulled-out plugs hang free)
-                var path = RopePath(c, pa, pb, out pa, out pb, out _, out _);
+                var path = ExplodedCable(a, b, ref pa, ref pb, out var apart) ? apart : RopePath(c, pa, pb, out pa, out pb, out _, out _);   // [explode] a moved end: a slack line
                 var look = CableLookOf(c.Id);
                 look.Tube.Material = CableMaterial(color, heat, selected);
                 // [perf] The tube is built again only when the rope moved (or its thickness changed); the GPU keeps the rest.

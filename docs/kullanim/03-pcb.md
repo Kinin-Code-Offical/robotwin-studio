@@ -132,6 +132,8 @@ Bir konnektör duvardan dışarı çıkacaksa (USB soketi, DC jakı) **Duvardaki
 
 **Uzunluk ayarı (menderes):** yol aracının grubundadır (yol düğmesini basılı tutun). Kısa kalan hattın uzun, düz bir parçasına tıklayın; parça 45° köşeli kıvrımlarla, çiftinin öteki yarısının ya da uzunluk grubunun en uzun hattının uzunluğuna getirilir. Kıvrımlar hat sınıfının aralığını başka bakıra ve kart kenarına karşı korur; sığmazsa nedenini söyler (hangi yola ya da pede yakın). Seçenek çubuğundan hedef (çift / grup ya da elle mm), genlik, en çok genlik, bacak aralığı ve köşe tipi seçilir. Geri alınabilir.
 
+**Fark çifti yolu:** yol aracının grubundadır (yol düğmesini basılı tutun). Bir çiftin (D+/D−, `_P`/`_N`, CAN H/L) pedine tıklayın: iki pedi birden alır. Her tıklama çiftin orta hattına bir bacak ekler (önce düz, sonra 45°); iki yol bu hattın iki yanından çiftin **Aralık**'ıyla, köşelerde gönyeli olarak birlikte gider, pedlerinden 45° ile çıkıp çifte katılır. İmlecin yanında iki uzunluk ve farkları görünür. Karşı uçtaki çift pedlerine tıklayınca yollar yerine konur; **Enter** ya da çift tık olduğu yerde bitirir, **Geri** son bacağı alır, **Esc** bırakır. Başka bir ağın bakırına fazla yaklaşan ya da uçları ters sırada olan (yollar kesişir) çift kırmızı çizilir ve konmaz. Adından bulunan çift, yol konunca kartın çiftlerine eklenir; DRC onu aralığına ve farkına göre denetler. Köşelerde iç yol kısa kalır: fark sınırı aşarsa uzunluk ayarı eşitler. Seçenek çubuğundan genişlik ve katman seçilir.
+
 ## 3D görünüm
 
 **3D** düğmesi kartı parçalarıyla birlikte 3 boyutlu gösterir. Simülasyon çalışırken LED'ler yanar, ısınan parçalar kızarır.

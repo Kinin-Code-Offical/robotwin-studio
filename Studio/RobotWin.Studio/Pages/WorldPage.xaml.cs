@@ -1957,6 +1957,7 @@ namespace RobotWin.Studio.Pages
             KinematicsSnapshot();   // [kin] --arm <name>, --arm-target, --arm-preview, --arm-reach, --arm-drive
             PidSnapshot();   // [pid] --pid <motor>
             ShellSnapshot();   // [shell] --select-shell, --xray, --exploded (Pages/WorldPage.Shells.cs)
+            AssemblyToolsSnapshot();   // [clearance] [explode] --clearance <mm>, --explode auto|radial|window (Pages/WorldPage.Explode.cs)
             SenseSnapshotFinish();   // [sense]
             SensorLogSnapshotFinish();   // [sensorlog]
             SdkSnapshot();   // [sdk]

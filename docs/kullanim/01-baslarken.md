@@ -64,7 +64,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 | Belge sekmeleri | Menünün yanında | Açık devreler ve dünyalar; kayıtlı bir dosya kendi adıyla görünür. Kaydedilmemiş değişiklik, kapatma düğmesinin yerinde bir nokta olarak görünür. Sekmeler sığmazsa şerit fare tekerleğiyle ya da oklarla kayar; **▾** bütün açık sekmeleri listeler. Sağ tıklayıp **Sabitle** derseniz sekme en solda kalır, toplu kapatmalarda kapanmaz ve dosya bir dahaki açılışta da sabit gelir. Sekmeleri sürükleyerek sıralayabilirsiniz. **Ctrl+Tab** sonraki sekme, **Ctrl+W** sekmeyi kapatır, **Ctrl+Shift+T** kapatılan dosyayı yeniden açar. |
 | Tasarımdan gerçeğe hattı | Sol kenar | Sayfalar üç grupta: **ELEKTRONİK** (Devre → PCB → Kod), **MEKANİK** (Parça → Montaj), **TEST** (Dünya). Altta Başlangıç, Kütüphane, Ayarlar ve Yardım. Başlangıç'a sol üstteki logodan da dönülür. **Ctrl+B** hattı genişletir; her sayfanın ne işe yaradığı ve durumu yazar. |
 | Sayfa | Orta | Seçili aşamanın editörü. |
-| Durum çubuğu | En alt | Son mesaj, simülasyon durumu, parça ve kablo sayısı. |
+| Durum çubuğu | En alt | Sorun sayaçları (hata ⊗, uyarı ⚠), son mesaj, simülasyon durumu, parça ve kablo sayısı. |
 
 ![Gruplu sol çubuk (genişletilmiş)](../images/rail-groups.png)
 
@@ -77,6 +77,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 - **Odak modu:** **Görünüm → Odak modu** gezinme çubuğunu gizler.
 - **Panelleri taşımak, küçültmek, ayırmak:** Dünya, Devre ve PCB sayfalarındaki yan paneller (palet, parça kütüphanesi, özellikler, denetçi) ve alt sekmeler başlıklarından sürüklenerek ayrı pencereye alınır; pencereyi kenara bırakınca sola, sağa ya da alt bölmeye yerleşir. Başlıktaki **Küçült** düğmesi o tarafı kenarda adların yazdığı ince bir şeride indirir (Visual Studio'daki gibi), şeride tıklayınca geri açılır. **Ctrl+Space** tam görünüm: bütün paneller çekilir, çizim alanı bütün pencereyi alır; yeniden basınca paneller olduğu gibi döner. Düzen saklanır. Bkz. [Dünya → Panelleri yerleştirme](07-dunya.md#panelleri-yerleştirme).
 - **Yüzen araç çubukları:** PCB'nin sol araç şeridi ve Devre'nin çizim araçları, başlarındaki noktalı tutamaktan sürüklenince küçük bir pencereye çıkar (SolidWorks'teki gibi); pencere istenen yere, ikinci ekrana da taşınır, sağ tıkla yatay ya da dikey çevrilir. Tutamağa çift tıklamak ya da **Yerine koy** şeridi geri yerleştirir; dışarıdayken çizim alanı genişler. Yeri saklanır.
+- **Sorunlar:** durum çubuğunun solundaki sayaçlar bütün projenin hatalarını ve uyarılarını sayar: devrenin ERC'si, PCB'nin son DRC'si ve son derlemenin hataları (VS Code'daki Sorunlar paneli gibi). Bir alanın denetimi son değişiklikten eskiyse yanında bir bilgi işareti çıkar. Sayaçlara tıklamak (ya da komut paletinde "Sorunlar") listeyi alan alan açar; bir satır o yere gider (parça seçilir, DRC işareti ya da kod satırı gösterilir), eski kalmış alan **Denetle** ile yeniden denetlenir.
 - **Tam ekran (F11):** **Esc** veya **F11** ile çıkılır.
 - **Arayüz ölçeği:** **Görünüm → Arayüz ölçeği** (%75–%150).
 

@@ -73,7 +73,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Yerel ratsnest (bir parçanınki) | yok | yok | 3 |
 | Ayak izi yerleştir | Parça ekle | var | |
 | Yol | Yol (X) | var | |
-| Fark çifti yolu | yok (yalnız denetim) | yok | 1 |
+| Fark çifti yolu | Fark çifti yolu (ortak orta hat, gönyeli köşe, 45° ped çıkışı, uzunluk ve fark, ters uç ve yakın bakır uyarısı) | var | |
 | Uzunluk ayarı (tek hat) | menderes aracı | var | |
 | Fark çifti eğiklik ayarı | yok | yok | 2 |
 | Via | Via aracı | var | |
@@ -157,10 +157,10 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Döndürerek katı | Döner gövde | var | |
 | Süpürme, loft, sınır ile katı | yok | yok | 2 |
 | Ekstrüzyon ile kes, döndürerek kes | Boolean fark | var | |
-| Delik sihirbazı (havşa, vida, cıvata) | delik var, sihirbaz yok | kısmi | 1 |
-| Radyüs (kenar yuvarlatma) | yok (yalnız pah) | yok | 1 |
+| Delik sihirbazı (havşa, vida, cıvata) | Delik sihirbazı (geçiş, silindir başlı, havşa, kılavuz, gömme somun; M2–M8, ISO ölçüleri; yüzeye tıkla) | var | |
+| Radyüs (kenar yuvarlatma) | Yuvarla (radyüs): iki yüze teğet dairesel yay, parça sayısı, küresel köşeler | var | |
 | Pah | Pah kır (Ctrl+B) | var | |
-| Kabuk (içini boşalt) | yok | yok | 1 |
+| Kabuk (içini boşalt) | Kabuk (seçili yüzleri açar, içe eşit duvar) ve Kalınlık ver | var | |
 | Draft, kaburga (rib) | yok | yok | 2 |
 | Doğrusal / dairesel çoğaltma | var | var | |
 | Aynala | Ayna kopyası | var | |
@@ -176,7 +176,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Ölç | Ölç | var | |
 | Kütle özellikleri | Kütle özellikleri… | var | |
 | Kesit özellikleri | yok | yok | 2 |
-| Kesit görünümü | yok | yok | 1 |
+| Kesit görünümü | Kesit (X/Y/Z, kaydırıcı, ters, kesit yüzü kendi renginde) | var | |
 | Geometri denetimi (kapalı ağ) | Durum: kapalı / açık ağ | var | |
 | Draft, eğrilik, simetri analizi | yok | yok | 3 |
 | Gövde karşılaştır | yok | yok | 3 |
@@ -206,9 +206,9 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Gelişmiş ilişkiler (sınır, genişlik, simetrik) | denetlenecek | kısmi | 2 |
 | Mekanik ilişkiler (dişli, kam, kremayer) | denetlenecek | kısmi | 2 |
 | Çakışma algılama | Çakışma algılama (hacim, değenler, bağlı parçalar, yalnız seçili) | var | |
-| Boşluk doğrulama | yok | yok | 1 |
+| Boşluk doğrulama | Boşluk doğrulama (en az boşluk, GJK ile kesin mesafe, iki uç arası çizgi) | var | |
 | Delik hizası | yok | yok | 2 |
-| Patlatılmış görünüm | yok | yok | 1 |
+| Patlatılmış görünüm | Adımlar (yön, uzaklık, bağlı parçalar birlikte), otomatik (eksen / dışa doğru, zincir kat kat), kaydırıcı, oynat / topla | var | |
 | Bileşen çoğaltma | Çoğalt | kısmi | 2 |
 | BOM | var | var | |
 
@@ -226,3 +226,5 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 4. **Montaj:** çakışma algılama, boşluk doğrulama, patlatılmış görünüm.
 
 Sonra öncelik 2 ve 3. Her grup bitince bu tablo güncellenir.
+
+Durum: öncelik 1'in bütün grupları bitti (PCB, Şema, Parça, Montaj); sırada öncelik 2.

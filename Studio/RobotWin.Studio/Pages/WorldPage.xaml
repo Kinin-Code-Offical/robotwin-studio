@@ -55,6 +55,12 @@
                         <Button Style="{StaticResource Btn.Icon}" Click="OnInterference" Margin="2,0,0,0" ToolTip="Çakışma algılama: aynı yeri kaplayan parçalar ve ortak hacimleri (SolidWorks'teki gibi)">
                             <t:Icon Data="{StaticResource I.Interference}" Size="16"/>
                         </Button>
+                        <Button Style="{StaticResource Btn.Icon}" Click="OnClearance" ToolTip="Boşluk doğrulama: birbirine istenen boşluktan yakın duran parçalar (SolidWorks'teki gibi)">
+                            <t:Icon Data="{StaticResource I.Clearance}" Size="16"/>
+                        </Button>
+                        <Button Style="{StaticResource Btn.Icon}" Click="OnExplode" ToolTip="Patlatılmış görünüm: parçaları adım adım ayır, oynat ve topla">
+                            <t:Icon Data="{StaticResource I.Explode}" Size="16"/>
+                        </Button>
                         <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="10,0"/>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="15° döndür (R, Shift+R ters)" Click="OnRotate"><t:Icon Data="{StaticResource I.Rotate}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Çoğalt (Ctrl+D)" Click="OnDuplicate"><t:Icon Data="{StaticResource I.Plus}" Size="16"/></Button>

@@ -110,6 +110,27 @@ namespace RobotWin.Studio.Modeling
                 return;
             }
 
+            if (SurfacePick != null && e.ChangedButton is MouseButton.Left or MouseButton.Right)
+            {
+                // [holes] placing: each click on an object's surface drills there; a right click stops
+                if (e.ChangedButton == MouseButton.Right)
+                {
+                    SurfacePick = null;
+                    _ed.Status("Delik yerleştirme bitti");
+                }
+                else if (PickFace(p) is { } hit)
+                {
+                    SurfacePick(hit.ObjectId, hit.Point, hit.Normal);
+                }
+                else
+                {
+                    _ed.Status("Bir nesnenin yüzeyine tıklayın · sağ tık: bitir");
+                }
+
+                e.Handled = true;
+                return;
+            }
+
             if (e.ChangedButton == MouseButton.Left)
             {
                 int nav = _overlay.HitNavigator(p, out var navAxis);
@@ -325,7 +346,7 @@ namespace RobotWin.Studio.Modeling
 
         private void OnWheel(object sender, MouseWheelEventArgs e)
         {
-            if (_modal is { Kind: ModalKind.LoopCut } lc)
+            if (_modal is { Kind: ModalKind.LoopCut or ModalKind.Bevel } lc)   // [fillet] the wheel sets a bevel's segments too
             {
                 lc.Typed = string.Empty;
                 lc.Cuts = Math.Max(1, Math.Min(64, lc.Cuts + Math.Sign(e.Delta)));
@@ -371,10 +392,10 @@ namespace RobotWin.Studio.Modeling
                     _modal.KnifeMode = (_modal.KnifeMode + 1) % 3;
                     UpdateModal(Mouse.GetPosition(this));
                     return true;
-                case Key.OemPlus when _modal.Kind == ModalKind.LoopCut:
-                case Key.Add when _modal.Kind == ModalKind.LoopCut:
-                case Key.OemMinus when _modal.Kind == ModalKind.LoopCut:
-                case Key.Subtract when _modal.Kind == ModalKind.LoopCut:
+                case Key.OemPlus when _modal.Kind is ModalKind.LoopCut or ModalKind.Bevel:
+                case Key.Add when _modal.Kind is ModalKind.LoopCut or ModalKind.Bevel:
+                case Key.OemMinus when _modal.Kind is ModalKind.LoopCut or ModalKind.Bevel:
+                case Key.Subtract when _modal.Kind is ModalKind.LoopCut or ModalKind.Bevel:
                     _modal.Typed = string.Empty;
                     _modal.Cuts = Math.Max(1, Math.Min(64, _modal.Cuts + (key == Key.OemPlus || key == Key.Add ? 1 : -1)));
                     UpdateModal(Mouse.GetPosition(this));
@@ -474,9 +495,14 @@ namespace RobotWin.Studio.Modeling
                 if (kind == ModalKind.Knife || kind == ModalKind.LoopCut || kind == ModalKind.Solidify || kind == ModalKind.Bevel)
                 {
                     m.Edges = kind == ModalKind.Bevel ? _ed.SelectedEdges() : new List<(int, int)>();
+                    if (kind == ModalKind.Bevel)
+                    {
+                        m.Cuts = NextBevelSegments;   // [fillet] 1: a chamfer; more: a round
+                        NextBevelSegments = 1;
+                    }
                     _ed.BeginChange();
                     m.Base = _ed.EditMesh!.Clone();
-                    m.Faces = kind == ModalKind.Knife ? _ed.SelectedFaceList() : new List<int>();
+                    m.Faces = kind == ModalKind.Knife || kind == ModalKind.Solidify ? _ed.SelectedFaceList() : new List<int>();   // [shell] the faces a shell opens
                     m.EW = ent.World;
                     m.EI = ent.Inverse;
                     m.LocalPerWorld = 1 / Math.Max(1e-9, Math.Pow(Math.Abs(m.EW.Determinant), 1.0 / 3));
@@ -769,10 +795,12 @@ namespace RobotWin.Studio.Modeling
                     double width = typed ?? Math.Max(0, (p.X - m.Start.X) * px);
                     if (snap && typed == null) width = Math.Round(width / (grid / 2)) * (grid / 2);
                     var mesh = m.Base!.Clone();
-                    var r = MeshCut.Bevel(mesh, m.Edges, width * m.LocalPerWorld);
+                    var r = MeshCut.Bevel(mesh, m.Edges, width * m.LocalPerWorld, m.Cuts);
                     _ed.SetEditMesh(mesh);
                     _ed.SelectResult(r);
-                    m.Header = $"Pah kır ({m.Edges.Count} kenar): {typedText}{width:0.###} mm   ·   fareyi sağa sürükleyin · sayı yazın · Enter onay · Esc iptal";
+                    m.Header = m.Cuts > 1
+                        ? $"Yuvarla ({m.Edges.Count} kenar, {m.Cuts} parça): {typedText}{width:0.###} mm   ·   fareyi sağa sürükleyin · sayı yazın · tekerlek veya +/−: parça sayısı (1: pah) · Enter onay · Esc iptal"
+                        : $"Pah kır ({m.Edges.Count} kenar): {typedText}{width:0.###} mm   ·   fareyi sağa sürükleyin · sayı yazın · tekerlek veya +: yuvarlat · Enter onay · Esc iptal";
                     RefreshEditMesh();
                     return;
                 }
@@ -783,11 +811,14 @@ namespace RobotWin.Studio.Modeling
                     double thick = typed ?? Math.Max(0, (p.X - m.Start.X) * px);
                     if (snap && typed == null) thick = Math.Round(thick / (grid / 2)) * (grid / 2);
                     var mesh = m.Base!.Clone();
-                    MeshCut.Solidify(mesh, thick * m.LocalPerWorld);
+                    if (m.Faces.Count > 0) MeshCut.Shell(mesh, m.Faces, thick * m.LocalPerWorld);   // [shell] SolidWorks' Shell: the selected faces opened
+                    else MeshCut.Solidify(mesh, thick * m.LocalPerWorld);
                     _ed.SetEditMesh(mesh);
                     _ed.SelVerts.Clear();
                     _ed.SelFaces.Clear();
-                    m.Header = $"Kalınlık ver: {typedText}{thick:0.###} mm (içe doğru)   ·   fareyi sağa sürükleyin · sayı yazın · Enter onay · Esc iptal";
+                    m.Header = m.Faces.Count > 0
+                        ? $"Kabuk ({m.Faces.Count} yüz açık): {typedText}{thick:0.###} mm duvar   ·   fareyi sağa sürükleyin · sayı yazın · Enter onay · Esc iptal"
+                        : $"Kalınlık ver: {typedText}{thick:0.###} mm (içe doğru)   ·   fareyi sağa sürükleyin · sayı yazın · Enter onay · Esc iptal";
                     RefreshEditMesh();
                     return;
                 }
@@ -885,7 +916,7 @@ namespace RobotWin.Studio.Modeling
                 ModalKind.Scale => "Ölçeklendi",
                 ModalKind.Extrude => "Çıkarıldı (extrude)",
                 ModalKind.Solidify => "Kalınlık verildi",
-                ModalKind.Bevel => "Pah kırıldı (bevel)",
+                ModalKind.Bevel => m.Cuts > 1 ? $"Kenar yuvarlatıldı ({m.Cuts} parça)" : "Pah kırıldı (bevel)",
                 _ => "İçe kaydırıldı (inset)"
             };
             if (m.Kind == ModalKind.Extrude || m.Kind == ModalKind.Inset || (m.Kind == ModalKind.Move && m.Done != null))

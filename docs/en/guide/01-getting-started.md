@@ -64,7 +64,7 @@ The guide stays in the bottom right corner as a small card. At each step it says
 | Document tabs | Next to the menu | Open circuits and worlds; a saved file shows its own name. Unsaved changes show as a dot where the close button is. When the tabs do not fit, the strip scrolls with the mouse wheel or its arrows; **▾** lists every open tab. Right-click and **Sabitle** (pin) keeps a tab at the left, out of the bulk closes, and the file opens pinned next time too. Drag tabs to reorder them. **Ctrl+Tab** next tab, **Ctrl+W** closes a tab, **Ctrl+Shift+T** opens the closed file again. |
 | Design-to-real line | Left edge | The pages in three groups: **ELECTRONICS** (Circuit → PCB → Code), **MECHANICAL** (Part → Assembly), **TEST** (World). Below: Start, Library, Settings and Help. The logo at the top left also returns to Start. **Ctrl+B** widens the line to show what each page is for and its status. |
 | Page | Centre | The editor of the selected stage. |
-| Status bar | Bottom | Latest message, simulation state, part and cable counts. |
+| Status bar | Bottom | Problem counters (errors ⊗, warnings ⚠), latest message, simulation state, part and cable counts. |
 
 ![The rail in groups (expanded)](../../images/en/rail-groups.png)
 
@@ -77,6 +77,7 @@ The guide stays in the bottom right corner as a small card. At each step it says
 - **Focus mode:** **View → Focus mode** hides the navigation rail.
 - **Moving, minimizing and tearing off panels:** on the world, circuit and PCB pages the side panels (palette, part library, properties, inspector) and the bottom tabs tear off into their own window when dragged by their header; drop the window on an edge to dock it left, right or in the bottom panel. The **Minimize** button in a header folds that side into a thin strip with the panels' names at the edge (as in Visual Studio); a click on the strip opens it again. **Ctrl+Space** is full view: every panel steps aside and the canvas takes the whole window; pressing it again brings the panels back as they were. The layout is kept. See [World → Arranging the panels](07-world.md#arranging-the-panels).
 - **Floating toolbars:** the PCB's left tool strip and the circuit's drawing tools come out into a small window of their own when dragged by the dotted grip at their start (as in SolidWorks); move the window anywhere, a second screen too, and turn it across or down with a right click. A double click on the grip, or **Put back**, docks the strip again; while it floats the canvas gets its room. Where it was is kept.
+- **Problems:** the counters at the left of the status bar count the whole project's errors and warnings: the circuit's ERC, the PCB's last DRC and the last build's errors (like VS Code's Problems panel). When an area's check is older than its last change, an info mark shows beside them. A click on the counters (or "Problems" in the command palette) opens the list by area; a row goes to its place (the part selected, the DRC marker or the code line shown), and an out-of-date area is checked again with **Check**.
 - **Full screen (F11):** leave with **Esc** or **F11**.
 - **Interface scale:** **View → Interface scale**, 75–150 %.
 

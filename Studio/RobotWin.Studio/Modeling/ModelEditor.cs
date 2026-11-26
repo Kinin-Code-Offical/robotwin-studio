@@ -739,6 +739,20 @@ namespace RobotWin.Studio.Modeling
             Status($"{name} tamam · {active.LocalMesh().Faces.Count} yüz · {(topo.IsClosed ? "kapalı (su geçirmez)" : "açık ağ: " + topo)} · {sw.ElapsedMilliseconds} ms");
         }
 
+        /// <summary>[holes] Drills a hole of the wizard's kind into an object at a world point along the surface's outward normal.</summary>
+        public void Drill(ModelObject target, Vec3 point, Vec3 normal, DrillSpec spec)
+        {
+            string what = HoleWizard.Describe(spec);
+            Do($"Delik: '{target.Name}' · {what}", () =>
+            {
+                HoleWizard.Drill(Doc, target, point, normal, spec);
+                Selected.Clear();
+                Selected.Add(target.Id);
+            }, ModelChange.All);
+            var topo = target.LocalMesh().Topology();
+            Status($"Delik açıldı: {what} · {(topo.IsClosed ? "kapalı (su geçirmez)" : "açık ağ: " + topo)} · başka yere tıklayın, sağ tık: bitir");
+        }
+
         /// <summary>Cuts <paramref name="target"/> in two closed pieces along a world plane; both pieces end up selected.</summary>
         public ModelObject? Slice(ModelObject target, Vec3 point, Vec3 normal)
         {

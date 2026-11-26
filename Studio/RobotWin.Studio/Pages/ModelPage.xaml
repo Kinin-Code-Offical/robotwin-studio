@@ -79,6 +79,7 @@
                         </StackPanel>
                     </Border>
                     <ToggleButton x:Name="WireToggle" Style="{StaticResource Chip}" Content="Kenarlar" Margin="6,0,0,0" Click="OnWireOverlay" ToolTip="Katı görünümün üzerinde tel kafes kenarları"/>
+                    <ToggleButton x:Name="SectionToggle" Style="{StaticResource Chip}" Content="Kesit" Margin="2,0,0,0" Click="OnSection" ToolTip="Kesit görünümü: modeli bir düzlemle kesip içini göster (yalnız görüntü)"/>
                     <ToggleButton x:Name="SnapToggle" Style="{StaticResource Chip}" Content="Yapış" Margin="2,0,0,0" Click="OnSnapToggle" ToolTip="Izgaraya yapış (açıkken Ctrl geçici kapatır)"/>
                     <ComboBox x:Name="GridBox" Width="86" Margin="4,0,0,0" SelectionChanged="OnGridSize" ToolTip="Yapışma adımı">
                         <ComboBoxItem Content="0.1 mm" Tag="0.1"/>
@@ -109,6 +110,21 @@
             </Grid.ColumnDefinitions>
 
             <Grid x:Name="ViewHost" Grid.Column="0"/>
+
+            <!-- [section] the section view's plane: axis, place along it, which side stays -->
+            <Border x:Name="SectionBar" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0" Visibility="Collapsed"
+                    Background="{DynamicResource B.Raised}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="8" Padding="10,4,4,4">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Kesit" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <RadioButton x:Name="SectionX" Style="{StaticResource Chip}" Content="X" GroupName="section" IsChecked="True" Tag="X" Click="OnSectionAxis" ToolTip="YZ düzlemiyle kes (X boyunca)"/>
+                    <RadioButton x:Name="SectionY" Style="{StaticResource Chip}" Content="Y" GroupName="section" Tag="Y" Click="OnSectionAxis" ToolTip="XZ düzlemiyle kes (Y boyunca)"/>
+                    <RadioButton x:Name="SectionZ" Style="{StaticResource Chip}" Content="Z" GroupName="section" Tag="Z" Click="OnSectionAxis" ToolTip="XY düzlemiyle kes (Z boyunca)"/>
+                    <Slider x:Name="SectionSlider" Width="220" Margin="10,0,8,0" VerticalAlignment="Center" ValueChanged="OnSectionMoved" ToolTip="Düzlemin yeri"/>
+                    <TextBlock x:Name="SectionValue" Width="64" VerticalAlignment="Center" TextAlignment="Right" Foreground="{DynamicResource B.TextSecondary}"/>
+                    <ToggleButton x:Name="SectionFlip" Style="{StaticResource Chip}" Content="Ters" Margin="8,0,0,0" Click="OnSectionFlip" ToolTip="Öbür yarıyı göster"/>
+                    <Button Style="{StaticResource Btn.Icon}" Width="26" Height="26" Margin="4,0,0,0" Click="OnSectionClose" ToolTip="Kesiti kapat"><t:Icon Data="{StaticResource I.Close}" Size="12"/></Button>
+                </StackPanel>
+            </Border>
 
             <!-- tool strip -->
             <Border Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,12,0,0" Background="{DynamicResource B.Raised}"

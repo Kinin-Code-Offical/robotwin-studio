@@ -262,7 +262,7 @@ Kullanıcı geri bildirimi: ikonlar, düğmeler ve yazılar tam hizada değil; a
 - [~] **Yüzen araç çubukları:** PCB araç şeridi ve Devre çizim araçları yapıldı (`Shell/FloatingStrip.cs`: tutamaktan koparma, taşıma, yatay / dikey, çift tıkla yerine koyma, yer saklama). Kalan: Dünya ve Parça araç grupları. araç şeritleri tutamağından sürüklenip ayrı küçük pencereye alınır, kenara bırakınca yerleşir (SolidWorks, Unity); yerleri saklanır.
 - [ ] **Model, Kod, Montaj:** panel yöneticisine geçiş (taşınır, küçülür, ayrılır paneller) ve tam görünüm.
 - [ ] **Denetçi bölümleri:** Blender gibi katlanır, katlanma durumu saklanır.
-- [ ] **Sorunlar paneli (D4):** kaynaklar hazır (devre ERC'si, PCB'nin son DRC'si eskiyse "eski", kodun son derlemesi; `Shell/ProblemsHub.cs`); durum çubuğu sayacı ve pencere kalıyor.
+- [x] **Sorunlar paneli (D4):** durum çubuğunda hata / uyarı sayaçları ve eski denetim işareti; tıklayınca alan alan liste (devre ERC'si, PCB'nin son DRC'si, kodun son derlemesi), satır yerine gider, eski alan **Denetle** ile yeniden denetlenir (`MainWindow.Problems.cs`, `Shell/ProblemsHub.cs`). Montaj ve proje denetimi kaynakları sonra eklenecek.
 
 ### D1. Temel ve güvenlik (P0)
 

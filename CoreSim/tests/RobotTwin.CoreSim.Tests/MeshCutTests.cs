@@ -129,6 +129,19 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void ShellOpensTheChosenFacesAndGivesTheRestAWall()
+        {
+            // [shell] SolidWorks' Shell: the top and one side opened, 2 mm walls
+            var m = Box();
+            int top = Enumerable.Range(0, m.Faces.Count).First(f => m.FaceNormal(f).Z > 0.9);
+            int side = Enumerable.Range(0, m.Faces.Count).First(f => m.FaceNormal(f).X > 0.9);
+            MeshCut.Shell(m, new[] { top, side }, 2);
+            Closed(m, "shell");
+            Assert.Equal(60 * 40 * 20 - 58 * 36 * 18, m.Volume(), 4);
+            Assert.Empty(MeshCut.Shell(Box(), Enumerable.Range(0, 6), 2).Vertices);   // every face open: nothing left to shell
+        }
+
+        [Fact]
         public void SolidifyHollowsAClosedBody()
         {
             var m = Box();
@@ -166,6 +179,41 @@ namespace RobotTwin.CoreSim.Tests
             // all twelve chamfer prisms, less their overlaps at the eight corners
             double prisms = 2 * 2 / 2.0 * 4 * (60 + 40 + 20);
             Assert.True(m.Volume() < v0 - prisms + 8 * 8 && m.Volume() > v0 - prisms, "volume " + m.Volume());
+        }
+
+        [Fact]
+        public void RoundingAnEdgeTakesAQuarterCircleOff()
+        {
+            // [fillet] one top edge rounded with 8 segments: the corner square less the arc's sector, along the edge
+            var m = Box();
+            var e = m.Edges().First(x =>
+            {
+                var a = m.Vertices[x.A];
+                var b = m.Vertices[x.B];
+                return a.Z > 9 && b.Z > 9 && a.Y < -19 && b.Y < -19;
+            });
+            const int n = 8;
+            const double r = 3;
+            MeshCut.Bevel(m, new[] { e }, r, n);
+            Closed(m, "one fillet");
+            double sector = 0.5 * r * r * n * Math.Sin(Math.PI / 2 / n);   // the 8-sided quarter circle
+            Assert.Equal(60 * 40 * 20 - (r * r - sector) * 60, m.Volume(), 6);
+            // every arc point is r from the fillet's axis (the line 3 mm in from both faces)
+            var axisY = -20 + r;
+            var axisZ = 10 - r;
+            foreach (var v in m.Vertices.Where(v => v.Y < axisY - 1e-9 && v.Z > axisZ + 1e-9))
+                Assert.Equal(r, Math.Sqrt((v.Y - axisY) * (v.Y - axisY) + (v.Z - axisZ) * (v.Z - axisZ)), 6);
+        }
+
+        [Fact]
+        public void RoundingEveryEdgeKeepsTheBodyClosed()
+        {
+            var m = Box();
+            double v0 = m.Volume();
+            MeshCut.Bevel(m, m.Edges(), 2, 6);
+            Closed(m, "rounded box");
+            double chamferedLoss = 2 * 2 / 2.0 * 4 * (60 + 40 + 20);
+            Assert.True(m.Volume() < v0 && m.Volume() > v0 - chamferedLoss, "a fillet takes less than a chamfer of the same set-back: " + m.Volume());
         }
 
         [Fact]

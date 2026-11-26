@@ -35,7 +35,10 @@ namespace RobotWin.Studio.Pcb
         Tune,
 
         /// <summary>[keepout] A rule area: drawn as a polygon like a zone.</summary>
-        Keepout
+        Keepout,
+
+        /// <summary>[diffroute] KiCad's differential pair router: both nets of a pair laid together (Pcb/BoardCanvas.DiffPair.cs).</summary>
+        DiffPair
     }
 
     /// <summary>
@@ -289,6 +292,7 @@ namespace RobotWin.Studio.Pcb
             PcbTool.Polygon => "Çokgen: köşelere tıklayın · çift tık, ilk köşeye tıklamak ya da Enter: kapat · Esc: iptal",
             PcbTool.Via => "Via: yere tıklayın (altındaki yolun, pedin ya da dolgunun hattını alır) · Esc: çık",
             PcbTool.Keepout => "Yasak bölge: köşelere tıklayın · çift tık veya Enter: kapat · seçenek çubuğundan katman ve neyin yasak olduğu · Esc: iptal",
+            PcbTool.DiffPair => "Fark çifti: bir çiftin (D+/D−, CAN H/L, _P/_N …) pedine tıklayın · tıklayarak ilerleyin, iki yol çiftin aralığıyla birlikte gider · karşı uçtaki çift pedine tıklayınca biter · Enter: burada bitir · Geri: son parça · Esc: iptal",
             PcbTool.Tune => "Uzunluk ayarı: kısa kalan hattın uzun, düz bir parçasına tıklayın; kıvrımlar hattı çiftinin ya da grubunun uzunluğuna getirir · Esc: çık",
             PcbTool.Dimension => "Ölçü çizgisi: başlangıç ve bitişe tıklayın, sonra kaydırıp tıklayın",
             PcbTool.Outline => "Kart kenarı: köşelere tıklayın · çift tık veya Enter: kapat (köşe yarıçapı panelden) · Esc: iptal",
@@ -307,6 +311,7 @@ namespace RobotWin.Studio.Pcb
             _routeStartPad = null;
             _polyPts.Clear();
             _gfx.Clear();   // [graphics]
+            DiffPairCancel();   // [diffroute]
             _measureA = _measureB = null;
             _dimA = _dimB = null;
             _drag = DragKind.None;
@@ -415,6 +420,7 @@ namespace RobotWin.Studio.Pcb
             if (ShowRatsnest) DrawRatsnest(dc, board);
             DrawSelection(dc, board);
             DrawGraphicPreview(dc);   // [graphics]
+            DrawDiffPreview(dc);   // [diffroute]
 
             // DRC markers.
             foreach (var v in Violations)

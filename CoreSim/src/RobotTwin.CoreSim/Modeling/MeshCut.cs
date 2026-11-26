@@ -540,6 +540,18 @@ namespace RobotTwin.CoreSim.Modeling
         /// normals) with even thickness at corners. Open surfaces get a rim along their border; a closed body
         /// becomes a hollow shell. The result lists the new inner vertices.
         /// </summary>
+        /// <summary>
+        /// [shell] SolidWorks' Shell: the chosen faces are opened (taken away) and the rest of the body gets a wall of the
+        /// thickness inward, its open rim closed; with no face chosen it is a closed hollow body.
+        /// </summary>
+        public static EditResult Shell(PolyMesh m, IEnumerable<int> openFaces, double thickness)
+        {
+            var open = openFaces.Where(f => f >= 0 && f < m.Faces.Count).Distinct().ToList();
+            if (open.Count >= m.Faces.Count) return new EditResult();   // nothing would be left to give a wall
+            if (open.Count > 0) MeshEdit.DeleteFaces(m, open);
+            return Solidify(m, thickness);
+        }
+
         public static EditResult Solidify(PolyMesh m, double thickness)
         {
             var result = new EditResult();
@@ -631,8 +643,16 @@ namespace RobotTwin.CoreSim.Modeling
         /// <paramref name="width"/> from each selected edge of that face; where three or more chamfers meet
         /// a corner patch closes the hole. The result lists the vertices of the new faces.
         /// </summary>
-        public static EditResult Bevel(PolyMesh m, IEnumerable<(int A, int B)> edges, double width)
+        /// <summary>
+        /// Chamfers (one segment) or rounds the selected edges: each is replaced by a strip set back <paramref name="width"/>
+        /// on both faces. With more than one segment the strip follows a circular arc tangent to both faces (SolidWorks'
+        /// fillet, Blender's bevel with segments), drawn as a rational quadratic Bézier whose control point is where the
+        /// tangents meet on the old edge; where three or more meet, the corner patch takes the arcs' points so the body stays
+        /// closed.
+        /// </summary>
+        public static EditResult Bevel(PolyMesh m, IEnumerable<(int A, int B)> edges, double width, int segments = 1)
         {
+            segments = Math.Max(1, Math.Min(64, segments));
             var result = new EditResult();
             var sel = new HashSet<long>(edges.Select(e => PolyMesh.EdgeKey(e.A, e.B)));
             if (sel.Count == 0 || width <= 0) return result;
@@ -733,7 +753,50 @@ namespace RobotTwin.CoreSim.Modeling
                 output.Add(Dedup(loop));
             }
 
-            // chamfer face along every selected edge
+            // chamfer face (or the rounded strip) along every selected edge; the arcs' inner points by (edge, end)
+            var arcs = new Dictionary<(long Edge, int End), (int From, List<int> Mid, Vec3 Centre, double Radius)>();
+            List<int> Arc(long key, int end, int other, int from, int to, Vec3 nFrom, Vec3 nTo)
+            {
+                var mid = new List<int>();
+                if (segments <= 1) return mid;
+                Vec3 p0 = m.Vertices[from], p1 = m.Vertices[to];
+                // the tangents meet on the old edge, level with the two set-back points
+                Vec3 va = m.Vertices[end], u = (m.Vertices[other] - va).Normalized();
+                var half = (p0 + p1) / 2;
+                var control = va + u * (half - va).Dot(u);
+                // the arc's centre: inward from each set-back point along its face's normal, as far as both agree
+                double gap = (nFrom - nTo).Length;
+                double radius = gap > 1e-9 ? (p0 - p1).Length / gap : 0;
+                var centre = p0 - nFrom * radius;
+                Vec3 r0 = p0 - centre, r1 = p1 - centre;
+                double theta = Math.Acos(Math.Max(-1, Math.Min(1, r0.Normalized().Dot(r1.Normalized()))));
+                if (radius > 0 && Math.Abs(r0.Length - r1.Length) < 1e-6 * radius + 1e-9 && theta > 1e-6 && Math.Sin(theta) > 1e-6)
+                {
+                    // points at equal angles round the centre
+                    for (int i = 1; i < segments; i++)
+                    {
+                        double t = (double)i / segments;
+                        double k0 = Math.Sin((1 - t) * theta) / Math.Sin(theta), k1 = Math.Sin(t * theta) / Math.Sin(theta);
+                        mid.Add(m.AddVertex(centre + r0 * k0 + r1 * k1));
+                    }
+                }
+                else
+                {
+                    // uneven set-backs: a rational quadratic Bézier through the tangents' meeting point
+                    var t0 = (control - p0).Normalized();
+                    var t1 = (p1 - control).Normalized();
+                    double w = Math.Sqrt(Math.Max(0, (1 + t0.Dot(t1)) / 2));
+                    for (int i = 1; i < segments; i++)
+                    {
+                        double t = (double)i / segments, a = (1 - t) * (1 - t), b = 2 * w * t * (1 - t), c = t * t;
+                        mid.Add(m.AddVertex((p0 * a + control * b + p1 * c) / (a + b + c)));
+                    }
+                }
+
+                arcs[(key, end)] = (from, mid, centre, radius);
+                return mid;
+            }
+
             foreach (long key in sel)
             {
                 var (a, b) = PolyMesh.EdgeOf(key);
@@ -750,6 +813,28 @@ namespace RobotTwin.CoreSim.Modeling
                 }
 
                 if (fl < 0 || fr < 0) continue;
+                if (segments > 1)
+                {
+                    // the rounded strip: arcs at both ends from face fl's set-back point to face fr's
+                    var arcA = new List<int> { corner[(fl, a)] };
+                    Vec3 nl = m.FaceNormal(fl), nr = m.FaceNormal(fr);
+                    arcA.AddRange(Arc(key, a, b, corner[(fl, a)], corner[(fr, a)], nl, nr));
+                    arcA.Add(corner[(fr, a)]);
+                    var arcB = new List<int> { corner[(fl, b)] };
+                    arcB.AddRange(Arc(key, b, a, corner[(fl, b)], corner[(fr, b)], nl, nr));
+                    arcB.Add(corner[(fr, b)]);
+                    for (int i = 0; i < segments; i++)
+                    {
+                        var strip = Dedup(new List<int> { arcB[i], arcA[i], arcA[i + 1], arcB[i + 1] });
+                        if (strip.Length < 3) continue;
+                        output.Add(strip);
+                        result.Faces.Add(output.Count - 1);
+                        result.Vertices.AddRange(strip);
+                    }
+
+                    continue;
+                }
+
                 var quad = Dedup(new List<int> { corner[(fl, b)], corner[(fl, a)], corner[(fr, a)], corner[(fr, b)] });
                 if (quad.Length >= 3)
                 {
@@ -766,6 +851,7 @@ namespace RobotTwin.CoreSim.Modeling
                 var ring = RingAround(m, v, vf[v]);
                 if (ring == null) continue;
                 var pts = new List<int>();
+                var centres = new List<(Vec3 C, double R)>();
                 foreach (int f in ring)
                 {
                     var loop = m.Faces[f];
@@ -777,6 +863,14 @@ namespace RobotTwin.CoreSim.Modeling
                         pts.Add(Point(f, v, next));
                         pts.Add(Point(f, v, prev));
                     }
+
+                    // toward the next face across the edge (v, prev): a rounded edge's arc runs between them
+                    if (arcs.TryGetValue((PolyMesh.EdgeKey(v, prev), v), out var arc) && arc.Mid.Count > 0)
+                    {
+                        if (arc.From == pts[pts.Count - 1]) pts.AddRange(arc.Mid);
+                        else pts.AddRange(Enumerable.Reverse(arc.Mid));
+                        centres.Add((arc.Centre, arc.Radius));
+                    }
                 }
 
                 var patch = Dedup(pts);
@@ -784,6 +878,19 @@ namespace RobotTwin.CoreSim.Modeling
                 var normal = Vec3.Zero;
                 foreach (int f in ring) normal += m.FaceNormalRaw(f);
                 if (PolyMesh.NewellNormal(patch, m.Vertices).Dot(normal) < 0) Array.Reverse(patch);
+                if (centres.Count == ring.Count && centres.Count >= 3)
+                {
+                    // [fillet] every edge here is rounded: the corner is a piece of the sphere their arcs lie on
+                    foreach (var piece in SphereCorner(m, patch, m.Vertices[v], centres, segments))
+                    {
+                        output.Add(piece);
+                        result.Faces.Add(output.Count - 1);
+                        result.Vertices.AddRange(piece);
+                    }
+
+                    continue;
+                }
+
                 output.Add(patch);
                 result.Faces.Add(output.Count - 1);
                 result.Vertices.AddRange(patch);
@@ -796,6 +903,56 @@ namespace RobotTwin.CoreSim.Modeling
             result.Vertices.Clear();
             result.Vertices.AddRange(verts);
             return result;
+        }
+
+        /// <summary>
+        /// [fillet] Fills a rounded corner: rings from its boundary (the arcs' points) toward the point of the sphere nearest
+        /// the old corner, each point pushed out onto the sphere the arcs share (their centres averaged).
+        /// </summary>
+        private static IEnumerable<int[]> SphereCorner(PolyMesh m, int[] boundary, Vec3 oldCorner, List<(Vec3 C, double R)> centres, int segments)
+        {
+            var s = Vec3.Zero;
+            double radius = 0;
+            foreach (var (c, r) in centres)
+            {
+                s += c;
+                radius += r;
+            }
+
+            s /= centres.Count;
+            radius /= centres.Count;
+            var dir = (oldCorner - s).Normalized();
+            if (dir.LengthSquared < 1e-12 || radius <= 0)
+            {
+                yield return boundary;
+                yield break;
+            }
+
+            var apex = s + dir * radius;
+            int rings = Math.Max(1, segments / 2);
+            var prev = boundary;
+            for (int j = 1; j < rings; j++)
+            {
+                double t = (double)j / rings;
+                var cur = new int[boundary.Length];
+                for (int i = 0; i < boundary.Length; i++)
+                {
+                    var b = m.Vertices[boundary[i]];
+                    var p = b + (apex - b) * t;
+                    cur[i] = m.AddVertex(s + (p - s).Normalized() * radius);
+                }
+
+                for (int i = 0; i < boundary.Length; i++)
+                {
+                    int k = (i + 1) % boundary.Length;
+                    yield return new[] { prev[i], prev[k], cur[k], cur[i] };
+                }
+
+                prev = cur;
+            }
+
+            int top = m.AddVertex(apex);
+            for (int i = 0; i < boundary.Length; i++) yield return new[] { prev[i], prev[(i + 1) % boundary.Length], top };
         }
 
         /// <summary>Faces around a vertex in rotation order (stepping across each face's edge before the vertex); null at an open border.</summary>

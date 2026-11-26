@@ -82,6 +82,10 @@ To drill holes, cut pockets or join parts:
 
 The tool objects are removed afterwards; the result is again a closed (watertight) body.
 
+### Hole wizard
+
+**Hole wizard…** in the **Cut, trim, combine** section (as in SolidWorks) makes a hole by the screw size, not by a diameter: **Type** (clearance, socket head counterbore, 90° countersink, tap drill, heat-set insert), **Size** (M2–M8), **Fit** (close / normal / loose, ISO 273) and **Depth** (0: all the way through; for an insert, the insert's length). The figures are the standards': counterbores DIN 974-1, countersinks ISO 15065, coarse-thread tap drills. After **Place on a surface**, each click drills a hole into the clicked surface along its normal; a right click finishes. Every hole can be undone.
+
 ## Slicing
 
 To split an object in two, select it and press **K** (or **Slice**). Click the start and the end of the cut line on the screen: the object is cut along that line, in the viewing direction. Both pieces are capped with the section, so both are closed bodies. Holes in the section stay open (a sliced tube shows a ring). Then select one piece and move it with **G** or turn it with **R**.
@@ -102,14 +106,15 @@ Selection: **Alt+click** (without dragging) selects the loop of the clicked edge
 | I | Inset |
 | K | Knife: cuts along a line drawn on the screen (only the selected faces when there is a selection). **C** switches the mode: cut / delete the right side / delete the left side; the opening of the deleted side is capped |
 | Ctrl+R | Loop cut: hover over an edge and new edge loops are added along its ring of quads; the wheel or +/− changes the number of cuts |
-| Ctrl+B | Bevel: flat chamfer faces in place of the selected edges; set the width with the mouse or type mm. A corner face closes the corner where three chamfers meet |
+| Ctrl+B | Bevel: flat chamfer faces in place of the selected edges; set the width with the mouse or type mm. A corner face closes the corner where three chamfers meet. The wheel or **+** adds segments: the chamfer becomes round |
+| Round (fillet) | SolidWorks' fillet: the selected edges are rounded by a circular arc tangent to both faces (starts with 8 segments, the wheel changes them); a corner whose edges are all rounded closes with a piece of a sphere and the body stays closed |
 | F | Fill a face |
 | M | Merge |
 | P | Separate the selection into its own object |
 | X or Del | Delete |
 | Shift+N | Recalculate normals |
 
-**Solidify** gives the surface a wall thickness inward: an open surface becomes a thick wall, a closed body becomes a hollow shell (for example a box without its top face → a tray). The thickness stays even at the corners.
+**Solidify** gives the surface a wall thickness inward: an open surface becomes a thick wall, a closed body becomes a hollow shell (for example a box without its top face → a tray). The thickness stays even at the corners. **Shell** (as in SolidWorks) does the same with the selected faces opened: in face mode (3) select the faces to open (a box's top, one side), press **Shell** and drag or type the wall thickness; the body becomes an open-mouthed housing with even walls.
 
 **Subdivide**, **Smooth** (Catmull–Clark), merge by distance, triangulate and flip normals are in the panel and the right-click menu.
 
@@ -132,6 +137,7 @@ A part in a printed material (PLA, PETG, ABS, nylon) has a **3D printing** secti
 
 - **Solid** (Z), **Wireframe** (Shift+Z), **X-ray (transparent)** (Alt+Z), **Edges**.
 - **Measure** tool: click two points to see the distance (snaps to vertices).
+- **Section** (SolidWorks' section view): every object is cut by a plane across X, Y or Z, the half facing the camera is taken away and the cut is filled in its own colour, so walls, holes and ribs show. The bar over the view picks the axis, the slider moves the plane through the model, **Flip** shows the other half. Display only: the objects do not change; the object in edit mode is not cut.
 
 ## Saving and exporting
 

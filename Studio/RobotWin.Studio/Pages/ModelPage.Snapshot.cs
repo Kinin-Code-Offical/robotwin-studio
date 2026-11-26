@@ -249,6 +249,7 @@ namespace RobotWin.Studio.Pages
                 }
 
                 case "boolean":
+                case "section":   // [section] the plate and its bearing boss cut through the middle
                 {
                     var plate = ModelOps.AddPrimitive(doc, PrimitiveKind.Box);
                     plate.Name = "Motor plakası";
@@ -291,6 +292,51 @@ namespace RobotWin.Studio.Pages
                     _ed.WireOverlay = true;
                     _ed.Notify(ModelChange.All);
                     _ed.Status($"Fark: 'Motor plakası' (6 araç) · {plate.LocalMesh().Faces.Count} yüz · kapalı (su geçirmez)");
+                    if (demo == "section") ShowSection(SectionAxis.Y, 0);
+                    break;
+                }
+
+                case "fillet":   // [fillet] a block rounded all round and a plate with two rounded edges, next to a chamfered one
+                {
+                    var round = PrimitiveBuilder.Box(30, 30, 30);
+                    MeshCut.Bevel(round, round.Edges(), 5, 8);
+                    var a = ModelOps.AddMesh(doc, round, "Yuvarlatılmış blok");
+                    a.Transform.Position = new Vec3(-25, 0, 15);
+                    a.Color = "#3B82C4";
+                    var plate = PrimitiveBuilder.Box(40, 30, 10);
+                    var top = plate.Edges().Where(x => plate.Vertices[x.A].Z > 4.9 && plate.Vertices[x.B].Z > 4.9 && Math.Abs(plate.Vertices[x.A].Y - plate.Vertices[x.B].Y) < 1e-9).ToList();
+                    MeshCut.Bevel(plate, top, 4, 8);
+                    var b = ModelOps.AddMesh(doc, plate, "Radyüslü plaka");
+                    b.Transform.Position = new Vec3(20, 0, 5);
+                    b.Color = "#E0A030";
+                    var chamfer = PrimitiveBuilder.Box(20, 20, 20);
+                    MeshCut.Bevel(chamfer, chamfer.Edges(), 3);
+                    var c = ModelOps.AddMesh(doc, chamfer, "Pahlı blok");
+                    c.Transform.Position = new Vec3(0, 32, 10);
+                    _ed.Load(doc, null);
+                    _ed.Select(a.Id);
+                    _ed.WireOverlay = true;
+                    _ed.Notify(ModelChange.All);
+                    _ed.Status("Radyüs: 5 mm, 8 parça (blok) · 4 mm iki kenar (plaka) · pah 3 mm");
+                    break;
+                }
+
+                case "holes":   // [holes] a motor plate with four wizard holes, cut through them by the section view
+                case "holes-dialog":
+                {
+                    var plate = ModelOps.AddMesh(doc, PrimitiveBuilder.Box(70, 40, 8), "Motor plakası");
+                    plate.Transform.Position = new Vec3(0, 0, 4);
+                    plate.Color = "#3B82C4";
+                    var kinds = new[] { HoleType.Counterbore, HoleType.Countersink, HoleType.Insert, HoleType.Tapped, HoleType.Clearance };
+                    for (int i = 0; i < kinds.Length; i++)
+                        HoleWizard.Drill(doc, plate, new Vec3(-26 + i * 13, 0, 8), Vec3.UnitZ, new DrillSpec { Type = kinds[i], Size = i == 2 ? "M4" : "M3" });
+                    _ed.Load(doc, null);
+                    _ed.Select(plate.Id);
+                    _ed.WireOverlay = true;
+                    _ed.Notify(ModelChange.All);
+                    _ed.Status("Delikler: silindir başlı, havşa başlı, gömme somun, kılavuz, geçiş");
+                    if (demo == "holes") ShowSection(SectionAxis.Y, 0);
+                    else OpenHoleWizard();
                     break;
                 }
 

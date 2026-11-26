@@ -226,6 +226,16 @@
                     <TextBlock x:Name="StatsText" Style="{StaticResource Text.Caption}" Margin="0,0,16,0"/>
                     <TextBlock Text="RobotWin Studio" Style="{StaticResource Text.Caption}"/>
                 </StackPanel>
+                <!-- [problems] VS Code's counters: every area's errors and warnings, a mark when a check is out of date; a click lists them -->
+                <Button x:Name="ProblemsButton" DockPanel.Dock="Left" Style="{StaticResource Btn.Ghost}" Padding="6,0" Height="22" Margin="-6,0,10,0" Click="OnProblems">
+                    <StackPanel Orientation="Horizontal">
+                        <t:Icon Data="{StaticResource I.Error}" Size="12" Foreground="{DynamicResource B.Danger}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="ProblemErrors" Text="0" Style="{StaticResource Text.Caption}" Margin="4,0,10,0" VerticalAlignment="Center"/>
+                        <t:Icon Data="{StaticResource I.Warning}" Size="12" Foreground="{DynamicResource B.Warning}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="ProblemWarnings" Text="0" Style="{StaticResource Text.Caption}" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                        <t:Icon x:Name="ProblemsStale" Data="{StaticResource I.Info}" Size="12" Foreground="{DynamicResource B.TextMuted}" Margin="10,0,0,0" VerticalAlignment="Center" Visibility="Collapsed"/>
+                    </StackPanel>
+                </Button>
                 <Ellipse x:Name="SimDot" DockPanel.Dock="Left" Width="7" Height="7" Fill="{DynamicResource B.TextMuted}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                 <TextBlock x:Name="StatusText" Style="{StaticResource Text.Caption}" Foreground="{DynamicResource B.TextSecondary}" VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>

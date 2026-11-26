@@ -32,6 +32,10 @@
     <Geometry x:Key="I.Scope">M3,12 C5,4 7,4 9,12 S13,20 15,12 S19,4 21,12</Geometry>
     <Geometry x:Key="I.Meter">M4,14 A8,8 0 0 1 20,14 M12,14 L16,8 M4,18 H20</Geometry>
     <Geometry x:Key="I.Warning">M12,4 L21,20 H3 Z M12,10 V14 M12,17 V17.01</Geometry>
+    <Geometry x:Key="I.Clearance">M3,6 H8.5 V18 H3 Z M15.5,6 H21 V18 H15.5 Z M8.5,12 H15.5 M10.5,10 L8.5,12 L10.5,14 M13.5,10 L15.5,12 L13.5,14</Geometry>
+    <Geometry x:Key="I.Explode">M9,9 H15 V15 H9 Z M12,7 V2.5 M10,4.5 L12,2.5 L14,4.5 M12,17 V21.5 M10,19.5 L12,21.5 L14,19.5 M7,12 H2.5 M4.5,10 L2.5,12 L4.5,14 M17,12 H21.5 M19.5,10 L21.5,12 L19.5,14</Geometry>
+    <Geometry x:Key="I.DiffPair">M3,12 H10.5 L16.5,6 H21 M3,18 H13 L19,12 H21</Geometry>
+    <Geometry x:Key="I.Error">M12,3 A9,9 0 1 1 11.99,3 M9.2,9.2 L14.8,14.8 M14.8,9.2 L9.2,14.8</Geometry>
     <Geometry x:Key="I.Info">M12,3 A9,9 0 1 1 11.99,3 M12,11 V16.5 M12,7.6 V7.61</Geometry>
     <Geometry x:Key="I.Help">M12,3 A9,9 0 1 1 11.99,3 M9.6,9.4 A2.5,2.5 0 1 1 12,12 V13.6 M12,16.9 V16.91</Geometry>
     <Geometry x:Key="I.Close">M6.5,6.5 L17.5,17.5 M17.5,6.5 L6.5,17.5</Geometry>

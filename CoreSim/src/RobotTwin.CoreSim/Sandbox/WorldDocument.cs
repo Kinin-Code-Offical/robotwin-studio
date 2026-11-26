@@ -435,6 +435,9 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>[mate] Assembly mates between the objects' faces and axes (Sandbox/WorldMates.cs); null when the world has none.</summary>
         public List<WorldMate>? Mates { get; set; }
 
+        /// <summary>[explode] The exploded view's steps, played in order (Sandbox/ExplodedView.cs); null when the world has none.</summary>
+        public List<ExplodeStep>? Explode { get; set; }
+
         /// <summary>[couple] Drops the couplings whose joints are gone; an empty list becomes null again.</summary>
         public void PruneCouplings()
         {
@@ -643,6 +646,14 @@ namespace RobotTwin.CoreSim.Sandbox
             Joints.RemoveAll(j => j.ObjectA == o.Id || j.ObjectB == o.Id);
             PruneCouplings();
             WorldMates.Prune(this);
+            if (Explode != null)
+            {
+                // [explode] a removed part leaves its steps; a step with nothing left goes
+                foreach (var step in Explode) step.Objects.RemoveAll(id => id == o.Id);
+                Explode.RemoveAll(step => step.Objects.Count == 0);
+                if (Explode.Count == 0) Explode = null;
+            }
+
             if (o.DesignId != null && Objects.All(x => x.DesignId != o.DesignId)) Designs.RemoveAll(d => d.Id == o.DesignId);
         }
 

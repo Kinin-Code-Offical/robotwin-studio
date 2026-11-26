@@ -161,6 +161,9 @@ namespace RobotWin.Studio.Pcb
                 case PcbTool.Tune:   // [tuning]
                     TuneClick(x, y);
                     return;
+                case PcbTool.DiffPair:   // [diffroute]
+                    DiffPairClick(x, y, e.ClickCount >= 2);
+                    return;
                 case PcbTool.Hole:
                     BeforeEdit?.Invoke(this, EventArgs.Empty);
                     Board.MountingHoles.Add(new MountingHole { X = Snap(x), Y = Snap(y), Drill = HoleDrill, PadDiameter = HolePad });
@@ -354,6 +357,14 @@ namespace RobotWin.Studio.Pcb
                 case PcbTool.Route:
                     UpdateRoutePreview();
                     InvalidateVisual();
+                    break;
+                case PcbTool.DiffPair:   // [diffroute] both tracks follow the cursor
+                    if (DiffPairActive)
+                    {
+                        UpdateDiffPreview();
+                        InvalidateVisual();
+                    }
+
                     break;
                 case PcbTool.Zone:
                 case PcbTool.Outline:
@@ -1216,6 +1227,7 @@ namespace RobotWin.Studio.Pcb
             if (_tool == PcbTool.Route && RouteKey(key, shift)) return;
             if ((_tool == PcbTool.Zone || _tool == PcbTool.Outline || _tool == PcbTool.Keepout) && PolygonKey(key)) return;
             if (IsGraphicTool(_tool) && GraphicKey(key)) return;   // [graphics]
+            if (_tool == PcbTool.DiffPair && DiffPairKey(key)) return;   // [diffroute]
 
             switch (key)
             {

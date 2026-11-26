@@ -236,6 +236,8 @@ namespace RobotWin.Studio
             SetupRail();
             SetupHelp();
             SetupDebugger();   // [debug] MainWindow.Debug.cs
+            SetupProblems();   // [problems] MainWindow.Problems.cs
+            Command("view.problems", "Görünüm", "Sorunlar", string.Empty, () => OnProblems(this, new RoutedEventArgs()));
             PageShortcuts.RegisterAll();   // [keys] the schematic and PCB editors' own keys, rebindable too
             ApplyShortcuts();   // [keys] every Command(...) above
             AppSettings.Changed += (_, _) => ApplyUiScale(AppSettings.Current.UiScale);
@@ -340,6 +342,16 @@ namespace RobotWin.Studio
                 Navigate("world");
                 _world.CheckInterference();
             }) { Context = "world", Keywords = "interference çakışma iç içe girme hacim montaj collision overlap", Ready = () => W.ActiveWorld?.Objects.Count > 1 };
+            yield return new PaletteCommand("Dünya", "Boşluk doğrula", () =>   // [clearance] SolidWorks' Clearance Verification
+            {
+                Navigate("world");
+                _world.CheckClearance();
+            }) { Context = "world", Keywords = "clearance boşluk mesafe yakın aralık tolerans montaj gap distance", Ready = () => W.ActiveWorld?.Objects.Count > 1 };
+            yield return new PaletteCommand("Dünya", "Patlatılmış görünüm", () =>   // [explode]
+            {
+                Navigate("world");
+                _world.OpenExplode();
+            }) { Context = "world", Keywords = "exploded view patlat ayır montaj sırası explode animation", Ready = () => W.ActiveWorld?.Objects.Count > 1 };
             yield return new PaletteCommand("Dünya", "Montaj ilişkilerini denetle", () =>
             {
                 Navigate("world");
@@ -829,6 +841,7 @@ namespace RobotWin.Studio
             if (page == "library") Library.PrepareSnapshot(fault);
             if (page == "settings" && fault != null) ((Pages.SettingsPage)_pages["settings"]).PrepareSnapshot(fault);   // [settings] // [libs] part creator / manager / import previews
             if (page == "pcb") _pcb.AutoLayoutForSnapshot(fault);
+            if (fault == "problems") SnapshotProblems();   // [problems] the status bar's counts and the list
             if (page == "pcb" && fault == "fpeditor")
             {
                 // The footprint editor is a dialog: render it instead of the main window.

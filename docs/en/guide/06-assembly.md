@@ -98,6 +98,19 @@ The **Interference detection** button beside **Align** on the toolbar (in the co
 
 Picking a row selects its first part, and the status bar gives the overlap's volume and middle. The scene stays usable while the window is open; **Calculate** checks again.
 
+## Clearance verification
+
+The **Clearance verification** button (in the command palette, "verify clearance") lists, as in SolidWorks, the pairs of parts closer to each other than the **Minimum clearance** (mm), with their smallest distance: a cable's bend allowance, a fan's breathing room, a tolerance. The distance is measured exactly between the parts' outer shapes (GJK). Picking a row draws a line across the gap between its two ends in the scene. Interfering pairs are listed as "interfering" (this can be turned off); the joined-parts and selected-part options work as in interference detection.
+
+## Exploded view
+
+The **Exploded view** button moves the parts apart step by step (assembly order, servicing, documents); it is display only and the parts stay where they are.
+
+- **New step:** select a part in the scene, give a direction (±X, ±Y, ±Z, or outward from the middle) and a distance, then **Add step**. What is joined onto the part goes with it; its own steps add on top.
+- **Auto explode:** the biggest free part stays. Every part joined onto another moves one **Spacing** away from it, so a chain (servo, arm, second servo…) opens up level by level; free parts spread along the axis in order, or outward from the middle. The deepest part comes off first.
+- In the **Steps** list, **Up**/**Down** change the order and a step can be deleted. The steps are saved with the world and can be undone.
+- The **View** slider goes from assembled to exploded step by step; **Play** and **Collapse** animate it. Cables are drawn slack between moved ends. When the window closes the assembly goes back together.
+
 ## Recording and fault experiments
 
 The Assembly is a world, so all world tools work here too:

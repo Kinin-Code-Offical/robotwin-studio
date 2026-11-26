@@ -98,6 +98,19 @@ Araç çubuğunda **Hizala**'nın yanındaki **Çakışma algılama** düğmesi 
 
 Bir satır seçilince ilk parça seçilir, durum çubuğu çakışmanın hacmini ve ortasını söyler. Pencere açıkken sahnede çalışılabilir; **Hesapla** yeniden denetler.
 
+## Boşluk doğrulama
+
+**Boşluk doğrulama** düğmesi (komut paletinde "boşluk doğrula"), SolidWorks'teki gibi birbirine **En az boşluk**'tan (mm) yakın duran parça çiftlerini en kısa mesafeleriyle listeler: kablonun bükülme payı, fanın nefes alanı, tolerans. Mesafe parçaların dış şekilleri arasında kesin olarak ölçülür (GJK). Bir satır seçilince sahnede iki uç arasına boşluğu gösteren bir çizgi çizilir. Çakışan çiftler "çakışıyor" diye listelenir (kapatılabilir); eklemle bağlı parçalar ve yalnız seçili parça seçenekleri çakışma algılamadaki gibidir.
+
+## Patlatılmış görünüm
+
+**Patlatılmış görünüm** düğmesi parçaları adım adım ayırır (montaj sırası, bakım, belgeler); yalnız görüntüdür, parçaların yeri değişmez.
+
+- **Yeni adım:** sahnede bir parça seçin, yön (±X, ±Y, ±Z ya da ortadan dışa doğru) ve uzaklık verip **Adım ekle**. Parçaya bağlı olanlar onunla birlikte gider; kendi adımları üstüne eklenir.
+- **Otomatik patlat:** en büyük serbest parça yerinde kalır. Bir parçaya bağlı her parça ondan bir **Aralık** uzaklaşır, böylece zincir (servo, kol, ikinci servo…) kat kat açılır; serbest parçalar eksen boyunca sırayla ya da ortadan dışa doğru ayrılır. En derindeki parça önce çıkar.
+- **Adımlar** listesinde sıra **Yukarı**/**Aşağı** ile değişir, adım silinir. Adımlar dünyayla birlikte kaydedilir ve geri alınabilir.
+- **Görünüm** kaydırıcısı toplu hâlden patlatılmışa adım adım ilerler; **Oynat** ve **Topla** bunu canlandırır. Kablolar ayrılan uçlar arasında gevşek çizilir. Pencere kapanınca montaj toplu hâline döner.
+
 ## Kayıt ve arıza deneyleri
 
 Montaj bir dünya olduğu için dünyanın bütün araçları burada da çalışır:

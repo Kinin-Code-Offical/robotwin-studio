@@ -46,6 +46,9 @@ namespace RobotWin.Studio.Modeling
             public ModelVisual3D Visual = null!;
             public bool IsEdit;
 
+            /// <summary>[section] The faces the section view's plane made (drawn in the cut colour); null when not cut.</summary>
+            public HashSet<int>? Caps;
+
             // world-space caches for outlines
             public Vec3[]? WV;
             public Vec3[]? WN;
@@ -284,6 +287,12 @@ namespace RobotWin.Studio.Modeling
 
         // ================================================================ scene
 
+        /// <summary>[section] The section view's plane (every object cut along it, the front taken away); null: whole objects.</summary>
+        public SectionPlane? Section { get; set; }
+
+        /// <summary>[section] The colour of the cut faces: flat, apart from every body colour.</summary>
+        internal static readonly Color CapColor = Color.FromRgb(0xE2, 0x6D, 0x5A);
+
         /// <summary>Re-creates the object visuals from the document.</summary>
         public void Rebuild()
         {
@@ -296,6 +305,15 @@ namespace RobotWin.Studio.Modeling
                 if (!o.Visible && !isEdit) continue;
                 var e = new Entry { Obj = o, IsEdit = isEdit, Visual = new ModelVisual3D() };
                 e.Mesh = isEdit ? _ed.EditMesh! : o.LocalMesh();
+                if (!isEdit && Section != null)
+                {
+                    // [section] the object as the plane leaves it: wholly in front, it is not shown (nor picked)
+                    var (cut, caps) = SectionView.Cut(e.Mesh, _ed.Doc.WorldMatrix(o), Section);
+                    if (cut.IsEmpty) continue;
+                    e.Mesh = cut;
+                    e.Caps = caps.Count > 0 ? caps : null;
+                }
+
                 BuildEntry(e);
                 _entries[o.Id] = e;
                 _objects.Children.Add(e.Visual);
@@ -340,10 +358,18 @@ namespace RobotWin.Studio.Modeling
             }
 
             var color = ModelGeometry.ParseColor(o.Color, Color.FromRgb(0xB9, 0xBF, 0xC9));
-            var geo = ModelGeometry.BuildSolid(e.Mesh, e.Tri, e.TriFace, o.SmoothShading, o.AutoSmoothAngle);
+            var caps = e.Caps;
+            var geo = ModelGeometry.BuildSolid(e.Mesh, e.Tri, e.TriFace, o.SmoothShading, o.AutoSmoothAngle, caps == null ? null : f => !caps.Contains(f));
             var mat = ModelGeometry.Solid(color, xray);
             var back = xray ? mat : ModelGeometry.Solid(Color.FromRgb(0x60, 0x30, 0x30), false);
-            return new GeometryModel3D(geo, mat) { BackMaterial = back };
+            var body = new GeometryModel3D(geo, mat) { BackMaterial = back };
+            if (caps == null) return body;
+            // [section] the cut faces in their own flat colour, lit from both sides
+            var capMat = ModelGeometry.Solid(CapColor, xray);
+            var group = new Model3DGroup();
+            group.Children.Add(body);
+            group.Children.Add(new GeometryModel3D(ModelGeometry.BuildSolid(e.Mesh, e.Tri, e.TriFace, false, 0, caps.Contains), capMat) { BackMaterial = capMat });
+            return group;
         }
 
         /// <summary>Updates object placements after transform edits (no geometry rebuild).</summary>
@@ -568,6 +594,21 @@ namespace RobotWin.Studio.Modeling
         }
 
         public string? PickObject(Point screen) => RayPick(screen).Entry?.Obj.Id;
+
+        /// <summary>[fillet] The segments the next bevel starts with: 1 a chamfer, more a round (the Yuvarla button sets 8).</summary>
+        public int NextBevelSegments { get; set; } = 1;
+
+        /// <summary>[holes] While set, a click on a surface hands its object, world point and outward normal here (the hole wizard).</summary>
+        public Action<string, Vec3, Vec3>? SurfacePick { get; set; }
+
+        /// <summary>[holes] The object surface under the cursor: its object, the world point and the face's outward normal.</summary>
+        public (string ObjectId, Vec3 Point, Vec3 Normal)? PickFace(Point screen)
+        {
+            var (e, _, point, face) = RayPick(screen, x => !x.IsEdit);
+            if (e == null || face < 0 || face >= e.Mesh.Faces.Count) return null;
+            var n = e.World.ApplyVector(e.Mesh.FaceNormal(face)).Normalized();
+            return (e.Obj.Id, point, n);
+        }
 
         /// <summary>Point on a surface under the cursor (or on the floor), snapped to nearby vertices.</summary>
         public Vec3? PickSurfacePoint(Point screen, bool snapVertices = true)

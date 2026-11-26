@@ -40,6 +40,7 @@ namespace RobotWin.Studio.Pages
             ToolFlyout.Attach(ToolRoute, new[]
             {
                 new ToolChoice(nameof(PcbTool.Route), "Yol", "I.Wire", "X"),
+                new ToolChoice(nameof(PcbTool.DiffPair), "Fark çifti yolu", "I.DiffPair", "6"),
                 new ToolChoice(nameof(PcbTool.Tune), "Uzunluk ayarı (menderes)", "I.Meander")
             });
             ToolFlyout.Attach(ToolZone, new[]
@@ -115,18 +116,33 @@ namespace RobotWin.Studio.Pages
             var layer = Combo(board.CopperLayers(), Canvas.ActiveLayer, l => Canvas.ActiveLayer = l, l => Shell.Lang.T(PcbLayers.DisplayName(l)));
             layer.Width = 130;
             layer.ToolTip = "Etkin katman (PgUp / PgDn)";
-            if (Canvas.Tool == PcbTool.Route)
+            bool laying = Canvas.Tool is PcbTool.Route or PcbTool.DiffPair;
+            if (laying)
             {
                 ToolOptionsRow.Children.Add(Label("Genişlik", 0));
                 ToolOptionsRow.Children.Add(width);
             }
 
-            ToolOptionsRow.Children.Add(Label("Via", Canvas.Tool == PcbTool.Route ? 12 : 0));
-            ToolOptionsRow.Children.Add(via);
-            if (Canvas.Tool == PcbTool.Route)
+            if (Canvas.Tool != PcbTool.DiffPair)
+            {
+                ToolOptionsRow.Children.Add(Label("Via", laying ? 12 : 0));
+                ToolOptionsRow.Children.Add(via);
+            }
+
+            if (laying)
             {
                 ToolOptionsRow.Children.Add(Label("Katman"));
                 ToolOptionsRow.Children.Add(layer);
+            }
+
+            if (Canvas.Tool == PcbTool.DiffPair)
+            {
+                // [diffroute] each pair keeps its own gap and skew limit (board setup); name-found pairs take 0.2 mm
+                var pairs = board.DiffPairs.Count > 0 ? board.DiffPairs : NetLengths.Detect(board);
+                string gaps = pairs.Count == 0 ? Shell.Lang.T("kartta çift yok") : string.Join(" · ", pairs.Take(3).Select(p => $"{p}: {Fmt(p.Gap)} mm"));
+                var info = Label(Shell.Lang.T("Aralık") + ": " + gaps);
+                info.ToolTip = Shell.Lang.T("Çiftler ve aralıkları kart kurulumunda; adlarından bulunan çiftler (D+/D−, _P/_N, CAN H/L) 0,2 mm alır");
+                ToolOptionsRow.Children.Add(info);
             }
 
             ToolOptions.Visibility = Visibility.Visible;
@@ -190,7 +206,7 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            if (Canvas.Tool is PcbTool.Route or PcbTool.Via)
+            if (Canvas.Tool is PcbTool.Route or PcbTool.Via or PcbTool.DiffPair)
             {
                 RouteOptions();
                 return;

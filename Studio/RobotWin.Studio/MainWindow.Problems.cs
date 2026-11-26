@@ -1,0 +1,174 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
+using RobotWin.Studio.Shell;
+
+namespace RobotWin.Studio
+{
+    /// <summary>
+    /// [problems] VS Code's Problems panel for the whole project: the status bar counts errors and warnings of every
+    /// area (circuit ERC, PCB DRC, the last build) and says when a check is out of date; a click opens the list by area,
+    /// a row goes to the place in its editor, an out-of-date area offers to run its check.
+    /// </summary>
+    public partial class MainWindow
+    {
+        private readonly DispatcherTimer _problemsTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
+        private Window? _problemsWindow;
+        private StackPanel? _problemsList;
+
+        private void SetupProblems()
+        {
+            AreaReport? On(string page, Func<AreaReport?> source)
+            {
+                var r = source();
+                if (r == null) return null;
+                // every jump opens its editor first
+                var routed = new AreaReport { NotChecked = r.NotChecked, Check = r.Check == null ? null : () => { Navigate(page); r.Check(); } };
+                foreach (var p in r.Problems)
+                {
+                    var go = p.Go;
+                    routed.Problems.Add(new Problem(p.Area, p.Level, p.Rule, p.Message, () =>
+                    {
+                        Navigate(page);
+                        Dispatcher.BeginInvoke(new Action(() => go?.Invoke()), DispatcherPriority.Loaded);
+                    }));
+                }
+
+                return routed;
+            }
+
+            ProblemsHub.Register(ProblemsHub.Circuit, () => On("schematic", _schematic.CircuitProblems));
+            ProblemsHub.Register(ProblemsHub.Pcb, () => On("pcb", _pcb.BoardProblems));
+            ProblemsHub.Register(ProblemsHub.Code, () => On("code", _code.CodeProblems));
+            ProblemsHub.Changed += ScheduleProblems;
+            W.DocumentChanged += (_, _) => ScheduleProblems();
+            W.DocumentReplaced += (_, _) => ScheduleProblems();
+            _problemsTimer.Tick += (_, _) =>
+            {
+                _problemsTimer.Stop();
+                RefreshProblems();
+            };
+            ScheduleProblems();
+        }
+
+        private void ScheduleProblems()
+        {
+            _problemsTimer.Stop();
+            _problemsTimer.Start();
+        }
+
+        /// <summary>The status bar's counts and, when it is open, the list.</summary>
+        private void RefreshProblems()
+        {
+            var reports = ProblemsHub.Collect();
+            var (errors, warnings, unverified) = ProblemsHub.Counts(reports);
+            ProblemErrors.Text = errors.ToString(System.Globalization.CultureInfo.CurrentCulture);
+            ProblemWarnings.Text = warnings.ToString(System.Globalization.CultureInfo.CurrentCulture);
+            ProblemsStale.Visibility = unverified > 0 ? Visibility.Visible : Visibility.Collapsed;
+            ProblemsButton.ToolTip = Lang.T($"Sorunlar: {errors} hata, {warnings} uyarı") + (unverified > 0 ? "\n" + Lang.T($"{unverified} alanın denetimi eski") : string.Empty)
+                                     + "\n" + string.Join("\n", reports.Select(r => Lang.T(ProblemsHub.Summary(r.Area, r.Report))));
+            if (_problemsList != null) FillProblems(reports);
+        }
+
+        private void OnProblems(object sender, RoutedEventArgs e)
+        {
+            if (_problemsWindow != null)
+            {
+                _problemsWindow.Activate();
+                return;
+            }
+
+            _problemsList = new StackPanel();
+            var root = new DockPanel { Margin = new Thickness(18, 14, 18, 16) };
+            var head = new DockPanel { Margin = new Thickness(0, 0, 0, 10) };
+            var again = new Button { Content = Lang.T("Yenile"), Style = (Style)FindResource("Btn.Ghost") };
+            again.Click += (_, _) => RefreshProblems();
+            DockPanel.SetDock(again, Dock.Right);
+            head.Children.Add(again);
+            head.Children.Add(new TextBlock { Text = Lang.T("Sorunlar"), Style = (Style)FindResource("Text.Title"), FontSize = 18 });
+            DockPanel.SetDock(head, Dock.Top);
+            root.Children.Add(head);
+            root.Children.Add(new ScrollViewer { Content = _problemsList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+            _problemsWindow = new Window
+            {
+                Title = Lang.T("Sorunlar"), Owner = this, Width = 560, Height = 520, ShowInTaskbar = false, WindowStyle = WindowStyle.ToolWindow, Content = root,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner, ShowActivated = !Unattended.Active
+            };
+            _problemsWindow.SetResourceReference(BackgroundProperty, "B.Surface");
+            _problemsWindow.SetResourceReference(ForegroundProperty, "B.Text");
+            _problemsWindow.Closed += (_, _) =>
+            {
+                _problemsWindow = null;
+                _problemsList = null;
+            };
+            FillProblems(ProblemsHub.Collect());
+            _problemsWindow.Show();
+        }
+
+        /// <summary>[problems] Snapshot: the counts now and the list's window as the picture.</summary>
+        private void SnapshotProblems()
+        {
+            RefreshProblems();
+            OnProblems(this, new RoutedEventArgs());
+            if (_problemsWindow == null) return;
+            _problemsWindow.UpdateLayout();
+            App.SnapshotTarget = VisualTreeHelper.GetChildrenCount(_problemsWindow) > 0 ? VisualTreeHelper.GetChild(_problemsWindow, 0) as FrameworkElement : _problemsWindow.Content as FrameworkElement;
+        }
+
+        private void FillProblems(List<(string Area, AreaReport Report)> reports)
+        {
+            if (_problemsList == null) return;
+            _problemsList.Children.Clear();
+            if (reports.Count == 0)
+            {
+                _problemsList.Children.Add(new TextBlock { Text = Lang.T("Projede denetlenecek bir şey yok."), Style = (Style)FindResource("Text.Body") });
+                return;
+            }
+
+            foreach (var (area, report) in reports)
+            {
+                var title = new DockPanel { Margin = new Thickness(0, 10, 0, 4) };
+                if (report.NotChecked != null && report.Check != null)
+                {
+                    var run = new Button { Content = Lang.T("Denetle"), Style = (Style)FindResource("Btn.Ghost"), Padding = new Thickness(8, 1, 8, 1) };
+                    run.Click += (_, _) => report.Check();
+                    DockPanel.SetDock(run, Dock.Right);
+                    title.Children.Add(run);
+                }
+
+                var summary = new TextBlock { Text = Lang.T(ProblemsHub.Summary(area, report)), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+                summary.SetResourceReference(TextBlock.ForegroundProperty, report.Errors > 0 ? "B.Danger" : report.Warnings > 0 ? "B.Warning" : report.NotChecked != null ? "B.TextSecondary" : "B.Success");
+                title.Children.Add(summary);
+                _problemsList.Children.Add(title);
+                if (report.NotChecked != null)
+                    _problemsList.Children.Add(new TextBlock { Text = Lang.T(report.NotChecked), Style = (Style)FindResource("Text.Caption"), Margin = new Thickness(0, 0, 0, 4) });
+
+                foreach (var p in report.Problems.OrderBy(p => p.Level))
+                {
+                    var row = new Grid();
+                    row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) });
+                    row.ColumnDefinitions.Add(new ColumnDefinition());
+                    var dot = new System.Windows.Shapes.Ellipse { Width = 7, Height = 7, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 5, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
+                    dot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, p.Level switch { ProblemLevel.Error => "B.Danger", ProblemLevel.Warning => "B.Warning", _ => "B.TextMuted" });
+                    row.Children.Add(dot);
+                    var text = new StackPanel();
+                    text.Children.Add(new TextBlock { Text = Lang.T(p.Rule), FontSize = 12 });
+                    var msg = new TextBlock { Text = Lang.T(p.Message), FontSize = 12, TextWrapping = TextWrapping.Wrap };
+                    msg.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
+                    text.Children.Add(msg);
+                    Grid.SetColumn(text, 1);
+                    row.Children.Add(text);
+                    var b = new Button { Content = row, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(6, 4, 6, 4), Margin = new Thickness(0, 0, 0, 2), IsEnabled = p.Go != null };
+                    b.SetResourceReference(StyleProperty, "Btn.Ghost");
+                    var go = p.Go;
+                    b.Click += (_, _) => go?.Invoke();
+                    _problemsList.Children.Add(b);
+                }
+            }
+        }
+    }
+}
