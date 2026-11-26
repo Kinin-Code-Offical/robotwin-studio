@@ -7519,7 +7519,19 @@
   "Kremayer m1 POM 8 × 10 × 200 mm": "Gear rack m1 POM 8 × 10 × 200 mm",
   "Çelik dişli kremayer, 20° basınç açısı: m1 pinyonla döner hareketi doğrusala çevirir (CNC, sürgülü kapı, direksiyon).": "Steel gear rack, 20° pressure angle: with an m1 pinion it turns rotation into a straight line (CNC, sliding gates, steering).",
   "Asetal (POM) kremayer: hafif, sessiz, m1 POM dişlilerle.": "Acetal (POM) rack: light and quiet, for m1 POM gears.",
-  "Kremayer": "Rack"
+  "Kremayer": "Rack",
+  "DRV8825 Step Motor Sürücü": "DRV8825 Stepper Driver",
+  "A4988 ile aynı ayaklar, 1/32 mikro adım (M0–M2), kendi 3,3 V mantığı (VDD yok: o ayak FAULT), VMOT 8,2–45 V. Akım sınırı Vref × 2.": "The A4988's pinout, 1/32 microstepping (M0–M2), its own 3.3 V logic (no VDD: that pin is FAULT), VMOT 8.2–45 V. Current limit is Vref × 2.",
+  "1/32 mikro adım, 1,5 A (soğutucusuz), 8,2–45 V": "1/32 microstepping, 1.5 A (no heatsink), 8.2–45 V",
+  "TMC2209 Step Motor Sürücü": "TMC2209 Stepper Driver",
+  "Sessiz sürücü (bağımsız kip): MS1/MS2 ile 1/8, 1/16, 1/32, 1/64; her adım 1/256'ya ara değerlenir (MicroPlyer). VM 4,75–29 V, VIO 3,3–5 V. EN LOW iken çalışır.": "Silent driver (standalone mode): 1/8, 1/16, 1/32 or 1/64 from MS1/MS2, each step interpolated to 1/256 (MicroPlyer). VM 4.75–29 V, VIO 3.3–5 V. Runs while EN is LOW.",
+  "1/256 ara değerlemeli, 1,2 A tepe (1,7 A en çok), 4,75–29 V": "Interpolated to 1/256, 1.2 A peak (1.7 A max), 4.75–29 V",
+  "Akım sınırı (tepe, Vref ayarı)": "Current limit (peak, Vref setting)",
+  "Köprü direnci (0 = çipin)": "Bridge resistance (0 = the chip's)",
+  "Arduino ile step motorlu Z ekseni (vidalı mil)": "Stepper Z axis with Arduino (lead screw)",
+  "Uno, A4988 sürücüyle NEMA 17'yi adım adım döndürür; kaplin T8 vidalı mili çevirir, pirinç somun alüminyum taşıyıcıyı iki Ø8 mil üzerinde LM8UU'larla 40 mm kaldırır ve indirir. Hız rampası kütüphanesiz, kodda; rampasız başlatırsanız motor adım kaçırır.": "An Uno steps a NEMA 17 through an A4988; a coupler turns a T8 lead screw and a brass nut lifts an aluminium carriage 40 mm on two Ø8 rods with LM8UUs, then lowers it. The speed ramp is in the code, no libraries; start it without a ramp and the motor loses steps.",
+  "Z ekseni": "Z axis",
+  "Taşıyıcı": "Carriage"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **DRV8825 and TMC2209 stepper drivers, and an Arduino Z axis:** the DRV8825 microsteps to 1/32 on its own 3.3 V logic (no VDD; VMOT 8.2–45 V); the TMC2209 standalone picks 1/8–1/64 with MS1/MS2 and spreads each step to 1/256 over the interval between STEP edges (MicroPlyer). Each carrier is drawn in its maker's colour. The built-in `z-axis-stepper` sketch drives an A4988 from an Uno (D2 DIR, D3 STEP, D8 EN) with a trapezoidal speed ramp, no libraries, and lifts a T8 carriage 40 mm and back.
+
 - **Gear racks:** m1 steel and POM racks with straight-flanked 20° teeth. The assembler meshes a pinion whose pitch circle sits on the rack's pitch line: a sliding rack is driven by it, a fixed rack has the pinion roll along it carrying its carriage (a CNC gantry), each turn moving it by the pinion's circumference; the pinion is turned to start tooth in space.
 
 - **Stepper motors and the A4988 driver:** a two-phase NEMA 17 (17HS4401, 17HS08) on its real equations (winding R and L, back-EMF and torque following the rotor's electrical angle, detent torque) and an A4988 that counts STEP edges, microsteps to 1/16 and regulates the phase currents as far as VMOT allows, with thermal shutdown. In a world the motor's torque turns a physics rotor, so a coupler, gear or pulley on its D-shaft (found by the assembler) and the whole mechanism load it: a square wave on STEP lifts a T8×8 carriage 8 mm a turn, and started too fast without a ramp it stalls. 3D models of the motor (caps, stack, pilot, M3 holes, connector, turning shaft) and the carrier (PCB, headers, heat sink, trimmer).
@@ -193,6 +195,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sharper boards and markings:** module boards are drawn at 24 px/mm instead of 14, your own PCB at 20 px/mm on top and 14 below, and chip markings and labels at twice the resolution.
 
 ### Fixed
+
+- **Time steps that shrank to nothing:** a step accepted at the solver's minimum because its error could not be met there halved on each later step, down to 10⁻²¹ s, where the inductors' companion models are round-off: a current of hundreds of amps appeared for a step and burned the stepper's 12 V wires after 0.4 s. Steps now stay at the minimum or above. The cause in that circuit was the stepper driver's bridge outputs: only their difference was set, and the pair floated by hundreds of volts; they now sit around half of VMOT as a real bridge's legs do, and the run takes a few dozen steps a millisecond instead of tens of thousands. A driver switched off (EN high, sleep, thermal shutdown) no longer stops its winding currents in one step, which put kilovolts across the windings: the current runs on through the bridge's body diodes back into VMOT and falls to zero in about 0.2 ms.
 
 - **"Boş sayfa" over a circuit:** opening a project or an example did not refresh the empty-sheet hint, and the snapshot circuits were built without a document event; both now show the hint only over an empty sheet.
 

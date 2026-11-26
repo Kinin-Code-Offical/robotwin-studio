@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using RobotTwin.CoreSim.Analog;
 using RobotTwin.CoreSim.Analog.Devices;
 using Xunit;
@@ -20,11 +21,12 @@ namespace RobotTwin.CoreSim.Tests
         {
             public AnalogSimulator Sim = null!;
             public StepperMotor Motor = null!;
-            public A4988Driver Driver = null!;
+            public StepperDriver Driver = null!;
         }
 
         /// <summary>12 V on VMOT, 5 V logic, 2 µs STEP pulses at a rate (none at 0), MS pins high for 1/16.</summary>
-        private static Rig Build(double stepRate, bool sixteenth = false, double currentLimit = 1.0, bool forward = true)
+        private static Rig Build(double stepRate, bool sixteenth = false, double currentLimit = 1.0, bool forward = true, StepperChip chip = StepperChip.A4988,
+            double disableAt = double.NaN)
         {
             var c = new AnalogCircuit();
             int vmot = c.Node("vmot"), vdd = c.Node("vdd"), step = c.Node("step"), dir = c.Node("dir"), en = c.Node("en");
@@ -34,6 +36,8 @@ namespace RobotTwin.CoreSim.Tests
             c.Add(new VoltageSource("VD", vdd, 0, 5.0));
             c.Add(new VoltageSource("VS", step, 0, stepRate > 0 ? new PulseWaveform(0, 5, 1 / stepRate, 2e-6, 0.002) : (Waveform)0.0));
             c.Add(new VoltageSource("VDIR", dir, 0, forward ? 5.0 : 0.0));
+            if (!double.IsNaN(disableAt))
+                c.Add(new VoltageSource("VEN", en, 0, new PiecewiseLinearWaveform(new[] { (0.0, 0.0), (disableAt, 0.0), (disableAt + 1e-6, 5.0) })));
             if (sixteenth)
             {
                 c.Add(new VoltageSource("VMS1", ms1, 0, 5.0));
@@ -41,7 +45,8 @@ namespace RobotTwin.CoreSim.Tests
                 c.Add(new VoltageSource("VMS3", ms3, 0, 5.0));
             }
 
-            var driver = c.Add(new A4988Driver("U1", vmot, 0, a1, a2, b1, b2, vdd, step, dir, en, ms1, ms2, ms3, slp, rst) { CurrentLimit = currentLimit });
+            var driver = c.Add(new StepperDriver("U1", chip, vmot, 0, a1, a2, b1, b2, chip == StepperChip.Drv8825 ? -1 : vdd, step, dir, en, ms1, ms2,
+                chip == StepperChip.Tmc2209 ? -1 : ms3, chip == StepperChip.Tmc2209 ? -1 : slp, chip == StepperChip.Tmc2209 ? -1 : rst) { CurrentLimit = currentLimit });
             var motor = c.Add(new StepperMotor("M1", a1, a2, b1, b2) { Resistance = 1.5, Inductance = 2.8e-3, TorqueConstant = 0.40 / (Math.Sqrt(2) * 1.7), DetentTorque = 0.022, Inertia = 54e-7 });
             var sim = new AnalogSimulator(c, new AnalogOptions { MaxStep = 5e-5 });
             sim.Initialize();
@@ -76,6 +81,58 @@ namespace RobotTwin.CoreSim.Tests
             var back = Build(3200, sixteenth: true, forward: false);
             Run(back, 0.5);
             Assert.InRange(back.Motor.FullSteps, -101, -98);
+        }
+
+        [Fact]
+        public void ADrv8825StepsInThirtySecondsWithItsOwnLogic()
+        {
+            // M0–M2 all high: 1/32; 6400 pulses a second is a turn a second. No VDD: the chip makes its own 3.3 V.
+            var r = Build(6400, sixteenth: true, chip: StepperChip.Drv8825);
+            Run(r, 0.5);
+            _out.WriteLine($"DRV8825 1/{r.Driver.Microsteps}: 0,5 s'de {r.Motor.FullSteps:0.00} tam adım");
+            Assert.Equal(32, r.Driver.Microsteps);
+            Assert.InRange(r.Motor.FullSteps, 98, 101.5);
+        }
+
+        [Fact]
+        public void ATmc2209InterpolatesBetweenStepsToA256th()
+        {
+            // MS1, MS2 high: 1/16, each step spread over the interval between pulses (MicroPlyer).
+            var r = Build(1600, sixteenth: true, chip: StepperChip.Tmc2209);
+            Run(r, 0.5);
+            Assert.Equal(16, r.Driver.Microsteps);
+            double now = r.Sim.Time, period = 1.0 / 1600;
+            // Between two pulses the translator is part of the way to the next position, not sitting on it.
+            double before = r.Driver.PositionAt(now), later = r.Driver.PositionAt(now + period / 2);
+            _out.WriteLine($"TMC2209 1/16: 0,5 s'de {r.Motor.FullSteps:0.00} tam adım; konum {before:0.0} → yarım aralık sonra {later:0.0} (1/256 adım)");
+            Assert.InRange(r.Motor.FullSteps, 48, 51.5);   // a quarter turn
+            Assert.True(r.Driver.PositionAt(now) != r.Driver.Position || later > before, "it moves between pulses");
+        }
+
+        [Fact]
+        public void SwitchedOffItsWindingCurrentDecaysIntoTheSupply()
+        {
+            // Holding at the current limit, then EN high: the bridge lets go, the windings push their current on through the
+            // body diodes against VMOT. It falls to zero in L·i/(VMOT + 1.4 V) ≈ 0.2 ms, not in one step, and the voltage
+            // across a winding stays at the supply's, not the kilovolts an instant cut would make.
+            var r = Build(0, disableAt: 0.05);
+            Run(r, 0.0499);
+            double held = Math.Max(Math.Abs(r.Motor.CurrentA), Math.Abs(r.Motor.CurrentB));
+            double peak = 0, zeroAt = double.NaN, supplyIn = 0;
+            var vm = r.Sim.Circuit.Devices.OfType<VoltageSource>().Single(v => v.Id == "VM");
+            r.Sim.SubstepAccepted = t =>
+            {
+                peak = Math.Max(peak, Math.Max(Math.Abs(r.Sim.NodeVoltage(r.Motor.A1) - r.Sim.NodeVoltage(r.Motor.A2)), Math.Abs(r.Sim.NodeVoltage(r.Motor.B1) - r.Sim.NodeVoltage(r.Motor.B2))));
+                if (double.IsNaN(zeroAt) && t > 0.05 && Math.Abs(r.Motor.CurrentA) < 0.01 && Math.Abs(r.Motor.CurrentB) < 0.01) zeroAt = t;
+                supplyIn = Math.Min(supplyIn, vm.Current);
+            };
+            Run(r, 0.003);
+            _out.WriteLine($"tutma {held:0.00} A; EN HIGH sonrası akım {(zeroAt - 0.05) * 1000:0.000} ms'de sıfır, sargıda en çok {peak:0.0} V, kaynağa geri en çok {-supplyIn * 1000:0} mA");
+            Assert.InRange(held, 0.65, 1.05);
+            Assert.False(r.Driver.Enabled);
+            Assert.InRange(zeroAt - 0.05, 0.1e-3, 0.4e-3);   // L·i/(VMOT + 1.4)
+            Assert.InRange(peak, 12, 15);   // the supply and two diode drops
+            Assert.True(supplyIn < -0.1, "the winding's energy goes back into VMOT");
         }
 
         [Fact]

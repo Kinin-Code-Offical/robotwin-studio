@@ -20,6 +20,7 @@ Sağdaki **Denetçi** seçili nesnenin yalnızca gerçekten kullandığı bölü
 | Boş atölye | 4 × 3 m zemin, 25 °C |
 | Kabloyla bağlı iki kart | 9 V güç kartı ve LED kartı ayrı PCB'lerde; iki kablo bağlanınca LED'ler yanar |
 | Arduino ile iki eksenli servo kol | Uno iki SG90 servoyu sürer; ikinci servo birincinin koluna vidalı |
+| Arduino ile step motorlu Z ekseni (vidalı mil) | Uno, A4988 ile NEMA 17'yi döndürür; T8 vidalı mil taşıyıcıyı rampalı hızla 40 mm kaldırıp indirir |
 | Arduino, LCD ve OLED (I²C kablolu) | Uno, 16×2 LCD, 128×64 OLED ve potansiyometre I²C kablolarıyla bağlı |
 | İki tekerlekli araba (gerçek fizik) | PLA şase, iki TT motor ve tekerlek tek aks üzerinde, bilyeli sarhoş teker, 4×AA pil |
 | Ultrasonik mesafe sensörü ve engeller | HC-SR04 önündeki engele gerçekten ölçüm yapar |
@@ -341,6 +342,14 @@ Motorun Ø5 D kesitli miline geçen kaplin, dişli ya da kasnak mile sabitlenir.
 - mıknatısların takılma torku.
 
 Sürücü STEP kenarlarını sayar, MS1–MS3 ile 1/16'ya kadar mikro adım atar ve faz akımlarını akım sınırına göre VMOT'un yettiği kadar sürer. Bu yüzden hız arttıkça tork düşer. Motorun torku fizikteki rotoru döndürür. Milin ataleti, vidanın yükü ve sürtünmesi motorun kendisine yansır: aşırı yük ya da rampasız hızlı başlangıçta motor gerçekteki gibi adım kaçırır.
+
+A4988'in yanında iki sürücü daha var; ayakları aynıdır:
+- **DRV8825:** M0–M2 ile 1/32 mikro adım. Kendi 3,3 V mantığını yapar, VDD ayağı yoktur (o ayak FAULT). VMOT 8,2–45 V.
+- **TMC2209:** MS1/MS2 ile 1/8, 1/16, 1/32 ya da 1/64. Her adımı iki STEP kenarı arasında 1/256'ya yayar (MicroPlyer), bu yüzden motor sessiz ve düzgün döner. VM 4,75–29 V.
+
+Akım sınırını sürücünün **Akım sınırı** değeriyle ayarlayın; bu, karttaki Vref ayarının karşılığıdır.
+
+**Arduino ile Z ekseni:** **Arduino ile step motorlu Z ekseni** şablonundaki `z-axis-stepper` yazılımı (yerleşik, kütüphanesiz) bir Uno'dan A4988'i sürer: D2 → DIR, D3 → STEP, D8 → EN. Taşıyıcıyı T8 vidalı milde 40 mm kaldırır ve indirir. Hızı sabit ivmeyle artırıp azaltır (AccelStepper'ın yaptığı rampa). Rampasız tam hızla başlayan motor durur, rampayla başlayan izler.
 
 Fizik bir animasyon değildir. Dişliler ve vida kısıt çözücüyle bağlanır (sanayideki çok gövdeli dinamik programları da böyle yapar). Motorun torkunu yük, verim, boşluk ve rulman sürtünmesi belirler. Dişlerin birbirine tek tek değmesini çarpışmayla çözmek hem yavaş hem kararsız olurdu; dişliler bu yüzden kendi gövdelerinde değil, kavrama kısıtında buluşur. Kendi 3B modelinizi kullanmak isterseniz **Bağla** aracıyla menteşe ya da kızak kurun, sonra **Özellik ekle → Dişli, kayış, vidalı mil** ile eşleyin. Fizik aynı yoldan çalışır.
 

@@ -13,6 +13,11 @@ namespace RobotTwin.CoreSim.Design
     {
         public const string StepperId = "stepper";
         public const string A4988Id = "a4988";
+        public const string Drv8825Id = "drv8825-stepper";
+        public const string Tmc2209Id = "tmc2209";
+
+        /// <summary>The driver carriers (same footprint and pin rows).</summary>
+        public static bool IsDriver(string? partId) => partId is A4988Id or Drv8825Id or Tmc2209Id;
 
         public static void Register(PartLibrary lib)
         {
@@ -64,33 +69,51 @@ namespace RobotTwin.CoreSim.Design
             Preset(lib, "nema17-17hs08", "NEMA 17 İnce Step Motor 17HS08-1004S", stepper.Id, "42 × 42 × 20 mm, 1,0 A, 0,13 N·m: ekstruder ve hafif eksenler",
                 "model=17HS08-1004S;irated=1.0;resistance=3.5;inductance=4.6m;holding=0.13;detent=0.012;inertia=20e-7;length=20");
 
+            Driver(lib, A4988Id, "A4988 Step Motor Sürücü", StepperChip.A4988,
+                "STEP'in her yükselen kenarında bir (mikro) adım, DIR yönü verir; MS1–MS3 tam adımdan 1/16'ya. EN LOW iken çalışır. VMOT 8–35 V, VDD 3–5,5 V; akım sınırı kartın Vref ayarıdır.",
+                new[] { "EN", "MS1", "MS2", "MS3", "RST", "SLP", "STEP", "DIR" }, new[] { "VMOT", "GND", "2B", "2A", "1A", "1B", "VDD", "GND2" }, 1.0);
+            Preset(lib, "a4988", "A4988 Step Motor Sürücü", A4988Id, "1/16 mikro adım, 1 A (soğutucusuz), 8–35 V");
+            Driver(lib, Drv8825Id, "DRV8825 Step Motor Sürücü", StepperChip.Drv8825,
+                "A4988 ile aynı ayaklar, 1/32 mikro adım (M0–M2), kendi 3,3 V mantığı (VDD yok: o ayak FAULT), VMOT 8,2–45 V. Akım sınırı Vref × 2.",
+                new[] { "EN", "M0", "M1", "M2", "RST", "SLP", "STEP", "DIR" }, new[] { "VMOT", "GND", "B2", "B1", "A1", "A2", "FLT", "GND2" }, 1.5);
+            Preset(lib, "drv8825", "DRV8825 Step Motor Sürücü", Drv8825Id, "1/32 mikro adım, 1,5 A (soğutucusuz), 8,2–45 V");
+            Driver(lib, Tmc2209Id, "TMC2209 Step Motor Sürücü", StepperChip.Tmc2209,
+                "Sessiz sürücü (bağımsız kip): MS1/MS2 ile 1/8, 1/16, 1/32, 1/64; her adım 1/256'ya ara değerlenir (MicroPlyer). VM 4,75–29 V, VIO 3,3–5 V. EN LOW iken çalışır.",
+                new[] { "EN", "MS1", "MS2", "PDN", "NC1", "NC2", "STEP", "DIR" }, new[] { "VM", "GND", "B2", "B1", "A1", "A2", "VIO", "GND2" }, 1.2);
+            Preset(lib, "tmc2209", "TMC2209 Step Motor Sürücü", Tmc2209Id, "1/256 ara değerlemeli, 1,2 A tepe (1,7 A en çok), 4,75–29 V");
+        }
+
+        /// <summary>A driver carrier: eight logic pins down the left, power and the two phases down the right.</summary>
+        private static void Driver(PartLibrary lib, string id, string name, StepperChip chip, string description, string[] left, string[] right, double current)
+        {
             var drv = new PartDefinition
             {
-                Id = A4988Id,
-                Name = "A4988 Step Motor Sürücü",
+                Id = id,
+                Name = name,
                 Category = StandardParts.Electromechanical,
                 RefPrefix = "U",
                 Symbol = SymbolKind.Module,
                 Footprint = "HDR-1x16",
                 ValueKey = "model",
-                Description = "STEP'in her yükselen kenarında bir (mikro) adım, DIR yönü verir; MS1–MS3 tam adımdan 1/16'ya. EN LOW iken çalışır. VMOT 8–35 V, VDD 3–5,5 V; akım sınırı kartın Vref ayarıdır.",
+                Description = description,
                 Build = c =>
                 {
                     int gnd = c.Pin("GND");
                     c.Add(new Resistor(c.Sub("GNDTIE"), gnd, c.Pin("GND2"), 0.001));
-                    c.Add(new A4988Driver(c.RefDes, c.Pin("VMOT"), gnd, c.Pin("1A"), c.Pin("1B"), c.Pin("2A"), c.Pin("2B"), c.Pin("VDD"),
-                        c.Pin("STEP"), c.Pin("DIR"), c.Pin("EN"), c.Pin("MS1"), c.Pin("MS2"), c.Pin("MS3"), c.Pin("SLP"), c.Pin("RST"))
+                    int Pin(string name) => Array.IndexOf(left, name) >= 0 || Array.IndexOf(right, name) >= 0 ? c.Pin(name) : -1;
+                    var d = new StepperDriver(c.RefDes, chip, Pin(right[0]), gnd, Pin(right[4]), Pin(right[5]), Pin(right[3]), Pin(right[2]),
+                        chip == StepperChip.Drv8825 ? -1 : Pin(right[6]), Pin("STEP"), Pin("DIR"), Pin("EN"), Pin(left[1]), Pin(left[2]),
+                        chip == StepperChip.Tmc2209 ? -1 : Pin(left[3]), chip == StepperChip.Tmc2209 ? -1 : Pin("SLP"), chip == StepperChip.Tmc2209 ? -1 : Pin("RST"))
                     {
-                        CurrentLimit = c.Num("imax", 1.0),
-                        OnResistance = c.Num("rds", 0.55)
-                    });
+                        CurrentLimit = c.Num("imax", current)
+                    };
+                    if (c.Num("rds", 0) > 0) d.OnResistance = c.Num("rds", 0);
+                    c.Add(d);
                 }
             };
-            drv.Parameters.Add(new ParameterDefinition("model", "Model", "A4988", ""));
-            drv.Parameters.Add(new ParameterDefinition("imax", "Akım sınırı (Vref / 8·Rs)", "1.0", "A"));
-            drv.Parameters.Add(new ParameterDefinition("rds", "Köprü direnci (üst + alt)", "0.55", "Ω"));
-            string[] left = { "EN", "MS1", "MS2", "MS3", "RST", "SLP", "STEP", "DIR" };
-            string[] right = { "VMOT", "GND", "2B", "2A", "1A", "1B", "VDD", "GND2" };
+            drv.Parameters.Add(new ParameterDefinition("model", "Model", name.Split(' ')[0], ""));
+            drv.Parameters.Add(new ParameterDefinition("imax", "Akım sınırı (tepe, Vref ayarı)", current.ToString(CultureInfo.InvariantCulture), "A"));
+            drv.Parameters.Add(new ParameterDefinition("rds", "Köprü direnci (0 = çipin)", "0", "Ω"));
             for (int k = 0; k < 8; k++)
             {
                 drv.Pins.Add(new PinDefinition(left[k], (k + 1).ToString(CultureInfo.InvariantCulture), -6, -7 + 2 * k));
@@ -100,7 +123,6 @@ namespace RobotTwin.CoreSim.Design
             drv.HalfWidth = 5;
             drv.HalfHeight = 8;
             lib.Add(drv);
-            Preset(lib, "a4988", "A4988 Step Motor Sürücü", drv.Id, "1/16 mikro adım, 1 A (soğutucusuz), 8–35 V");
         }
 
         private static void Preset(PartLibrary lib, string id, string name, string partId, string description, string parameters = "")

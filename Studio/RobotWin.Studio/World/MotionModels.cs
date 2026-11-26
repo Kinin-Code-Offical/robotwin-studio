@@ -19,9 +19,6 @@ namespace RobotWin.Studio.World
             ("A+", "A+ (siyah)", -3.0), ("A-", "A− (yeşil)", -1.0), ("B+", "B+ (kırmızı)", 1.0), ("B-", "B− (mavi)", 3.0)
         };
 
-        private static readonly string[] Left = { "EN", "MS1", "MS2", "MS3", "RST", "SLP", "STEP", "DIR" };
-        private static readonly string[] Right = { "VMOT", "GND", "2B", "2A", "1A", "1B", "VDD", "GND2" };
-
         private static Model3DGroup Scaled(ComponentInstance inst)
         {
             var g = new Model3DGroup { Transform = new MatrixTransform3D(new Matrix3D(Mm, 0, 0, 0, 0, Mm, 0, 0, 0, 0, Mm, 0, 0, 0, 0, 1)) };
@@ -31,11 +28,12 @@ namespace RobotWin.Studio.World
 
         public static ObjectModel? TryBuild(RobotTwin.CoreSim.Sandbox.WorldObject o, RobotTwin.CoreSim.Design.PartLibrary library)
         {
-            if (o.PartId is not (RobotTwin.CoreSim.Design.MotionParts.StepperId or RobotTwin.CoreSim.Design.MotionParts.A4988Id)) return null;
-            var def = library.Find(o.PartId);
+            if (o.PartId != RobotTwin.CoreSim.Design.MotionParts.StepperId && !RobotTwin.CoreSim.Design.MotionParts.IsDriver(o.PartId)) return null;
+            var def = library.Find(o.PartId!);
             if (def == null) return null;
             var preset = o.PresetId != null ? library.FindPreset(o.PresetId) : null;
-            return TryBuild(o.PartId, library.ResolveParameters(def, preset, o.Parameters));
+            if (RobotTwin.CoreSim.Design.MotionParts.IsDriver(o.PartId)) return Carrier(def);
+            return TryBuild(o.PartId!, library.ResolveParameters(def, preset, o.Parameters));
         }
 
         public static ObjectModel? TryBuild(string partId, IReadOnlyDictionary<string, string> p)
@@ -60,25 +58,42 @@ namespace RobotWin.Studio.World
                     return m;
                 }
 
-                case RobotTwin.CoreSim.Design.MotionParts.A4988Id:
-                {
-                    var inst = ComponentModels.Template(new ModelRequest("a4988", "pololu", b => Gen.A4988Carrier(b))).Instantiate();
-                    var m = new ObjectModel();
-                    m.Body.Children.Add(Scaled(inst));
-                    for (int k = 0; k < 8; k++)
-                    {
-                        double y = 8.89 - 2.54 * k;
-                        m.Pins.Add(new PinAnchor(Left[k], Left[k], new Point3D(-6.35 * Mm, y * Mm, 10.4 * Mm)));
-                        m.Pins.Add(new PinAnchor(Right[k], Right[k] == "GND2" ? "GND" : Right[k], new Point3D(6.35 * Mm, y * Mm, 10.4 * Mm)));
-                    }
-
-                    m.Bounds = new Rect3D(-7.62 * Mm, -10.16 * Mm, 0, 15.24 * Mm, 20.32 * Mm, 15.0 * Mm);
-                    return m;
-                }
-
                 default:
                     return null;
             }
+        }
+
+        /// <summary>
+        /// A driver carrier, the colour of its maker's board (Pololu's green A4988 and purple DRV8825, a black TMC2209
+        /// StepStick); its sixteen header pins in the part's order, each a cable end.
+        /// </summary>
+        private static ObjectModel Carrier(RobotTwin.CoreSim.Design.PartDefinition def)
+        {
+            var inst = CarrierInstance(def.Id);
+            var m = new ObjectModel();
+            m.Body.Children.Add(Scaled(inst));
+            var left = new List<RobotTwin.CoreSim.Design.PinDefinition>();
+            var right = new List<RobotTwin.CoreSim.Design.PinDefinition>();
+            foreach (var pin in def.Pins) (pin.X < 0 ? left : right).Add(pin);
+            left.Sort((a, b) => a.Y.CompareTo(b.Y));
+            right.Sort((a, b) => a.Y.CompareTo(b.Y));
+            for (int k = 0; k < Math.Min(8, left.Count); k++) m.Pins.Add(new PinAnchor(left[k].Name, left[k].Name, new Point3D(-6.35 * Mm, (8.89 - 2.54 * k) * Mm, 10.4 * Mm)));
+            for (int k = 0; k < Math.Min(8, right.Count); k++)
+                m.Pins.Add(new PinAnchor(right[k].Name, right[k].Name == "GND2" ? "GND" : right[k].Name, new Point3D(6.35 * Mm, (8.89 - 2.54 * k) * Mm, 10.4 * Mm)));
+            m.Bounds = new Rect3D(-7.62 * Mm, -10.16 * Mm, 0, 15.24 * Mm, 20.32 * Mm, 15.0 * Mm);
+            return m;
+        }
+
+        /// <summary>A driver carrier's model in its own frame (mm).</summary>
+        public static ComponentInstance CarrierInstance(string partId)
+        {
+            uint pcb = partId switch
+            {
+                RobotTwin.CoreSim.Design.MotionParts.Drv8825Id => 0x4B2A7Au,
+                RobotTwin.CoreSim.Design.MotionParts.Tmc2209Id => 0x1C1D21u,
+                _ => 0x1B6B3Au
+            };
+            return ComponentModels.Template(new ModelRequest("stepper-driver", partId, b => Gen.A4988Carrier(b, pcb))).Instantiate();
         }
     }
 }

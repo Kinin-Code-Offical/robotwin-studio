@@ -368,7 +368,9 @@ namespace RobotTwin.CoreSim.Analog
                 {
                     _forceBackwardEuler = false;
                     _stepsSinceDiscontinuity++;
-                    _hNext = Math.Min(h * growth, Options.MaxStep);
+                    // Never below the floor: a step accepted at the minimum because the error could not be met there would
+                    // otherwise halve on every step, down to 1e-21 s where the companion models are all round-off.
+                    _hNext = Math.Min(Math.Max(h * growth, Options.MinStep), Options.MaxStep);
                     // [perf] a step cut short only to end the call, with the error allowing all the growth there is: the next
                     // call goes on at the step that was planned, not at four times the cut one
                     if (cut && !hitsBreakpoint && growth >= 4.0 - 1e-9) _hNext = Math.Max(_hNext, planned);

@@ -20,6 +20,7 @@ The **Inspector** on the right shows only the sections the selected object reall
 | Empty workshop | 4 × 3 m floor, 25 °C |
 | Two boards connected by cable | A 9 V power board and an LED board on separate PCBs; the LEDs light once two cables connect them |
 | Two-axis servo arm with Arduino | An Uno drives two SG90 servos; the second servo is screwed to the first one's horn |
+| Stepper Z axis with Arduino (lead screw) | An Uno turns a NEMA 17 through an A4988; a T8 lead screw lifts the carriage 40 mm and lowers it with a speed ramp |
 | Arduino, LCD and OLED (I²C wired) | Uno, 16×2 LCD, 128×64 OLED and a potentiometer on I²C cables |
 | Two-wheeled car (real physics) | PLA chassis, two TT motors and wheels on one axle, ball caster, 4×AA pack |
 | Ultrasonic distance sensor and obstacles | An HC-SR04 really measures the obstacle in front of it |
@@ -341,6 +342,14 @@ A coupler, gear or pulley that goes on the motor's Ø5 D-cut shaft is fixed to i
 - the magnets' detent torque.
 
 The driver counts STEP edges, microsteps down to 1/16 with MS1–MS3, and drives the phase currents to the current limit as far as VMOT allows, so the torque falls as the speed rises. The motor's torque turns the rotor in the physics. The shaft's inertia and the screw's load and friction reach the motor itself: overloaded, or started too fast without a ramp, it loses steps as a real one does.
+
+Two more drivers sit beside the A4988, with the same pinout:
+- **DRV8825:** 1/32 microstepping with M0–M2. It makes its own 3.3 V logic and has no VDD pin (that pin is FAULT). VMOT 8.2–45 V.
+- **TMC2209:** 1/8, 1/16, 1/32 or 1/64 with MS1/MS2. It spreads each step to 1/256 between two STEP edges (MicroPlyer), so the motor turns quietly and smoothly. VM 4.75–29 V.
+
+Set the current limit with the driver's **Current limit** value; it stands for the Vref setting on the board.
+
+**A Z axis with an Arduino:** the `z-axis-stepper` firmware in the **Stepper Z axis with Arduino** template (built in, no libraries) drives an A4988 from an Uno: D2 → DIR, D3 → STEP, D8 → EN. It lifts the carriage 40 mm on a T8 lead screw and lowers it again, raising and lowering the speed at a steady acceleration (the ramp AccelStepper makes). A motor started at full speed without a ramp stalls; ramped, it follows.
 
 The physics is not an animation. Gears and screws are joined by constraints in the solver, as engineering multibody programs do it. The motor's torque comes from the load, the efficiency, the backlash and the bearing friction. Solving each tooth touching the next with collisions would be slow and unstable, so gears meet in the meshing constraint rather than through their bodies. If you want to use your own 3D models, join them with hinges or slides using the **Join** tool, then pair them with **Add feature → Gear, belt, lead screw**. The physics works the same way.
 

@@ -21,6 +21,12 @@ namespace RobotWin.Studio.Models3D
                 yield return new Item("8-drive", spec.Name, () => World.DriveModels.Instance(spec), false);
             }
 
+            foreach (var (id, name) in new[] { (RobotTwin.CoreSim.Design.MotionParts.A4988Id, "A4988"), (RobotTwin.CoreSim.Design.MotionParts.Drv8825Id, "DRV8825"), (RobotTwin.CoreSim.Design.MotionParts.Tmc2209Id, "TMC2209") })
+            {
+                string part = id;
+                yield return new Item("8-drive", name, () => World.MotionModels.CarrierInstance(part), false);   // [stepper] the driver carriers
+            }
+
             yield return new Item(L, "RGB LED 5 mm", () => Part("led-rgb", "led-rgb-5mm"));
             yield return new Item(L, "RGB LED lit", () =>
             {

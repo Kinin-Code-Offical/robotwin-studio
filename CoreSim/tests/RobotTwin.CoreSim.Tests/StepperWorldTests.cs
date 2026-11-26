@@ -8,9 +8,9 @@ using Xunit.Abstractions;
 namespace RobotTwin.CoreSim.Tests
 {
     /// <summary>
-    /// [stepper] A whole Z axis in a world: 12 V and 5 V supplies, a square wave on STEP, an A4988, a NEMA 17, a coupler to
-    /// a T8×8 screw in a 608, a brass nut on a carriage riding two rods on LM8UUs. Nothing is joined by hand except the
-    /// carriage's screws: the motor's steps lift it 8 mm a turn.
+    /// [stepper] A whole Z axis in a world (the "z-axis" template): 12 V and 5 V supplies, a square wave or an Uno on STEP,
+    /// an A4988, a NEMA 17, a coupler to a T8×8 screw in a 608, a brass nut on a carriage riding two rods on LM8UUs. Nothing
+    /// is joined by hand except the carriage's screws: the motor's steps lift it 8 mm a turn.
     /// </summary>
     public class StepperWorldTests
     {
@@ -18,63 +18,8 @@ namespace RobotTwin.CoreSim.Tests
 
         public StepperWorldTests(ITestOutputHelper output) => _out = output;
 
-        internal static WorldDocument ZAxis(double stepRate = 200)
-        {
-            var w = new WorldDocument { Title = "Z ekseni" };
-            WorldObject Component(string part, string? preset, string name, double x, double y, string parameters = "")
-            {
-                var o = new WorldObject { Id = w.NextId("O"), Name = name, Kind = WorldObjectKind.Component, PartId = part, PresetId = preset, Pose = new WorldPose { X = x, Y = y }, IsStatic = true };
-                foreach (var pair in parameters.Split(';', StringSplitOptions.RemoveEmptyEntries))
-                {
-                    var kv = pair.Split('=');
-                    o.Parameters[kv[0]] = kv[1];
-                }
-
-                w.Objects.Add(o);
-                return o;
-            }
-
-            WorldObject Put(string id, double x, double y, double z, bool frame = false)
-            {
-                var o = DriveParts.Add(w, id, new WorldPose { X = x, Y = y, Z = z });
-                o.IsStatic = frame;
-                return o;
-            }
-
-            void Wire(WorldObject a, string pa, WorldObject b, string pb) =>
-                w.Cables.Add(new WorldCable { Id = w.NextId("C"), A = new CableEnd { ObjectId = a.Id, Pin = pa }, B = new CableEnd { ObjectId = b.Id, Pin = pb } });
-
-            var vmot = Component("dc-source", null, "12 V", 0.15, 0.1, "voltage=12");
-            var vdd = Component("dc-source", null, "5 V", 0.2, 0.1, "voltage=5");
-            var gen = Component("signal-generator", null, "STEP", 0.25, 0.1, $"frequency={stepRate};amplitude=5;duty=0.1");
-            var drv = Component("a4988", "a4988", "A4988", 0.15, -0.1);
-            var motor = Component("stepper", "nema17-17hs4401", "NEMA 17", 0, 0);
-            Wire(vmot, "+", drv, "VMOT");
-            Wire(vmot, "-", drv, "GND");
-            Wire(vdd, "+", drv, "VDD");
-            Wire(vdd, "-", drv, "GND2");
-            Wire(vdd, "+", drv, "DIR");
-            Wire(gen, "+", drv, "STEP");
-            Wire(gen, "-", drv, "GND2");
-            Wire(drv, "1A", motor, "A+");
-            Wire(drv, "1B", motor, "A-");
-            Wire(drv, "2A", motor, "B+");
-            Wire(drv, "2B", motor, "B-");
-            // The mechanics, placed: the coupler over the motor's shaft (42–64 mm up) and the screw's foot.
-            Put("coupler-5-8", 0, 0, 0.048);
-            Put("screw-t8x8-300", 0, 0, 0.062);
-            Put("bearing-608zz", 0, 0, 0.33, true);
-            Put("shaft-8-300", 0, 0.035, 0.062, true);
-            Put("shaft-8-300", 0, -0.035, 0.062, true);
-            var nut = Put("nut-t8x8", 0, 0, 0.15);
-            var lm1 = Put("lm8uu", 0, 0.035, 0.15);
-            var lm2 = Put("lm8uu", 0, -0.035, 0.15);
-            var plate = new WorldObject { Id = w.NextId("O"), Name = "Taşıyıcı", Kind = WorldObjectKind.Body, Shape = "box", SizeX = 0.02, SizeY = 0.1, SizeZ = 0.024, MassKg = 0.2, Material = "aluminium", Pose = new WorldPose { X = 0.021, Z = 0.15 } };
-            w.Objects.Add(plate);
-            foreach (var part in new[] { nut, lm1, lm2 })
-                w.Joints.Add(new WorldJoint { Id = w.NextId("J"), Kind = WorldJointKind.Fixed, ObjectA = part.Id, ObjectB = plate.Id, Fastening = "screws", AnchorX = part.Pose.X, AnchorY = part.Pose.Y, AnchorZ = part.Pose.Z });
-            return w;
-        }
+        internal static WorldDocument ZAxis(double stepRate = 200, bool arduino = false) =>
+            WorldExamples.ZAxis(RobotTwin.CoreSim.Design.PartLibrary.Default, arduino ? 0 : stepRate);
 
         [Fact]
         public void StepsFromAGeneratorTurnTheMotorAndTheScrewLiftsTheCarriage()
@@ -96,6 +41,47 @@ namespace RobotTwin.CoreSim.Tests
             Assert.InRange(Math.Abs(stepper.FullSteps), 190, 202);
             Assert.InRange(Math.Abs(rotor.Angle - stepper.Angle), 0, 0.05);   // the shaft is where the electrical rotor is
             Assert.InRange(Math.Abs(rise), 0.0075, 0.0082);   // 8 mm a turn
+        }
+
+        [Fact]
+        public void AnArduinoSketchRampsTheAxisUpFortyMillimetres()
+        {
+            string? dir = FirmwareDir();
+            if (dir == null) return;   // repository layout not available
+            var w = ZAxis(arduino: true);
+            DriveAssembly.Assemble(w);
+            var options = new RunnerOptions();
+            options.FirmwareSearchPath.Add(dir);
+            using var runner = new WorldRunner(WorldDocument.FromJson(w.ToJson()), options);
+            Assert.Single(runner.Boards);
+            var plate = w.Objects.Single(o => o.Name == "Taşıyıcı");
+            double z0 = runner.Physics!.Scene.Bodies.Single(b => b.Id == plate.Id).Position.Z, top = 0;
+            var stepper = runner.Circuit!.Compiled.Circuit.Devices.OfType<RobotTwin.CoreSim.Analog.Devices.StepperMotor>().Single();
+            var driver = runner.Circuit!.Compiled.Circuit.Devices.OfType<RobotTwin.CoreSim.Analog.Devices.StepperDriver>().Single();
+            while (runner.Time < 2.0 - 1e-6)
+            {
+                runner.Step(0.01);
+                top = Math.Max(top, runner.Physics.Scene.Bodies.Single(b => b.Id == plate.Id).Position.Z - z0);
+            }
+
+            string serial = string.Concat(runner.ReadSerial(null, true).Values);
+            _out.WriteLine($"seri: {serial.Replace("\r", "").Replace("\n", " | ")}");
+            _out.WriteLine($"2 s: sürücü {driver.Steps} adım, motor {stepper.FullSteps:0.0} tam adım, taşıyıcı en çok {top * 1000:0.00} mm yükseldi");
+            Assert.Contains("Yukari 40 mm", serial);
+            Assert.InRange(Math.Abs(driver.Steps), 990, 1000);   // the sketch's 1000 steps up
+            Assert.InRange(Math.Abs(Math.Abs(stepper.FullSteps) - Math.Abs(driver.Steps)), 0, 2);   // ramped, it lost none
+            Assert.InRange(top, 0.0385, 0.0405);   // 40 mm up
+        }
+
+        private static string? FirmwareDir()
+        {
+            for (var d = new System.IO.DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
+            {
+                string candidate = System.IO.Path.Combine(d.FullName, "Studio", "RobotWin.Studio", "Firmware");
+                if (System.IO.Directory.Exists(candidate)) return candidate;
+            }
+
+            return null;
         }
     }
 }

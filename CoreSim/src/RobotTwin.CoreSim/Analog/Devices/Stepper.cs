@@ -229,24 +229,45 @@ namespace RobotTwin.CoreSim.Analog.Devices
         }
     }
 
-    /// <summary>
-    /// [stepper] An A4988 stepper driver (Pololu-style carrier): its translator counts rising edges on STEP (in the
-    /// direction DIR gives) at the resolution MS1–MS3 set (full to 1/16), and drives each phase's current to the sine and
-    /// cosine of that position times the current limit, through an H-bridge fed from VMOT. The current regulation is the
-    /// chopper's average: it holds the current while the supply can, and runs out of voltage when the winding's back-EMF
-    /// and inductance ask more, so the torque falls with speed as it does on the bench. EN high, SLEEP or RESET low, VMOT
-    /// under 8 V or a hot chip (165 °C) turn the bridges off.
-    /// </summary>
-    public sealed class A4988Driver : AnalogDevice
+    /// <summary>[stepper] The stepper driver chips modelled: their microstep tables, logic levels and limits differ.</summary>
+    public enum StepperChip
     {
-        private readonly int[] _out1, _out2;
-        private readonly double[] _i = new double[2], _u = new double[2], _ff = new double[2];
-        private readonly int[] _mode = new int[2];   // 0 regulating, ±1 bridge full on
-        private bool _stepHigh, _hot;
-        private double _vmot;
+        /// <summary>Allegro A4988: MS1–MS3 to 1/16, logic at 0.7·VDD, VMOT 8–35 V, shutdown at 165 °C.</summary>
+        A4988,
 
-        public A4988Driver(string id, int vmot, int gnd, int out1A, int out1B, int out2A, int out2B, int vdd, int step, int dir, int enable, int ms1, int ms2, int ms3, int sleep, int reset) : base(id)
+        /// <summary>TI DRV8825: M0–M2 to 1/32, its own 3.3 V logic (2.2 V high), VMOT 8.2–45 V, shutdown at 150 °C.</summary>
+        Drv8825,
+
+        /// <summary>
+        /// Trinamic TMC2209 standalone: MS1/MS2 pick 1/8, 1/16, 1/32 or 1/64, each interpolated to 1/256 between STEP edges
+        /// (MicroPlyer); VM 4.75–29 V; shutdown at 150 °C. Its current is regulated as in spreadCycle.
+        /// </summary>
+        Tmc2209
+    }
+
+    /// <summary>
+    /// [stepper] A stepper driver on its carrier (A4988, DRV8825, TMC2209): the translator counts rising edges on STEP (in
+    /// the direction DIR gives) at the resolution its microstep pins set, and drives each phase's current to the sine and
+    /// cosine of that position times the current limit, through an H-bridge fed from VMOT. The current regulation is the
+    /// chopper's average: it holds the current while the supply can, and runs out of voltage when the winding's back-EMF and
+    /// inductance ask more, so the torque falls with speed as it does on the bench. EN high, SLEEP or RESET low, VMOT under
+    /// the chip's minimum or a hot chip turn the bridges off.
+    /// </summary>
+    public sealed class StepperDriver : AnalogDevice
+    {
+        /// <summary>Positions in 1/256 of a full step: every chip's resolution divides it.</summary>
+        public const int Resolution = 256;
+
+        private readonly int[] _out1, _out2;
+        private readonly double[] _i = new double[2], _u = new double[2], _ff = new double[2], _target = new double[2];
+        private readonly int[] _mode = new int[2];   // 0 regulating, ±1 bridge full on
+        private readonly int[] _decay = new int[2];   // switched off with current flowing: ∓1 while the body diodes return it to VMOT
+        private bool _stepHigh, _hot;
+        private double _vmot, _edgeTime = double.NaN, _interval, _from;
+
+        public StepperDriver(string id, StepperChip chip, int vmot, int gnd, int out1A, int out1B, int out2A, int out2B, int vdd, int step, int dir, int enable, int ms1, int ms2, int ms3, int sleep, int reset) : base(id)
         {
+            Chip = chip;
             Vmot = vmot;
             Gnd = gnd;
             _out1 = new[] { out1A, out1B };
@@ -260,11 +281,16 @@ namespace RobotTwin.CoreSim.Analog.Devices
             Ms3 = ms3;
             Sleep = sleep;
             ResetPin = reset;
+            OnResistance = chip switch { StepperChip.Drv8825 => 0.4, StepperChip.Tmc2209 => 0.34, _ => 0.55 };
         }
 
+        public StepperChip Chip { get; }
         public int Vmot { get; }
         public int Gnd { get; }
+
+        /// <summary>The logic supply pin; −1 when the chip makes its own (DRV8825).</summary>
         public int Vdd { get; }
+
         public int Step { get; }
         public int Dir { get; }
         public int Enable { get; }
@@ -274,11 +300,14 @@ namespace RobotTwin.CoreSim.Analog.Devices
         public int Sleep { get; }
         public int ResetPin { get; }
 
-        /// <summary>The current limit (A, the peak of each phase's sine): Vref / (8·Rsense) on the carrier.</summary>
+        /// <summary>The current limit (A, the peak of each phase's sine), as the carrier's Vref sets it.</summary>
         public double CurrentLimit { get; set; } = 1.0;
 
         /// <summary>The bridge's on-resistance, high side plus low side (Ω).</summary>
-        public double OnResistance { get; set; } = 0.55;
+        public double OnResistance { get; set; }
+
+        /// <summary>What a switched-off output pair shows a winding once the diodes stop (Ω).</summary>
+        public double OffResistance { get; set; } = 1000.0;
 
         /// <summary>The averaged regulator's gain (V/A) and its integral time (s): about a chopper's settling.</summary>
         public double Gain { get; set; } = 100.0;
@@ -289,7 +318,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
 
         public ThermalState Thermal { get; } = new ThermalState(40.0, 0.4);
 
-        /// <summary>The translator's position in 1/16 steps (it moves by 16/m per STEP edge at 1/m stepping).</summary>
+        /// <summary>The translator's position in 1/256 of a full step (45° electrical at home).</summary>
         public int Position { get; private set; }
 
         public int Microsteps { get; private set; } = 1;
@@ -304,13 +333,26 @@ namespace RobotTwin.CoreSim.Analog.Devices
 
         public override int BranchCount => 2;
 
-        /// <summary>The phase currents the translator asks for: the cosine and sine of its electrical angle (45° at home).</summary>
-        public (double I1, double I2) Targets()
+        private double MinimumVmot => Chip switch { StepperChip.Drv8825 => 8.2, StepperChip.Tmc2209 => 4.75, _ => 8.0 };
+
+        private double ShutdownC => Chip == StepperChip.A4988 ? 165 : 150;
+
+        /// <summary>The phase currents for an electrical position (1/256 steps): its cosine and sine times the limit.</summary>
+        private (double I1, double I2) Currents(double position)
         {
-            if (!Enabled) return (0, 0);
-            double angle = Math.PI / 4 + Position * (Math.PI / 2) / 16.0;
+            double angle = Math.PI / 4 + position * (Math.PI / 2) / Resolution;
             return (CurrentLimit * Math.Cos(angle), CurrentLimit * Math.Sin(angle));
         }
+
+        /// <summary>Where the translator is at a moment: a TMC2209 moves there smoothly over the last step's interval.</summary>
+        public double PositionAt(double time)
+        {
+            if (Chip != StepperChip.Tmc2209 || double.IsNaN(_edgeTime) || _interval <= 0) return Position;
+            double f = Math.Max(0, Math.Min(1, (time - _edgeTime) / _interval));
+            return _from + (Position - _from) * f;
+        }
+
+        public (double I1, double I2) Targets() => Enabled ? Currents(Position) : (0, 0);
 
         public override void Reset()
         {
@@ -318,9 +360,12 @@ namespace RobotTwin.CoreSim.Analog.Devices
             Array.Clear(_u, 0, 2);
             Array.Clear(_ff, 0, 2);
             Array.Clear(_mode, 0, 2);
+            Array.Clear(_decay, 0, 2);
+            Array.Clear(_target, 0, 2);
             Position = 0;
             Steps = 0;
             _stepHigh = _hot = false;
+            _edgeTime = double.NaN;
             Thermal.Reset(25.0);
         }
 
@@ -332,8 +377,9 @@ namespace RobotTwin.CoreSim.Analog.Devices
 
         public override void BeginStep(StepInfo step)
         {
-            var (t1, t2) = Targets();
-            double[] target = { t1, t2 };
+            var (t1, t2) = Enabled ? Currents(PositionAt(step.Time)) : (0, 0);
+            _target[0] = t1;
+            _target[1] = t2;
             for (int p = 0; p < 2; p++)
             {
                 if (!Enabled)
@@ -344,7 +390,7 @@ namespace RobotTwin.CoreSim.Analog.Devices
 
                 // Saturate when holding the current would take more than the supply; come back only well inside it, so
                 // the bridge does not flip between the two every step at the edge.
-                double want = Gain * (target[p] - _i[p]) + _ff[p];
+                double want = Gain * (_target[p] - _i[p]) + _ff[p];
                 double avail = Math.Max(0, _vmot - OnResistance * Math.Abs(_i[p]));
                 int mode = _mode[p] == 0 ? (Math.Abs(want) > avail ? Math.Sign(want) : 0) : (Math.Abs(want) < 0.9 * avail || Math.Sign(want) != _mode[p] ? 0 : _mode[p]);
                 if (mode != _mode[p]) PendingDiscontinuity = true;
@@ -354,32 +400,44 @@ namespace RobotTwin.CoreSim.Analog.Devices
 
         public override void Stamp(StampContext ctx)
         {
-            var (t1, t2) = Targets();
-            double[] target = { t1, t2 };
             for (int p = 0; p < 2; p++)
             {
                 int k = BranchBase + p, a = p == 0 ? _out1[0] : _out2[0], b = p == 0 ? _out1[1] : _out2[1];
                 // The phase current leaves the bridge at xA, goes through the winding and comes back at xB.
                 ctx.AddBranchCurrent(b, a, k);
-                if (!Enabled || Failure == FailureMode.Open)
+                StampCommonMode(ctx, a, b);
+                if (Failure == FailureMode.Open)
                 {
-                    ctx.AddMatrix(k, k, 1.0);   // bridges off: no current
+                    ctx.AddMatrix(k, k, 1.0);   // a burnt bridge: no current
+                    continue;
+                }
+
+                if (!Enabled && _decay[p] == 0)
+                {
+                    // Off, its current decayed: the outputs float. 1 kΩ takes the last milliamps the diodes leave (5 nJ in
+                    // the winding) instead of stopping them in one step, which put tens of volts across it.
+                    ctx.AddRowNode(k, a, 1.0);
+                    ctx.AddRowNode(k, b, -1.0);
+                    ctx.AddMatrix(k, k, OffResistance);
                     continue;
                 }
 
                 ctx.AddRowNode(k, a, 1.0);
                 ctx.AddRowNode(k, b, -1.0);
-                if (_mode[p] == 0)
+                if (Enabled && _mode[p] == 0)
                 {
                     // V(xA) − V(xB) = G·(i* − i) + u_ff − R_on·i; the supply delivers that power.
                     ctx.AddMatrix(k, k, Gain + OnResistance);
-                    ctx.AddRhs(k, Gain * target[p] + _ff[p]);
+                    ctx.AddRhs(k, Gain * _target[p] + _ff[p]);
                     if (_vmot > 1) ctx.AddCurrent(Vmot, Gnd, _u[p] * _i[p] / _vmot);
                 }
                 else
                 {
-                    // Full on: V(xA) − V(xB) = ±VMOT − R_on·i, the current drawn from VMOT.
-                    double d = _mode[p];
+                    // Full on: V(xA) − V(xB) = ±VMOT − R_on·i, the current drawn from VMOT. Switched off, the winding drives
+                    // its current on through the opposite body diodes into VMOT (fast decay) until it reaches zero: the
+                    // supply against it, and two diode drops.
+                    double d = Enabled ? _mode[p] : _decay[p];
+                    if (!Enabled) ctx.AddRhs(k, d * 1.4);
                     ctx.AddRowNode(k, Vmot, -d);
                     ctx.AddRowNode(k, Gnd, d);
                     ctx.AddMatrix(k, k, OnResistance);
@@ -388,66 +446,139 @@ namespace RobotTwin.CoreSim.Analog.Devices
                 }
             }
 
-            // Logic: 8 mA from VDD, pull-downs on MS1–3 and EN, pull-ups on SLEEP and RESET (the carrier's).
-            ctx.AddConductance(Vdd, Gnd, 8e-3 / 5.0);
-            foreach (int pin in new[] { Ms1, Ms2, Ms3, Enable }) ctx.AddConductance(pin, Gnd, 1e-5);
-            foreach (int pin in new[] { Sleep, ResetPin }) ctx.AddConductance(pin, Vdd, 1e-4);
-            ctx.AddConductance(Vmot, Gnd, 1e-4);   // the carrier's quiescent draw from VMOT
+            // Logic: the carrier's pull-downs on the microstep pins and EN, pull-ups on SLEEP and RESET, its supply's draw.
+            if (Vdd > 0) ctx.AddConductance(Vdd, Gnd, 8e-3 / 5.0);
+            foreach (int pin in new[] { Ms1, Ms2, Ms3, Enable })
+                if (pin > 0) ctx.AddConductance(pin, Gnd, 1e-5);
+            foreach (int pin in new[] { Sleep, ResetPin })
+            {
+                if (pin <= 0) continue;
+                if (Vdd > 0) ctx.AddConductance(pin, Vdd, 1e-4);
+                else
+                {
+                    // The DRV8825's own 3.3 V through the carrier's 10 kΩ (its Norton equivalent).
+                    ctx.AddConductance(pin, Gnd, 1e-4);
+                    ctx.AddCurrent(Gnd, pin, 3.3e-4);
+                }
+            }
+
+            ctx.AddConductance(Vmot, Gnd, Vdd > 0 ? 1e-4 : 5e-4);   // quiescent draw (the DRV8825 runs its logic from VMOT)
+        }
+
+        /// <summary>
+        /// Where a phase's two outputs sit together. The equations above fix only their difference; a real bridge has each
+        /// leg on VMOT or GND, so the pair averages half the supply. Left floating, the pair wandered by hundreds of volts on
+        /// round-off and the step-size control chased it down to nothing. The same current goes into both outputs (none
+        /// through the winding), back to GND; VMOT is only sensed.
+        /// </summary>
+        private void StampCommonMode(StampContext ctx, int a, int b)
+        {
+            const double g = 0.1;
+            void G(int row, int col, double v)
+            {
+                if (row > 0 && col > 0) ctx.AddMatrix(row - 1, col - 1, v);
+            }
+
+            foreach (int row in new[] { a, b })
+            {
+                G(row, a, 0.5 * g);
+                G(row, b, 0.5 * g);
+                G(row, Vmot, -0.5 * g);
+                G(row, Gnd, -0.5 * g);
+            }
+
+            G(Gnd, a, -g);
+            G(Gnd, b, -g);
+            G(Gnd, Vmot, g);
+            G(Gnd, Gnd, g);
         }
 
         public override void Accept(AcceptContext ctx)
         {
-            double vdd = ctx.V(Vdd, Gnd);
+            double vdd = Vdd > 0 ? ctx.V(Vdd, Gnd) : 3.3;
             _vmot = ctx.V(Vmot, Gnd);
-            bool High(int pin, bool was) => ctx.V(pin, Gnd) > (was ? 0.3 : 0.7) * Math.Max(vdd, 1e-3);
-            var (t1, t2) = Targets();
-            double[] target = { t1, t2 };
+            bool High(int pin, bool was)
+            {
+                if (pin <= 0) return false;
+                double v = ctx.V(pin, Gnd);
+                return Chip == StepperChip.Drv8825 ? v > (was ? 0.8 : 2.2) : v > (was ? 0.3 : 0.7) * Math.Max(vdd, 1e-3);
+            }
+
             for (int p = 0; p < 2; p++)
             {
                 _i[p] = ctx.Unknown(BranchBase + p);
                 int a = p == 0 ? _out1[0] : _out2[0], b = p == 0 ? _out1[1] : _out2[1];
                 _u[p] = ctx.V(a, b);
+                // The decaying current has reached zero: the diodes stop conducting.
+                if (!Enabled && _decay[p] != 0 && (Math.Abs(_i[p]) < 1e-3 || Math.Sign(_i[p]) == _decay[p]))
+                {
+                    _decay[p] = 0;
+                    ctx.RequestDiscontinuity();
+                }
+
                 if (!ctx.IsDc && _mode[p] == 0 && Enabled)
-                    _ff[p] = Math.Max(-_vmot, Math.Min(_vmot, _ff[p] + Gain * (target[p] - _i[p]) * ctx.Dt / IntegralTime));
+                    _ff[p] = Math.Max(-_vmot, Math.Min(_vmot, _ff[p] + Gain * (_target[p] - _i[p]) * ctx.Dt / IntegralTime));
                 if (!Enabled) _ff[p] = 0;
             }
 
-            bool powered = vdd > 3.0 && _vmot > 8.0;
-            bool on = powered && !High(Enable, false) && High(Sleep, true) && High(ResetPin, true) && !_hot && !IsFailed;
-            if (powered && !High(ResetPin, true)) Position = 0;   // RESET low: the translator goes home
+            bool powered = vdd > 3.0 && _vmot > MinimumVmot;
+            bool awake = (Sleep <= 0 || High(Sleep, true)) && (ResetPin <= 0 || High(ResetPin, true));
+            bool on = powered && !High(Enable, false) && awake && !_hot && !IsFailed;
+            if (powered && ResetPin > 0 && !High(ResetPin, true)) Position = 0;   // RESET low: the translator goes home
             bool m1 = High(Ms1, false), m2 = High(Ms2, false), m3 = High(Ms3, false);
-            Microsteps = (m1, m2, m3) switch
+            Microsteps = Chip switch
             {
-                (false, false, false) => 1,
-                (true, false, false) => 2,
-                (false, true, false) => 4,
-                (true, true, false) => 8,
-                _ => 16
+                StepperChip.Drv8825 => (m1, m2, m3) switch
+                {
+                    (false, false, false) => 1,
+                    (true, false, false) => 2,
+                    (false, true, false) => 4,
+                    (true, true, false) => 8,
+                    (false, false, true) => 16,
+                    _ => 32
+                },
+                StepperChip.Tmc2209 => (m1, m2) switch { (false, false) => 8, (true, false) => 32, (false, true) => 64, _ => 16 },
+                _ => (m1, m2, m3) switch { (false, false, false) => 1, (true, false, false) => 2, (false, true, false) => 4, (true, true, false) => 8, _ => 16 }
             };
             bool step = High(Step, _stepHigh);
             if (on && step && !_stepHigh && !ctx.IsDc)
             {
-                int delta = 16 / Microsteps;
-                // At coarser steps the translator first snaps onto that grid, as the chip's table does.
+                int delta = Resolution / Microsteps;
+                double previous = PositionAt(ctx.Time);
+                // At coarser steps the translator first snaps onto that grid, as the chips' tables do.
                 if (Position % delta != 0) Position -= ((Position % delta) + delta) % delta;
                 Position += High(Dir, false) ? delta : -delta;
                 Steps += High(Dir, false) ? 1 : -1;
+                if (Chip == StepperChip.Tmc2209)
+                {
+                    // MicroPlyer: the next interval is taken to be the last one; until it is known, go straight there.
+                    _interval = double.IsNaN(_edgeTime) || ctx.Time - _edgeTime > 0.25 ? 0 : ctx.Time - _edgeTime;
+                    _from = previous;
+                    _edgeTime = ctx.Time;
+                }
+
                 // The regulator's integral follows the new targets (a chopper starts each position afresh, no overshoot).
-                var (n1, n2) = Targets();
+                var (n1, n2) = Currents(PositionAt(ctx.Time));
                 double[] next = { n1, n2 };
-                for (int p = 0; p < 2; p++) _ff[p] = Math.Abs(target[p]) > 1e-6 ? _ff[p] * next[p] / target[p] : 0;
+                for (int p = 0; p < 2; p++) _ff[p] = Math.Abs(_target[p]) > 1e-6 ? _ff[p] * next[p] / _target[p] : 0;
             }
 
             _stepHigh = step;
             if (on != Enabled) ctx.RequestDiscontinuity();
+            for (int p = 0; p < 2; p++)
+            {
+                if (on) _decay[p] = 0;
+                else if (Enabled && !ctx.IsDc && Failure != FailureMode.Open) _decay[p] = Math.Abs(_i[p]) > 1e-3 ? -Math.Sign(_i[p]) : 0;
+            }
+
             Enabled = on;
             if (ctx.IsDc) return;
-            double loss = (_i[0] * _i[0] + _i[1] * _i[1]) * OnResistance + 0.008 * 5.0;
+            double loss = (_i[0] * _i[0] + _i[1] * _i[1]) * OnResistance + 0.04;
             Thermal.ThermalResistance = ThermalResistance;
             Thermal.Advance(loss, ctx.Dt, ctx.AmbientTempC);
-            // Thermal shutdown at 165 °C, back on 15 °C cooler.
-            if (!_hot && Thermal.TemperatureC > 165) _hot = true;
-            else if (_hot && Thermal.TemperatureC < 150) _hot = false;
+            // Thermal shutdown, back on 15 °C cooler.
+            if (!_hot && Thermal.TemperatureC > ShutdownC) _hot = true;
+            else if (_hot && Thermal.TemperatureC < ShutdownC - 15) _hot = false;
         }
 
         public override void Report(ISignalSink sink)
