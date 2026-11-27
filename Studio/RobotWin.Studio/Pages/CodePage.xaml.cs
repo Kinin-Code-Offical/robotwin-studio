@@ -363,6 +363,7 @@ namespace RobotWin.Studio.Pages
             _folder = folder;
             _file = file;
             NoBoard.Visibility = folder == null ? Visibility.Visible : Visibility.Collapsed;
+            Editor.Visibility = folder == null ? Visibility.Hidden : Visibility.Visible;   // [layout] nothing to edit: the choice lies on an empty page, not over an editor
             if (folder?.Board is { } board && board != _target)
             {
                 _loading = true;

@@ -40,7 +40,7 @@
                     </StackPanel>
                     <Border x:Name="MenuHost" Margin="10,0,0,0" VerticalAlignment="Center"/>
                     <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="8,0,8,0"/>
-                    <StackPanel Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <StackPanel x:Name="QuickFile" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
                         <Button x:Name="NewButton" Style="{StaticResource Btn.Icon}" ToolTip="Yeni proje veya dünya (Ctrl+N)" Click="OnNewMenu" Width="30" Height="30"><t:Icon Data="{StaticResource I.Plus}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Aç (Ctrl+O)" Click="OnOpen" Width="30" Height="30"><t:Icon Data="{StaticResource I.Folder}" Size="16"/></Button>
                         <Button x:Name="SaveButton" Style="{StaticResource Btn.Icon}" ToolTip="Kaydet (Ctrl+S)" Click="OnSave" Width="30" Height="30"><t:Icon Data="{StaticResource I.Save}" Size="16"/></Button>
@@ -157,10 +157,10 @@
                     <Button x:Name="SplitButton" Style="{StaticResource Btn.Icon}" Width="34" Height="42" Click="OnSplitMenu" ToolTip="Bölünmüş görünüm: iki sayfayı yan yana aç (Ctrl+\)">
                         <t:Icon Data="{StaticResource I.Split}" Size="15"/>
                     </Button>
-                    <Button Style="{StaticResource Btn.Icon}" Width="34" Height="42" Click="OnDetach" ToolTip="Bu sayfayı ayrı pencereye al (ikinci ekran için)">
+                    <Button x:Name="DetachButton" Style="{StaticResource Btn.Icon}" Width="34" Height="42" Click="OnDetach" ToolTip="Bu sayfayı ayrı pencereye al (ikinci ekran için)">
                         <t:Icon Data="{StaticResource I.Window}" Size="15"/>
                     </Button>
-                    <Button Style="{StaticResource Btn.Icon}" Width="34" Height="42" Click="OnFocusMode" ToolTip="Odak modu / tam ekran (F11)">
+                    <Button x:Name="FocusButton" Style="{StaticResource Btn.Icon}" Width="34" Height="42" Click="OnFocusMode" ToolTip="Odak modu / tam ekran (F11)">
                         <t:Icon Data="{StaticResource I.Focus}" Size="15"/>
                     </Button>
                     <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="6,0"/>
@@ -232,7 +232,7 @@
                     <TextBlock Text="RobotWin Studio" Style="{StaticResource Text.Caption}"/>
                 </StackPanel>
                 <!-- [problems] VS Code's counters: every area's errors and warnings, a mark when a check is out of date; a click lists them -->
-                <Button x:Name="ProblemsButton" DockPanel.Dock="Left" Style="{StaticResource Btn.Ghost}" Padding="6,0" Height="22" Margin="-6,0,10,0" Click="OnProblems">
+                <Button x:Name="ProblemsButton" DockPanel.Dock="Left" Style="{StaticResource Btn.Ghost}" Padding="6,0" Height="22" MinHeight="0" Margin="-6,0,10,0" Click="OnProblems">
                     <StackPanel Orientation="Horizontal">
                         <t:Icon Data="{StaticResource I.Error}" Size="12" Foreground="{DynamicResource B.Danger}" VerticalAlignment="Center"/>
                         <TextBlock x:Name="ProblemErrors" Text="0" Style="{StaticResource Text.Caption}" Margin="4,0,10,0" VerticalAlignment="Center"/>

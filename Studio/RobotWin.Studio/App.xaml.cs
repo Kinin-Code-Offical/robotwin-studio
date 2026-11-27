@@ -430,6 +430,17 @@ namespace RobotWin.Studio
                     File.AppendAllLines(contrastPath, lines.Distinct());
                 }
 
+                // [layout] --layout-report file: controls cut off by the window or a clipping panel, or lying over each other, at
+                // this window size (the display scale's: 150 % of 1920 × 1080 is 1280 × 720)
+                if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--layout-report").Skip(1).FirstOrDefault() is { } layoutPath)
+                {
+                    var lines = new System.Collections.Generic.List<string>();
+                    string size = $"{window.ActualWidth:0}x{window.ActualHeight:0}";
+                    if (window.Content is Visual content)
+                        lines.AddRange(Shell.LayoutAudit.Find(content).Select(f => Shell.LayoutAudit.Line(f, page + (fault != null ? ":" + fault : string.Empty), size)));
+                    File.AppendAllLines(layoutPath, lines.Distinct());
+                }
+
                 // [align] --align-report file: icons and labels out of line, toolbar rows of uneven centres, heights or icon sizes
                 if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--align-report").Skip(1).FirstOrDefault() is { } alignPath)
                 {

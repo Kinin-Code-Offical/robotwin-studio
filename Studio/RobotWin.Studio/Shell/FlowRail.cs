@@ -98,8 +98,15 @@ namespace RobotWin.Studio.Shell
             _line.Margin = new Thickness(0, 4, 0, 0);
             _line.LayoutUpdated += (_, _) => _trace.LayoutMaybeMoved();
             middle.Children.Add(_line);
-            SetRow(middle, 1);
-            Children.Add(middle);
+            // [layout] on a short window (a large display scale) the stages scroll instead of sliding under the tools
+            var scroll = new System.Windows.Controls.ScrollViewer
+            {
+                Content = middle, VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled, Focusable = false
+            };
+            scroll.ScrollChanged += (_, _) => _trace.LayoutMaybeMoved();
+            SetRow(scroll, 1);
+            Children.Add(scroll);
 
             // [rail] Three groups, in the order the work goes.
             AddGroup("ELEKTRONİK", "devre, kart, yazılım");

@@ -54,16 +54,21 @@ namespace RobotWin.Studio.Shell
         public static Border Divider(Orientation orientation)
         {
             var d = new Border { Margin = new Thickness(4) };
-            if (orientation == Orientation.Vertical) d.Height = 1;
+            if (orientation == Orientation.Vertical)
+            {
+                d.Height = 1;
+                d.Width = 24;   // in a wrapping column it has no width of its own to stretch to
+            }
             else d.Width = 1;
             d.SetResourceReference(Border.BackgroundProperty, "B.Border");
             return d;
         }
 
         /// <summary>A strip of the page's controls in order; a null stands for a divider.</summary>
-        public static StackPanel Strip(Orientation orientation, IEnumerable<FrameworkElement?> items)
+        public static Panel Strip(Orientation orientation, IEnumerable<FrameworkElement?> items)
         {
-            var p = new StackPanel { Orientation = orientation };
+            // [layout] a column wraps into a second one when the view is shorter than the strip (a large display scale)
+            Panel p = orientation == Orientation.Vertical ? new WrapPanel { Orientation = Orientation.Vertical } : new StackPanel { Orientation = orientation };
             foreach (var item in items) p.Children.Add(item == null ? Divider(orientation) : Take(item));
             return p;
         }

@@ -192,7 +192,10 @@ namespace RobotWin.Studio.Shell
                 e.Handled = true;
             };
 
-            var stack = new StackPanel { Orientation = row ? Orientation.Horizontal : Orientation.Vertical };
+            // [layout] a dock panel, not a stack: the content gets the height (or width) there is, so a long strip can wrap
+            // into a second column when the view is short (a large display scale)
+            var stack = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(handle, row ? System.Windows.Controls.Dock.Left : System.Windows.Controls.Dock.Top);
             stack.Children.Add(handle);
             if (Collapsed)
             {
@@ -204,6 +207,7 @@ namespace RobotWin.Studio.Shell
                 {
                     var label = new TextBlock { Text = Lang.T(Title), FontSize = 11.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(6, 0, 6, 4) };
                     label.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
+                    DockPanel.SetDock(label, System.Windows.Controls.Dock.Top);
                     stack.Children.Add(label);
                 }
 

@@ -191,6 +191,7 @@ namespace RobotWin.Studio
             StatusText.Text = W.Status;
 
             StateChanged += (_, _) => OnStateChanged();
+            SizeChanged += (_, _) => FitTitleBar();   // [layout] the title bar at large display scales
             SourceInitialized += (_, _) => ApplyWindowsCorners();
             ContentRendered += (_, _) => Dispatcher.BeginInvoke(new Action(OfferGuideOnFirstStart), System.Windows.Threading.DispatcherPriority.ApplicationIdle);   // [guide]
             _behavior = new WindowBehavior(this, MaxButton);
@@ -1744,6 +1745,25 @@ namespace RobotWin.Studio
             WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
         private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
+
+        /// <summary>
+        /// [layout] The title bar at large display scales (D2 "Erişilebilirlik ve DPI"; Shell/LayoutAudit.cs found the window
+        /// buttons pushed out at 200 %): under 1280 device-independent pixels the workspace button keeps its icon and the
+        /// split, detach and focus buttons step aside (the Pencere menu and their keys keep them); under 1100 the wordmark and
+        /// the new / open / save buttons do too (the Dosya menu, Ctrl+N / O / S).
+        /// </summary>
+        private void FitTitleBar()
+        {
+            double w = ActualWidth;
+            var narrow = w < 1280 ? Visibility.Collapsed : Visibility.Visible;
+            var narrower = w < 1100 ? Visibility.Collapsed : Visibility.Visible;
+            WorkspaceLabel.Visibility = narrow;
+            SplitButton.Visibility = narrow;
+            DetachButton.Visibility = narrow;
+            FocusButton.Visibility = narrow;
+            AppTitle.Visibility = narrower;
+            QuickFile.Visibility = narrower;
+        }
 
         private void OnStateChanged()
         {
