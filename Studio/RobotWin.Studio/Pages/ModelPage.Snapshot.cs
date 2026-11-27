@@ -752,7 +752,7 @@ namespace RobotWin.Studio.Pages
                     if (demo == "xray") _ed.Shading = ShadingMode.XRay;
                     if (demo == "wire") _ed.Shading = ShadingMode.Wireframe;
                     SetTool(ModelTool.Move);
-                    if (demo == "library") SideTabs.SelectedIndex = 1;
+                    if (demo == "library") _dock?.Reveal("library");
                     _ed.Notify(ModelChange.All);
                     _ed.Status("2WD şasi seçili · Özellikler panelinden ölçüleri değiştirin, G ile taşıyın");
                     break;

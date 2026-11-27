@@ -65,7 +65,7 @@ namespace RobotWin.Studio.Pages
                 UpdateTargetText();
                 if (fault == "esp32-libs-tab")
                 {
-                    BottomTabs.SelectedItem = _libTab;
+                    _dock?.Reveal("libs");
                     return;
                 }
 
@@ -113,7 +113,7 @@ namespace RobotWin.Studio.Pages
 
                 if (fault == "libraries")
                 {
-                    BottomTabs.SelectedItem = _libTab;
+                    _dock?.Reveal("libs");
                     _libSearch.Text = "servo";
                     return;
                 }

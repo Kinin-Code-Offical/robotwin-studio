@@ -31,10 +31,12 @@
         <Geometry x:Key="M.Edit">M4,20 L5,15 L15,5 L19,9 L9,19 Z M13,7 L17,11 M4,20 L9,19</Geometry>
     </UserControl.Resources>
 
-    <Grid>
+    <Grid x:Name="PageRoot">
         <Grid.RowDefinitions>
             <RowDefinition Height="44"/>
             <RowDefinition Height="*"/>
+            <RowDefinition x:Name="DockLineRow" Height="0"/>
+            <RowDefinition x:Name="DockRow" Height="0"/>
             <RowDefinition Height="28"/>
         </Grid.RowDefinitions>
 
@@ -106,17 +108,20 @@
         </Border>
 
         <!-- ================= Main ================= -->
-        <Grid Grid.Row="1">
+        <!-- [dock] the library on the left, the parts and properties on the right: panels that move, minimize and tear off (Shell/DockManager.cs) -->
+        <Grid x:Name="ContentGrid" Grid.Row="1">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="0"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition x:Name="SideLineColumn" Width="1"/>
-                <ColumnDefinition x:Name="SideColumn" Width="318" MinWidth="240"/>
+                <ColumnDefinition Width="1"/>
+                <ColumnDefinition Width="318"/>
             </Grid.ColumnDefinitions>
 
-            <Grid x:Name="ViewHost" Grid.Column="0"/>
+            <Grid x:Name="ViewHost" Grid.Column="2"/>
 
             <!-- [section] the section view's plane: axis, place along it, which side stays -->
-            <Border x:Name="SectionBar" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0" Visibility="Collapsed"
+            <Border x:Name="SectionBar" Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0" Visibility="Collapsed"
                     Background="{DynamicResource B.Raised}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="8" Padding="10,4,4,4">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Kesit" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
@@ -132,7 +137,7 @@
             </Border>
 
             <!-- [analysis] faces coloured by draft, curvature or symmetry, with the legend's areas -->
-            <Border x:Name="AnalysisBar" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,40" Visibility="Collapsed"
+            <Border x:Name="AnalysisBar" Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,40" Visibility="Collapsed"
                     Background="{DynamicResource B.Raised}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="8" Padding="10,4,4,6">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
@@ -159,7 +164,7 @@
             </Border>
 
             <!-- tool strip -->
-            <Border x:Name="ToolShelf" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,12,0,0" Background="{DynamicResource B.Raised}"
+            <Border x:Name="ToolShelf" Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,12,0,0" Background="{DynamicResource B.Raised}"
                     BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="8" Padding="3">
                 <StackPanel>
                     <RadioButton x:Name="ToolSelect" Style="{StaticResource Toggle.Tool}" GroupName="tool" IsChecked="True" Tag="Select" Click="OnTool" ToolTip="Seç: tıkla / kutu seçimi (W)"><t:Icon Data="{StaticResource I.Pointer}" Size="16"/></RadioButton>
@@ -171,44 +176,34 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Column="1" Background="{DynamicResource B.Border}"/>
 
-            <!-- right column: outliner + properties / library -->
-            <Grid x:Name="SidePane" Grid.Column="2" Background="{DynamicResource B.Base}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="230" MinHeight="90"/>
-                    <RowDefinition Height="1"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <DockPanel Grid.Row="0">
-                    <Grid DockPanel.Dock="Top" Margin="14,10,10,6">
-                        <TextBlock Text="Parçalar" Style="{StaticResource Text.Subtitle}" FontSize="12.5" VerticalAlignment="Center"
-                                   ToolTip="En üstteki her nesne ayrı bir parçadır. Altına bağlanan (Ctrl+P) nesneler onunla tek parça olur."/>
-                        <TextBlock x:Name="OutlinerCount" Style="{StaticResource Text.Caption}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                    </Grid>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="Outliner" Margin="6,0,6,8"/>
-                    </ScrollViewer>
-                </DockPanel>
-                <GridSplitter Grid.Row="1" Height="5" Margin="0,-2" HorizontalAlignment="Stretch" Background="Transparent" ResizeDirection="Rows"/>
-                <Border Grid.Row="1" Background="{DynamicResource B.Border}" IsHitTestVisible="False"/>
-                <TabControl x:Name="SideTabs" Grid.Row="2">
-                    <TabItem Header="Özellikler">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel x:Name="Props" Margin="14,10,14,16"/>
-                        </ScrollViewer>
-                    </TabItem>
-                    <TabItem Header="Kütüphane">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel x:Name="Library" Margin="14,10,14,16"/>
-                        </ScrollViewer>
-                    </TabItem>
-                </TabControl>
-            </Grid>
+            <!-- [dock] the panels' content: the dock manager frames them where they stand -->
+            <DockPanel x:Name="OutlinerPane" Grid.Column="4">
+                <Grid DockPanel.Dock="Top" Margin="14,6,10,4">
+                    <TextBlock Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Text="Ctrl+P: altına bağla"
+                               ToolTip="En üstteki her nesne ayrı bir parçadır. Altına bağlanan (Ctrl+P) nesneler onunla tek parça olur."/>
+                    <TextBlock x:Name="OutlinerCount" Style="{StaticResource Text.Caption}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                </Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="Outliner" Margin="6,0,6,8"/>
+                </ScrollViewer>
+            </DockPanel>
+            <ScrollViewer x:Name="PropsPane" Grid.Column="4" VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="Props" Margin="14,10,14,16"/>
+            </ScrollViewer>
+            <ScrollViewer x:Name="LibraryPane" Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="Library" Margin="14,10,14,16"/>
+            </ScrollViewer>
         </Grid>
 
+        <!-- [dock] the dock manager's bottom row (no bottom tabs here yet: it stays closed) -->
+        <DockPanel x:Name="BottomArea" Grid.Row="3" Visibility="Collapsed">
+            <StackPanel x:Name="DockTabs" DockPanel.Dock="Top" Orientation="Horizontal"/>
+            <Grid x:Name="DockHost"/>
+        </DockPanel>
+
         <!-- ================= Status bar ================= -->
-        <Border Grid.Row="2" Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,1,0,0">
+        <Border Grid.Row="4" Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,1,0,0">
             <Grid Margin="12,0">
                 <TextBlock x:Name="StatusText" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,420,0"/>
                 <TextBlock x:Name="HintText" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" HorizontalAlignment="Right" Foreground="{DynamicResource B.TextMuted}"/>

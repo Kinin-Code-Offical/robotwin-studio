@@ -28,7 +28,7 @@ namespace RobotWin.Studio.Pages
         private TextBox _libSearch = null!;
         private TextBlock _libStatus = null!;
         private StackPanel _libList = null!;
-        private TabItem _libTab = null!;
+        private FrameworkElement _libPane = null!;
         private bool _libBusy;
 
         private static string SketchbookLibraries => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Arduino", "libraries");
@@ -104,18 +104,13 @@ namespace RobotWin.Studio.Pages
             root.Children.Add(top);
             _libList = new StackPanel();
             root.Children.Add(new ScrollViewer { Content = _libList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
-            _libTab = new TabItem { Header = "Kütüphaneler", Content = root };
-            BottomTabs.Items.Add(_libTab);
-            BottomTabs.SelectionChanged += (_, e) =>
-            {
-                if (e.OriginalSource == BottomTabs && BottomTabs.SelectedItem == _libTab) ShowLibraries();
-            };
+            _libPane = root;   // [dock] a bottom tab of its own (Pages/CodePage.Layout.cs)
         }
 
         /// <summary>Opens the tab searching for a header (a "… bulunamadı" error).</summary>
         private void FindLibraryFor(string header)
         {
-            BottomTabs.SelectedItem = _libTab;
+            _dock?.Reveal("libs");
             _libSearch.Text = header;
             ShowLibraries();
         }

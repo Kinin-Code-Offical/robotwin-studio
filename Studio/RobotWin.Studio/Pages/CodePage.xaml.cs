@@ -66,6 +66,7 @@ namespace RobotWin.Studio.Pages
             PreviewKeyDown += OnKeys;
             WireDebugger();   // [debug] Pages/CodePage.Debug.cs
             InitCompletion();   // [code] Pages/CodePage.Libraries.cs
+            InitDock();   // [dock] Pages/CodePage.Layout.cs
             Libraries.LibraryManager.Changed += (_, _) => Dispatcher.BeginInvoke(new Action(LibrariesChanged));
         }
 
@@ -756,7 +757,7 @@ namespace RobotWin.Studio.Pages
             BuildButton.IsEnabled = UploadButton.IsEnabled = false;
             BuildStatus.Text = "Derleniyor…";
             BuildStatus.Foreground = (Brush)FindResource("B.Accent");
-            BottomTabs.SelectedIndex = 0;
+            _dock?.Reveal("build");
             BuildLog.Text = ArduinoCompiler.IsEsp32(fqbn) ? "ESP32 çizimi MSVC ile derleniyor (ilk derleme HAL'ı da kurar) …\n" : "arduino-cli compile --fqbn " + fqbn + " …\n";
             BuildResult result;
             try
@@ -899,7 +900,7 @@ namespace RobotWin.Studio.Pages
                 {
                     _serialShown = 0;
                     SerialView.Clear();
-                    BottomTabs.SelectedItem = SerialTab;
+                    _dock?.Reveal("serial");
                     W.Status = $"{target.Title}: kod yüklendi, simülasyon çalışıyor";
                 }
                 else

@@ -64,6 +64,8 @@ Bir çizim birden çok dosyadan oluşabilir: ana `.ino`, yanında `.h` / `.cpp` 
 5. **Karta yükle ve çalıştır** düğmesine veya **F5**'e basın. Klasördeki kod karta kopyalanır, derlenir ve simülasyon başlar. Kart dünyadaysa dünya çalışmaya başlar.
 6. **Seri monitör** sekmesinde `Serial.print` çıktısını görün. Alttaki kutuya yazıp **Gönder** ile karta veri yollayın.
 
+Gezgin ve alttaki sekmeler (Derleyici, Seri monitör, Değişkenler, Yazmaçlar, Zaman çizelgesi, Kütüphaneler) öbür sayfalardaki paneller gibidir: başlığından ya da sekmesinden sürüklenip öbür yana, alta ya da ayrı pencereye (ikinci ekrana da) alınır, şeride küçültülür ya da gizlenir; yerleşim saklanır ve çalışma alanlarına girer. Alt bölme açılışta kapalıdır; bir sekmeye tıklamak ya da derlemek onu açar.
+
 Araç çubuğundaki diğer düğmeler simülasyonu durdurur ve kartı resetler.
 
 Her derleme, kartın kodunda neyle derlendiğini projeye yazar: derleyici ve kart çekirdeğinin sürümü, örneğin `arduino-cli 1.6.0 · arduino:avr 1.8.8` (derleme durumunun üstüne gelince görünür). Proje başka bir bilgisayarda ya da güncellenmiş bir derleyiciyle derlenirse **Derleyici** sekmesi önce bunu söyler: aynı kod başka bir avr-gcc ile farklı bir ikili verebilir.

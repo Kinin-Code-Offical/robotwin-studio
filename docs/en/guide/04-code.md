@@ -64,6 +64,8 @@ A sketch can have several files: the main `.ino`, `.h` / `.cpp` files next to it
 5. Press **Upload to board and run** or **F5**. The folder's code is copied into the board, compiled, and the simulation starts. If the board is in a world, the world starts running.
 6. See the `Serial.print` output in the **Serial monitor** tab. Type in the box below and press **Send** to send data to the board.
 
+The explorer and the bottom tabs (Compiler, Serial monitor, Variables, Registers, Timeline, Libraries) are panels as on the other pages: drag one by its header or tab to the other side, the bottom or a window of its own (a second screen too), minimize it to a strip or hide it; the layout is kept and goes into the workspaces. The bottom pane starts closed; clicking a tab or building opens it.
+
 The other toolbar buttons stop the simulation and reset the board.
 
 Every build writes what it was made with into the board's code in the project: the compiler's and the board core's versions, e.g. `arduino-cli 1.6.0 · arduino:avr 1.8.8` (hover over the build status to see it). When the project is built on another computer or with an updated compiler, the **Compiler** tab says so first: the same code can give a different binary with another avr-gcc.

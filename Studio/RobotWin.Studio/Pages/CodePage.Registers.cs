@@ -153,6 +153,6 @@ namespace RobotWin.Studio.Pages
         }
 
         /// <summary>[registers] Brings the Yazmaçlar tab to the front.</summary>
-        internal void ShowRegistersTab() => BottomTabs.SelectedItem = RegistersTab;
+        internal void ShowRegistersTab() => _dock?.Reveal("regs");
     }
 }

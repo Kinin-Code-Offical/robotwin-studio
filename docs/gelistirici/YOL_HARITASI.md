@@ -260,7 +260,7 @@ Kullanıcı geri bildirimi: ikonlar, düğmeler ve yazılar tam hizada değil; a
     - Izgara, birim, gizli pinler.
   - Her eksik aracın arkasında gerçek işlevi olacak; yalnızca düğme eklenmeyecek.
 - [x] **Yüzen araç çubukları:** Dünya, Parça, Devre ve PCB'nin araç şeritleri tek bir kaplama altyapısında (`Shell/SceneOverlays.cs`, `Shell/PageOverlays.cs`): çizim alanının kenarında simgeli sütun, ≡ tutamağından kenara / köşeye yerleşme ya da yüzme, çift tıkla ayrı küçük pencereye alma ve yerine koyma, aynı kenarda yan yana durma, çizim araçları kendi şeridinde; yerleri sayfa sayfa saklanır (SolidWorks, Unity).
-- [ ] **Model, Kod, Montaj:** panel yöneticisine geçiş (taşınır, küçülür, ayrılır paneller) ve tam görünüm.
+- [x] **Model, Kod, Montaj:** panel yöneticisine geçiş (taşınır, küçülür, ayrılır paneller) ve tam görünüm. Parça: Kütüphane solda, Parçalar ve Özellikler sağda (N sağ yanı küçültür). Kod: gezgin solda, Derleyici, Seri monitör, Değişkenler, Yazmaçlar, Zaman çizelgesi ve Kütüphaneler alt sekme (açılışta kapalı). İkisi de Ctrl+Space tam görünümde ve çalışma alanlarında. Montaj Dünya sayfasının montaj kipidir, onun panellerini kullanır.
 - [ ] **Denetçi bölümleri:** Blender gibi katlanır, katlanma durumu saklanır.
 - [x] **Sorunlar paneli (D4):** durum çubuğunda hata / uyarı sayaçları ve eski denetim işareti; tıklayınca alan alan liste (devre ERC'si, PCB'nin son DRC'si, kodun son derlemesi), satır yerine gider, eski alan **Denetle** ile yeniden denetlenir (`MainWindow.Problems.cs`, `Shell/ProblemsHub.cs`). Montaj ve proje denetimi kaynakları sonra eklenecek.
 

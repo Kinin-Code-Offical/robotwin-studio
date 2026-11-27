@@ -33,6 +33,7 @@ namespace RobotWin.Studio.Pages
             InitializeComponent();
             _vp = new ModelViewport(_ed);
             ViewHost.Children.Add(_vp);
+            InitDock();
             InitToolStrip();
             _vp.ContextMenuRequested += p => ShowContextMenu();
             _vp.ViewChanged += () => { };
@@ -68,7 +69,7 @@ namespace RobotWin.Studio.Pages
             var items = Shell.PageOverlays.ItemsOf((Panel)ToolShelf.Child);
             ToolShelf.Visibility = Visibility.Collapsed;
             _toolsOverlay = new Shell.SceneOverlay("tools", "Araçlar", (System.Windows.Media.Geometry)FindResource("I.Pointer"), o => Shell.PageOverlays.Strip(o, items));
-            _overlays = Shell.PageOverlays.Attach((Panel)ToolShelf.Parent, "model", "tools:Left:40:40:Vertical:0:1:Left", new[] { _toolsOverlay }, column: 0);
+            _overlays = Shell.PageOverlays.Attach((Panel)ToolShelf.Parent, "model", "tools:Left:40:40:Vertical:0:1:Left", new[] { _toolsOverlay }, column: 2);
         }
 
         /// <summary>The editor behind the page (document, selection, undo).</summary>
@@ -478,7 +479,6 @@ namespace RobotWin.Studio.Pages
         private void AddPrimitive(PrimitiveKind kind)
         {
             _ed.AddPrimitive(kind, DropPoint());
-            SideTabs.SelectedIndex = 0;
         }
 
         private void AddPart(string id)
@@ -486,7 +486,6 @@ namespace RobotWin.Studio.Pages
             var sw = System.Diagnostics.Stopwatch.StartNew();
             var added = _ed.AddPart(id, DropPoint());
             if (added.Count > 0) _ed.Status($"{added[0].Name} eklendi ({sw.ElapsedMilliseconds} ms) · ölçüleri Özellikler panelinden değiştirin");
-            SideTabs.SelectedIndex = 0;
         }
 
         private void ShowShadingMenu()

@@ -52,9 +52,10 @@ namespace RobotWin.Studio.Pages
             {
                 // live values while the program runs (only while the tab is in view)
                 if (!IsVisible || DebugKey is not { } key || FirmwareDebugger.ProgramFor(key) is not { IsHalted: false }) return;
-                if (BottomTabs.SelectedItem == VariablesTab) ShowVariables();
-                else if (BottomTabs.SelectedItem == RegistersTab) ShowRegisters();
-                else if (BottomTabs.SelectedItem == TimelineTab) ShowTimeline();
+                if (_dock == null) return;
+                if (_dock.IsShowing("vars")) ShowVariables();
+                if (_dock.IsShowing("regs")) ShowRegisters();
+                if (_dock.IsShowing("timeline")) ShowTimeline();
             };
             _debugTimer.Start();
         }
@@ -94,7 +95,7 @@ namespace RobotWin.Studio.Pages
                     Editor.RevealLine(place.Line);
                 }
 
-                if (BottomTabs.SelectedItem != RegistersTab && BottomTabs.SelectedItem != TimelineTab) BottomTabs.SelectedItem = VariablesTab;
+                if (_dock != null && !_dock.IsShowing("regs") && !_dock.IsShowing("timeline")) _dock.Reveal("vars");
                 UpdateDebug();
                 string why = p.Debugger.Reason == DebugStopReason.Step ? "adım" : "kesme noktası";
                 W.Status = $"{p.Where} durdu ({why}): {StopText(p)} — devre ve dünya da bu anda duruyor.";

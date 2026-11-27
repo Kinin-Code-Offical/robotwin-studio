@@ -4,32 +4,32 @@ using RobotWin.Studio.Shell;
 namespace RobotWin.Studio.Pages
 {
     /// <summary>
-    /// [nt] Blender's N and T in the part editor: N slides the side panel (parts and properties) out of the way and back,
-    /// T hides the tool shelf; Ctrl+Space (the workspace) hides everything round the view.
+    /// [dock] The part editor's panels as the other pages': the library on the left, the parts and their properties on
+    /// the right; each moves to the other side or the bottom, minimizes to a strip, tears off into its own window or hides
+    /// (Shell/DockManager.cs), and the layout is kept. Blender's N minimizes the right side and brings it back, T hides the
+    /// tool strip, Ctrl+Space (the workspace) hides everything round the view.
     /// </summary>
     public partial class ModelPage
     {
-        private GridLength _sideWidth = new GridLength(318);
+        private DockManager? _dock;
+
+        /// <summary>[workspaces] The page's panels (a workspace saves and restores their layout).</summary>
+        public DockManager? Panels => _dock;
+
+        private void InitDock()
+        {
+            _dock = new DockManager("model", this, PageRoot, ContentGrid, 0, 4, DockTabs, DockHost, BottomArea, DockRow, DockLineRow);
+            _dock.Add(new DockItem("library", "Kütüphane", LibraryPane, DockPlace.Left));
+            _dock.Add(new DockItem("outliner", "Parçalar", OutlinerPane, DockPlace.Right));
+            _dock.Add(new DockItem("properties", "Özellikler", PropsPane, DockPlace.Right));
+            _dock.Start();
+        }
 
         private void ToggleSidePane()
         {
-            bool shown = SidePane.Visibility == Visibility.Visible;
-            if (shown)
-            {
-                _sideWidth = SideColumn.Width;
-                SideColumn.MinWidth = 0;
-                SideColumn.Width = new GridLength(0);
-                SideLineColumn.Width = new GridLength(0);
-                SidePane.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                SidePane.Visibility = Visibility.Visible;
-                SideColumn.Width = _sideWidth;
-                SideColumn.MinWidth = 240;
-                SideLineColumn.Width = new GridLength(1);
-            }
-
+            if (_dock == null) return;
+            bool shown = !_dock.IsMinimized(DockPlace.Right);
+            _dock.Minimize(DockPlace.Right, shown);
             _ed.Status(Lang.T(shown ? "Yan panel gizli (N)" : "Yan panel açık (N)"));
         }
     }

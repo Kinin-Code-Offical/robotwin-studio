@@ -5,12 +5,12 @@
              xmlns:ed="clr-namespace:RobotWin.Studio.Editor"
              xmlns:fw="clr-namespace:RobotWin.Studio.Firmware"
              Background="{DynamicResource B.Base}">
-    <Grid>
+    <Grid x:Name="PageRoot">
         <Grid.RowDefinitions>
             <RowDefinition Height="44"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="5"/>
-            <RowDefinition Height="230"/>
+            <RowDefinition Height="*" MinHeight="120"/>
+            <RowDefinition x:Name="DockLineRow" Height="1"/>
+            <RowDefinition x:Name="DockRow" Height="230" MinHeight="36"/>
             <RowDefinition Height="26"/>
         </Grid.RowDefinitions>
 
@@ -39,15 +39,17 @@
             </Grid>
         </Border>
 
-        <!-- Explorer | editor -->
-        <Grid Grid.Row="1">
+        <!-- [dock] explorer | editor | (right dock): the explorer and the bottom tabs move, minimize and tear off (Shell/DockManager.cs) -->
+        <Grid x:Name="ContentGrid" Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="270" MinWidth="170"/>
-                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="270"/>
+                <ColumnDefinition Width="0"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="0"/>
+                <ColumnDefinition Width="300"/>
             </Grid.ColumnDefinitions>
 
-            <DockPanel Background="{DynamicResource B.Base}">
+            <DockPanel x:Name="ExplorerPane" Background="{DynamicResource B.Base}">
                 <DockPanel DockPanel.Dock="Top" Margin="12,8,6,4">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Yeni dosya (.ino, .h, .cpp …)" Click="OnNewFile"><t:Icon Data="{StaticResource I.Plus}" Size="14"/></Button>
@@ -55,7 +57,6 @@
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Diskten klasör aç (Arduino çizim klasörü ya da herhangi bir kod klasörü)" Click="OnOpenFolder"><t:Icon Data="{StaticResource I.Import}" Size="14"/></Button>
                         <Button x:Name="MoreButton" Style="{StaticResource Btn.Icon}" ToolTip="İçe aktar, diske kaydet, zip, yeniden adlandır, sil" Click="OnMore"><t:Icon Data="{StaticResource I.More}" Size="14"/></Button>
                     </StackPanel>
-                    <TextBlock Text="KOD" Style="{StaticResource Text.Caption}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 </DockPanel>
                 <TreeView x:Name="Explorer" BorderThickness="0" Background="Transparent" Margin="4,0,0,6"
                           SelectedItemChanged="OnExplorerPick" MouseRightButtonUp="OnExplorerMenu" AllowDrop="True" Drop="OnExplorerDrop">
@@ -68,7 +69,6 @@
                     </TreeView.Resources>
                 </TreeView>
             </DockPanel>
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="{DynamicResource B.Border}" ResizeDirection="Columns"/>
 
             <DockPanel Grid.Column="2">
                 <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,0,1" Padding="12,5">
@@ -109,11 +109,20 @@
             </DockPanel>
         </Grid>
 
-        <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" Background="{DynamicResource B.Border}" ResizeDirection="Rows"/>
+        <GridSplitter x:Name="DockSplitter" Grid.Row="2" Height="7" Margin="0,-3" HorizontalAlignment="Stretch" Background="Transparent" ResizeDirection="Rows"
+                      ResizeBehavior="PreviousAndNext" Cursor="SizeNS" Panel.ZIndex="5" ToolTip="Sürükleyerek alt bölmeyi büyütün / küçültün"/>
+        <Border x:Name="DockLine" Grid.Row="2" Background="{DynamicResource B.Border}" IsHitTestVisible="False"/>
 
-        <TabControl x:Name="BottomTabs" Grid.Row="3">
-            <TabItem Header="Derleyici">
-                <Grid>
+        <DockPanel x:Name="BottomArea" Grid.Row="3">
+            <StackPanel x:Name="DockTabs" DockPanel.Dock="Top" Orientation="Horizontal" Margin="12,6,0,4">
+                <RadioButton x:Name="DockBuild" Style="{StaticResource Chip}" GroupName="codedock" Content="Derleyici" IsChecked="True"/>
+                <RadioButton x:Name="DockSerial" Style="{StaticResource Chip}" GroupName="codedock" Content="Seri monitör" Margin="4,0,0,0"/>
+                <RadioButton x:Name="DockVars" Style="{StaticResource Chip}" GroupName="codedock" Content="Değişkenler" Margin="4,0,0,0"/>
+                <RadioButton x:Name="DockRegs" Style="{StaticResource Chip}" GroupName="codedock" Content="Yazmaçlar" Margin="4,0,0,0"/>
+                <RadioButton x:Name="DockTimeline" Style="{StaticResource Chip}" GroupName="codedock" Content="Zaman çizelgesi" Margin="4,0,0,0"/>
+            </StackPanel>
+            <Grid x:Name="DockHost">
+                <Grid x:Name="BuildPane">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="1"/>
@@ -124,18 +133,14 @@
                     <TextBox x:Name="BuildLog" Grid.Column="2" IsReadOnly="True" FontFamily="{StaticResource F.Mono}" FontSize="12"
                              TextWrapping="NoWrap" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" BorderThickness="0" Margin="6"/>
                 </Grid>
-            </TabItem>
-            <TabItem x:Name="SerialTab" Header="Seri monitör">
-                <DockPanel Margin="10">
+                <DockPanel x:Name="SerialPane" Visibility="Collapsed" Margin="10">
                     <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
                         <Button DockPanel.Dock="Right" Content="Gönder" Margin="8,0,0,0" Click="OnSerialSend"/>
                         <TextBox x:Name="SerialInput" KeyDown="OnSerialKey" Tag="Karta gönder (Enter)"/>
                     </DockPanel>
                     <TextBox x:Name="SerialView" IsReadOnly="True" FontFamily="{StaticResource F.Mono}" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" BorderThickness="0"/>
                 </DockPanel>
-            </TabItem>
-            <TabItem x:Name="VariablesTab" Header="Değişkenler">
-                <DockPanel Margin="10,6,10,6">
+                <DockPanel x:Name="VariablesPane" Visibility="Collapsed" Margin="10,6,10,6">
                     <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="220"/>
@@ -172,9 +177,7 @@
                         </ItemsControl>
                     </ScrollViewer>
                 </DockPanel>
-            </TabItem>
-            <TabItem x:Name="RegistersTab" Header="Yazmaçlar">
-                <DockPanel Margin="10,6,10,6">
+                <DockPanel x:Name="RegistersPane" Visibility="Collapsed" Margin="10,6,10,6">
                     <TextBlock x:Name="RegistersNote" DockPanel.Dock="Bottom" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,0"/>
                     <ScrollViewer DockPanel.Dock="Left" Width="400" Margin="0,0,24,0" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
@@ -231,16 +234,14 @@
                         </ItemsControl>
                     </ScrollViewer>
                 </DockPanel>
-            </TabItem>
-            <TabItem x:Name="TimelineTab" Header="Zaman çizelgesi">
-                <DockPanel Margin="10,6,10,6">
+                <DockPanel x:Name="TimelinePane" Visibility="Collapsed" Margin="10,6,10,6">
                     <TextBlock x:Name="TimelineNote" DockPanel.Dock="Top" Style="{StaticResource Text.Caption}" TextTrimming="CharacterEllipsis" Margin="0,0,0,4"/>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <fw:TimelineView x:Name="Timeline" MinHeight="120"/>
                     </ScrollViewer>
                 </DockPanel>
-            </TabItem>
-        </TabControl>
+            </Grid>
+        </DockPanel>
 
         <Border Grid.Row="4" Background="{DynamicResource B.Canvas}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,1,0,0">
             <Grid Margin="12,0">

@@ -55,6 +55,8 @@ namespace RobotWin.Studio
             "schematic" => _schematic.Panels,
             "world" => _world.Panels,
             "pcb" => _pcb.Panels,
+            "model" => _model.Panels,
+            "code" => _code.Panels,
             _ => null
         };
 
@@ -65,6 +67,8 @@ namespace RobotWin.Studio
             if (_schematic.Panels is { } s) p.Layouts["schematic"] = s.Snapshot();
             if (_world.Panels is { } w) p.Layouts["world"] = w.Snapshot();
             if (_pcb.Panels is { } pc) p.Layouts["pcb"] = pc.Snapshot();
+            if (_model.Panels is { } md) p.Layouts["model"] = md.Snapshot();
+            if (_code.Panels is { } cd) p.Layouts["code"] = cd.Snapshot();
             return p;
         }
 
@@ -114,6 +118,8 @@ namespace RobotWin.Studio
             _schematic.Panels?.Reset();
             _world.Panels?.Reset();
             _pcb.Panels?.Reset();
+            _model.Panels?.Reset();
+            _code.Panels?.Reset();
             WorkspaceProfiles.Active = null;
             UpdateWorkspaceButton();
             W.Status = "Paneller varsayılan yerlerine döndü";

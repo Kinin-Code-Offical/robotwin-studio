@@ -132,7 +132,7 @@ namespace RobotWin.Studio.Pages
             _hardwareWork = new CancellationTokenSource();
             HardwareButton.IsEnabled = BuildButton.IsEnabled = UploadButton.IsEnabled = false;
             BuildStatus.Foreground = (Brush)FindResource("B.Accent");
-            BottomTabs.SelectedIndex = 0;
+            _dock?.Reveal("build");
             return _hardwareWork;
         }
 

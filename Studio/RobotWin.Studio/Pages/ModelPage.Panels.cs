@@ -63,7 +63,7 @@ namespace RobotWin.Studio.Pages
             {
                 Outliner.Children.Add(new TextBlock
                 {
-                    Text = "Henüz parça yok. Shift+A ile şekil ya da Kütüphane sekmesinden hazır parça ekleyin. Bir dosyada istediğiniz kadar parça olur: en üstteki her nesne ayrı bir parçadır, altına bağlanan (Ctrl+P) nesneler onunla tek parça olur. Bitince 'Montaja gönder'.",
+                    Text = "Henüz parça yok. Shift+A ile şekil ya da Kütüphane panelinden hazır parça ekleyin. Bir dosyada istediğiniz kadar parça olur: en üstteki her nesne ayrı bir parçadır, altına bağlanan (Ctrl+P) nesneler onunla tek parça olur. Bitince 'Montaja gönder'.",
                     Style = (Style)FindResource("Text.Caption"),
                     TextWrapping = TextWrapping.Wrap,
                     Margin = new Thickness(8, 4, 8, 0)
@@ -1211,7 +1211,7 @@ namespace RobotWin.Studio.Pages
             Library.Children.Add(new TextBlock { Text = "Robot parçaları", FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = Res("B.Text"), Margin = new Thickness(0, 14, 0, 4) });
             Library.Children.Add(new TextBlock
             {
-                Text = "Parametrik: ekledikten sonra ölçülerini Özellikler sekmesinden değiştirin. Tab ile düzenlenebilir ağa dönüşür.",
+                Text = "Parametrik: ekledikten sonra ölçülerini Özellikler panelinden değiştirin. Tab ile düzenlenebilir ağa dönüşür.",
                 Style = (Style)FindResource("Text.Caption"),
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 0, 8)
@@ -1228,7 +1228,7 @@ namespace RobotWin.Studio.Pages
                 var text = new StackPanel();
                 text.Children.Add(new TextBlock { Text = id == "enclosure" ? "Muhafaza kutusu + kapak" : t.Name, FontSize = 12.5, Foreground = Res("B.Text") });
                 text.Children.Add(new TextBlock { Text = t.Description, FontSize = 12, Foreground = Res("B.TextMuted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
-                text.Children.Add(new TextBlock { Text = $"{t.Material} · {t.Params.Count} parametre", FontSize = 12, Foreground = Res("B.TextDisabled"), Margin = new Thickness(0, 4, 0, 0) });
+                text.Children.Add(new TextBlock { Text = $"{t.Material} · {t.Params.Count} parametre", FontSize = 12, Foreground = Res("B.TextMuted"), Margin = new Thickness(0, 4, 0, 0) });
                 Grid.SetColumn(text, 1);
                 g.Children.Add(text);
                 card.Child = g;

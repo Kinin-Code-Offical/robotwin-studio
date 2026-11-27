@@ -39,7 +39,7 @@ namespace RobotWin.Studio.Pages
         /// <summary>[timeline] Brings the Zaman çizelgesi tab to the front (for checks and snapshots).</summary>
         internal void ShowTimelineTab()
         {
-            BottomTabs.SelectedItem = TimelineTab;
+            _dock?.Reveal("timeline");
             ShowTimeline();
         }
     }
