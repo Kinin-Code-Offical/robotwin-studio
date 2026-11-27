@@ -11,7 +11,7 @@ namespace RobotWin.Studio
 {
     /// <summary>
     /// [problems] VS Code's Problems panel for the whole project: the status bar counts errors and warnings of every
-    /// area (circuit ERC, PCB DRC, the last build) and says when a check is out of date; a click opens the list by area,
+    /// area (circuit ERC, PCB DRC, the last build, the Montaj, the project check) and says when a check is out of date; a click opens the list by area,
     /// a row goes to the place in its editor, an out-of-date area offers to run its check.
     /// </summary>
     public partial class MainWindow
@@ -44,9 +44,16 @@ namespace RobotWin.Studio
             ProblemsHub.Register(ProblemsHub.Circuit, () => On("schematic", _schematic.CircuitProblems));
             ProblemsHub.Register(ProblemsHub.Pcb, () => On("pcb", _pcb.BoardProblems));
             ProblemsHub.Register(ProblemsHub.Code, () => On("code", _code.CodeProblems));
+            ProblemsHub.Register(ProblemsHub.Assembly, () => CheckArea(montaj: true));   // [problems] the project check's two areas (MainWindow.Check.cs)
+            ProblemsHub.Register(ProblemsHub.Project, () => CheckArea(montaj: false));
             ProblemsHub.Changed += ScheduleProblems;
-            W.DocumentChanged += (_, _) => ScheduleProblems();
+            W.DocumentChanged += (_, _) =>
+            {
+                if (ReferenceEquals(_checkedDoc, W.ActiveDocument)) _checkStale = true;   // the check's result is from before this change
+                ScheduleProblems();
+            };
             W.DocumentReplaced += (_, _) => ScheduleProblems();
+            W.ActiveDocumentChanged += (_, _) => ScheduleProblems();   // another tab: its own areas (the check's result belongs to one document)
             _problemsTimer.Tick += (_, _) =>
             {
                 _problemsTimer.Stop();
@@ -129,6 +136,9 @@ namespace RobotWin.Studio
                 return;
             }
 
+            // [problems] each area's state at the top (Devre tamam, PCB 2 uyarı …): a click goes to its list
+            var states = new WrapPanel { Margin = new Thickness(0, 0, 0, 6) };
+            _problemsList.Children.Add(states);
             foreach (var (area, report) in reports)
             {
                 var title = new DockPanel { Margin = new Thickness(0, 10, 0, 4) };
@@ -140,35 +150,65 @@ namespace RobotWin.Studio
                     title.Children.Add(run);
                 }
 
+                string brush = report.Errors > 0 ? "B.Danger" : report.Warnings > 0 ? "B.Warning" : report.NotChecked != null ? "B.TextSecondary" : "B.Success";
                 var summary = new TextBlock { Text = Lang.T(ProblemsHub.Summary(area, report)), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
-                summary.SetResourceReference(TextBlock.ForegroundProperty, report.Errors > 0 ? "B.Danger" : report.Warnings > 0 ? "B.Warning" : report.NotChecked != null ? "B.TextSecondary" : "B.Success");
+                summary.SetResourceReference(TextBlock.ForegroundProperty, brush);
                 title.Children.Add(summary);
                 _problemsList.Children.Add(title);
+
+                var chipText = new TextBlock { Text = Lang.T(ProblemsHub.Summary(area, report)), FontSize = 12 };
+                chipText.SetResourceReference(TextBlock.ForegroundProperty, brush);
+                var chip = new Button { Content = chipText, Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(0, 0, 6, 6), ToolTip = Lang.T("Bu alanın listesine git") };
+                chip.SetResourceReference(StyleProperty, "Btn.Ghost");
+                var target = title;
+                chip.Click += (_, _) => target.BringIntoView(new Rect(0, 0, 1, 400));
+                states.Children.Add(chip);
+
                 if (report.NotChecked != null)
                     _problemsList.Children.Add(new TextBlock { Text = Lang.T(report.NotChecked), Style = (Style)FindResource("Text.Caption"), Margin = new Thickness(0, 0, 0, 4) });
 
-                foreach (var p in report.Problems.OrderBy(p => p.Level))
+                // errors and warnings in full; what is only worth knowing folds under one line (it opens with a click)
+                foreach (var p in report.Problems.Where(p => p.Level is ProblemLevel.Error or ProblemLevel.Warning).OrderBy(p => p.Level)) _problemsList.Children.Add(ProblemRow(p));
+                var notes = report.Problems.Where(p => p.Level is ProblemLevel.Info or ProblemLevel.Unverified).ToList();
+                if (notes.Count == 0) continue;
+                var fold = new StackPanel { Visibility = Visibility.Collapsed };
+                foreach (var p in notes) fold.Children.Add(ProblemRow(p));
+                var label = new TextBlock { Text = "▸ " + Lang.T($"{notes.Count} bilgi"), FontSize = 12 };
+                label.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
+                var toggle = new Button { Content = label, HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(6, 2, 6, 2), Margin = new Thickness(0, 0, 0, 2), ToolTip = Lang.T("Bilgi düzeyindekileri göster / gizle") };
+                toggle.SetResourceReference(StyleProperty, "Btn.Ghost");
+                toggle.Click += (_, _) =>
                 {
-                    var row = new Grid();
-                    row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) });
-                    row.ColumnDefinitions.Add(new ColumnDefinition());
-                    var dot = new System.Windows.Shapes.Ellipse { Width = 7, Height = 7, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 5, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
-                    dot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, p.Level switch { ProblemLevel.Error => "B.Danger", ProblemLevel.Warning => "B.Warning", _ => "B.TextMuted" });
-                    row.Children.Add(dot);
-                    var text = new StackPanel();
-                    text.Children.Add(new TextBlock { Text = Lang.T(p.Rule), FontSize = 12 });
-                    var msg = new TextBlock { Text = Lang.T(p.Message), FontSize = 12, TextWrapping = TextWrapping.Wrap };
-                    msg.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
-                    text.Children.Add(msg);
-                    Grid.SetColumn(text, 1);
-                    row.Children.Add(text);
-                    var b = new Button { Content = row, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(6, 4, 6, 4), Margin = new Thickness(0, 0, 0, 2), IsEnabled = p.Go != null };
-                    b.SetResourceReference(StyleProperty, "Btn.Ghost");
-                    var go = p.Go;
-                    b.Click += (_, _) => go?.Invoke();
-                    _problemsList.Children.Add(b);
-                }
+                    bool open = fold.Visibility != Visibility.Visible;
+                    fold.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+                    label.Text = (open ? "▾ " : "▸ ") + Lang.T($"{notes.Count} bilgi");
+                };
+                _problemsList.Children.Add(toggle);
+                _problemsList.Children.Add(fold);
             }
+        }
+
+        /// <summary>One problem: its level's dot, the rule and the message; a click goes to its place.</summary>
+        private Button ProblemRow(Problem p)
+        {
+            var row = new Grid();
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) });
+            row.ColumnDefinitions.Add(new ColumnDefinition());
+            var dot = new System.Windows.Shapes.Ellipse { Width = 7, Height = 7, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 5, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
+            dot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, p.Level switch { ProblemLevel.Error => "B.Danger", ProblemLevel.Warning => "B.Warning", _ => "B.TextMuted" });
+            row.Children.Add(dot);
+            var text = new StackPanel();
+            text.Children.Add(new TextBlock { Text = Lang.T(p.Rule), FontSize = 12 });
+            var msg = new TextBlock { Text = Lang.T(p.Message), FontSize = 12, TextWrapping = TextWrapping.Wrap };
+            msg.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
+            text.Children.Add(msg);
+            Grid.SetColumn(text, 1);
+            row.Children.Add(text);
+            var b = new Button { Content = row, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(6, 4, 6, 4), Margin = new Thickness(0, 0, 0, 2), IsEnabled = p.Go != null };
+            b.SetResourceReference(StyleProperty, "Btn.Ghost");
+            var go = p.Go;
+            b.Click += (_, _) => go?.Invoke();
+            return b;
         }
     }
 }

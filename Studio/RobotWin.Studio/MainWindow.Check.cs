@@ -24,7 +24,33 @@ namespace RobotWin.Studio
         private DispatcherTimer? _noticeTimer;
 
         /// <summary>Checks the active project or world: the window at once (<paramref name="quiet"/> false), or a notice when something is missing.</summary>
-        public async void CheckProject(bool quiet)
+        public async void CheckProject(bool quiet) => await CheckProjectAsync(quiet);
+
+        // [problems] the project check's last result, for the Problems panel's Proje and Montaj areas
+        private List<ProjectIssue>? _checkIssues;
+        private OpenDocument? _checkedDoc;
+        private bool _checkStale;
+        private string _checkWhat = string.Empty;
+        private Func<Task<List<ProjectIssue>>>? _checkRun;
+
+        private Func<Task<List<ProjectIssue>>> Remembered(OpenDocument doc, string what, Func<Task<List<ProjectIssue>>> check)
+        {
+            Func<Task<List<ProjectIssue>>> run = null!;
+            run = async () =>
+            {
+                var issues = await check();
+                _checkIssues = issues;
+                _checkedDoc = doc;
+                _checkStale = false;
+                _checkWhat = what;
+                _checkRun = run;
+                ProblemsHub.Notify();
+                return issues;
+            };
+            return run;
+        }
+
+        private async Task CheckProjectAsync(bool quiet)
         {
             var doc = W.ActiveDocument;
             string what;
@@ -51,6 +77,7 @@ namespace RobotWin.Studio
                 };
             }
 
+            check = Remembered(doc, what, check);   // [problems] every run of it (here, or again from its window) feeds the Problems panel
             if (!quiet)
             {
                 ShowCheckWindow(what, check, null);
@@ -76,6 +103,58 @@ namespace RobotWin.Studio
             if (missing > 0) lines.Add($"{what}: bu bilgisayarda {missing} eksik var ({Areas(lacks)}).");
             if (behind > 0) lines.Add(missing > 0 ? OutOfStep(behind) : $"{what}: şema, PCB ve montaj arasında {behind} tutarsızlık var.");
             ShowNotice(string.Join("\n", lines), "Göster", () => ShowCheckWindow(what, check, issues));   // a line each: translated one by one
+        }
+
+        /// <summary>
+        /// [problems] The project check as two areas of the Problems panel: Proje (what this computer lacks: compilers,
+        /// libraries, parts; the PCB behind the schematic) and Montaj (a Montaj behind the projects it follows). An area
+        /// says when the check has not run for the open document, or ran before its last change; a row opens the check's
+        /// window with its fixes.
+        /// </summary>
+        private AreaReport? CheckArea(bool montaj)
+        {
+            var doc = W.ActiveDocument;
+            if (montaj && !HasMontaj(doc)) return null;
+            var r = new AreaReport { Check = () => CheckProject(quiet: true) };
+            if (_checkIssues == null || !ReferenceEquals(_checkedDoc, doc))
+            {
+                r.NotChecked = "Proje denetimi bu belge için henüz çalışmadı";
+                return r;
+            }
+
+            if (_checkStale) r.NotChecked = "Son değişiklikten önce denetlendi";
+            var issues = _checkIssues;
+            string what = _checkWhat;
+            var run = _checkRun;
+            foreach (var issue in issues.Where(i => IsMontajIssue(i) == montaj))
+            {
+                var level = issue.Level switch { IssueLevel.Error => ProblemLevel.Error, IssueLevel.Warning => ProblemLevel.Warning, _ => ProblemLevel.Info };
+                r.Problems.Add(new Problem(montaj ? ProblemsHub.Assembly : ProblemsHub.Project, level, issue.Area, issue.Subject + ": " + issue.Text,
+                    run == null ? null : () => ShowCheckWindow(what, run, issues)));
+            }
+
+            return r;
+        }
+
+        private static bool IsMontajIssue(ProjectIssue i) => i.Fix == IssueFix.SyncMontaj || i.Subject.StartsWith("Montaj", StringComparison.Ordinal);
+
+        private bool HasMontaj(OpenDocument doc)
+        {
+            try
+            {
+                return doc.Kind == DocumentKind.World ? doc.World?.AssemblySources.Count > 0 : W.MontajOf(doc) != null || doc.Package.Montaj != null;
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is NullReferenceException)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>[problems] --snapshot --fault problems-check: a project from another computer, checked, and the Problems panel.</summary>
+        private async void SnapshotProblemsAfterCheck()
+        {
+            await CheckProjectAsync(quiet: true);
+            SnapshotProblems();
         }
 
         /// <summary>[integrity] How many things are out of step between the schematic, the PCB and the Montaj.</summary>

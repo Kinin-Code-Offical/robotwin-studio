@@ -934,6 +934,12 @@ namespace RobotWin.Studio
                 CheckProject(quiet: false);
             }
 
+            if (fault == "problems-check")
+            {
+                LoadCheckDemo();   // [problems] the project check's findings in the Problems panel
+                SnapshotProblemsAfterCheck();
+            }
+
             if (fault == "check-montaj")
             {
                 LoadMontajCheckDemo();   // [integrity] the check's window on a project its Montaj is behind

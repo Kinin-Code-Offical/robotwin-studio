@@ -296,7 +296,7 @@ Kullanıcı geri bildirimi: ikonlar, düğmeler ve yazılar tam hizada değil; a
 
 ### D4. Birleşik mühendislik deneyimi (P1)
 
-- [ ] **Proje sağlık merkezi (Sorunlar paneli):** bütün denetimler (ERC, DRC, DFM, derleme, proje denetimi, montaj, model sınırları) tek panelde; seviye: hata, uyarı, bilgi, doğrulanmamış; alan başına durum (Devre tamam, PCB 2 uyarı …); sorun seçilince editörü açar, nesneyi seçer, nedeni açıklar, varsa düzeltmeyi önerir, düzelince yeniden denetler.
+- [~] **Proje sağlık merkezi (Sorunlar paneli):** yapılan: Devre (ERC), PCB (DRC), Kod (derleme), Montaj (projesinin gerisinde kalan montaj) ve Proje denetimi (derleyici, kütüphane, parça, şemanın gerisinde kalan PCB) tek pencerede; hata, uyarı, bilgi (katlı) ve eski denetim; üstte alan başına durum; satır editörü açıp nesneyi seçer, Proje / Montaj satırı düzeltmeleriyle denetim penceresini açar; düzenleme denetimi eski sayar. Kalan: DFM ve model sınırları alanları, satırda nedenin açıklaması ve önerilen düzeltme düğmesi. İstek: bütün denetimler (ERC, DRC, DFM, derleme, proje denetimi, montaj, model sınırları) tek panelde; seviye: hata, uyarı, bilgi, doğrulanmamış; alan başına durum (Devre tamam, PCB 2 uyarı …); sorun seçilince editörü açar, nesneyi seçer, nedeni açıklar, varsa düzeltmeyi önerir, düzelince yeniden denetler.
 - [ ] **Her yöne CrossProbe:** kalıcı parça kimliği üzerinden ortak seçim: şema ↔ PCB ↔ 3B kart / dünya ↔ firmware'deki pin ↔ simülasyon değerleri; PCB'de seçince şemada da.
 - [ ] **Birleşik zaman çizelgesi (seviye 1):** firmware olayları, kesmeler, GPIO, devre ölçümleri, servo açıları, konum, çarpışmalar, PLC durumları, sensörler tek zaman ekseninde, kayıttan. Seviye 2 (tutarlı anlık görüntülerle geri sarma, deterministik yeniden yürütme): P2.
 
