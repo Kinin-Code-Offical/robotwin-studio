@@ -262,7 +262,10 @@ namespace RobotWin.Studio.World
         /// <summary>A log line from wherever the run is advancing: on the simulation thread it waits for the next frame.</summary>
         private void AddLog(SimLogEntry entry)
         {
-            if (SimThread.OnSimThread) _logFromThread.Add(entry);
+            if (SimThread.OnSimThread || System.Threading.Tasks.Task.CurrentId != null)
+            {
+                lock (_boardOutput) _logFromThread.Add(entry);   // [bigscene] a board on a worker thread too
+            }
             else Log.Add(entry);
         }
 
@@ -350,6 +353,12 @@ namespace RobotWin.Studio.World
             NetworkNotices();   // [opcua-sec]
             double done = Advance(wallDt * Speed, budget, Shell.UiHeadroom.SimulationBudget(0.022));   // room for the rest of the UI
             _realtime = 0.85 * _realtime + 0.15 * (done / wallDt);
+            if (_logFromThread.Count > 0)
+            {
+                // [bigscene] what boards running side by side logged in this frame
+                foreach (var entry in _logFromThread) Log.Add(entry);
+                _logFromThread.Clear();
+            }
             FrameEnd();
         }
 
@@ -450,13 +459,23 @@ namespace RobotWin.Studio.World
                     // instant (the circuit, the mechanics and the other boards go exactly as far as it did).
                     FirmwareCoSimulation? halted = null;
                     long t0 = Stopwatch.GetTimestamp();
-                    for (int i = 0; i < _avr.Count; i++)
+                    if (BoardsInParallel())
                     {
-                        double ran = _avr[i].Advance(dt, Simulator.Time);
-                        if (_avr[i].Halted && (halted == null || ran < dt))
+                        // [bigscene] Each Uno runs its own chip on its own pins and only reads the circuit, so within one slice
+                        // they are independent: spread over the cores (no breakpoints here, so none stops inside the slice).
+                        double slice = dt, at = Simulator.Time;
+                        System.Threading.Tasks.Parallel.For(0, _avr.Count, BoardThreads, i => _avr[i].Advance(slice, at));
+                    }
+                    else
+                    {
+                        for (int i = 0; i < _avr.Count; i++)
                         {
-                            halted ??= _avr[i];
-                            dt = Math.Min(dt, ran);
+                            double ran = _avr[i].Advance(dt, Simulator.Time);
+                            if (_avr[i].Halted && (halted == null || ran < dt))
+                            {
+                                halted ??= _avr[i];
+                                dt = Math.Min(dt, ran);
+                            }
                         }
                     }
 
@@ -755,7 +774,33 @@ namespace RobotWin.Studio.World
 
         private string _serialSource = string.Empty;
 
+        /// <summary>[bigscene] From how many Unos their slices run in parallel (below it, the hand-over costs more than it saves).</summary>
+        public const int ParallelBoardsFrom = 4;
+
+        private static readonly System.Threading.Tasks.ParallelOptions BoardThreads = new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) };
+
+        /// <summary>The serial monitor and the log, written by boards running side by side.</summary>
+        private readonly object _boardOutput = new object();
+
+        /// <summary>
+        /// [bigscene] Whether this slice's Unos may run side by side: enough of them, none stopped, and no breakpoint set in
+        /// any (a program that stops at one must stop the world at that instant, which only the one-by-one loop can do).
+        /// </summary>
+        private bool BoardsInParallel()
+        {
+            if (_avr.Count < ParallelBoardsFrom || Environment.ProcessorCount < 2) return false;
+            foreach (var b in _avr) if (b.Halted) return false;
+            foreach (var p in Firmware.FirmwareDebugger.Running)
+                if (Firmware.FirmwareDebugger.CountOf(p.Key) > 0) return false;
+            return true;
+        }
+
         private void AppendSerial(string source, string text)
+        {
+            lock (_boardOutput) AppendSerialCore(source, text);
+        }
+
+        private void AppendSerialCore(string source, string text)
         {
             if (source != _serialSource)
             {

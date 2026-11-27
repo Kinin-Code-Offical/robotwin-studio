@@ -38,6 +38,17 @@ namespace RobotWin.Studio.Pages
         /// <summary>[perf] Where the last press of Run went (circuit, operating point, firmware, physics, cables, sensors).</summary>
         public string StartProfile => _session.LastStartProfile;
 
+        /// <summary>[bigscene] The world's solvers since the run began: milliseconds per simulated second and share (for --bench).</summary>
+        public string SolverProfile()
+        {
+            var costs = new System.Collections.Generic.List<(string Name, double Seconds)>();
+            ((Shell.ISolverCosts)_session).Costs(costs);
+            double sim = ((Shell.ISolverCosts)_session).SimulatedSeconds, total = costs.Sum(c => c.Seconds);
+            if (sim <= 0 || total <= 0) return "—";
+            return string.Join(" · ", costs.Where(c => c.Seconds > 0).OrderByDescending(c => c.Seconds)
+                .Select(c => string.Format(CultureInfo.InvariantCulture, "{0} {1:0} ms/s ({2:0}%)", c.Name, c.Seconds * 1000 / sim, 100 * c.Seconds / total)));
+        }
+
         /// <summary>[perf] Simulated time of the run (for --bench).</summary>
         public double SimTime
         {

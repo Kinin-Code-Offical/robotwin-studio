@@ -611,6 +611,7 @@ namespace RobotWin.Studio
                         string where = Shell.AppSettings.Current.SimulationThread ? "ayrı iş parçacığı" : "arayüz karelerinde";
                         log.AppendLine($"{templates[index].Id,-14} çalışırken {Perf.EndRecording()}");
                         log.AppendLine($"{string.Empty,-14} simülasyon ×{pace.ToString("0.00", CultureInfo.InvariantCulture)} gerçek zaman ({where})");
+                        log.AppendLine($"{string.Empty,-14} çözücüler  {window.WorldSolverProfile}");   // [bigscene] which one holds it back
                         log.AppendLine($"{string.Empty,-14} başlatma   {window.WorldStartProfile}");   // [perf] where pressing Run went
                         Write($"{templates[index].Id,-14} durduruluyor…");
                         window.StopWorldForBench();

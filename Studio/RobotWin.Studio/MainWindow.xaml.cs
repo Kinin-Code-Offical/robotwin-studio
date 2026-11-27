@@ -117,6 +117,9 @@ namespace RobotWin.Studio
         /// <summary>[perf] Where the world's last start went (for --bench).</summary>
         public string WorldStartProfile => _world.StartProfile;
 
+        /// <summary>[bigscene] Where the world's run went, by solver (for --bench).</summary>
+        public string WorldSolverProfile => _world.SolverProfile();
+
         public void StopWorldForBench() => _world.StopSimulation();
 
         /// <summary>[perf] The running world's simulated time (for --bench: how close to real time it ran).</summary>
