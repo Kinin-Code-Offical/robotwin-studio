@@ -33,6 +33,18 @@ namespace RobotTwin.CoreSim.Pcb
         /// <summary>Minimum distance between the edges of two drilled holes.</summary>
         public double MinHoleToHole { get; set; } = 0.25;
 
+        /// <summary>[fab-rules] A via's ring, when fabs allow a narrower one than a pad's (nothing is soldered to it); 0: <see cref="MinAnnularRing"/>.</summary>
+        public double MinViaAnnularRing { get; set; }
+
+        /// <summary>[fab-rules] Two vias' holes, when closer than two pads' is allowed; 0: <see cref="MinHoleToHole"/>.</summary>
+        public double MinViaHoleToHole { get; set; }
+
+        [JsonIgnore]
+        public double ViaRing => MinViaAnnularRing > 0 ? MinViaAnnularRing : MinAnnularRing;
+
+        [JsonIgnore]
+        public double ViaHoleToHole => MinViaHoleToHole > 0 ? MinViaHoleToHole : MinHoleToHole;
+
         /// <summary>Copper clearance to a non-plated hole (mounting hole).</summary>
         public double HoleClearance { get; set; } = 0.25;
 
@@ -664,6 +676,9 @@ namespace RobotTwin.CoreSim.Pcb
 
         public DesignRules Rules { get; set; } = new DesignRules();
         public BoardStackup Stackup { get; set; } = new BoardStackup();
+
+        /// <summary>[fab-rules] The fab the board is made at ("jlcpcb", "pcbway", "oshpark"); empty: none chosen. See <see cref="FabRules"/>.</summary>
+        public string Fab { get; set; } = string.Empty;
         public List<BoardComponent> Components { get; set; } = new List<BoardComponent>();
         public List<Track> Tracks { get; set; } = new List<Track>();
         public List<Via> Vias { get; set; } = new List<Via>();

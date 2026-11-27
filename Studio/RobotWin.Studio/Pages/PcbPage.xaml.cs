@@ -1127,6 +1127,15 @@ namespace RobotWin.Studio.Pages
                     if (ClassesPanel.Parent is ScrollViewer sv) Dispatcher.BeginInvoke(new Action(sv.ScrollToEnd), System.Windows.Threading.DispatcherPriority.Loaded);
                     break;
                 }
+                case "impedance":   // [impedance] a 50 Ω class off its target and a 90 Ω pair at a gap that misses it
+                {
+                    if (board.NetClasses.All(c => c.Name != "RF")) board.NetClasses.Insert(1, new NetClass { Name = "RF", Clearance = 0.2, TrackWidth = 0.3, Impedance = 50 });
+                    var nets = NetLengths.Measure(board).OrderByDescending(kv => kv.Value).Select(kv => kv.Key).ToList();
+                    if (nets.Count >= 2) board.DiffPairs.Add(new DiffPair { Positive = nets[0], Negative = nets[1], Gap = 0.3, Impedance = 90 });
+                    UpdatePanel();
+                    ShowPanel(2);
+                    break;
+                }
                 case "classes":
                     if (board.NetClasses.All(c => c.Name != "Sinyal-HV")) board.NetClasses.Add(new NetClass { Name = "Sinyal-HV", Clearance = 0.5, TrackWidth = 0.5, ViaDiameter = 1.0, ViaDrill = 0.5 });
                     UpdatePanel();
@@ -2062,7 +2071,7 @@ namespace RobotWin.Studio.Pages
                 case Track t:
                 {
                     host.Children.Add(new TextBlock { Text = $"Yol · {t.Net}", Style = S("Text.Subtitle") });
-                    host.Children.Add(Caption($"{PcbLayers.DisplayName(t.Layer)} · {Canvas.Length(t.Length)} · sınıf {board.ClassNameFor(t.Net)} · {board.CurrentCapacity(t.Width, t.Layer):0.0} A", 2));
+                    host.Children.Add(Caption($"{PcbLayers.DisplayName(t.Layer)} · {Canvas.Length(t.Length)} · sınıf {board.ClassNameFor(t.Net)} · {board.CurrentCapacity(t.Width, t.Layer):0.0} A · {Impedance.OfTrack(board, t.Layer, t.Width).Z0:0} Ω", 2));
                     host.Children.Add(Row("Genişlik (mm)", Number(t.Width, v => Edit($"{t.Net} yol genişliği {Fmt(v)} mm", () => t.Width = v), 0.05, 10)));
                     host.Children.Add(Row("Katman", Combo(board.CopperLayers(), t.Layer, l => Edit($"{t.Net} yolu {PcbLayers.DisplayName(l)} katmanına", () => t.Layer = l), PcbLayers.DisplayName), 130));
                     host.Children.Add(Buttons(
@@ -2364,6 +2373,7 @@ namespace RobotWin.Studio.Pages
                 body.Children.Add(Row("Boşluk (mm)", Number(c.Clearance, v => Edit($"{c.Name} boşluğu {Fmt(v)} mm", () => c.Clearance = v), 0.05, 10), 80));
                 body.Children.Add(Row("Yol genişliği (mm)", Number(c.TrackWidth, v => Edit($"{c.Name} yol genişliği {Fmt(v)} mm", () => c.TrackWidth = v), 0.05, 10), 80));
                 body.Children.Add(Row("Via Ø / delik (mm)", ViaEditor(board, c), 110));
+                ClassImpedance(board, c, body);   // [impedance] Pages/PcbPage.Impedance.cs
                 card.Child = body;
                 ClassesPanel.Children.Add(card);
             }
@@ -2435,6 +2445,7 @@ namespace RobotWin.Studio.Pages
                 });
                 body.Children.Add(Row("Aralık (mm)", Number(pair.Gap, v => Edit($"{pair} aralığı {Fmt(v)} mm", () => pair.Gap = v), 0.05, 5), 80));
                 body.Children.Add(Row("En çok fark (mm)", Number(pair.MaxSkew, v => Edit($"{pair} en çok farkı {Fmt(v)} mm", () => pair.MaxSkew = v), 0.01, 100), 80));
+                PairImpedance(board, pair, body);   // [impedance]
                 card.Child = body;
                 ClassesPanel.Children.Add(card);
             }

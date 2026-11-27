@@ -16,7 +16,8 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal(ReadinessState.Pass, items.Single(i => i.Name == "Bağlantı bütünlüğü").State);
             Assert.Equal(ReadinessState.Pass, items.Single(i => i.Name == "Gerber ve delik dosyaları").State);
             // what is not checked is listed as such
-            Assert.Contains(items, i => i.State == ReadinessState.NotChecked && i.Name == "Empedans kontrolü");
+            Assert.Contains(items, i => i.State == ReadinessState.NotChecked && i.Name == "Üreticinin kural seti");   // no fab chosen
+            Assert.Contains(items, i => i.State == ReadinessState.Pass && i.Name == "Empedans kontrolü" && i.Detail.Contains("istenmedi"));   // computed, no target
             Assert.Contains("denetlenmedi", FabReadiness.Summary(items));
         }
 

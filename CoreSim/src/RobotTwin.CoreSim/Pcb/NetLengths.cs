@@ -18,6 +18,9 @@ namespace RobotTwin.CoreSim.Pcb
         /// <summary>Largest length difference the pair tolerates (mm); USB 2.0 full speed allows ~2.5 mm, high speed ~1.25 mm.</summary>
         public double MaxSkew { get; set; } = 1.25;
 
+        /// <summary>[impedance] Differential impedance the pair must have (Ω: USB 90, Ethernet and LVDS 100, CAN 120); 0 for none.</summary>
+        public double Impedance { get; set; }
+
         public override string ToString() => Positive + " / " + Negative;
     }
 

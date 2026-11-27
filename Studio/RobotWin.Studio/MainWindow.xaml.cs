@@ -928,8 +928,10 @@ namespace RobotWin.Studio
 
             if (page == "pcb" && fault != null && fault.StartsWith("stackup", StringComparison.Ordinal) && W.Schematic.Board is { } stackBoard)
             {
-                // "stackup:12": the board setup window with that many copper layers (not applied).
-                stackBoard.Stackup.CopperLayers = fault.Length > 8 && int.TryParse(fault.Substring(8), NumberStyles.Integer, CultureInfo.InvariantCulture, out int n) ? n : 8;
+                // "stackup:12": the board setup window with that many copper layers (not applied); "stackup:4:jlcpcb" with a fab.
+                var stackParts = fault.Split(':');
+                stackBoard.Stackup.CopperLayers = stackParts.Length > 1 && int.TryParse(stackParts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int n) ? n : 8;
+                if (stackParts.Length > 2) stackBoard.Fab = stackParts[2];
                 RobotWin.Studio.Pcb.PcbDialogs.SnapshotPreview = true;
                 try { RobotWin.Studio.Pcb.PcbDialogs.BoardSetup(this, stackBoard, out _); }
                 finally { RobotWin.Studio.Pcb.PcbDialogs.SnapshotPreview = false; }

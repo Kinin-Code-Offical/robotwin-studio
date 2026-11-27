@@ -85,7 +85,14 @@ namespace RobotTwin.CoreSim.Pcb
             return files;
         }
 
-        public static GerberCheckReport Check(BoardDocument board, IReadOnlyDictionary<string, string> files, double pixel = 0)
+        public static GerberCheckReport Check(BoardDocument board, IReadOnlyDictionary<string, string> files, double pixel = 0) => Check(board, files, null, pixel);
+
+        /// <summary>
+        /// [gerbv] The same check with another reader drawing the files: <paramref name="paint"/> (file name, its text, the
+        /// frame in the files' coordinates) fills the frame and returns null, or what went wrong. A third-party renderer such
+        /// as gerbv then stands in for <see cref="GerberReader"/>, which still names the layer from its file function.
+        /// </summary>
+        public static GerberCheckReport Check(BoardDocument board, IReadOnlyDictionary<string, string> files, Func<string, string, GerberRaster, string?>? paint, double pixel = 0)
         {
             const double margin = 2.0;
             double area = (board.Width + 2 * margin) * (board.Height + 2 * margin);
@@ -117,7 +124,8 @@ namespace RobotTwin.CoreSim.Pcb
                 // [origins] the files measure from the fabrication origin: the same pixels, shifted to it
                 var fab = board.FabOrigin;
                 var got = new GerberRaster(-margin - fab.X, -margin - (hgt - fab.Y), board.Width + 2 * margin, board.Height + 2 * margin, pixel);
-                got.Draw(image);
+                if (paint == null) got.Draw(image);
+                else if (paint(name, kv.Value, got) is { } problem) check.Warnings.Add(problem);
                 check.ExpectedArea = expected.Count() * pixel * pixel;
                 check.FileArea = got.Count() * pixel * pixel;
                 check.Differences.AddRange(Compare(expected, got, hgt));

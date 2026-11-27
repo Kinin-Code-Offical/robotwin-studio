@@ -81,9 +81,9 @@ namespace RobotTwin.CoreSim.Pcb
                 }
 
                 double ring = (via.Diameter - via.Drill) / 2;
-                if (ring < rules.MinAnnularRing - Eps)
+                if (ring < rules.ViaRing - Eps)
                 {
-                    v.Add(new DrcViolation(DrcSeverity.Error, "Halka genişliği", $"{via.Net} viası: halka {ring:0.###} mm (en az {rules.MinAnnularRing} mm)", via.X, via.Y));
+                    v.Add(new DrcViolation(DrcSeverity.Error, "Halka genişliği", $"{via.Net} viası: halka {ring:0.###} mm (en az {rules.ViaRing} mm)", via.X, via.Y));
                 }
 
                 if (!board.HasLayer(via.StartLayer) || !board.HasLayer(via.EndLayer) || via.StartLayer == via.EndLayer)
@@ -215,19 +215,19 @@ namespace RobotTwin.CoreSim.Pcb
             }
 
             // ---------------------------------------------------------- holes
-            var drills = new List<(double X, double Y, double R, string What, CopperLayer From, CopperLayer To)>();
+            var drills = new List<(double X, double Y, double R, string What, CopperLayer From, CopperLayer To, bool Via)>();
             foreach (var p in pads)
             {
-                if (p.Pad.IsThroughHole) drills.Add((p.X, p.Y, p.Pad.Drill / 2, $"{p.Component.RefDes}.{p.Pad.Name}", CopperLayer.Top, CopperLayer.Bottom));
+                if (p.Pad.IsThroughHole) drills.Add((p.X, p.Y, p.Pad.Drill / 2, $"{p.Component.RefDes}.{p.Pad.Name}", CopperLayer.Top, CopperLayer.Bottom, false));
             }
 
             foreach (var via in board.Vias)
             {
                 var span = via.Span(layerCount);
-                drills.Add((via.X, via.Y, via.Drill / 2, $"{via.Net} viası", span.From, span.To));
+                drills.Add((via.X, via.Y, via.Drill / 2, $"{via.Net} viası", span.From, span.To, true));
             }
 
-            foreach (var h in board.MountingHoles) drills.Add((h.X, h.Y, h.Drill / 2, $"montaj deliği Ø{h.Drill}", CopperLayer.Top, CopperLayer.Bottom));
+            foreach (var h in board.MountingHoles) drills.Add((h.X, h.Y, h.Drill / 2, $"montaj deliği Ø{h.Drill}", CopperLayer.Top, CopperLayer.Bottom, false));
 
             for (int i = 0; i < drills.Count; i++)
             {
@@ -235,13 +235,14 @@ namespace RobotTwin.CoreSim.Pcb
                 {
                     var a = drills[i];
                     var b = drills[j];
-                    if (Math.Abs(a.X - b.X) > a.R + b.R + rules.MinHoleToHole + 1 || Math.Abs(a.Y - b.Y) > a.R + b.R + rules.MinHoleToHole + 1) continue;
+                    double holeGap = a.Via && b.Via ? rules.ViaHoleToHole : rules.MinHoleToHole;   // [fab-rules] vias may sit closer
+                    if (Math.Abs(a.X - b.X) > a.R + b.R + holeGap + 1 || Math.Abs(a.Y - b.Y) > a.R + b.R + holeGap + 1) continue;
                     if (!SpansOverlap(a.From, a.To, b.From, b.To, layerCount)) continue;
                     double d = Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y)) - a.R - b.R;
-                    if (d < rules.MinHoleToHole - Eps)
+                    if (d < holeGap - Eps)
                     {
                         v.Add(new DrcViolation(DrcSeverity.Error, "Delik-delik aralığı",
-                            $"{a.What} ↔ {b.What}: {Math.Max(0, d):0.###} mm (en az {rules.MinHoleToHole} mm)", (a.X + b.X) / 2, (a.Y + b.Y) / 2));
+                            $"{a.What} ↔ {b.What}: {Math.Max(0, d):0.###} mm (en az {holeGap} mm)", (a.X + b.X) / 2, (a.Y + b.Y) / 2));
                     }
                 }
             }
@@ -434,6 +435,7 @@ namespace RobotTwin.CoreSim.Pcb
 
             // ---------------------------------------------------------- [pairs] the board's differential pairs and length groups
             v.AddRange(NetLengths.Check(board));
+            v.AddRange(Impedance.Check(board));   // [impedance]
             v.AddRange(RuleAreaCheck.Check(board));   // [keepout]
 
             // ---------------------------------------------------------- [enclosure] the box the board goes into, when it has one

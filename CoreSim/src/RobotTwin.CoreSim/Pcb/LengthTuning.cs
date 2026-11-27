@@ -59,19 +59,7 @@ namespace RobotTwin.CoreSim.Pcb
         // ---------------------------------------------------------------- delay
 
         /// <summary>Effective permittivity of a track (Hammerstad–Jensen for an outer-layer microstrip, εr for a stripline).</summary>
-        public static double EffectivePermittivity(BoardDocument board, CopperLayer layer, double width)
-        {
-            var stack = board.Stackup;
-            double er = stack.DielectricConstant;
-            if (!PcbLayers.IsOuter(layer)) return er;
-            var built = stack.Build(board.Rules.CopperThicknessUm);
-            int i = built.FindIndex(l => l.Copper == layer);
-            int j = layer == CopperLayer.Top ? i + 1 : i - 1;
-            double h = j >= 0 && j < built.Count ? built[j].Thickness : stack.Thickness;
-            double u = Math.Max(1e-6, width / Math.Max(1e-6, h));
-            double f = 1 / Math.Sqrt(1 + 12 / u) + (u < 1 ? 0.04 * (1 - u) * (1 - u) : 0);
-            return (er + 1) / 2 + (er - 1) / 2 * f;
-        }
+        public static double EffectivePermittivity(BoardDocument board, CopperLayer layer, double width) => Impedance.OfTrack(board, layer, width).EpsEff;   // [impedance] one model
 
         public static double PsPerMm(BoardDocument board, CopperLayer layer, double width) => VacuumPsPerMm * Math.Sqrt(EffectivePermittivity(board, layer, width));
 

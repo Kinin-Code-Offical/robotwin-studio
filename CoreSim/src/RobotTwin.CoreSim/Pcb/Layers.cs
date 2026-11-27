@@ -226,6 +226,9 @@ namespace RobotTwin.CoreSim.Pcb
         public double ViaDiameter { get; set; } = 0.9;
         public double ViaDrill { get; set; } = 0.45;
 
+        /// <summary>[impedance] Controlled impedance its tracks must have (Ω, single-ended); 0 for none. DRC holds each track's width on its layer to it.</summary>
+        public double Impedance { get; set; }
+
         public NetClass Clone() => (NetClass)MemberwiseClone();
 
         public override string ToString() => Name;

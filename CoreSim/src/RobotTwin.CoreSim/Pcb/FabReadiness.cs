@@ -105,8 +105,8 @@ namespace RobotTwin.CoreSim.Pcb
                 + (stats.PartsSmd == 0 ? " · SMD yok: dizgi makinesi gerekmez" : string.Empty)));
 
             // what this screen does not check: said, not left out
-            items.Add(new ReadinessItem("Empedans kontrolü", ReadinessState.NotChecked, "Katman yapısından empedans hesabı yapılmadı: kontrollü empedans gerekiyorsa üreticiye ayrıca bildirin"));
-            items.Add(new ReadinessItem("Üreticinin kural seti", ReadinessState.NotChecked, "Üreticiye özgü DFM kuralları yüklü değil: kartın kendi kuralları kullanıldı"));
+            items.Add(Impedance.Readiness(board));   // [impedance] from the stackup
+            items.Add(FabRules.Readiness(board));   // [fab-rules] the chosen fab's published limits
             items.Add(new ReadinessItem("Panelleme", ReadinessState.NotChecked, "Panel (V-kesim, kırma tırnakları) hazırlanmadı: üretici kartı tek parça alır"));
             return items;
         }

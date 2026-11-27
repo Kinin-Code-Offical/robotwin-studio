@@ -32,6 +32,8 @@ namespace RobotWin.Studio.Pcb
             double outer = Nearest(rules.CopperThicknessUm);
             double minTrack = rules.MinTrackWidth, minDrill = rules.MinDrill, ring = rules.MinAnnularRing, h2h = rules.MinHoleToHole;
             double edge = rules.EdgeClearance, holeClr = rules.HoleClearance, grid = rules.RoutingGrid;
+            double viaRing = rules.MinViaAnnularRing, viaH2h = rules.MinViaHoleToHole;
+            string fab = board.Fab ?? string.Empty;
 
             var panel = new StackPanel();
             var left = new StackPanel { Width = 300 };
@@ -50,9 +52,11 @@ namespace RobotWin.Studio.Pcb
             var table = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
             var thin = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 4), Visibility = Visibility.Collapsed, Style = S("Text.Caption") };
             thin.SetResourceReference(TextBlock.ForegroundProperty, "B.Warning");
+            Action? RedrawFab = null;   // [fab-rules] the chosen fab's limits follow the layer count and copper
             void Redraw()
             {
                 foreach (var c in chips) c.IsChecked = (int)c.Tag == st.CopperLayers;
+                RedrawFab?.Invoke();
                 blind.IsEnabled = st.CopperLayers >= 4;
                 double min = st.MinimumThickness(outer);
                 thin.Visibility = st.Thickness + 1e-9 < min ? Visibility.Visible : Visibility.Collapsed;
@@ -108,12 +112,55 @@ namespace RobotWin.Studio.Pcb
             left.Children.Add(Overline("Yığın"));
             left.Children.Add(new ScrollViewer { Content = table, MaxHeight = 240, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
 
+            // [fab-rules] the fab the board goes to: its published limits for this stackup, written into the rules on request
+            right.Children.Add(Overline("Üretici", 0));
+            var fabInfo = new TextBlock { TextWrapping = TextWrapping.Wrap, Style = S("Text.Caption"), Margin = new Thickness(0, 0, 0, 4) };
+            var trackBox = Number(minTrack, v => minTrack = v, 0.05, 5);
+            var drillBox = Number(minDrill, v => minDrill = v, 0.05, 6);
+            var ringBox = Number(ring, v => ring = v, 0, 2, true);
+            var viaRingBox = Number(viaRing, v => viaRing = v, 0, 2, true);
+            var h2hBox = Number(h2h, v => h2h = v, 0, 5, true);
+            var viaH2hBox = Number(viaH2h, v => viaH2h = v, 0, 5, true);
+            var edgeBox = Number(edge, v => edge = v, 0, 10, true);
+            var applyFab = Button("Sınırları kurallara yaz", (_, _) =>
+            {
+                var set = FabRules.For(fab, st.CopperLayers, outer);
+                if (set == null) return;
+                minTrack = set.MinTrackWidth; SetDrill(set.MinDrill); ring = set.MinPadRing; viaRing = set.MinViaRing;
+                h2h = set.MinHoleToHole; viaH2h = set.MinViaHoleToHole; edge = set.EdgeClearance;
+                trackBox.Text = Fmt(minTrack); ringBox.Text = Fmt(ring); viaRingBox.Text = Fmt(viaRing);
+                h2hBox.Text = Fmt(h2h); viaH2hBox.Text = Fmt(viaH2h); edgeBox.Text = Fmt(edge);
+            }, tip: "Üreticinin bu yığın için en küçük yol, delik, halka, delik aralığı ve kenar değerlerini aşağıdaki kurallara yazar; DRC bunlarla denetler");
+            void SetDrill(double v)
+            {
+                minDrill = v;
+                drillBox.Text = Fmt(v);
+            }
+
+            RedrawFab = () =>
+            {
+                var set = FabRules.For(fab, st.CopperLayers, outer);
+                fabInfo.Text = set == null
+                    ? RobotWin.Studio.Shell.Lang.T("Üretici seçilmedi: üretime hazırlık kartın kendi kurallarıyla denetler.")
+                    : RobotWin.Studio.Shell.Lang.T(set.Name) + "\n" + RobotWin.Studio.Shell.Lang.T(set.Limits) + "\n" + RobotWin.Studio.Shell.Lang.T($"Kaynak: {set.Source}; sipariş öncesi üreticinin güncel sayfasına bakın.")
+                      + (st.CopperLayers > set.MaxLayers ? "\n" + RobotWin.Studio.Shell.Lang.T($"Bu üretici en çok {set.MaxLayers} katman yapıyor.") : string.Empty);
+                fabInfo.Foreground = set != null && st.CopperLayers > set.MaxLayers ? B("B.Warning") : B("B.TextSecondary");
+                applyFab.IsEnabled = set != null;
+            };
+            var fabIds = new[] { string.Empty }.Concat(FabRules.Fabs.Select(f => f.Id)).ToList();
+            right.Children.Add(Row("Kural seti", Combo(fabIds, fabIds.Contains(fab) ? fab : string.Empty, v => { fab = v; RedrawFab(); },
+                v => v.Length == 0 ? RobotWin.Studio.Shell.Lang.T("Yok (kartın kuralları)") : FabRules.Fabs.First(f => f.Id == v).Name), 140));
+            right.Children.Add(fabInfo);
+            right.Children.Add(Buttons(applyFab));
+
             right.Children.Add(Overline("Üretim kuralları (en az)"));
-            right.Children.Add(Row("Yol genişliği (mm)", Number(minTrack, v => minTrack = v, 0.05, 5)));
-            right.Children.Add(Row("Delik çapı (mm)", Number(minDrill, v => minDrill = v, 0.05, 6)));
-            right.Children.Add(Row("Halka genişliği (mm)", Number(ring, v => ring = v, 0, 2, true), tip: "Ped/via bakırının delik etrafındaki en dar kısmı"));
-            right.Children.Add(Row("Delik-delik (mm)", Number(h2h, v => h2h = v, 0, 5, true)));
-            right.Children.Add(Row("Kart kenarına (mm)", Number(edge, v => edge = v, 0, 10, true)));
+            right.Children.Add(Row("Yol genişliği (mm)", trackBox));
+            right.Children.Add(Row("Delik çapı (mm)", drillBox));
+            right.Children.Add(Row("Halka genişliği (mm)", ringBox, tip: "Ped/via bakırının delik etrafındaki en dar kısmı"));
+            right.Children.Add(Row("Via halkası (mm)", viaRingBox, tip: "Via'nın halkası (üreticiler pedden dar halkaya izin verir); 0: ped halkası"));
+            right.Children.Add(Row("Delik-delik (mm)", h2hBox));
+            right.Children.Add(Row("Via delik-delik (mm)", viaH2hBox, tip: "İki via deliği arası; 0: delik-delik değeri"));
+            right.Children.Add(Row("Kart kenarına (mm)", edgeBox));
             right.Children.Add(Row("Montaj deliğine (mm)", Number(holeClr, v => holeClr = v, 0, 10, true)));
             right.Children.Add(Row("Oto. rota ızgarası (mm)", Number(grid, v => grid = v, 0.05, 2)));
             right.Children.Add(Caption("Hat başına boşluk, yol ve via ölçüleri 'Hatlar' sekmesindeki hat sınıflarındadır.", 8));
@@ -163,7 +210,10 @@ namespace RobotWin.Studio.Pcb
             rules.MinDrill = minDrill;
             rules.MinAnnularRing = ring;
             rules.MinHoleToHole = h2h;
+            rules.MinViaAnnularRing = viaRing;
+            rules.MinViaHoleToHole = viaH2h;
             rules.EdgeClearance = edge;
+            board.Fab = fab;
             rules.HoleClearance = holeClr;
             rules.RoutingGrid = grid;
             summary = $"Kart ayarları: {st.CopperLayers} katman, {st.Thickness:0.##} mm, dış bakır {BoardStackup.UmToOz(outer):0.#} oz";

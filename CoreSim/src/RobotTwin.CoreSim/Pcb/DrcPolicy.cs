@@ -77,6 +77,8 @@ namespace RobotTwin.CoreSim.Pcb
             new DrcRuleInfo("Uzunluk eşleme", SignalIntegrity, DrcSeverity.Warning, "Uzunluk grubundaki hatlar toleranstan farklı"),
             new DrcRuleInfo("Fark çifti uzunluğu", SignalIntegrity, DrcSeverity.Warning, "Fark çiftinin iki hattı farklı uzunlukta"),
             new DrcRuleInfo("Fark çifti eşleşmesi", SignalIntegrity, DrcSeverity.Warning, "Fark çiftinin hatları bulunamadı ya da eşleşmiyor"),
+            new DrcRuleInfo("Empedans", SignalIntegrity, DrcSeverity.Warning, "Yolun genişliği, katmanında hat sınıfının hedef empedansını tutturmuyor"),
+            new DrcRuleInfo("Fark empedansı", SignalIntegrity, DrcSeverity.Warning, "Fark çiftinin genişliği ve aralığı hedef fark empedansını tutturmuyor"),
             new DrcRuleInfo("Serigrafi pedde", Housekeeping, DrcSeverity.Warning, "Serigrafi pedin üstünden geçiyor (Gerber'de kırpılır)"),
             new DrcRuleInfo("Boşta yol ucu", Housekeeping, DrcSeverity.Warning, "Yolun bir ucu hiçbir yere bağlı değil"),
             new DrcRuleInfo("Bağlantısız via", Housekeeping, DrcSeverity.Warning, "Via ikiden az katmana bağlı"),
