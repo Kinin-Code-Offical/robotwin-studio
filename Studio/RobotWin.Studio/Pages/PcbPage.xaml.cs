@@ -416,7 +416,7 @@ namespace RobotWin.Studio.Pages
             var parameters = W.Schematic.ResolveParameters(W.Library, part);
             var pin = def.Pins.FirstOrDefault(p => string.Equals(def.ResolvePad(p, parameters), pad.Pad.Name, StringComparison.OrdinalIgnoreCase));
             if (pin == null) return false;
-            W.Schematic.Labels.Add(new NetLabel { Name = net, Position = part.Transform(pin.X, pin.Y) });
+            W.Schematic.Labels.Add(new NetLabel { Name = net, Position = part.Transform(pin.X, pin.Y), Sheet = part.Sheet });   // [sheets] on the part's sheet
             return true;
         }
 

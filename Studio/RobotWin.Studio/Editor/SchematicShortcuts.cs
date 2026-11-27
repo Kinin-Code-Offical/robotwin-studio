@@ -14,6 +14,7 @@ namespace RobotWin.Studio.Editor
                 ("W", "Kablo aracı · Shift+W imleçten başlat"),
                 ("L / Ctrl+L", "Hat etiketi / global etiket"),
                 ("Q", "Bağlantı yok (NC) işareti"),
+                ("S · H", "Hiyerarşik sayfa · hiyerarşik etiket"),
                 ("Pine tık", "Kablo başlat"),
             }),
             ("Kablo", new List<(string, string)>
@@ -54,6 +55,8 @@ namespace RobotWin.Studio.Editor
             ("Görünüm", new List<(string, string)>
             {
                 ("F · Home", "Sığdır"),
+                ("Çift tık sayfa · Alt+↑", "Sayfaya gir · üst sayfaya çık"),
+                ("Alt+← · Alt+→", "Geri · ileri (sayfalar)"),
                 ("+ / − · tekerlek", "Yakınlaştır (imlece)"),
                 ("Orta tuş · Boşluk+sürükle", "Kaydır"),
                 ("`", "İmleç altındaki hattı vurgula"),

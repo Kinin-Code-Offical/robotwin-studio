@@ -69,6 +69,16 @@ Labels with the same name are connected; the name `GND` means ground. As in KiCa
 
 **Rule area** (KiCad 9's schematic rule area): pick **Rule area** in the **Çiz** menu and click two corners; a dashed frame comes with the class in braces at its top left (first `{Power}`). Every net with a wire, a pin or a label inside it takes that net class when the PCB is brought up to date; a net class directive inside the area comes first. Change the class with a double click, right-click ▸ **Edit the net class…** or in Properties; the area is picked, moved, copied and deleted like a drawing.
 
+**Hierarchical sheets** (as in KiCad): a large circuit is split into blocks. Pick **Hierarchical sheet** from the toolbar's **Hierarchy** button, or press **S**, and click two corners; the frame shows its name above it (typed in place) and how many parts it holds below it. Double-click a sheet to open it. On the sub-sheet, parts, wires and labels are drawn as usual. A net leaves the sub-sheet through a **hierarchical label** (**H**, dashed outline) and joins the **sheet pin** of the same name on the sheet symbol's edge. Add the pin with the **Sheet pin** tool by clicking the edge, or with right-click ▸ **Sync sheet pins** from the labels inside. Set the pin's and the label's direction (input, output, bidirectional, tri-state, passive) with a right-click. Wires start from a sheet pin too, so a net on the parent sheet runs down into the sub-sheet.
+
+The connection rules are KiCad's:
+
+- A sub-sheet's local labels are its own and are named by the sheet path in the netlist, such as `/Motor/IN1`; a label of the same name on another sheet is a separate net.
+- Global labels and power symbols (GND, +5V) are the same net on every sheet.
+- Parts standing at the same place on different sheets do not touch.
+
+With a sheet open, a path bar appears at the top left: **◀ Back**, **▲ Up** and **▶ Forward**, then every step from the root to the sheet (each one clickable); **▾** lists the sheets below. Shortcuts: Alt+↑ or Alt+Backspace goes up, Alt+← back, Alt+→ forward. Find, ERC and Show in PCB reach a part on another sheet by opening that sheet. ERC warns about a hierarchical label with no pin on its sheet symbol and a sheet pin with no label inside. All the sheets are one design: the PCB, the simulation, the bill of materials and the netlist see them together. Exported to KiCad, every sub-sheet becomes its own `.kicad_sch` file, standing on the root sheet as a KiCad sheet symbol.
+
 | Key | Function |
 | --- | --- |
 | M / G | Move / drag (with G the wires stretch) |

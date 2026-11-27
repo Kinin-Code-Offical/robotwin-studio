@@ -120,6 +120,7 @@ namespace RobotTwin.CoreSim.Design
                 case NoConnectFlag nc: return GridRect.FromPoint(nc.Position);
                 case SchematicNote n: return n.Bounds();   // [notes]
                 case SchematicShape s: return s.Bounds();   // [shapes]
+                case SchematicSheet h: return h.Bounds();   // [sheets]
                 default: return null;
             }
         }
@@ -137,47 +138,57 @@ namespace RobotTwin.CoreSim.Design
             return result;
         }
 
-        /// <summary>Everything on the sheet, in drawing order.</summary>
-        public static IEnumerable<object> AllItems(Schematic doc) =>
-            doc.Parts.Cast<object>().Concat(doc.Wires).Concat(doc.Labels).Concat(doc.NoConnects).Concat(doc.Notes).Concat(doc.Shapes);
+        /// <summary>Everything on a sheet (null: the root), in drawing order; sheet symbols last.</summary>
+        public static IEnumerable<object> AllItems(Schematic doc, string? sheet = null) =>
+            doc.Parts.Cast<object>().Concat(doc.Wires).Concat(doc.Labels).Concat(doc.NoConnects).Concat(doc.Notes).Concat(doc.Shapes).Concat(doc.Sheets)
+               .Where(o => Schematic.SameSheet(Schematic.SheetOf(o), sheet));   // [sheets]
 
         /// <summary>
         /// Box selection. Window mode (dragged left to right) takes items lying completely inside;
         /// crossing mode (right to left) also takes items the rectangle merely touches.
         /// </summary>
-        public static List<object> ItemsInRect(Schematic doc, PartLibrary library, GridRect rect, bool crossing)
+        public static List<object> ItemsInRect(Schematic doc, PartLibrary library, GridRect rect, bool crossing, string? sheet = null)
         {
             var result = new List<object>();
             foreach (var part in doc.Parts)
             {
+                if (!Schematic.SameSheet(part.Sheet, sheet)) continue;   // [sheets] only what is on the sheet shown
                 var b = PartBounds(part, library.Find(part.PartId));
                 if (crossing ? rect.Intersects(b) : rect.Contains(b)) result.Add(part);
             }
 
             foreach (var wire in doc.Wires)
             {
-                if (wire.Points.Count == 0) continue;
+                if (wire.Points.Count == 0 || !Schematic.SameSheet(wire.Sheet, sheet)) continue;
                 bool hit = crossing
                     ? wire.Points.Count == 1 ? rect.Contains(wire.Points[0]) : Enumerable.Range(0, wire.Points.Count - 1).Any(i => rect.IntersectsSegment(wire.Points[i], wire.Points[i + 1]))
                     : wire.Points.All(rect.Contains);
                 if (hit) result.Add(wire);
             }
 
-            foreach (var label in doc.Labels) if (rect.Contains(label.Position)) result.Add(label);
-            foreach (var nc in doc.NoConnects) if (rect.Contains(nc.Position)) result.Add(nc);
+            foreach (var label in doc.Labels) if (Schematic.SameSheet(label.Sheet, sheet) && rect.Contains(label.Position)) result.Add(label);
+            foreach (var nc in doc.NoConnects) if (Schematic.SameSheet(nc.Sheet, sheet) && rect.Contains(nc.Position)) result.Add(nc);
             foreach (var n in doc.Notes)   // [notes]
             {
+                if (!Schematic.SameSheet(n.Sheet, sheet)) continue;
                 var b = n.Bounds();
                 if (crossing ? rect.Intersects(b) : rect.Contains(b)) result.Add(n);
             }
 
             foreach (var s in doc.Shapes)   // [shapes] crossing: any edge the rectangle touches; window: all of it inside
             {
+                if (!Schematic.SameSheet(s.Sheet, sheet)) continue;
                 var o = s.Outline();
                 bool hit = crossing
                     ? o.Count == 1 ? rect.Contains(o[0]) : Enumerable.Range(0, o.Count - 1).Any(i => rect.IntersectsSegment(o[i], o[i + 1]))
                     : o.All(rect.Contains);
                 if (hit) result.Add(s);
+            }
+
+            foreach (var h in doc.SheetsOn(sheet))   // [sheets] the sheet symbols drawn here
+            {
+                var b = h.Bounds();
+                if (crossing ? rect.Intersects(b) : rect.Contains(b)) result.Add(h);
             }
 
             return result;
@@ -240,9 +251,20 @@ namespace RobotTwin.CoreSim.Design
                         case SchematicShape sh:   // [shapes]
                             for (int i = 0; i < sh.Points.Count; i++) sh.Points[i] = RotatePoint(sh.Points[i], center);
                             break;
+                        case SchematicSheet h:   // [sheets] a sheet symbol stays upright: only its place turns
+                            MoveSheet(h, RotatePoint(h.Bounds().Center, center) - h.Bounds().Center);
+                            break;
                     }
                 }
             }
+        }
+
+        /// <summary>[sheets] Moves a sheet symbol with its pins, onto whole grid steps.</summary>
+        public static void MoveSheet(SchematicSheet h, GridPoint delta)
+        {
+            delta = new GridPoint(Math.Round(delta.X), Math.Round(delta.Y));
+            h.Position += delta;
+            foreach (var pin in h.Pins) pin.Position += delta;
         }
 
         /// <summary>
@@ -277,6 +299,9 @@ namespace RobotTwin.CoreSim.Design
                     case SchematicShape sh:   // [shapes]
                         for (int i = 0; i < sh.Points.Count; i++) sh.Points[i] = MirrorPoint(sh.Points[i], center, vertical);
                         break;
+                    case SchematicSheet h:   // [sheets] only its place mirrors
+                        MoveSheet(h, MirrorPoint(h.Bounds().Center, center, vertical) - h.Bounds().Center);
+                        break;
                 }
             }
         }
@@ -297,6 +322,10 @@ namespace RobotTwin.CoreSim.Design
                     case SchematicShape sh:   // [shapes]
                         for (int i = 0; i < sh.Points.Count; i++) sh.Points[i] += delta;
                         break;
+                    case SchematicSheet h:   // [sheets] with its pins
+                        h.Position += delta;
+                        foreach (var pin in h.Pins) pin.Position += delta;
+                        break;
                 }
             }
         }
@@ -315,6 +344,7 @@ namespace RobotTwin.CoreSim.Design
                     NoConnectFlag nc => doc.NoConnects.Remove(nc),
                     SchematicNote note => doc.Notes.Remove(note),
                     SchematicShape shape => doc.Shapes.Remove(shape),   // [shapes]
+                    SchematicSheet sheet => doc.RemoveSheet(sheet) > 0,   // [sheets] with its sub-sheet
                     _ => false
                 };
                 if (removed) n++;
@@ -393,8 +423,8 @@ namespace RobotTwin.CoreSim.Design
         // ================================================================ [junction] KiCad's Add Junction
 
         /// <summary>The wires that pass through a point: at a corner or an end of theirs, or across one of their segments.</summary>
-        public static List<SchematicWire> WiresThrough(Schematic s, GridPoint at) =>
-            s.Wires.Where(w => w.Points.Contains(at) || Crossing(w, at) >= 0).ToList();
+        public static List<SchematicWire> WiresThrough(Schematic s, GridPoint at, string? sheet = null) =>
+            s.Wires.Where(w => Schematic.SameSheet(w.Sheet, sheet) && (w.Points.Contains(at) || Crossing(w, at) >= 0)).ToList();   // [sheets]
 
         /// <summary>The segment of <paramref name="w"/> that <paramref name="at"/> lies inside of (not at its ends), or -1.</summary>
         private static int Crossing(SchematicWire w, GridPoint at)
@@ -414,9 +444,9 @@ namespace RobotTwin.CoreSim.Design
         /// (two wires crossing without one do not, as in KiCad). Nothing changes, and false comes back, when fewer than
         /// two wires pass through the point.
         /// </summary>
-        public static bool PlaceJunction(Schematic s, GridPoint at)
+        public static bool PlaceJunction(Schematic s, GridPoint at, string? sheet = null)
         {
-            var through = WiresThrough(s, at);
+            var through = WiresThrough(s, at, sheet);
             if (through.Count < 2) return false;
             foreach (var w in through)
             {
@@ -432,11 +462,12 @@ namespace RobotTwin.CoreSim.Design
         /// cross again without joining. A wire that ends or turns there keeps it (a T stays joined, as in KiCad).
         /// Returns how many wires let go.
         /// </summary>
-        public static int RemoveJunction(Schematic s, GridPoint at)
+        public static int RemoveJunction(Schematic s, GridPoint at, string? sheet = null)
         {
             int freed = 0;
             foreach (var w in s.Wires)
             {
+                if (!Schematic.SameSheet(w.Sheet, sheet)) continue;   // [sheets]
                 for (int i = 1; i + 1 < w.Points.Count; i++)
                 {
                     if (!w.Points[i].Equals(at) || !Collinear(w.Points[i - 1], at, w.Points[i + 1]) || !Between(w.Points[i - 1], at, w.Points[i + 1])) continue;
@@ -450,8 +481,8 @@ namespace RobotTwin.CoreSim.Design
         }
 
         /// <summary>Whether a junction placed by hand is at the point: two or more wires run straight through a corner there.</summary>
-        public static bool HasRemovableJunction(Schematic s, GridPoint at) =>
-            s.Wires.Count(w => Enumerable.Range(1, Math.Max(0, w.Points.Count - 2))
+        public static bool HasRemovableJunction(Schematic s, GridPoint at, string? sheet = null) =>
+            s.Wires.Count(w => Schematic.SameSheet(w.Sheet, sheet) && Enumerable.Range(1, Math.Max(0, w.Points.Count - 2))
                                        .Any(i => w.Points[i].Equals(at) && Collinear(w.Points[i - 1], at, w.Points[i + 1]) && Between(w.Points[i - 1], at, w.Points[i + 1]))) >= 2;
 
         public static double DistanceToSegment(GridPoint p, GridPoint a, GridPoint b, out GridPoint closest)
@@ -530,16 +561,20 @@ namespace RobotTwin.CoreSim.Design
         }
 
         /// <summary>Pin tips of every part, keyed by position.</summary>
-        public static HashSet<GridPoint> PinTips(Schematic doc, PartLibrary library, IEnumerable<SchematicPart>? only = null)
+        public static HashSet<GridPoint> PinTips(Schematic doc, PartLibrary library, IEnumerable<SchematicPart>? only = null, string? sheet = null)
         {
             var set = new HashSet<GridPoint>();
-            foreach (var part in only ?? doc.Parts)
+            foreach (var part in only ?? doc.Parts.Where(x => Schematic.SameSheet(x.Sheet, sheet)))   // [sheets] the sheet's own parts
             {
                 var def = library.Find(part.PartId);
                 if (def == null) continue;
                 foreach (var pin in def.Pins) set.Add(part.Transform(pin.X, pin.Y));
             }
 
+            if (only == null)
+                foreach (var h in doc.SheetsOn(sheet))   // [sheets] a sheet symbol's pins are connection points too
+                    foreach (var pin in h.Pins)
+                        set.Add(pin.Position);
             return set;
         }
 
@@ -547,13 +582,14 @@ namespace RobotTwin.CoreSim.Design
         /// True when something electrical sits at p other than <paramref name="exclude"/>:
         /// a pin tip, a label, a vertex of another wire or the inside of another wire's segment.
         /// </summary>
-        public static bool IsConnectionPoint(Schematic doc, PartLibrary library, GridPoint p, SchematicWire? exclude = null)
+        public static bool IsConnectionPoint(Schematic doc, PartLibrary library, GridPoint p, SchematicWire? exclude = null, string? sheet = null)
         {
-            if (PinTips(doc, library).Contains(p)) return true;
-            if (doc.Labels.Any(l => l.Position.Equals(p))) return true;
+            if (exclude != null) sheet = exclude.Sheet;   // [sheets] on the wire's own sheet
+            if (PinTips(doc, library, null, sheet).Contains(p)) return true;
+            if (doc.Labels.Any(l => Schematic.SameSheet(l.Sheet, sheet) && l.Position.Equals(p))) return true;
             foreach (var w in doc.Wires)
             {
-                if (ReferenceEquals(w, exclude)) continue;
+                if (ReferenceEquals(w, exclude) || !Schematic.SameSheet(w.Sheet, sheet)) continue;
                 for (int i = 0; i < w.Points.Count; i++)
                 {
                     if (w.Points[i].Equals(p)) return true;
@@ -568,20 +604,21 @@ namespace RobotTwin.CoreSim.Design
         /// Wire ends that are not attached to anything (no pin, label, no-connect, other wire,
         /// and not the other end of the same wire). Used by ERC and for the dangling-end marks.
         /// </summary>
-        public static List<(SchematicWire Wire, GridPoint End)> DanglingEnds(Schematic doc, PartLibrary library)
+        public static List<(SchematicWire Wire, GridPoint End)> DanglingEnds(Schematic doc, PartLibrary library, string? sheet = null)
         {
-            var tips = PinTips(doc, library);
+            var tips = PinTips(doc, library, null, sheet);
             var result = new List<(SchematicWire, GridPoint)>();
             foreach (var w in doc.Wires)
             {
-                if (w.Points.Count < 2) continue;
+                if (w.Points.Count < 2 || !Schematic.SameSheet(w.Sheet, sheet)) continue;   // [sheets] the sheet's own wires
                 foreach (var end in new[] { w.Points[0], w.Points[^1] })
                 {
-                    if (tips.Contains(end) || doc.Labels.Any(l => l.Position.Equals(end)) || doc.NoConnects.Any(n => n.Position.Equals(end))) continue;
+                    if (tips.Contains(end) || doc.Labels.Any(l => Schematic.SameSheet(l.Sheet, sheet) && l.Position.Equals(end)) ||
+                        doc.NoConnects.Any(n => Schematic.SameSheet(n.Sheet, sheet) && n.Position.Equals(end))) continue;
                     bool joined = false;
                     foreach (var other in doc.Wires)
                     {
-                        if (ReferenceEquals(other, w)) continue;
+                        if (ReferenceEquals(other, w) || !Schematic.SameSheet(other.Sheet, sheet)) continue;
                         for (int i = 0; i < other.Points.Count && !joined; i++)
                         {
                             if (other.Points[i].Equals(end)) joined = true;
@@ -622,6 +659,7 @@ namespace RobotTwin.CoreSim.Design
         private readonly Dictionary<SchematicNote, GridPoint> _notes = new Dictionary<SchematicNote, GridPoint>();
         private readonly Dictionary<SchematicShape, List<GridPoint>> _shapes = new Dictionary<SchematicShape, List<GridPoint>>();   // [shapes]
         private readonly Dictionary<SchematicWire, List<GridPoint>> _wires = new Dictionary<SchematicWire, List<GridPoint>>();
+        private readonly Dictionary<SchematicSheet, (GridPoint Position, List<GridPoint> Pins)> _sheets = new Dictionary<SchematicSheet, (GridPoint, List<GridPoint>)>();   // [sheets]
         private readonly List<WireStretch> _stretch = new List<WireStretch>();
         private readonly HashSet<GridPoint> _fixedPoints;
 
@@ -629,16 +667,19 @@ namespace RobotTwin.CoreSim.Design
         {
             var moving = new HashSet<object>(items);
             foreach (var item in moving) Remember(item);
+            string? sheet = moving.Select(Schematic.SheetOf).FirstOrDefault();   // [sheets] what else may stretch: the same sheet's
+            bool Here(object o) => Schematic.SameSheet(Schematic.SheetOf(o), sheet);
 
             if (rubberBand)
             {
                 var anchors = SchematicEditing.PinTips(doc, library, moving.OfType<SchematicPart>());
+                foreach (var h in moving.OfType<SchematicSheet>()) foreach (var pin in h.Pins) anchors.Add(pin.Position);   // [sheets]
                 foreach (var w in moving.OfType<SchematicWire>()) foreach (var p in w.Points) anchors.Add(p);
                 foreach (var l in moving.OfType<NetLabel>()) anchors.Add(l.Position);
 
                 // Labels and no-connect flags sitting on a moving point travel with it.
-                foreach (var l in doc.Labels) if (!moving.Contains(l) && anchors.Contains(l.Position)) Remember(l);
-                foreach (var nc in doc.NoConnects) if (!moving.Contains(nc) && anchors.Contains(nc.Position)) Remember(nc);
+                foreach (var l in doc.Labels) if (!moving.Contains(l) && Here(l) && anchors.Contains(l.Position)) Remember(l);
+                foreach (var nc in doc.NoConnects) if (!moving.Contains(nc) && Here(nc) && anchors.Contains(nc.Position)) Remember(nc);
 
                 var movingSegments = moving.OfType<SchematicWire>()
                     .SelectMany(w => Enumerable.Range(0, Math.Max(0, w.Points.Count - 1)).Select(i => (w.Points[i], w.Points[i + 1])))
@@ -647,7 +688,7 @@ namespace RobotTwin.CoreSim.Design
 
                 foreach (var w in doc.Wires)
                 {
-                    if (moving.Contains(w) || w.Points.Count < 2) continue;
+                    if (moving.Contains(w) || w.Points.Count < 2 || !Here(w)) continue;
                     bool start = Attached(w.Points[0]), end = Attached(w.Points[^1]);
                     if (start && end) Remember(w);
                     else if (start || end) _stretch.Add(new WireStretch(w, start, end));
@@ -655,18 +696,19 @@ namespace RobotTwin.CoreSim.Design
             }
 
             // Points other (non-moving) things are attached to: never slide those.
-            _fixedPoints = SchematicEditing.PinTips(doc, library, doc.Parts.Where(p => !_parts.ContainsKey(p)));
-            foreach (var l in doc.Labels) if (!_labels.ContainsKey(l)) _fixedPoints.Add(l.Position);
+            _fixedPoints = SchematicEditing.PinTips(doc, library, doc.Parts.Where(p => !_parts.ContainsKey(p) && Here(p)));
+            foreach (var h in doc.SheetsOn(sheet)) if (!_sheets.ContainsKey(h)) foreach (var pin in h.Pins) _fixedPoints.Add(pin.Position);
+            foreach (var l in doc.Labels) if (!_labels.ContainsKey(l) && Here(l)) _fixedPoints.Add(l.Position);
             foreach (var w in doc.Wires)
             {
-                if (_wires.ContainsKey(w) || w.Points.Count == 0) continue;
+                if (_wires.ContainsKey(w) || w.Points.Count == 0 || !Here(w)) continue;
                 _fixedPoints.Add(w.Points[0]);
                 _fixedPoints.Add(w.Points[^1]);
             }
         }
 
         /// <summary>Everything that moves rigidly (selection plus attached labels and fully attached wires).</summary>
-        public IEnumerable<object> RigidItems => _parts.Keys.Cast<object>().Concat(_wires.Keys).Concat(_labels.Keys).Concat(_flags.Keys).Concat(_notes.Keys).Concat(_shapes.Keys);
+        public IEnumerable<object> RigidItems => _parts.Keys.Cast<object>().Concat(_wires.Keys).Concat(_labels.Keys).Concat(_flags.Keys).Concat(_notes.Keys).Concat(_shapes.Keys).Concat(_sheets.Keys);
 
         public IEnumerable<SchematicWire> StretchedWires => _stretch.Select(s => s.Wire);
 
@@ -680,6 +722,7 @@ namespace RobotTwin.CoreSim.Design
                 case SchematicNote n: _notes[n] = n.Position; break;   // [notes]
                 case SchematicShape sh: _shapes[sh] = new List<GridPoint>(sh.Points); break;   // [shapes]
                 case SchematicWire w: _wires[w] = new List<GridPoint>(w.Points); break;
+                case SchematicSheet h: _sheets[h] = (h.Position, h.Pins.Select(x => x.Position).ToList()); break;   // [sheets]
             }
         }
 
@@ -692,6 +735,12 @@ namespace RobotTwin.CoreSim.Design
             foreach (var kv in _shapes)   // [shapes]
                 for (int i = 0; i < kv.Value.Count && i < kv.Key.Points.Count; i++) kv.Key.Points[i] = kv.Value[i] + delta;
             foreach (var kv in _wires) kv.Key.Points = kv.Value.Select(p => p + delta).ToList();
+            foreach (var kv in _sheets)   // [sheets] the frame with its pins
+            {
+                kv.Key.Position = kv.Value.Position + delta;
+                for (int i = 0; i < kv.Value.Pins.Count && i < kv.Key.Pins.Count; i++) kv.Key.Pins[i].Position = kv.Value.Pins[i] + delta;
+            }
+
             foreach (var s in _stretch) s.Apply(delta, _fixedPoints);
         }
 

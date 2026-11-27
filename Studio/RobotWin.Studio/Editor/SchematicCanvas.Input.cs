@@ -159,6 +159,16 @@ namespace RobotWin.Studio.Editor
                     RequestCommand(SchematicCommand.EditNote, Snap(_mouseGrid));
                     Tool = EditorTool.Select;
                     return;
+                case EditorTool.Sheet:   // [sheets] Editor/SchematicCanvas.Sheets.cs
+                    if (GuardEditing()) SheetToolClick();
+                    return;
+                case EditorTool.SheetPin:
+                    if (GuardEditing()) SheetPinToolClick();
+                    return;
+                case EditorTool.HierLabel:
+                    AddHierarchicalLabelAt(WireSnap(_mouseGrid));
+                    Tool = EditorTool.Select;
+                    return;
             }
 
             if (_wirePoints != null)
@@ -194,6 +204,10 @@ namespace RobotWin.Studio.Editor
                     case SchematicShape { Kind: SheetShapeKind.RuleArea } ra:   // [rule-area]
                         RequestCommand(SchematicCommand.EditRuleArea, ra);
                         return;
+                    case SchematicSheet ds:   // [sheets] in, as KiCad's double-click on a sheet
+                        if (HitSheetPin(_mouseGrid) is { } dp2) RequestCommand(SchematicCommand.EditSheetPin, (dp2.Sheet, dp2.Pin));
+                        else EnterSheet(ds.Uid);
+                        return;
                     case SchematicWire:
                         if (NetUnderCursor() is { } net) SelectConnection(net);
                         return;
@@ -205,6 +219,13 @@ namespace RobotWin.Studio.Editor
             if (pin != null && e.ClickCount == 1 && !ctrl && !shift)
             {
                 _wirePoints = new System.Collections.Generic.List<GridPoint> { pin.Value.Part.Transform(pin.Value.Pin.X, pin.Value.Pin.Y) };
+                InvalidateVisual();
+                return;
+            }
+
+            if (e.ClickCount == 1 && !ctrl && !shift && HitSheetPin(_mouseGrid) is { } sheetPin)   // [sheets] a sheet pin starts a wire too
+            {
+                _wirePoints = new System.Collections.Generic.List<GridPoint> { sheetPin.Pin.Position };
                 InvalidateVisual();
                 return;
             }
@@ -402,6 +423,16 @@ namespace RobotWin.Studio.Editor
         {
             var mods = Keyboard.Modifiers;
             var key = e.Key == Key.System ? e.SystemKey : e.Key;
+            if (mods == ModifierKeys.Alt && key is Key.Back or Key.Up or Key.Left or Key.Right)
+            {
+                // [sheets] KiCad's Leave Sheet (Alt+Backspace), Navigate Up / Back / Forward (Alt+↑ / ← / →)
+                if (key is Key.Back or Key.Up) SheetUp();
+                else if (key == Key.Left) SheetBack();
+                else SheetForward();
+                e.Handled = true;
+                return;
+            }
+
             if (mods.HasFlag(ModifierKeys.Alt)) return;
             // [keys] a key the user moved a tool to becomes the tool's own key; the tool's old key does nothing
             if (!Shell.Shortcuts.Translate(Shell.PageShortcuts.Schematic, ref key, ref mods))
@@ -608,6 +639,12 @@ namespace RobotWin.Studio.Editor
                     return true;
                 case Key.L when !ctrl:
                     Tool = EditorTool.Label;
+                    return true;
+                case Key.S when !ctrl && !shift:   // [sheets] KiCad's Add Sheet
+                    Tool = EditorTool.Sheet;
+                    return true;
+                case Key.H when !ctrl && !shift:   // [sheets] KiCad's hierarchical label
+                    Tool = EditorTool.HierLabel;
                     return true;
                 case Key.T when !ctrl:   // [notes] KiCad's text tool
                     Tool = EditorTool.Text;

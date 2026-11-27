@@ -56,7 +56,16 @@ namespace RobotWin.Studio.Editor
         RuleArea,
 
         /// <summary>[erase] KiCad's eraser: every click deletes what is under it (a wire, a part, a label, a note, a flag).</summary>
-        Erase
+        Erase,
+
+        /// <summary>[sheets] KiCad's Add Sheet (S): two corners, then its name.</summary>
+        Sheet,
+
+        /// <summary>[sheets] A pin on a sheet symbol's edge.</summary>
+        SheetPin,
+
+        /// <summary>[sheets] KiCad's hierarchical label (H).</summary>
+        HierLabel
     }
 
     /// <summary>
@@ -188,6 +197,7 @@ namespace RobotWin.Studio.Editor
         {
             var part = Doc.Parts.FirstOrDefault(p => string.Equals(p.RefDes, refDes, StringComparison.OrdinalIgnoreCase));
             if (part == null) return false;
+            EnterSheet(part.Sheet);   // [sheets] on its own sheet
             _selection.Clear();
             _selection.Add(part);
             _scale = Math.Max(_scale, 18);
@@ -237,13 +247,14 @@ namespace RobotWin.Studio.Editor
             foreach (var r in refDes) _highlight.Add(r);
             _highlightUntil = W.Simulation.WallTime + 3.0;
             _selection.Clear();
-            foreach (var part in Doc.Parts)
+            if (Doc.Parts.FirstOrDefault(p => _highlight.Contains(p.RefDes)) is { } there && !Here(there)) EnterSheet(there.Sheet);   // [sheets]
+            foreach (var part in SheetParts)
             {
                 if (_highlight.Contains(part.RefDes)) _selection.Add(part);
             }
 
             SelectionChanged?.Invoke(this, EventArgs.Empty);
-            var first = Doc.Parts.FirstOrDefault(p => _highlight.Contains(p.RefDes));
+            var first = SheetParts.FirstOrDefault(p => _highlight.Contains(p.RefDes));
             if (first != null && ActualWidth > 0)
             {
                 var b = PartBounds(first);
@@ -274,7 +285,9 @@ namespace RobotWin.Studio.Editor
         public void Refresh()
         {
             _netlist = null;
-            _selection.RemoveWhere(o => o is SchematicPart p && !Doc.Parts.Contains(p) ||
+            KeepSheetValid();   // [sheets] Editor/SchematicCanvas.Sheets.cs
+            _selection.RemoveWhere(o => !Here(o) || o is SchematicSheet h && !Doc.Sheets.Contains(h) ||
+                                        o is SchematicPart p && !Doc.Parts.Contains(p) ||
                                         o is SchematicWire w && !Doc.Wires.Contains(w) ||
                                         o is NetLabel l && !Doc.Labels.Contains(l) ||
                                         o is SchematicNote sn && !Doc.Notes.Contains(sn) ||
@@ -298,7 +311,7 @@ namespace RobotWin.Studio.Editor
         public void FitToContent()
         {
             if (ActualWidth < 10 || ActualHeight < 10) return;
-            if (Doc.Parts.Count == 0 && Doc.Wires.Count == 0)
+            if (!SheetParts.Any() && !SheetWires.Any() && !SheetSymbols.Any())   // [sheets] the shown sheet's
             {
                 _scale = 14;
                 _offset = new Vector(ActualWidth / 2, ActualHeight / 2);
@@ -315,18 +328,24 @@ namespace RobotWin.Studio.Editor
                 maxY = Math.Max(maxY, p.Y);
             }
 
-            foreach (var part in Doc.Parts)
+            foreach (var part in SheetParts)
             {
                 var b = PartBounds(part);
                 Inc(new GridPoint(b.Left, b.Top));
                 Inc(new GridPoint(b.Right, b.Bottom));
             }
 
-            foreach (var w in Doc.Wires) foreach (var p in w.Points) Inc(p);
-            foreach (var l in Doc.Labels) Inc(l.Position);
+            foreach (var w in SheetWires) foreach (var p in w.Points) Inc(p);
+            foreach (var l in SheetLabels) Inc(l.Position);
+            foreach (var h in SheetSymbols)   // [sheets]
+            {
+                Inc(new GridPoint(h.Position.X, h.Position.Y - 2));
+                Inc(new GridPoint(h.Position.X + h.Width, h.Position.Y + h.Height + 2));
+            }
+
             // A net label reaches beyond its point by its name, and while simulating by its voltage badge too: room on
             // both sides so the outermost ones are not cut by the edge.
-            double labelRoom = Doc.Labels.Count > 0 ? 12 : 0;
+            double labelRoom = SheetLabels.Any() ? 12 : 0;
             double w2 = Math.Max(10, maxX - minX + 8 + labelRoom), h2 = Math.Max(8, maxY - minY + 8);
             _scale = Math.Max(MinScale, Math.Min(26, Math.Min(ActualWidth / w2, ActualHeight / h2)));
             _offset = new Vector(ActualWidth / 2 - (minX + maxX) / 2 * _scale, ActualHeight / 2 - (minY + maxY) / 2 * _scale);
@@ -355,7 +374,7 @@ namespace RobotWin.Studio.Editor
         private (SchematicPart Part, PinDefinition Pin)? HitPin(GridPoint g)
         {
             double tol = Math.Max(0.45, 7 / _scale);
-            foreach (var part in Doc.Parts.AsEnumerable().Reverse())
+            foreach (var part in SheetParts.Reverse())
             {
                 var def = Lib.Find(part.PartId);
                 if (def == null) continue;
@@ -373,18 +392,18 @@ namespace RobotWin.Studio.Editor
         {
             double tol = Math.Max(0.35, 6 / _scale);
             if (HitNote(ToScreen(g)) is { } note) return note;   // [notes]
-            foreach (var nc in Doc.NoConnects)
+            foreach (var nc in SheetNoConnects)
             {
                 if (Math.Abs(nc.Position.X - g.X) <= tol && Math.Abs(nc.Position.Y - g.Y) <= tol) return nc;
             }
 
-            foreach (var label in Doc.Labels)
+            foreach (var label in SheetLabels)
             {
                 var r = LabelRect(label);
                 if (r.Contains(ToScreen(g))) return label;
             }
 
-            foreach (var wire in Doc.Wires)
+            foreach (var wire in SheetWires)
             {
                 for (int i = 0; i + 1 < wire.Points.Count; i++)
                 {
@@ -394,13 +413,14 @@ namespace RobotWin.Studio.Editor
                 }
             }
 
-            foreach (var part in Doc.Parts.AsEnumerable().Reverse())
+            foreach (var part in SheetParts.Reverse())
             {
                 var r = PartBounds(part);
                 r.Inflate(0.2, 0.2);
                 if (r.Contains(new Point(g.X, g.Y))) return part;
             }
 
+            if (HitSheet(g) is { } sheet) return sheet;   // [sheets] a sheet symbol (its pins are its)
             return HitShape(ToScreen(g));   // [shapes] last: a frame drawn round a block leaves its parts and wires pickable
         }
 
@@ -426,7 +446,7 @@ namespace RobotWin.Studio.Editor
         private bool LabelFacesLeft(NetLabel label)
         {
             var probe = new Point(label.Position.X + 0.8, label.Position.Y);
-            foreach (var part in Doc.Parts)
+            foreach (var part in Doc.Parts.Where(p => Schematic.SameSheet(p.Sheet, label.Sheet)))
             {
                 var r = PartBounds(part);
                 if (r.Contains(probe)) return true;
@@ -506,7 +526,7 @@ namespace RobotWin.Studio.Editor
             for (int i = 0; i < Doc.Wires.Count; i++)
             {
                 var wire = Doc.Wires[i];
-                if (wire.Points.Count < 2) continue;
+                if (wire.Points.Count < 2 || !Here(wire)) continue;   // [sheets] the shown sheet's
                 string? net = i < netlist.WireNets.Count ? netlist.WireNets[i] : null;
                 Color color = WireColor;
                 if (Simulating && net != null)
@@ -525,17 +545,22 @@ namespace RobotWin.Studio.Editor
             }
 
             // Junctions
-            foreach (var j in netlist.Junctions)
+            for (int k = 0; k < netlist.Junctions.Count; k++)
             {
-                dc.DrawEllipse(SymbolRenderer.Brush(WireColor), null, ToScreen(j), Math.Max(2.5, _scale * 0.2), Math.Max(2.5, _scale * 0.2));
+                if (k < netlist.JunctionSheets.Count && !Schematic.SameSheet(netlist.JunctionSheets[k], CurrentSheet)) continue;   // [sheets]
+                dc.DrawEllipse(SymbolRenderer.Brush(WireColor), null, ToScreen(netlist.Junctions[k]), Math.Max(2.5, _scale * 0.2), Math.Max(2.5, _scale * 0.2));
             }
 
             // Parts
             _variant = Variants.Find(Doc, Doc.ActiveVariant);   // [variants] parts as the active alternative has them
-            foreach (var part in Doc.Parts) DrawPart(dc, part, false);
+            foreach (var part in SheetParts) DrawPart(dc, part, false);
+            DrawSheetSymbols(dc);   // [sheets] Editor/SchematicCanvas.Sheets.cs
 
             // Net labels
-            for (int i = 0; i < Doc.Labels.Count; i++) DrawLabel(dc, Doc.Labels[i], i < netlist.LabelNets.Count ? netlist.LabelNets[i] : null);
+            for (int i = 0; i < Doc.Labels.Count; i++)
+                if (Here(Doc.Labels[i]))
+                    DrawLabel(dc, Doc.Labels[i], i < netlist.LabelNets.Count ? netlist.LabelNets[i] : null);
+            DrawSheetDraft(dc);
 
             DrawNoConnects(dc);
             DrawShapes(dc);   // [shapes] (Editor/SchematicCanvas.Shapes.cs)
@@ -706,11 +731,13 @@ namespace RobotWin.Studio.Editor
         {
             foreach (var w in Doc.Wires)
             {
+                if (!Schematic.SameSheet(w.Sheet, owner.Sheet)) continue;   // [sheets]
                 foreach (var p in w.Points) if (p.Equals(tip)) return true;
             }
 
-            foreach (var l in Doc.Labels) if (l.Position.Equals(tip)) return true;
-            foreach (var other in Doc.Parts)
+            foreach (var l in Doc.Labels) if (Schematic.SameSheet(l.Sheet, owner.Sheet) && l.Position.Equals(tip)) return true;
+            foreach (var h in Doc.SheetsOn(owner.Sheet)) if (h.Pins.Any(pin => pin.Position.Equals(tip))) return true;
+            foreach (var other in Doc.Parts.Where(p => Schematic.SameSheet(p.Sheet, owner.Sheet)))
             {
                 if (ReferenceEquals(other, owner)) continue;
                 var def = Lib.Find(other.PartId);
@@ -823,8 +850,16 @@ namespace RobotWin.Studio.Editor
             }
 
             g.Freeze();
-            var border = selected ? Accent : lit ? HighlightColor : label.Global ? LabelColor : PanelBorder;
-            dc.DrawGeometry(SymbolRenderer.Brush(label.Global ? PanelColor : CanvasColor), MakePen(border, label.Global ? 1.4 : 1), g);
+            var border = selected ? Accent : lit ? HighlightColor : label.Global || label.Hierarchical ? LabelColor : PanelBorder;
+            var outline = MakePen(border, label.Global || label.Hierarchical ? 1.4 : 1);
+            if (label.Hierarchical)
+            {
+                // [sheets] a hierarchical label: dashed, as it goes up to the sheet symbol's pin
+                outline = outline.Clone();
+                outline.DashStyle = DashStyles.Dash;
+            }
+
+            dc.DrawGeometry(SymbolRenderer.Brush(label.Global ? PanelColor : CanvasColor), outline, g);
             var ft = Text(label.Name, 11.5, color, false);
             dc.DrawText(ft, new Point(left ? r.Left + 6 : r.Left + 12, r.Top + 3));
             dc.DrawEllipse(SymbolRenderer.Brush(WireColor), null, ToScreen(label.Position), 2.2, 2.2);
@@ -953,7 +988,7 @@ namespace RobotWin.Studio.Editor
                 return;
             }
 
-            foreach (var part in Doc.Parts)
+            foreach (var part in SheetParts)
             {
                 var devices = Sim.Compiled?.DevicesOf(part.RefDes);
                 if (devices == null || devices.Count == 0) continue;
@@ -1047,14 +1082,15 @@ namespace RobotWin.Studio.Editor
                     if (probe.Kind == ProbeKind.Voltage)
                     {
                         int w = netlist.WireNets.FindIndex(n => n == probe.Name);
+                        w = Enumerable.Range(0, Math.Min(Doc.Wires.Count, netlist.WireNets.Count)).FirstOrDefault(i => netlist.WireNets[i] == probe.Name && Here(Doc.Wires[i]), -1);   // [sheets]
                         if (w >= 0 && w < Doc.Wires.Count && Doc.Wires[w].Points.Count > 0) at = Doc.Wires[w].Points[0];
                         else
                         {
-                            int l = netlist.LabelNets.FindIndex(n => n == probe.Name);
+                            int l = Enumerable.Range(0, Math.Min(Doc.Labels.Count, netlist.LabelNets.Count)).FirstOrDefault(i => netlist.LabelNets[i] == probe.Name && Here(Doc.Labels[i]), -1);
                             if (l >= 0 && l < Doc.Labels.Count) at = Doc.Labels[l].Position;
                         }
                     }
-                    else if (Doc.FindPart(probe.Target) is { } part)
+                    else if (Doc.FindPart(probe.Target) is { } part && Here(part))
                     {
                         at = PartCenter(part);
                     }
@@ -1084,7 +1120,7 @@ namespace RobotWin.Studio.Editor
             }
 
             double pulse = 0.5 + 0.5 * Math.Sin(Sim.WallTime * 9);
-            foreach (var part in Doc.Parts)
+            foreach (var part in SheetParts)
             {
                 if (!_highlight.Contains(part.RefDes)) continue;
                 var b = PartBounds(part);
@@ -1097,7 +1133,7 @@ namespace RobotWin.Studio.Editor
         private void DrawSimulationOverlay(DrawingContext dc, Netlist netlist)
         {
             // Current flow dots along two-terminal parts.
-            foreach (var part in AppSettings.Current.ShowCurrentFlow ? Doc.Parts : new List<SchematicPart>())
+            foreach (var part in AppSettings.Current.ShowCurrentFlow ? SheetParts : Enumerable.Empty<SchematicPart>())
             {
                 var def = Lib.Find(part.PartId);
                 if (def == null || def.Pins.Count != 2 || def.Symbol == SymbolKind.Ground) continue;

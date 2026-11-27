@@ -40,6 +40,24 @@ namespace RobotWin.Studio.Editor
 
             string Check(bool on, string text) => (on ? "✓  " : "     ") + text;
 
+            // [sheets] a hierarchical label's or a sheet pin's direction (KiCad's shapes)
+            void ShapeItems(LabelShape now, Action<LabelShape> set)
+            {
+                var sub = new MenuItem { Header = Shell.Lang.T("Yön"), IsEnabled = editable };
+                foreach (var (shape, text) in new[]
+                         {
+                             (LabelShape.Input, "Giriş"), (LabelShape.Output, "Çıkış"), (LabelShape.Bidirectional, "Çift yönlü"), (LabelShape.TriState, "Üç durumlu"), (LabelShape.Passive, "Pasif")
+                         })
+                {
+                    var mi = new MenuItem { Header = Shell.Lang.T(text), IsChecked = shape == now };
+                    var chosen = shape;
+                    mi.Click += (_, _) => set(chosen);
+                    sub.Items.Add(mi);
+                }
+
+                menu.Items.Add(sub);
+            }
+
             // Instruments: scope channels and meter leads on any net (also before the run starts).
             if (hitNet != null && (hit is SchematicWire || hit is NetLabel || pin != null))
             {
@@ -135,6 +153,50 @@ namespace RobotWin.Studio.Editor
                     Item("Sürükle", "G", () => BeginKeyMove(true));
                     Item("Kopyala", "Ctrl+C", CopySelection);
                     Item("Kes", "Ctrl+X", CutSelection);
+                    Item("Sil" + many, "Del", DeleteSelection);
+                    break;
+
+                case SchematicSheet sheet:   // [sheets]
+                {
+                    Item(Shell.Lang.T("Sayfayı aç"), Shell.Lang.T("çift tık"), () => EnterSheet(sheet.Uid));
+                    Item(Shell.Lang.T("Yeniden adlandır"), "V", () => RequestCommand(SchematicCommand.EditSheet, sheet), editable);
+                    Item(Shell.Lang.T("Sayfa pinlerini eşitle (iç etiketlerden)"), "", () => SyncSheetPins(sheet), editable);
+                    if (HitSheetPin(at) is { } sp)
+                    {
+                        Sep();
+                        Item(string.Format(Shell.Lang.T("'{0}' pinini yeniden adlandır"), sp.Pin.Name), "", () => RequestCommand(SchematicCommand.EditSheetPin, (sp.Sheet, sp.Pin)), editable);
+                        ShapeItems(sp.Pin.Shape, shape =>
+                        {
+                            W.BeginChange();
+                            sp.Pin.Shape = shape;
+                            W.CommitChange(Shell.Lang.T("Sayfa pini") + ": " + sp.Pin.Name);
+                        });
+                        Item(string.Format(Shell.Lang.T("'{0}' pinini sil"), sp.Pin.Name), "", () =>
+                        {
+                            W.BeginChange();
+                            sp.Sheet.Pins.Remove(sp.Pin);
+                            W.CommitChange(Shell.Lang.T("Sayfa pini silindi"));
+                        }, editable);
+                    }
+
+                    Sep();
+                    Item("Taşı", "M", () => BeginKeyMove(false));
+                    Item("Sürükle (kablolar uzar)", "G", () => BeginKeyMove(true));
+                    Item(Shell.Lang.T("Sayfayı içindekilerle sil"), "Del", DeleteSelection, editable);
+                    break;
+                }
+
+                case NetLabel { Hierarchical: true } hl:   // [sheets]
+                    Item("Yeniden adlandır", "V", () => RequestCommand(SchematicCommand.EditValue, hl));
+                    ShapeItems(hl.Shape, shape =>
+                    {
+                        W.BeginChange();
+                        hl.Shape = shape;
+                        W.CommitChange(Shell.Lang.T("Hiyerarşik etiket") + ": " + hl.Name);
+                    });
+                    if (CurrentSheet != null) Item(Shell.Lang.T("Üst sayfaya çık"), "Alt+↑", SheetUp);
+                    Sep();
+                    Item("Taşı", "M", () => BeginKeyMove(false));
                     Item("Sil" + many, "Del", DeleteSelection);
                     break;
 

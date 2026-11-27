@@ -42,6 +42,10 @@ namespace RobotTwin.CoreSim.Design
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Group { get; set; }
 
+        /// <summary>[sheets] The sheet it is on (<see cref="SchematicSheet.Uid"/>); null: the root sheet.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Sheet { get; set; }
+
         /// <summary>
         /// [integrity] The part's identity for its whole life: it stays when the designator changes, so the PCB and the
         /// Montaj follow a renamed part instead of dropping it and adding a new one. Empty in files saved before it existed
@@ -85,6 +89,10 @@ namespace RobotTwin.CoreSim.Design
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Group { get; set; }
 
+        /// <summary>[sheets] The sheet it is on (<see cref="SchematicSheet.Uid"/>); null: the root sheet.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Sheet { get; set; }
+
         public List<GridPoint> Points { get; set; } = new List<GridPoint>();
     }
 
@@ -94,6 +102,10 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Group { get; set; }
+
+        /// <summary>[sheets] The sheet it is on (<see cref="SchematicSheet.Uid"/>); null: the root sheet.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Sheet { get; set; }
 
         public string Name { get; set; } = string.Empty;
         public GridPoint Position { get; set; }
@@ -114,6 +126,17 @@ namespace RobotTwin.CoreSim.Design
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public bool Global { get; set; }
+
+        /// <summary>
+        /// [sheets] KiCad's hierarchical label: inside a sub-sheet it joins the sheet symbol's pin of the same name on the
+        /// parent sheet (and nothing else by its name).
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool Hierarchical { get; set; }
+
+        /// <summary>[sheets] Which way a hierarchical or global label carries its signal (its outline).</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public LabelShape Shape { get; set; }
     }
 
     /// <summary>A "no connection" flag (KiCad's X marker) on a pin that is deliberately left open.</summary>
@@ -122,6 +145,10 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Group { get; set; }
+
+        /// <summary>[sheets] The sheet it is on (<see cref="SchematicSheet.Uid"/>); null: the root sheet.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Sheet { get; set; }
 
         public GridPoint Position { get; set; }
     }
@@ -135,6 +162,10 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Group { get; set; }
+
+        /// <summary>[sheets] The sheet it is on (<see cref="SchematicSheet.Uid"/>); null: the root sheet.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Sheet { get; set; }
 
         public string Text { get; set; } = string.Empty;
         public GridPoint Position { get; set; }
@@ -195,6 +226,10 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Group { get; set; }
+
+        /// <summary>[sheets] The sheet it is on (<see cref="SchematicSheet.Uid"/>); null: the root sheet.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Sheet { get; set; }
 
         public SheetShapeKind Kind { get; set; }
 
@@ -406,6 +441,9 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>Points where three or more connections meet (drawn as junction dots).</summary>
         public List<GridPoint> Junctions { get; } = new List<GridPoint>();
 
+        /// <summary>[sheets] The sheet of each junction (index-aligned with <see cref="Junctions"/>; null: the root).</summary>
+        public List<string?> JunctionSheets { get; } = new List<string?>();
+
         public Net? NetOf(string refDes, string pin) =>
             Nets.FirstOrDefault(n => n.Connections.Any(c =>
                 string.Equals(c.RefDes, refDes, StringComparison.OrdinalIgnoreCase) &&
@@ -413,7 +451,7 @@ namespace RobotTwin.CoreSim.Design
     }
 
     /// <summary>The schematic document: parts, wires and labels. Also the project file format.</summary>
-    public sealed class Schematic
+    public sealed partial class Schematic
     {
         public const int FormatVersion = 1;
 
@@ -449,17 +487,18 @@ namespace RobotTwin.CoreSim.Design
                 string cls = area.NetClass!.Trim();
                 for (int i = 0; i < Wires.Count && i < netlist.WireNets.Count; i++)
                 {
+                    if (!SameSheet(Wires[i].Sheet, area.Sheet)) continue;   // [sheets]
                     var w = Wires[i].Points;
                     bool inside = w.Any(r.Contains) || Enumerable.Range(0, Math.Max(0, w.Count - 1)).Any(k => r.IntersectsSegment(w[k], w[k + 1]));
                     if (inside && netlist.WireNets[i] is { } wn) map[wn] = cls;
                 }
 
                 for (int i = 0; i < Labels.Count && i < netlist.LabelNets.Count; i++)
-                    if (!Labels[i].IsDirective && r.Contains(Labels[i].Position) && netlist.LabelNets[i] is { } ln)
+                    if (!Labels[i].IsDirective && SameSheet(Labels[i].Sheet, area.Sheet) && r.Contains(Labels[i].Position) && netlist.LabelNets[i] is { } ln)
                         map[ln] = cls;
                 if (library != null)
                     foreach (var (part, pin, pos) in PinPositions(library))
-                        if (r.Contains(pos) && netlist.NetOf(part.RefDes, pin.Name) is { } pn)
+                        if (SameSheet(part.Sheet, area.Sheet) && r.Contains(pos) && netlist.NetOf(part.RefDes, pin.Name) is { } pn)
                             map[pn.Name] = cls;
             }
 
@@ -598,77 +637,123 @@ namespace RobotTwin.CoreSim.Design
         /// </summary>
         public Netlist BuildNetlist(PartLibrary library)
         {
+            // [sheets] Every point is a place on one sheet: wires, pins and labels meet only on the same sheet. Local labels
+            // join on their own sheet; global labels and power symbols on every sheet; a sub-sheet's hierarchical labels join
+            // the pins of its symbol on the parent sheet.
             var netlist = new Netlist();
             var uf = new UnionFind();
-            var pointIds = new Dictionary<GridPoint, int>();
+            var pointIds = new Dictionary<(string Sheet, GridPoint P), int>();
+            static string Key(string? sheet) => sheet ?? string.Empty;
 
-            int Id(GridPoint p)
+            int Id(string? sheet, GridPoint p)
             {
-                if (!pointIds.TryGetValue(p, out int id))
+                var key = (Key(sheet), p);
+                if (!pointIds.TryGetValue(key, out int id))
                 {
                     id = uf.Add();
-                    pointIds[p] = id;
+                    pointIds[key] = id;
                 }
 
                 return id;
             }
 
-            var segments = new List<(GridPoint A, GridPoint B)>();
+            var segments = new List<(string Sheet, GridPoint A, GridPoint B)>();
             foreach (var wire in Wires)
             {
                 for (int i = 0; i + 1 < wire.Points.Count; i++)
                 {
-                    uf.Union(Id(wire.Points[i]), Id(wire.Points[i + 1]));
-                    segments.Add((wire.Points[i], wire.Points[i + 1]));
+                    uf.Union(Id(wire.Sheet, wire.Points[i]), Id(wire.Sheet, wire.Points[i + 1]));
+                    segments.Add((Key(wire.Sheet), wire.Points[i], wire.Points[i + 1]));
                 }
 
-                if (wire.Points.Count == 1) Id(wire.Points[0]);
+                if (wire.Points.Count == 1) Id(wire.Sheet, wire.Points[0]);
             }
 
             var pins = PinPositions(library).ToList();
-            foreach (var (_, _, pos) in pins) Id(pos);
-            foreach (var label in Labels) Id(label.Position);
+            foreach (var (part, _, pos) in pins) Id(part.Sheet, pos);
+            foreach (var label in Labels) Id(label.Sheet, label.Position);
+            var known = new HashSet<string>(Sheets.Select(x => x.Uid), StringComparer.Ordinal);
+            foreach (var symbol in Sheets)
+                foreach (var pin in symbol.Pins)
+                    Id(symbol.Sheet, pin.Position);
 
-            // T-junctions: any point that lies on the interior of a segment joins it.
+            // T-junctions: any point that lies on the interior of a segment on its sheet joins it.
+            var bySheet = segments.GroupBy(x => x.Sheet).ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
             foreach (var point in pointIds.Keys.ToList())
             {
-                foreach (var (a, b) in segments)
+                if (!bySheet.TryGetValue(point.Sheet, out var onSheet)) continue;
+                foreach (var (_, a, b) in onSheet)
                 {
-                    if (OnSegment(point, a, b)) uf.Union(pointIds[point], pointIds[a]);
+                    if (OnSegment(point.P, a, b)) uf.Union(pointIds[point], pointIds[(point.Sheet, a)]);
                 }
             }
 
-            // Labels with the same name, ground/power symbols and internal part connections.
-            var byName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            var namedRoots = new List<(int Id, string Name, bool Ground)>();
+            // Labels with the same name (per scope), ground/power symbols, sheet pins and internal part connections.
+            var byKey = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var namedRoots = new List<(int Id, string Name, bool Ground, int Rank)>();
 
-            void Name(int id, string name, bool ground)
+            void Join(int id, string key)
             {
-                if (byName.TryGetValue(name, out int other)) uf.Union(id, other);
-                else byName[name] = id;
-                namedRoots.Add((id, name, ground));
+                if (byKey.TryGetValue(key, out int other)) uf.Union(id, other);
+                else byKey[key] = id;
             }
+
+            // A name's rank: global ones and power first, then the root's labels, then deeper sheets' (KiCad's drivers).
+            void Name(int id, string name, bool ground, int rank) => namedRoots.Add((id, name, ground, rank));
 
             foreach (var label in Labels)
             {
-                if (label.IsDirective) continue;   // [directive] it gives a class, not a name
-                if (!string.IsNullOrWhiteSpace(label.Name)) Name(pointIds[label.Position], label.Name.Trim(), IsGroundName(label.Name));
+                if (label.IsDirective || string.IsNullOrWhiteSpace(label.Name)) continue;   // [directive] it gives a class, not a name
+                string name = label.Name.Trim();
+                int id = pointIds[(Key(label.Sheet), label.Position)];
+                bool sub = label.Sheet != null && known.Contains(label.Sheet);
+                int depth = sub ? SheetDepth(label.Sheet) : 0;
+                if (label.Hierarchical && sub)
+                {
+                    Name(id, SheetPath(label.Sheet) + name, IsGroundName(name), 100 + depth);   // joined through the sheet pin below
+                }
+                else if (label.Global || !sub)
+                {
+                    Join(id, ":" + name);   // the root's labels and global labels share one scope (a single sheet stays as it was)
+                    Name(id, name, IsGroundName(name), 0);   // as before sheets: first placed, first named
+                }
+                else
+                {
+                    Join(id, label.Sheet + ":" + name);
+                    Name(id, SheetPath(label.Sheet) + name, IsGroundName(name), 10 + depth);
+                }
+            }
+
+            foreach (var symbol in Sheets)
+            {
+                var inside = Labels.Where(l => l.Hierarchical && SameSheet(l.Sheet, symbol.Uid) && !string.IsNullOrWhiteSpace(l.Name)).ToList();
+                foreach (var pin in symbol.Pins)
+                {
+                    if (string.IsNullOrWhiteSpace(pin.Name)) continue;
+                    int at = pointIds[(Key(symbol.Sheet), pin.Position)];
+                    foreach (var l in inside.Where(l => string.Equals(l.Name.Trim(), pin.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
+                        uf.Union(at, pointIds[(Key(l.Sheet), l.Position)]);
+                    Name(at, SheetPath(symbol.Sheet) == "/" ? pin.Name.Trim() : SheetPath(symbol.Sheet) + pin.Name.Trim(), false, 200 + SheetDepth(symbol.Sheet));
+                }
             }
 
             var pinIds = new Dictionary<(SchematicPart, string), int>();
             foreach (var (part, pin, pos) in pins)
             {
-                pinIds[(part, pin.Name)] = pointIds[pos];
+                int id = pointIds[(Key(part.Sheet), pos)];
+                pinIds[(part, pin.Name)] = id;
                 var def = library.Get(part.PartId);
                 if (def.Symbol == SymbolKind.Ground)
                 {
-                    Name(pointIds[pos], "GND", true);
+                    Join(id, ":GND");
+                    Name(id, "GND", true, 0);
                 }
                 else if (def.Symbol == SymbolKind.PowerRail)
                 {
                     var parameters = ResolveParameters(library, part);
                     string net = parameters.TryGetValue("net", out var n) && !string.IsNullOrWhiteSpace(n) ? n.Trim() : "VCC";
-                    Name(pointIds[pos], net, IsGroundName(net));
+                    Join(id, ":" + net);
+                    Name(id, net, IsGroundName(net), 0);
                 }
             }
 
@@ -699,7 +784,7 @@ namespace RobotTwin.CoreSim.Design
             {
                 var def = library.Get(part.PartId);
                 if (def.Symbol == SymbolKind.Ground || def.Symbol == SymbolKind.PowerRail) continue;
-                int root = uf.Find(pointIds[pos]);
+                int root = uf.Find(pointIds[(Key(part.Sheet), pos)]);
                 if (!nets.TryGetValue(root, out var net))
                 {
                     net = new Net();
@@ -709,8 +794,8 @@ namespace RobotTwin.CoreSim.Design
                 net.Connections.Add(new NetConnection(part.RefDes, pin.Name));
             }
 
-            // Names: explicit names win (ground first), otherwise "<first part>.<pin>".
-            foreach (var (id, name, ground) in namedRoots.OrderByDescending(r => r.Ground))
+            // Names: explicit names win (ground first, then by rank), otherwise "<first part>.<pin>".
+            foreach (var (id, name, ground, _) in namedRoots.OrderByDescending(r => r.Ground).ThenBy(r => r.Rank))
             {
                 int root = uf.Find(id);
                 if (!nets.TryGetValue(root, out var net))
@@ -747,7 +832,8 @@ namespace RobotTwin.CoreSim.Design
                     var owner = FindPart(only.RefDes);
                     var ownerDef = owner != null ? library.Find(owner.PartId) : null;
                     var pinDef = ownerDef?.FindPin(only.Pin);
-                    bool flagged = owner != null && pinDef != null && NoConnects.Any(nc => nc.Position.Equals(owner.Transform(pinDef.X, pinDef.Y)));
+                    bool flagged = owner != null && pinDef != null &&
+                                   NoConnects.Any(nc => SameSheet(nc.Sheet, owner.Sheet) && nc.Position.Equals(owner.Transform(pinDef.X, pinDef.Y)));
                     if (ownerDef != null && ownerDef.Pins.Count <= 3 && !flagged)
                     {
                         netlist.Warnings.Add($"{only.RefDes}.{only.Pin} hiçbir yere bağlı değil.");
@@ -761,42 +847,46 @@ namespace RobotTwin.CoreSim.Design
             foreach (var wire in Wires)
             {
                 string? name = null;
-                if (wire.Points.Count > 0 && nameByRoot.TryGetValue(uf.Find(pointIds[wire.Points[0]]), out var n)) name = n;
+                if (wire.Points.Count > 0 && nameByRoot.TryGetValue(uf.Find(pointIds[(Key(wire.Sheet), wire.Points[0])]), out var n)) name = n;
                 netlist.WireNets.Add(name);
             }
 
             foreach (var label in Labels)
             {
-                netlist.LabelNets.Add(nameByRoot.TryGetValue(uf.Find(pointIds[label.Position]), out var n) ? n : null);
+                netlist.LabelNets.Add(nameByRoot.TryGetValue(uf.Find(pointIds[(Key(label.Sheet), label.Position)]), out var n) ? n : null);
             }
 
-            var degree = new Dictionary<GridPoint, int>();
-            void Bump(GridPoint p, int by) => degree[p] = (degree.TryGetValue(p, out int d) ? d : 0) + by;
+            var degree = new Dictionary<(string Sheet, GridPoint P), int>();
+            void Bump((string, GridPoint) p, int by) => degree[p] = (degree.TryGetValue(p, out int d) ? d : 0) + by;
             foreach (var wire in Wires)
             {
                 for (int i = 0; i < wire.Points.Count; i++)
                 {
                     bool end = i == 0 || i == wire.Points.Count - 1;
-                    Bump(wire.Points[i], wire.Points.Count == 1 ? 0 : (end ? 1 : 2));
+                    Bump((Key(wire.Sheet), wire.Points[i]), wire.Points.Count == 1 ? 0 : (end ? 1 : 2));
                 }
             }
 
             foreach (var point in degree.Keys.ToList())
             {
-                foreach (var (a, b) in segments)
+                if (!bySheet.TryGetValue(point.Sheet, out var onSheet)) continue;
+                foreach (var (_, a, b) in onSheet)
                 {
-                    if (OnSegment(point, a, b)) Bump(point, 2);
+                    if (OnSegment(point.P, a, b)) Bump(point, 2);
                 }
             }
 
-            foreach (var (_, _, pos) in pins)
+            foreach (var (part, _, pos) in pins)
             {
-                if (degree.ContainsKey(pos)) Bump(pos, 1);
+                var key = (Key(part.Sheet), pos);
+                if (degree.ContainsKey(key)) Bump(key, 1);
             }
 
             foreach (var kv in degree)
             {
-                if (kv.Value >= 3) netlist.Junctions.Add(kv.Key);
+                if (kv.Value < 3) continue;
+                netlist.Junctions.Add(kv.Key.P);
+                netlist.JunctionSheets.Add(kv.Key.Sheet.Length == 0 ? null : kv.Key.Sheet);
             }
 
             return netlist;
@@ -842,6 +932,7 @@ namespace RobotTwin.CoreSim.Design
             }
 
             doc.NoConnects ??= new List<NoConnectFlag>();
+            doc.Sheets ??= new List<SchematicSheet>();   // [sheets]
             return doc;
         }
 

@@ -213,7 +213,7 @@ namespace RobotWin.Studio.Pages
                     return;
                 }
 
-                W.Schematic.Notes.Add(new SchematicNote { Text = text, Position = at, Size = sz, Boxed = boxed.IsChecked == true, Bold = bold.IsChecked == true });
+                W.Schematic.Notes.Add(new SchematicNote { Text = text, Position = at, Size = sz, Boxed = boxed.IsChecked == true, Bold = bold.IsChecked == true, Sheet = Canvas.CurrentSheet });   // [sheets]
                 W.CommitChange("Metin eklendi");
             }
             else if (text.Length == 0)

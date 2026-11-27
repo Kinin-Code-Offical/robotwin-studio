@@ -31,6 +31,7 @@ namespace RobotWin.Studio.Pages
         /// <summary>Goes to an ERC marker as a click on it in the ERC list does: the place, its part selected, its net highlighted.</summary>
         public void ShowErcMarker(ErcViolation v)
         {
+            Canvas.EnterSheet(v.Sheet);   // [sheets]
             Canvas.ZoomToPoint(v.Location, 22);
             var part = v.RefDes != null ? W.Schematic.FindPart(v.RefDes) : null;
             if (part != null) Canvas.SelectItems(new object[] { part });

@@ -41,6 +41,7 @@ namespace RobotWin.Studio.Editor
         {
             var table = SchematicShape.Table(Snap(_mouseGrid), 3, 3);
             W.BeginChange();
+            table.Sheet = CurrentSheet;   // [sheets]
             Doc.Shapes.Add(table);
             W.CommitChange(Shell.Lang.T("Tablo eklendi"));
             Tool = EditorTool.Select;
@@ -95,6 +96,7 @@ namespace RobotWin.Studio.Editor
             if (PendingImageAt(Snap(_mouseGrid)) is not { } image) return;
             _pendingImage = null;
             W.BeginChange();
+            image.Sheet = CurrentSheet;   // [sheets]
             Doc.Shapes.Add(image);
             W.CommitChange(Shell.Lang.T("Resim eklendi"));
             Tool = EditorTool.Select;
@@ -162,7 +164,8 @@ namespace RobotWin.Studio.Editor
                 shape.NetClass = "Power";
                 shape.Dashed = true;
                 W.BeginChange();
-                Doc.Shapes.Add(shape);
+                shape.Sheet = CurrentSheet;   // [sheets]
+            Doc.Shapes.Add(shape);
                 W.CommitChange(Shell.Lang.T("Kural alanı eklendi"));
                 Tool = EditorTool.Select;
                 SelectItems(new object[] { shape });
@@ -171,13 +174,14 @@ namespace RobotWin.Studio.Editor
             }
 
             W.BeginChange();
+            shape.Sheet = CurrentSheet;   // [sheets]
             Doc.Shapes.Add(shape);
             W.CommitChange(Shell.Lang.T("Çizim eklendi"));
         }
 
         private void DrawShapes(DrawingContext dc)
         {
-            foreach (var s in Doc.Shapes) DrawShape(dc, s, _selection.Contains(s) ? Accent : TextColor);
+            foreach (var s in SheetShapes) DrawShape(dc, s, _selection.Contains(s) ? Accent : TextColor);
             if (_tool == EditorTool.Image && PendingImageAt(Snap(_mouseGrid)) is { } ghost)
             {
                 dc.PushOpacity(0.6);
@@ -255,7 +259,7 @@ namespace RobotWin.Studio.Editor
         /// <summary>The topmost shape whose stroke passes within a few pixels of the point (or that contains it, when filled).</summary>
         private SchematicShape? HitShape(Point screen)
         {
-            foreach (var s in Doc.Shapes.AsEnumerable().Reverse())
+            foreach (var s in SheetShapes.Reverse())
             {
                 var pts = s.Outline().Select(ToScreen).ToList();
                 double reach = Math.Max(5, s.Width / 2.54 * _scale / 2 + 3);

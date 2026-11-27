@@ -31,7 +31,7 @@ namespace RobotWin.Studio.Editor
 
         private void DrawNotes(DrawingContext dc)
         {
-            foreach (var n in Doc.Notes)
+            foreach (var n in SheetNotes)   // [sheets]
             {
                 bool selected = _selection.Contains(n);
                 var color = selected ? Accent : TextColor;
@@ -43,6 +43,6 @@ namespace RobotWin.Studio.Editor
             }
         }
 
-        private SchematicNote? HitNote(Point screen) => Doc.Notes.AsEnumerable().Reverse().FirstOrDefault(n => Rect.Inflate(NoteRect(n), 3, 3).Contains(screen));
+        private SchematicNote? HitNote(Point screen) => SheetNotes.Reverse().FirstOrDefault(n => Rect.Inflate(NoteRect(n), 3, 3).Contains(screen));
     }
 }

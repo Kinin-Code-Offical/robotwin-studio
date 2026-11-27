@@ -53,7 +53,9 @@ namespace RobotTwin.CoreSim.Design
             new ErcRuleInfo("wire-dangling", "Boşta kablo ucu", ErcSeverity.Warning, "Kablo ucu hiçbir pine ya da kabloya değmiyor"),
             new ErcRuleInfo("label-unconnected", "Bağlanmamış etiket", ErcSeverity.Warning, "Etiket hiçbir kabloya ya da pine değmiyor"),
             new ErcRuleInfo("label-single", "Tek etiket", ErcSeverity.Warning, "Aynı adda başka etiket yok ve hatta tek pin var"),
-            new ErcRuleInfo("nc-floating", "Boşta NC işareti", ErcSeverity.Warning, "NC işareti bir pinin üzerinde değil")
+            new ErcRuleInfo("nc-floating", "Boşta NC işareti", ErcSeverity.Warning, "NC işareti bir pinin üzerinde değil"),
+            new ErcRuleInfo("hier-label-no-pin", "Pinsiz hiyerarşik etiket", ErcSeverity.Warning, "Hiyerarşik etiketin sayfa sembolünde pini yok"),
+            new ErcRuleInfo("sheet-pin-no-label", "Etiketsiz sayfa pini", ErcSeverity.Warning, "Sayfa pininin alt sayfada hiyerarşik etiketi yok")
         };
 
         public static ErcRuleInfo? Find(string code) => Rules.FirstOrDefault(r => string.Equals(r.Code, code, StringComparison.Ordinal));

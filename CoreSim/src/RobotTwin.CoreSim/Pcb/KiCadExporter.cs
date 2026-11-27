@@ -992,13 +992,23 @@ namespace RobotTwin.CoreSim.Pcb
         /// page by a whole number of grid units); ground and power-rail symbols are omitted
         /// because the labels already carry their net names.
         /// </summary>
-        public static string ExportSchematic(Schematic schematic, PartLibrary library, string? projectName = null)
+        public static string ExportSchematic(Schematic schematic, PartLibrary library, string? projectName = null) =>
+            ExportSchematic(schematic, library, projectName, null);
+
+        /// <summary>
+        /// [sheets] One sheet of a hierarchical design as its own .kicad_sch: its parts, drawings and the sheet symbols on it
+        /// (each pointing at its file, <see cref="SheetFileName"/>). The nets join across the files by their global labels,
+        /// as the whole design does; only the root file carries the sheet instances.
+        /// </summary>
+        public static string ExportSchematic(Schematic schematic, PartLibrary library, string? projectName, string? sheet)
         {
             if (schematic == null) throw new ArgumentNullException(nameof(schematic));
             if (library == null) throw new ArgumentNullException(nameof(library));
             string project = ProjectName(projectName, schematic);
             string rootUuid = Uuid("schematic:" + project);
-            var parts = ExportParts(schematic, library, out var variants);
+            string fileUuid = sheet == null ? rootUuid : Uuid("schematic:sheet:" + sheet);
+            string instancePath = "/" + rootUuid + string.Concat(schematic.SheetChain(sheet).Select(x => "/" + Uuid("schematic:sheet:" + x.Uid)));
+            var parts = ExportParts(schematic, library, out var variants).Where(x => Schematic.SameSheet(x.Part.Sheet, sheet)).ToList();   // [sheets] this sheet's
             var dnp = Design.Variants.FittingOf(schematic, library)?.NotFitted ?? new HashSet<string>();   // [variants] the chosen alternative's parts not fitted
             var pinNets = PinNets(schematic.BuildNetlist(library));
 
@@ -1039,8 +1049,14 @@ namespace RobotTwin.CoreSim.Pcb
                 Grow(s.End.X + s.Dx * labelLength, s.End.Y + s.Dy * labelLength);
             }
 
-            foreach (var sh in schematic.Shapes ?? new List<SchematicShape>())   // [shapes] the sheet's drawings fit on the page too
+            foreach (var sh in (schematic.Shapes ?? new List<SchematicShape>()).Where(x => Schematic.SameSheet(x.Sheet, sheet)))   // [shapes] the sheet's drawings fit on the page too
                 foreach (var q in sh.Outline(16)) Grow(q.X, q.Y);
+            var symbols = schematic.SheetsOn(sheet).ToList();   // [sheets] the sheet symbols drawn here
+            foreach (var h in symbols)
+            {
+                Grow(h.Position.X, h.Position.Y - 2);
+                Grow(h.Position.X + h.Width, h.Position.Y + h.Height + 2);
+            }
 
             if (double.IsInfinity(minX))
             {
@@ -1057,7 +1073,7 @@ namespace RobotTwin.CoreSim.Pcb
                 new SNode("version", SchematicFileVersion),
                 new SNode("generator", Q(Generator)),
                 new SNode("generator_version", Q(GeneratorVersion)),
-                new SNode("uuid", Q(rootUuid)),
+                new SNode("uuid", Q(fileUuid)),
                 new SNode("paper", Q(Paper((maxX + ox + Margin) * SchematicGridMm, (maxY + oy + Margin) * SchematicGridMm + 40))),
                 new SNode("title_block", new SNode("title", Q(schematic.Title ?? string.Empty))),
                 new SNode("lib_symbols", variants.Select(v => LibSymbol(v, DefaultLibrary + ":" + v.Name))));
@@ -1125,12 +1141,31 @@ namespace RobotTwin.CoreSim.Pcb
 
                 symbol.Add(new SNode("instances",
                     new SNode("project", Q(project),
-                        new SNode("path", Q("/" + rootUuid), new SNode("reference", Q(part.RefDes)), new SNode("unit", "1")))));
+                        new SNode("path", Q(instancePath), new SNode("reference", Q(part.RefDes)), new SNode("unit", "1")))));
                 root.Add(symbol);
             }
 
+            // [sheets] KiCad's sheet symbols, each pointing at its sub-sheet's file
+            foreach (var h in symbols)
+            {
+                double sx = Mx(h.Position.X), sy = My(h.Position.Y), sw = h.Width * SchematicGridMm, shh = h.Height * SchematicGridMm;
+                root.Add(new SNode("sheet",
+                    new SNode("at", N(sx), N(sy)),
+                    new SNode("size", N(sw), N(shh)),
+                    new SNode("fields_autoplaced", "yes"),
+                    new SNode("stroke", new SNode("width", "0.1524"), new SNode("type", "solid")),
+                    new SNode("fill", new SNode("color", "0", "0", "0", "0.0000")),
+                    new SNode("uuid", Q(Uuid("schematic:sheet:" + h.Uid))),
+                    new SNode("property", Q("Sheetname"), Q(h.Name), new SNode("at", N(sx), N(sy - 0.7116), "0"),
+                        new SNode("effects", SchFont(), new SNode("justify", "left", "bottom"))),
+                    new SNode("property", Q("Sheetfile"), Q(SheetFileName(schematic, h)), new SNode("at", N(sx), N(sy + shh + 0.5884), "0"),
+                        new SNode("effects", SchFont(), new SNode("justify", "left", "top"))),
+                    new SNode("instances", new SNode("project", Q(project),
+                        new SNode("path", Q(instancePath), new SNode("page", Q((schematic.Sheets.IndexOf(h) + 2).ToString(CultureInfo.InvariantCulture))))))));
+            }
+
             // [shapes] lines, rectangles, circles and arcs as KiCad's schematic graphics
-            var shapes = schematic.Shapes ?? new List<SchematicShape>();
+            var shapes = (schematic.Shapes ?? new List<SchematicShape>()).Where(x => Schematic.SameSheet(x.Sheet, sheet)).ToList();
             for (int i = 0; i < shapes.Count; i++)
             {
                 var sh = shapes[i];
@@ -1195,8 +1230,23 @@ namespace RobotTwin.CoreSim.Pcb
                 }
             }
 
-            root.Add(new SNode("sheet_instances", new SNode("path", Q("/"), new SNode("page", Q("1")))));
+            if (sheet == null) root.Add(new SNode("sheet_instances", new SNode("path", Q("/"), new SNode("page", Q("1")))));
             return Render(root);
+        }
+
+        /// <summary>[sheets] The file a sub-sheet is written to: its name made a file name, unique in the project.</summary>
+        public static string SheetFileName(Schematic schematic, SchematicSheet sheet)
+        {
+            string Clean(SchematicSheet x)
+            {
+                var sb = new StringBuilder();
+                foreach (char c in x.Name.Trim()) sb.Append(c < 32 || "<>:\"/\\|?* ".IndexOf(c) >= 0 ? '_' : c);
+                return sb.Length == 0 ? "sheet" : sb.ToString();
+            }
+
+            string name = Clean(sheet);
+            bool shared = schematic.Sheets.Any(x => !ReferenceEquals(x, sheet) && string.Equals(Clean(x), name, StringComparison.OrdinalIgnoreCase));
+            return (shared ? name + "_" + sheet.Uid.Substring(0, Math.Min(6, sheet.Uid.Length)) : name) + ".kicad_sch";
         }
 
         private static GridPoint[] BoxCorners(ExportPart p)
@@ -1499,7 +1549,7 @@ namespace RobotTwin.CoreSim.Pcb
             var files = new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 [dir + name + ".kicad_pro"] = ExportProject(name, board),
-                [dir + name + ".kicad_sch"] = ExportSchematic(schematic, library, name),
+                [dir + name + ".kicad_sch"] = ExportSchematic(schematic, library, name, null),
                 [dir + name + ".kicad_pcb"] = ExportPcb(board, schematic.Title, embedDesignRules: false),
                 [dir + name + ".net"] = ExportNetlist(schematic, library, name),
                 [dir + name + ".cir"] = SpiceExporter.ExportSpice(schematic, library),
@@ -1534,6 +1584,7 @@ namespace RobotTwin.CoreSim.Pcb
             }
 
             foreach (var kv in GerberExporter.Generate(board, name)) files[dir + "gerber/" + kv.Key] = kv.Value;
+            foreach (var sheet in schematic.Sheets) files[dir + SheetFileName(schematic, sheet)] = ExportSchematic(schematic, library, name, sheet.Uid);   // [sheets] one file a sub-sheet
             return files;
         }
 

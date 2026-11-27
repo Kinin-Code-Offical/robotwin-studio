@@ -49,6 +49,9 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | W / Shift+W | Wire tool / start a wire at the cursor |
 | L / Ctrl+L | Net label / global label |
 | Q | No-connect (NC) marker |
+| S / H | Hierarchical sheet / hierarchical label |
+| Double-click sheet · Alt+↑ (Alt+Backspace) | Enter the sheet · up to the parent |
+| Alt+← / Alt+→ | Back / forward through the sheets |
 | T | Text |
 | / | Wire corner direction |
 | Shift+Space | Wire mode: 90° → 45° → free |

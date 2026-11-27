@@ -46,6 +46,9 @@ namespace RobotTwin.CoreSim.Design
         public string? RefDes { get; }
         public string? Net { get; }
 
+        /// <summary>[sheets] The sheet it is on (null: the root), so the editor can go there.</summary>
+        public string? Sheet { get; set; }
+
         public string SeverityText => Severity switch
         {
             ErcSeverity.Error => "Hata",
@@ -253,49 +256,84 @@ namespace RobotTwin.CoreSim.Design
                 }
             }
 
-            // Wiring.
-            foreach (var (wire, end) in SchematicEditing.DanglingEnds(doc, library))
+            // Wiring, sheet by sheet ([sheets]: a point on one sheet is nowhere on another).
+            var sheetIds = new List<string?> { null };
+            sheetIds.AddRange(doc.Sheets.Select(x => (string?)x.Uid));
+            foreach (var sheetId in sheetIds)
             {
-                result.Add(new ErcViolation(ErcSeverity.Warning, "wire-dangling", "Kablo ucu boşta (hiçbir pine veya kabloya bağlı değil).", end));
-            }
-
-            var tips = SchematicEditing.PinTips(doc, library);
-            foreach (var label in doc.Labels)
-            {
-                bool onSomething = tips.Contains(label.Position) || doc.Wires.Any(w =>
-                    w.Points.Any(p => p.Equals(label.Position)) ||
-                    Enumerable.Range(0, Math.Max(0, w.Points.Count - 1)).Any(i => SchematicEditing.OnSegmentInterior(label.Position, w.Points[i], w.Points[i + 1])));
-                if (label.IsDirective)
+                foreach (var (wire, end) in SchematicEditing.DanglingEnds(doc, library, sheetId))
                 {
-                    // [directive] a class flag names nothing: it only has to touch the net it gives the class to
-                    if (!onSomething)
-                        result.Add(new ErcViolation(ErcSeverity.Warning, "label-unconnected", $"'{{{label.NetClass}}}' net sınıfı yönergesi hiçbir kabloya veya pine değmiyor.", label.Position, null, label.NetClass));
-                    continue;
+                    result.Add(new ErcViolation(ErcSeverity.Warning, "wire-dangling", "Kablo ucu boşta (hiçbir pine veya kabloya bağlı değil).", end) { Sheet = sheetId });
                 }
 
-                if (!onSomething)
+                var tips = SchematicEditing.PinTips(doc, library, null, sheetId);
+                var wires = doc.Wires.Where(w => Schematic.SameSheet(w.Sheet, sheetId)).ToList();
+                foreach (var label in doc.Labels.Where(l => Schematic.SameSheet(l.Sheet, sheetId)))
                 {
-                    result.Add(new ErcViolation(ErcSeverity.Warning, "label-unconnected", $"'{label.Name}' etiketi hiçbir kabloya veya pine değmiyor.", label.Position, null, label.Name));
-                }
-                else if (doc.Labels.Count(l => string.Equals(l.Name.Trim(), label.Name.Trim(), StringComparison.OrdinalIgnoreCase)) == 1 &&
-                         !doc.Parts.Any(p => library.Find(p.PartId)?.Symbol == SymbolKind.PowerRail &&
-                                             string.Equals(doc.ResolveParameters(library, p).TryGetValue("net", out var n) ? n.Trim() : "", label.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
-                {
-                    var net = netlist.Nets.FirstOrDefault(x => string.Equals(x.Name, label.Name.Trim(), StringComparison.OrdinalIgnoreCase));
-                    if (net != null && net.Connections.Count <= 1 && !net.IsGround)
+                    bool onSomething = tips.Contains(label.Position) || wires.Any(w =>
+                        w.Points.Any(p => p.Equals(label.Position)) ||
+                        Enumerable.Range(0, Math.Max(0, w.Points.Count - 1)).Any(i => SchematicEditing.OnSegmentInterior(label.Position, w.Points[i], w.Points[i + 1])));
+                    if (label.IsDirective)
                     {
-                        result.Add(new ErcViolation(ErcSeverity.Warning, "label-single", $"'{label.Name}' etiketi tek başına: aynı adda başka etiket yok ve hatta tek pin var.", label.Position, null, label.Name));
+                        // [directive] a class flag names nothing: it only has to touch the net it gives the class to
+                        if (!onSomething)
+                            result.Add(new ErcViolation(ErcSeverity.Warning, "label-unconnected", $"'{{{label.NetClass}}}' net sınıfı yönergesi hiçbir kabloya veya pine değmiyor.", label.Position, null, label.NetClass) { Sheet = sheetId });
+                        continue;
+                    }
+
+                    if (!onSomething)
+                    {
+                        result.Add(new ErcViolation(ErcSeverity.Warning, "label-unconnected", $"'{label.Name}' etiketi hiçbir kabloya veya pine değmiyor.", label.Position, null, label.Name) { Sheet = sheetId });
+                    }
+                    else if (!label.Hierarchical &&
+                             doc.Labels.Count(l => !l.Hierarchical && string.Equals(l.Name.Trim(), label.Name.Trim(), StringComparison.OrdinalIgnoreCase)) == 1 &&
+                             !doc.Parts.Any(p => library.Find(p.PartId)?.Symbol == SymbolKind.PowerRail &&
+                                                 string.Equals(doc.ResolveParameters(library, p).TryGetValue("net", out var n) ? n.Trim() : "", label.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
+                    {
+                        int li = doc.Labels.IndexOf(label);
+                        string? labelNet = label.Sheet != null && li >= 0 && li < netlist.LabelNets.Count ? netlist.LabelNets[li] : null;   // a sub-sheet's net is /Sheet/name
+                        var net = netlist.Nets.FirstOrDefault(x => string.Equals(x.Name, labelNet ?? label.Name.Trim(), StringComparison.OrdinalIgnoreCase));
+                        if (net != null && net.Connections.Count <= 1 && !net.IsGround)
+                        {
+                            result.Add(new ErcViolation(ErcSeverity.Warning, "label-single", $"'{label.Name}' etiketi tek başına: aynı adda başka etiket yok ve hatta tek pin var.", label.Position, null, label.Name) { Sheet = sheetId });
+                        }
+                    }
+                }
+
+                foreach (var nc in doc.NoConnects.Where(x => Schematic.SameSheet(x.Sheet, sheetId)))
+                {
+                    if (!tips.Contains(nc.Position))
+                    {
+                        result.Add(new ErcViolation(ErcSeverity.Warning, "nc-floating", "NC işareti bir pinin üzerinde değil.", nc.Position) { Sheet = sheetId });
                     }
                 }
             }
 
-            foreach (var nc in doc.NoConnects)
+            // [sheets] The hierarchy: every hierarchical label needs its pin on the sheet symbol, every pin its label inside.
+            foreach (var label in doc.Labels.Where(l => l.Hierarchical && !string.IsNullOrWhiteSpace(l.Name)))
             {
-                if (!tips.Contains(nc.Position))
+                var symbol = doc.FindSheet(label.Sheet);
+                if (symbol == null || !symbol.Pins.Any(pn => string.Equals(pn.Name.Trim(), label.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
                 {
-                    result.Add(new ErcViolation(ErcSeverity.Warning, "nc-floating", "NC işareti bir pinin üzerinde değil.", nc.Position));
+                    result.Add(new ErcViolation(ErcSeverity.Warning, "hier-label-no-pin",
+                        symbol == null ? $"'{label.Name}' hiyerarşik etiketi kök sayfada: bağlanacağı bir sayfa sembolü yok."
+                                       : $"'{label.Name}' hiyerarşik etiketinin '{symbol.Name}' sayfa sembolünde pini yok.", label.Position, null, label.Name) { Sheet = label.Sheet });
                 }
             }
+
+            foreach (var symbol in doc.Sheets)
+            {
+                foreach (var pin in symbol.Pins)
+                {
+                    if (doc.Labels.Any(l => l.Hierarchical && Schematic.SameSheet(l.Sheet, symbol.Uid) && string.Equals(l.Name.Trim(), pin.Name.Trim(), StringComparison.OrdinalIgnoreCase))) continue;
+                    result.Add(new ErcViolation(ErcSeverity.Warning, "sheet-pin-no-label",
+                        $"'{symbol.Name}' sayfasının '{pin.Name}' pininin alt sayfada hiyerarşik etiketi yok.", pin.Position, null, pin.Name) { Sheet = symbol.Sheet });
+                }
+            }
+
+            foreach (var v in result)
+                if (v.Sheet == null && v.RefDes != null)
+                    v.Sheet = doc.FindPart(v.RefDes)?.Sheet;   // [sheets] a part's violation is on its sheet
 
             return result
                 .OrderBy(v => v.Severity)

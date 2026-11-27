@@ -69,6 +69,16 @@ Aynı adı taşıyan etiketler birbirine bağlıdır; `GND` adı toprak demektir
 
 **Kural alanı** (KiCad 9'daki şema kural alanı): **Çiz** menüsünden **Kural alanı** seçilip iki köşeye tıklanır; kesik çizgili bir çerçeve ve sol üstünde süslü parantez içinde sınıf (önce `{Power}`) gelir. İçinde bir teli, pini ya da etiketi olan her hat PCB güncellenince o net sınıfını alır; alandaki bir net sınıfı yönergesi alandan önce gelir. Sınıf çift tıkla, sağ tık ▸ **Net sınıfını düzenle…** ya da Özellikler'den değişir; alan seçilir, taşınır, kopyalanır, silinir.
 
+**Hiyerarşik sayfalar** (KiCad'deki gibi): büyük bir devre bloklara bölünür. Araç çubuğundaki **Hiyerarşi** düğmesinden ya da **S** ile **Hiyerarşik sayfa** seçilip iki köşeye tıklanır; çerçevenin üstünde adı (yerinde yazılır), altında içindeki parça sayısı görünür. Sayfaya çift tıklamak onu açar. Alt sayfada parçalar, teller ve etiketler her zamanki gibi çizilir. Bir hat alt sayfadan **hiyerarşik etiketle** (**H**, kesik çerçeveli) çıkar ve sayfa sembolünün kenarındaki aynı adlı **sayfa pinine** bağlanır. Pin, **Sayfa pini** aracıyla kenara tıklanarak ya da sağ tık ▸ **Sayfa pinlerini eşitle** ile içerideki etiketlerden eklenir. Pinin ve etiketin yönü (giriş, çıkış, çift yönlü, üç durumlu, pasif) sağ tıkla seçilir. Sayfa pininden tel çekilir; böylece üst sayfadaki bir hat alt sayfaya iner.
+
+Bağlantı kuralları KiCad'inkilerdir:
+
+- Alt sayfadaki yerel etiketler yalnız o sayfanındır ve netlistte `/Motor/IN1` gibi sayfa yoluyla adlanır; aynı adlı başka bir sayfadaki etiket ayrı bir hattır.
+- Global etiketler ve güç sembolleri (GND, +5V) her sayfada aynı hattır.
+- Farklı sayfalarda aynı yerde duran parçalar birbirine değmez.
+
+Sayfa açıkken sol üstte bir yol çubuğu belirir: **◀ Geri**, **▲ Üst sayfa**, **▶ İleri** ve kökten bu sayfaya kadar her basamak tıklanabilir, **▾** alt sayfaları listeler. Kısayollar: Alt+↑ ya da Alt+Backspace üst sayfaya çıkar, Alt+← geri, Alt+→ ileri gider. Bul, ERC ve PCB'de göster başka sayfadaki bir parçaya o sayfayı açarak gider. ERC, sayfa sembolünde pini olmayan hiyerarşik etiketi ve içinde etiketi olmayan sayfa pinini uyarır. Bütün sayfalar tek tasarımdır: PCB, simülasyon, malzeme listesi ve netlist hepsini birlikte görür. KiCad'e aktarımda her alt sayfa kendi `.kicad_sch` dosyası olur ve kök sayfada KiCad'in sayfa sembolüyle durur.
+
 | Tuş | İşlev |
 | --- | --- |
 | M / G | Taşı / sürükle (G'de kablolar uzar) |

@@ -106,7 +106,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Sayfa ayarları, yazdır, çizdir | PNG/SVG, yazdır | var | |
 | Bul / bul ve değiştir | var | var | |
 | Yakınlaştırma düğmeleri | araç çubuğunda yakınlaştır, uzaklaştır, sığdır; tekerlek ve tuşlar | var | |
-| Hiyerarşide geri / yukarı / ileri | hiyerarşi yok | yok | 3 |
+| Hiyerarşide geri / yukarı / ileri | Yol çubuğu: ◀ geri, ▲ üst sayfa, ▶ ileri, kökten basamaklar, alt sayfa listesi; Alt+← / Alt+↑ (Alt+Backspace) / Alt+→; bul, ERC ve PCB'de göster sayfayı açar | var | |
 | Döndür, aynala | var | var | |
 | Grupla | Ctrl+G / Ctrl+Shift+G, tık bütün grubu seçer, kesik çerçeve ve ad, kaydedilir; yapıştırılan grup yeni grup | var | |
 | Sembol düzenleyici, sembol tarayıcı | Parça oluşturucu, kütüphane | var | |
@@ -122,9 +122,9 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | NC işareti | var | var | |
 | Bağlantı noktası (junction) aracı | J aracı: kesişen telleri birleştirir, yeniden tıklayınca ayırır; T bağlantıları kendiliğinden | var | |
 | Etiket: yerel, global | var | var | |
-| Etiket: hiyerarşik, yönerge | Net sınıfı yönergesi (netclass flag): hattı adlandırmaz, değdiği hattın PCB net sınıfını verir (yoksa Default kopyası açılır); hiyerarşik etiket sonra | kısmi | 3 |
+| Etiket: hiyerarşik, yönerge | Net sınıfı yönergesi (netclass flag): hattı adlandırmaz, değdiği hattın PCB net sınıfını verir (yoksa Default kopyası açılır); hiyerarşik etiket (H): sayfa sembolünün aynı adlı pinine bağlanır, yönü (giriş / çıkış / çift yönlü / üç durumlu / pasif) | var | |
 | Kural alanı | Kural alanı: iki köşe, net sınıfı; içinde teli, pini ya da etiketi olan hatlar PCB'de o sınıfı alır, alandaki yönerge önce gelir | var | |
-| Hiyerarşik sayfa, sayfa pini | yok | yok | 3 |
+| Hiyerarşik sayfa, sayfa pini | Hiyerarşik sayfa (S): çerçeve, ad, çift tıkla gir; sayfa pini (kenara tık, iç etiketlerden eşitle, yön); sayfa yerel hatlar /Ad/hat, global ve güç her sayfada; ERC pinsiz etiket / etiketsiz pin; KiCad'e sayfa başına .kicad_sch | var | |
 | Metin, metin kutusu | Metin (T), çerçeveli = metin kutusu | var | |
 | Tablo | Tablo: sol üst köşeden 3 × 3, ortak tablo düzenleyicisi (hücreler, satır / sütun ekle-çıkar, sütun genişliği, satır yüksekliği, yazı boyu, çizgi), dik kalır, kopyalanır; KiCad table gider ve gelir | var | |
 | Dikdörtgen, daire, yay, çizgi, Bezier, resim | Çiz: çizgi, dikdörtgen, daire, yay, Bezier eğrisi, resim (dik kalır, PNG olarak gömülür) (seçilir, taşınır, döndürülür, kopyalanır; KiCad'e gider ve gelir; görüntüye çizilir) | var | |

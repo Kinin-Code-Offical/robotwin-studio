@@ -76,6 +76,7 @@ namespace RobotWin.Studio.Pages
 
             Canvas.SelectionChanged += (_, _) => BuildInspector();
             Canvas.ToolChanged += (_, _) => SyncTools();
+            InitSheets();   // [sheets] Pages/SchematicPage.Sheets.cs
             Canvas.PartDoubleClicked += (_, _) => BuildInspector();
             W.DocumentChanged += (_, _) =>
             {
@@ -294,6 +295,7 @@ namespace RobotWin.Studio.Pages
             ToolText.IsChecked = Canvas.Tool == EditorTool.Text;   // [notes]
             ToolHighlight.IsChecked = Canvas.Tool == EditorTool.Highlight;   // [highlight]
             ToolJunction.IsChecked = Canvas.Tool == EditorTool.Junction;   // [junction]
+            ToolSheet.IsChecked = Canvas.Tool is EditorTool.Sheet or EditorTool.SheetPin or EditorTool.HierLabel;   // [sheets]
             ToolErase.IsChecked = Canvas.Tool == EditorTool.Erase;   // [erase]
             ToolDraw.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier or EditorTool.Table;   // [shapes]
         }
@@ -313,7 +315,7 @@ namespace RobotWin.Studio.Pages
         {
             UndoButton.IsEnabled = W.CanUndo;
             RedoButton.IsEnabled = W.CanRedo;
-            EmptyHint.Visibility = W.Schematic.Parts.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            EmptyHint.Visibility = !W.Schematic.Parts.Any(p => Schematic.SameSheet(p.Sheet, Canvas.CurrentSheet)) && !W.Schematic.SheetsOn(Canvas.CurrentSheet).Any() ? Visibility.Visible : Visibility.Collapsed;   // [sheets] the shown sheet
             ListWorldBoards();
         }
 
@@ -435,7 +437,7 @@ namespace RobotWin.Studio.Pages
 
         private void OnSimStateChanged()
         {
-            EmptyHint.Visibility = W.Schematic.Parts.Count == 0 ? Visibility.Visible : Visibility.Collapsed;   // a circuit being simulated is never an empty sheet
+            EmptyHint.Visibility = !W.Schematic.Parts.Any(p => Schematic.SameSheet(p.Sheet, Canvas.CurrentSheet)) && !W.Schematic.SheetsOn(Canvas.CurrentSheet).Any() ? Visibility.Visible : Visibility.Collapsed;   // [sheets] the shown sheet   // a circuit being simulated is never an empty sheet
             var state = W.Simulation.State;
             RunText.Text = state == SimState.Running ? "Duraklat" : state == SimState.Paused ? "Devam" : "Simüle et";
             RunIcon.Data = (Geometry)FindResource(state == SimState.Running ? "I.Pause" : "I.Play");

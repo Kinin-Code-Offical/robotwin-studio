@@ -48,7 +48,13 @@ namespace RobotWin.Studio.Editor
         EditTable,
 
         /// <summary>[rule-area] A rule area's net class (target: the area).</summary>
-        EditRuleArea
+        EditRuleArea,
+
+        /// <summary>[sheets] A sheet symbol's name (target: the sheet).</summary>
+        EditSheet,
+
+        /// <summary>[sheets] A sheet pin's name and shape (target: (sheet, pin)).</summary>
+        EditSheetPin
     }
 
     public sealed class SchematicCommandEventArgs : EventArgs
@@ -239,7 +245,7 @@ namespace RobotWin.Studio.Editor
             NotifySelection();
         }
 
-        public void SelectAll() => SelectItems(SchematicEditing.AllItems(Doc));
+        public void SelectAll() => SelectItems(SchematicEditing.AllItems(Doc, CurrentSheet));   // [sheets] the shown sheet's
 
         /// <summary>The selection, or the item under the cursor when nothing is selected (KiCad hotkey behaviour).</summary>
         private List<object> Targets()
@@ -265,8 +271,8 @@ namespace RobotWin.Studio.Editor
         {
             var nl = Netlist;
             var items = new List<object>();
-            for (int i = 0; i < Doc.Wires.Count && i < nl.WireNets.Count; i++) if (string.Equals(nl.WireNets[i], net, StringComparison.OrdinalIgnoreCase)) items.Add(Doc.Wires[i]);
-            for (int i = 0; i < Doc.Labels.Count && i < nl.LabelNets.Count; i++) if (string.Equals(nl.LabelNets[i], net, StringComparison.OrdinalIgnoreCase)) items.Add(Doc.Labels[i]);
+            for (int i = 0; i < Doc.Wires.Count && i < nl.WireNets.Count; i++) if (Here(Doc.Wires[i]) && string.Equals(nl.WireNets[i], net, StringComparison.OrdinalIgnoreCase)) items.Add(Doc.Wires[i]);
+            for (int i = 0; i < Doc.Labels.Count && i < nl.LabelNets.Count; i++) if (Here(Doc.Labels[i]) && string.Equals(nl.LabelNets[i], net, StringComparison.OrdinalIgnoreCase)) items.Add(Doc.Labels[i]);
             SelectItems(items);
             W.Status = $"{net}: {items.Count} kablo/etiket seçildi";
         }
@@ -513,7 +519,7 @@ namespace RobotWin.Studio.Editor
             var a = ToGrid(_dragStart);
             bool crossing = _mouse.X < _dragStart.X;
             var rect = GridRect.FromCorners(a, _mouseGrid);
-            var items = SchematicEditing.ItemsInRect(Doc, Lib, rect, crossing);
+            var items = SchematicEditing.ItemsInRect(Doc, Lib, rect, crossing, CurrentSheet);
             foreach (var item in items)
             {
                 if (_boxToggle)
@@ -624,6 +630,7 @@ namespace RobotWin.Studio.Editor
             if (f == null) return;
             W.BeginChange();
             var result = f.PasteInto(Doc, Lib, f.Anchor);
+            foreach (var item in result.Items) Schematic.SetSheet(item, CurrentSheet);   // [sheets] onto the shown sheet
             string extra = result.Renamed.Count > 0 ? $" · {result.Renamed.Count} parça yeniden numaralandı" : string.Empty;
             if (result.SkippedParts.Count > 0) extra += $" · {result.SkippedParts.Count} bilinmeyen parça atlandı";
             W.CommitChange($"{_floatingVerb}: {result.Items.Count} öğe" + extra);
@@ -646,13 +653,14 @@ namespace RobotWin.Studio.Editor
             var pin = HitPin(g);
             if (pin != null) return pin.Value.Part.Transform(pin.Value.Pin.X, pin.Value.Pin.Y);
             double tol = Math.Max(0.4, 7 / _scale);
-            foreach (var l in Doc.Labels) if (Math.Abs(l.Position.X - g.X) <= tol && Math.Abs(l.Position.Y - g.Y) <= tol) return l.Position;
-            foreach (var w in Doc.Wires)
+            if (HitSheetPin(g) is { } sp) return sp.Pin.Position;   // [sheets]
+            foreach (var l in SheetLabels) if (Math.Abs(l.Position.X - g.X) <= tol && Math.Abs(l.Position.Y - g.Y) <= tol) return l.Position;
+            foreach (var w in SheetWires)
             {
                 foreach (var p in w.Points) if (Math.Abs(p.X - g.X) <= tol && Math.Abs(p.Y - g.Y) <= tol) return p;
             }
 
-            foreach (var w in Doc.Wires)
+            foreach (var w in SheetWires)
             {
                 for (int i = 0; i + 1 < w.Points.Count; i++)
                 {
@@ -667,7 +675,7 @@ namespace RobotWin.Studio.Editor
             return Snap(g);
         }
 
-        private bool IsConnectionPoint(GridPoint p) => SchematicEditing.IsConnectionPoint(Doc, Lib, p);
+        private bool IsConnectionPoint(GridPoint p) => SchematicEditing.IsConnectionPoint(Doc, Lib, p, null, CurrentSheet);
 
         private List<GridPoint> WirePreview()
         {
@@ -706,7 +714,7 @@ namespace RobotWin.Studio.Editor
                 if (clean.Count >= 2)
                 {
                     W.BeginChange();
-                    Doc.Wires.Add(new SchematicWire { Points = clean });
+                    Doc.Wires.Add(new SchematicWire { Points = clean, Sheet = CurrentSheet });
                     W.CommitChange("Kablo eklendi");
                 }
             }
@@ -727,6 +735,7 @@ namespace RobotWin.Studio.Editor
             W.BeginChange();
             var part = Doc.AddPart(Lib, _placePreset, Snap(_mouseGrid), _ghost.Rotation);
             part.Mirror = _ghost.Mirror;
+            part.Sheet = CurrentSheet;   // [sheets]
             W.CommitChange($"{part.RefDes} yerleştirildi");
             SelectItems(new object[] { part });
         }
@@ -738,7 +747,7 @@ namespace RobotWin.Studio.Editor
             W.BeginChange();
             int n = 1;
             while (Doc.Labels.Any(l => l.Name == "NET" + n.ToString(CultureInfo.InvariantCulture))) n++;
-            var label = new NetLabel { Name = "NET" + n.ToString(CultureInfo.InvariantCulture), Position = at, Global = global };
+            var label = new NetLabel { Name = "NET" + n.ToString(CultureInfo.InvariantCulture), Position = at, Global = global, Sheet = CurrentSheet };
             Doc.Labels.Add(label);
             W.CommitChange(global ? "Global etiket eklendi" : "Hat etiketi eklendi");
             SelectItems(new object[] { label });
@@ -751,7 +760,7 @@ namespace RobotWin.Studio.Editor
         {
             if (!GuardEditing()) return null;
             W.BeginChange();
-            var label = new NetLabel { Name = string.Empty, NetClass = "Power", Position = at };
+            var label = new NetLabel { Name = string.Empty, NetClass = "Power", Position = at, Sheet = CurrentSheet };
             Doc.Labels.Add(label);
             W.CommitChange(Shell.Lang.T("Net sınıfı yönergesi eklendi"));
             SelectItems(new object[] { label });
@@ -772,7 +781,7 @@ namespace RobotWin.Studio.Editor
             var pin = HitPin(g);
             var at = pin != null ? pin.Value.Part.Transform(pin.Value.Pin.X, pin.Value.Pin.Y) : Snap(g);
             W.BeginChange();
-            var existing = Doc.NoConnects.FirstOrDefault(n => n.Position.Equals(at));
+            var existing = SheetNoConnects.FirstOrDefault(n => n.Position.Equals(at));
             if (existing != null)
             {
                 Doc.NoConnects.Remove(existing);
@@ -780,7 +789,7 @@ namespace RobotWin.Studio.Editor
             }
             else
             {
-                Doc.NoConnects.Add(new NoConnectFlag { Position = at });
+                Doc.NoConnects.Add(new NoConnectFlag { Position = at, Sheet = CurrentSheet });
                 W.CommitChange(pin != null ? $"{pin.Value.Part.RefDes}.{pin.Value.Pin.Name}: bağlantı yok (NC)" : "NC işareti eklendi");
             }
         }
@@ -790,15 +799,15 @@ namespace RobotWin.Studio.Editor
         {
             if (!GuardEditing()) return;
             var at = Snap(g);
-            if (SchematicEditing.HasRemovableJunction(Doc, at))
+            if (SchematicEditing.HasRemovableJunction(Doc, at, CurrentSheet))
             {
                 W.BeginChange();
-                SchematicEditing.RemoveJunction(Doc, at);
+                SchematicEditing.RemoveJunction(Doc, at, CurrentSheet);
                 W.CommitChange("Bağlantı noktası kaldırıldı: teller yalnız kesişiyor");
                 return;
             }
 
-            int through = SchematicEditing.WiresThrough(Doc, at).Count;
+            int through = SchematicEditing.WiresThrough(Doc, at, CurrentSheet).Count;
             if (through < 2)
             {
                 W.Status = through == 0 ? "Burada tel yok" : "Burada kesişen ikinci bir tel yok";
@@ -806,7 +815,7 @@ namespace RobotWin.Studio.Editor
             }
 
             W.BeginChange();
-            SchematicEditing.PlaceJunction(Doc, at);
+            SchematicEditing.PlaceJunction(Doc, at, CurrentSheet);
             W.CommitChange($"Bağlantı noktası: {through} tel birleşti");
         }
 
@@ -861,7 +870,7 @@ namespace RobotWin.Studio.Editor
             var glow = MakePen(Color.FromArgb(0x50, HighlightColor.R, HighlightColor.G, HighlightColor.B), Math.Max(6, _scale * 0.5));
             for (int i = 0; i < Doc.Wires.Count && i < netlist.WireNets.Count; i++)
             {
-                if (Doc.Wires[i].Points.Count < 2 || !string.Equals(netlist.WireNets[i], _netHighlight, StringComparison.OrdinalIgnoreCase)) continue;
+                if (Doc.Wires[i].Points.Count < 2 || !Here(Doc.Wires[i]) || !string.Equals(netlist.WireNets[i], _netHighlight, StringComparison.OrdinalIgnoreCase)) continue;
                 dc.DrawGeometry(null, glow, Polyline(Doc.Wires[i].Points));
             }
 
@@ -889,14 +898,14 @@ namespace RobotWin.Studio.Editor
 
         private void DrawNoConnects(DrawingContext dc)
         {
-            foreach (var nc in Doc.NoConnects) DrawNoConnect(dc, nc.Position, _selection.Contains(nc) ? Accent : Color.FromRgb(0x8C, 0x8C, 0xD8));
+            foreach (var nc in SheetNoConnects) DrawNoConnect(dc, nc.Position, _selection.Contains(nc) ? Accent : Color.FromRgb(0x8C, 0x8C, 0xD8));
 
             // Dangling wire ends get a small square (KiCad style) so open wires stand out.
             if (Simulating || _exporting) return;
             var nl = Netlist;
             if (!ReferenceEquals(_danglingFor, nl))
             {
-                _dangling = SchematicEditing.DanglingEnds(Doc, Lib);
+                _dangling = SchematicEditing.DanglingEnds(Doc, Lib, CurrentSheet);
                 _danglingFor = nl;
             }
 
@@ -972,7 +981,7 @@ namespace RobotWin.Studio.Editor
             {
                 foreach (var v in _ercMarkers)
                 {
-                    if (v.Severity == ErcSeverity.Info) continue;
+                    if (v.Severity == ErcSeverity.Info || !Schematic.SameSheet(v.Sheet, CurrentSheet)) continue;   // [sheets] the shown sheet's
                     var c = ToScreen(v.Location);
                     var color = v.Severity == ErcSeverity.Error ? ErrorColor : WarningColor;
                     var g = new StreamGeometry();
@@ -1052,7 +1061,7 @@ namespace RobotWin.Studio.Editor
         public DrawingGroup RenderSheet(out Size size, double pixelsPerUnit = 20, bool clearBackground = false)
         {
             _clearBackground = clearBackground;   // [home] a preview: only the drawing, the start page's card is behind it
-            var bounds = SchematicEditing.Bounds(SchematicEditing.AllItems(Doc), Lib) ?? new GridRect(-10, -10, 10, 10);
+            var bounds = SchematicEditing.Bounds(SchematicEditing.AllItems(Doc, CurrentSheet), Lib) ?? new GridRect(-10, -10, 10, 10);
             bounds = bounds.Inflate(4);
             var saved = (_scale, _offset, _hover, _hoverPin, _netHighlight, _ercMarkers);
             var selection = _selection.ToList();

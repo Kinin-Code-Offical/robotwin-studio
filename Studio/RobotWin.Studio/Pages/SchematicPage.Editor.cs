@@ -108,6 +108,8 @@ namespace RobotWin.Studio.Pages
                 case SchematicCommand.EditNote: EditNote(target); break;   // [notes]
                 case SchematicCommand.EditTable when target is SchematicShape table: EditSheetTable(table); break;   // [table]
                 case SchematicCommand.EditRuleArea when target is SchematicShape area: EditRuleArea(area); break;   // [rule-area]
+                case SchematicCommand.EditSheet when target is SchematicSheet sheet: EditSheetName(sheet); break;   // [sheets]
+                case SchematicCommand.EditSheetPin when target is ValueTuple<SchematicSheet, SheetPin> sp: EditSheetPin(sp.Item1, sp.Item2); break;
                 case SchematicCommand.Replace: ShowFind(true); break;
                 case SchematicCommand.Help: ToggleHelp(); break;
                 case SchematicCommand.Erc: RunErc(keepOpen: false); break;
@@ -356,7 +358,7 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            ShowInlineEditor(anchor, label.Name, (label.Global ? "Global etiket" : "Hat etiketi") + " · aynı ad = aynı hat · Enter / Esc", value =>
+            ShowInlineEditor(anchor, label.Name, (label.Hierarchical ? "Hiyerarşik etiket · sayfa sembolünün aynı adlı pinine bağlanır" : label.Global ? "Global etiket · aynı ad = aynı hat" : "Hat etiketi · aynı ad = aynı hat") + " · Enter / Esc", value =>
             {
                 if (value.Length == 0 || value == label.Name) return;
                 W.BeginChange();
@@ -706,6 +708,7 @@ namespace RobotWin.Studio.Pages
 
             void Go(SearchHit hit)
             {
+                if (hit.Target != null) Canvas.EnterSheet(Schematic.SheetOf(hit.Target));   // [sheets] a find on another sheet goes there
                 Canvas.ZoomToPoint(hit.Location);
                 if (hit.Target != null) Canvas.SelectItems(new[] { hit.Target });
                 if (hit.Net != null) Canvas.HighlightedNet = hit.Net;
@@ -830,6 +833,7 @@ namespace RobotWin.Studio.Pages
             list.SelectionChanged += (_, _) =>
             {
                 if ((list.SelectedItem as ListBoxItem)?.Tag is not ErcViolation v) return;
+                Canvas.EnterSheet(v.Sheet);   // [sheets] on its own sheet
                 Canvas.ZoomToPoint(v.Location, 22);
                 var part = v.RefDes != null ? W.Schematic.FindPart(v.RefDes) : null;
                 if (part != null) Canvas.SelectItems(new object[] { part });
@@ -1123,6 +1127,46 @@ namespace RobotWin.Studio.Pages
                             ?? sch.Parts.FirstOrDefault();
             switch (fault)
             {
+                case "sheets":   // [sheets] a Motor sub-sheet beside the circuit (its symbol picked), or inside it
+                case "sheets-in":
+                {
+                    var lib = W.Library;
+                    var motor = new SchematicSheet { Name = "Motor", Position = new GridPoint(Math.Round(b.MaxX) + 10, Math.Round(b.MinY) + 2), Width = 14, Height = 9 };
+                    sch.Sheets.Add(motor);
+                    GridPoint TipOf(SchematicPart part, int k) => sch.PinPositions(lib).First(x => ReferenceEquals(x.Part, part) && x.Pin.Name == lib.Get(part.PartId).Pins[k].Name).Position;
+                    var r = sch.AddPart(lib, "resistor", new GridPoint(0, 0));
+                    r.Sheet = motor.Uid;
+                    var led = sch.AddPart(lib, "led", new GridPoint(12, 0));
+                    led.Sheet = motor.Uid;
+                    led.Position += TipOf(r, 1) + new GridPoint(4, 0) - TipOf(led, 0);
+                    var gnd = sch.AddPart(lib, "gnd", new GridPoint(0, 0));
+                    gnd.Sheet = motor.Uid;
+                    gnd.Position += TipOf(led, 1) + new GridPoint(3, 0) - TipOf(gnd, 0);
+                    var mid = TipOf(r, 1) + new GridPoint(2, 0);
+                    sch.Wires.Add(new SchematicWire { Sheet = motor.Uid, Points = { TipOf(r, 1), mid, TipOf(led, 0) } });
+                    sch.Wires.Add(new SchematicWire { Sheet = motor.Uid, Points = { TipOf(led, 1), TipOf(gnd, 0) } });
+                    sch.Wires.Add(new SchematicWire { Sheet = motor.Uid, Points = { mid, mid + new GridPoint(0, -4) } });
+                    var inAt = TipOf(r, 0) - new GridPoint(3, 0);
+                    sch.Wires.Add(new SchematicWire { Sheet = motor.Uid, Points = { inAt, TipOf(r, 0) } });
+                    sch.Labels.Add(new NetLabel { Name = "PWM", Position = inAt, Hierarchical = true, Shape = LabelShape.Input, Sheet = motor.Uid });
+                    sch.Labels.Add(new NetLabel { Name = "DURUM", Position = mid + new GridPoint(0, -4), Hierarchical = true, Shape = LabelShape.Output, Sheet = motor.Uid });
+                    sch.ImportSheetPins(motor);
+                    var pwm = motor.Pins.First(x => x.Name == "PWM");
+                    sch.Wires.Add(new SchematicWire { Points = { pwm.Position, pwm.Position - new GridPoint(5, 0) } });
+                    sch.Labels.Add(new NetLabel { Name = "PWM", Position = pwm.Position - new GridPoint(5, 0) });
+                    Canvas.Refresh();
+                    BuildSheetBar();
+                    if (fault == "sheets-in") Canvas.EnterSheet(motor.Uid);
+                    else
+                    {
+                        Canvas.FitToContent();
+                        Canvas.SelectItems(new object[] { motor });
+                    }
+
+                    Canvas.InvalidateVisual();
+                    return;
+                }
+
                 case "rule-area":   // [rule-area] the motor's switch and supply inside a Power area, picked
                 {
                     var q1 = sch.Parts.FirstOrDefault(x => x.RefDes == "Q1") ?? firstPart;
