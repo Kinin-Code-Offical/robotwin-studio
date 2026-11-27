@@ -508,6 +508,27 @@ namespace RobotWin.Studio.Pages
                 Scene.MarqueeFraction(f[0], f[1], f[2], f[3]);
             }
 
+            int gp = Array.IndexOf(args, "--grid-plane");   // [grid] --grid-plane xz|yz [--grid-unlinked]: the upright grid, own Y/Z steps, from the selection
+            if (gp >= 0 && gp + 1 < args.Length)
+            {
+                var st = AppSettings.Current;   // not saved: a snapshot leaves the user's settings as they were
+                st.WorldGridPlane = args[gp + 1];
+                if (args.Contains("--grid-unlinked"))
+                {
+                    st.WorldGridLinked = false;
+                    st.WorldGridYMm = 10;
+                    st.WorldGridZMm = 20;
+                }
+
+                if (World?.Find(Scene.Selected) is { } gs)
+                {
+                    st.WorldGridOriginXMm = gs.Pose.X * 1000;
+                    st.WorldGridOriginYMm = gs.Pose.Y * 1000;
+                }
+
+                ApplyGridSettings();
+            }
+
             if (args.Contains("--grid-snap"))
             {
                 // [grid] the Grid and Snap panel, open, as the picture

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
 
 namespace RobotWin.Studio.World
 {
@@ -17,6 +18,39 @@ namespace RobotWin.Studio.World
 
         /// <summary>The scale handle's size step in metres (0 = the move step, <see cref="Grid"/>).</summary>
         public double SizeStep { get; set; }
+
+        /// <summary>[grid] The move step along Y and Z (metres); 0: the X step (<see cref="Grid"/>), Unity's linked step.</summary>
+        public double GridY { get; set; }
+
+        public double GridZ { get; set; }
+
+        /// <summary>[grid] Where the grid's lines start in X and Y (metres): Unity's Grid Position.</summary>
+        public Point GridOrigin { get; set; }
+
+        /// <summary>[grid] The plane the grid shows on besides the floor: "xy" (the floor only), "xz" or "yz" (upright, through the grid's position).</summary>
+        public string GridPlane { get; set; } = "xy";
+
+        private double StepX => Grid;
+        private double StepY => GridY > 0 ? GridY : Grid;
+        private double StepZ => GridZ > 0 ? GridZ : Grid;
+
+        private double SnapTo(double v, double step, double origin) =>
+            step > 0 && SnapOn && !System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftAlt) ? origin + Math.Round((v - origin) / step) * step : v;
+
+        /// <summary>[grid] A coordinate onto its axis' grid (its own step, from the grid's position).</summary>
+        private double SnapX(double v) => SnapTo(v, StepX, GridOrigin.X);
+
+        private double SnapY(double v) => SnapTo(v, StepY, GridOrigin.Y);
+        private double SnapZ(double v) => SnapTo(v, StepZ, 0);
+
+        /// <summary>[grid] The nearest grid point in X and Y to a place (what "align to grid" puts a part on).</summary>
+        public Point NearestGridPoint(double x, double y)
+        {
+            double Round(double v, double step, double o) => step > 0 ? o + Math.Round((v - o) / step) * step : v;
+            return new Point(Round(x, StepX, GridOrigin.X), Round(y, StepY, GridOrigin.Y));
+        }
+
+        private static double Wrap(double v, double period) => period <= 0 ? 0 : ((v % period) + period) % period;
 
         private bool _gridShown = true;
         private double _gridOpacity = 1;
@@ -60,21 +94,51 @@ namespace RobotWin.Studio.World
         private static readonly Dictionary<int, BitmapSource> GridTiles = new Dictionary<int, BitmapSource>();
 
         /// <summary>The floor: one tile is ten minor steps with a major line on its edge, tiled at its true size.</summary>
-        private ImageBrush GridBrush()
+        private ImageBrush GridBrush(double w, double d)
         {
-            double minor = DrawnStep(Grid);
+            // the floor's texture runs u = x + w/2, v = w − d/2 − y: the tiles start where the grid's position puts a major line
+            double tx = DrawnStep(StepX) * 10, ty = DrawnStep(StepY) * 10;
             var brush = new ImageBrush(GridTile(_gridShown ? _gridOpacity : 0))
             {
                 TileMode = TileMode.Tile,
                 ViewportUnits = BrushMappingMode.Absolute,
-                Viewport = new Rect(0, 0, minor * 10, minor * 10)
+                Viewport = new Rect(Wrap(GridOrigin.X + w / 2, tx), Wrap(w - d / 2 - GridOrigin.Y, ty), tx, ty)
             };
             return brush;
         }
 
-        private static BitmapSource GridTile(double opacity)
+        /// <summary>
+        /// [grid] Unity's grid plane: an upright grid through the grid's position, XZ (square to Y) or YZ (square to X), its
+        /// lines on a clear ground so the scene shows through, as high as half the floor is wide.
+        /// </summary>
+        private GeometryModel3D? UprightGrid(double w, double d)
         {
-            int key = (int)Math.Round(opacity * 100);
+            if (!_gridShown || GridPlane is not ("xz" or "yz")) return null;
+            double h = Math.Max(0.2, w / 2);
+            bool xz = GridPlane == "xz";
+            double span = xz ? w : d, along = xz ? StepX : StepY, start = xz ? -w / 2 : -d / 2;
+            double ta = DrawnStep(along) * 10, tz = DrawnStep(StepZ) * 10;
+            Point3D P(double a, double z) => xz ? new Point3D(a, GridOrigin.Y, z) : new Point3D(GridOrigin.X, a, z);
+            var quad = new System.Windows.Media.Media3D.MeshGeometry3D
+            {
+                Positions = new System.Windows.Media.Media3D.Point3DCollection { P(start, 0), P(start + span, 0), P(start + span, h), P(start, h) },
+                TextureCoordinates = new PointCollection { new Point(0, h), new Point(span, h), new Point(span, 0), new Point(0, 0) },
+                TriangleIndices = new System.Windows.Media.Int32Collection { 0, 1, 2, 0, 2, 3 }
+            };
+            double origin = xz ? GridOrigin.X : GridOrigin.Y;
+            var brush = new ImageBrush(GridTile(_gridOpacity, clear: true))
+            {
+                TileMode = TileMode.Tile,
+                ViewportUnits = BrushMappingMode.Absolute,
+                Viewport = new Rect(Wrap(origin - start, ta), Wrap(h, tz), ta, tz)
+            };
+            var material = new System.Windows.Media.Media3D.DiffuseMaterial(brush);
+            return new GeometryModel3D(quad, material) { BackMaterial = material };
+        }
+
+        private static BitmapSource GridTile(double opacity, bool clear = false)
+        {
+            int key = (int)Math.Round(opacity * 100) + (clear ? 1000 : 0);
             lock (GridTiles)
                 if (GridTiles.TryGetValue(key, out var cached))
                     return cached;
@@ -86,11 +150,12 @@ namespace RobotWin.Studio.World
             var dv = new DrawingVisual();
             using (var dc = dv.RenderOpen())
             {
-                dc.DrawRectangle(new SolidColorBrush(floor), null, new Rect(0, 0, px, px));
+                if (!clear) dc.DrawRectangle(new SolidColorBrush(floor), null, new Rect(0, 0, px, px));
                 if (opacity > 0)
                 {
-                    var minor = new Pen(new SolidColorBrush(Toward(Color.FromRgb(0x1F, 0x1F, 0x24))), 1);
-                    var major = new Pen(new SolidColorBrush(Toward(Color.FromRgb(0x2E, 0x2E, 0x35))), 2);
+                    // an upright grid's lines stand on nothing: lighter, see-through ink
+                    var minor = new Pen(new SolidColorBrush(clear ? Color.FromArgb((byte)(0x50 * opacity), 0x9A, 0xA4, 0xB2) : Toward(Color.FromRgb(0x1F, 0x1F, 0x24))), 1);
+                    var major = new Pen(new SolidColorBrush(clear ? Color.FromArgb((byte)(0x90 * opacity), 0x9A, 0xA4, 0xB2) : Toward(Color.FromRgb(0x2E, 0x2E, 0x35))), 2);
                     for (int i = 1; i < 10; i++)
                     {
                         double x = i * px / 10.0 + 0.5;

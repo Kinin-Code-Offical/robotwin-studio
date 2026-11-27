@@ -759,9 +759,10 @@ Unity'deki kaplama menüsü gibi, sahnenin sağ üstündeki kaplama düğmesi ya
 Araç çubuğundaki ızgara düğmesi Unity'deki **Grid and Snap** penceresini açar:
 
 - **Izgaraya yakala:** taşıma, döndürme ve boyut sürüklemeleri adımlara oturur. Kapalıyken her sürükleme serbesttir; açıkken Alt basılı tutmak o sürüklemeyi serbest bırakır.
-- **Izgarayı göster** ve **Saydamlık:** zemindeki çizgiler. İnce çizgiler taşıma adımında, kalın çizgiler her on adımda bir çizilir (çok küçük adımlarda çizgiler sıklaşmasın diye ikiye katlanır).
-- **Adımlar:** **Taşı** (seçili uzunluk biriminde; mm, cm, inç, mil yazılabilir), **Döndür** (derece; döndür tutamacı ve Ctrl+E bu kadar çevirir), **Boyut** (ölçek tutamacı; 0 ise taşıma adımı).
-- **Seçiliyi ızgaraya oturt** seçili parçayı, üstüne takılanlarla birlikte, X ve Y'de en yakın ızgara noktasına taşır. **Varsayılana dön** 5 mm, 15° ve görünen ızgaraya döner.
+- **Izgarayı göster** ve **Saydamlık:** zemindeki çizgiler. İnce çizgiler taşıma adımında, kalın çizgiler her on adımda bir çizilir (çok küçük adımlarda çizgiler sıklaşmasın diye ikiye katlanır). **Düzlem**: XY yalnız zemindeki ızgaradır; XZ ya da YZ seçilince zemine ek olarak ızgaranın yerinden geçen dik, saydam bir ızgara da çizilir (Unity'deki ızgara düzlemi).
+- **Adımlar:** **Taşı** (seçili uzunluk biriminde; mm, cm, inç, mil yazılabilir), **Döndür** (derece; döndür tutamacı ve Ctrl+E bu kadar çevirir), **Boyut** (ölçek tutamacı; 0 ise taşıma adımı). **X, Y ve Z aynı adım** kapatılınca Y ve Z kendi taşıma adımlarını alır (Unity'deki bağlı adım); sürüklemeler ve tutamaç her eksende kendi adımına oturur, zemin çizgileri de buna göre çizilir.
+- **Izgaranın yeri** (Unity'deki Grid Position): ızgara çizgilerinin başladığı X ve Y (mm); yakalama da oradan sayılır. **Seçiliden al** onu seçili parçanın yerine taşır, **Dünyaya sıfırla** dünyanın başlangıç noktasına döndürür.
+- **Seçiliyi ızgaraya oturt** seçili parçayı, üstüne takılanlarla birlikte, X ve Y'de en yakın ızgara noktasına taşır. **Varsayılana dön** 5 mm, 15°, bağlı adım, dünyanın başlangıcındaki zemin ızgarasına döner.
 
 Ayarlar kaydedilir; her dünya ve montaj onlarla açılır.
 

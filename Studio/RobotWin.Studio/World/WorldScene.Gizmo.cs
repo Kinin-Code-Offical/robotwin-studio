@@ -686,9 +686,9 @@ namespace RobotWin.Studio.World
             if (!free)
             {
                 // the grid along the world's axes the move uses
-                if (Math.Abs(delta.X) > 1e-12 || _gizmoDrag != GizmoPart.Z) nx = Snap(nx);
-                if (Math.Abs(delta.Y) > 1e-12 || _gizmoDrag != GizmoPart.Z) ny = Snap(ny);
-                if (Math.Abs(delta.Z) > 1e-12) nz = Snap(nz);
+                if (Math.Abs(delta.X) > 1e-12 || _gizmoDrag != GizmoPart.Z) nx = SnapX(nx);   // [grid] each axis its own step
+                if (Math.Abs(delta.Y) > 1e-12 || _gizmoDrag != GizmoPart.Z) ny = SnapY(ny);
+                if (Math.Abs(delta.Z) > 1e-12) nz = SnapZ(nz);
             }
 
             if (_gizmoDrag is GizmoPart.X or GizmoPart.Y && SurfaceSnap && World!.Terrain != null && Math.Abs(_gizmoPose.Z - GroundZAt(_gizmoPose.X, _gizmoPose.Y)) < 1e-3) nz = GroundZAt(nx, ny);

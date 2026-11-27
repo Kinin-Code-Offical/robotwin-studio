@@ -760,9 +760,10 @@ Like Unity's overlay menu, the overlay button at the scene's top right, or the k
 The grid button in the toolbar opens the counterpart of Unity's **Grid and Snap** window:
 
 - **Snap to grid**: move, rotate and size drags snap to the steps. Off, every drag is free; on, holding Alt frees that drag.
-- **Show grid** and **Opacity**: the lines on the floor. Thin lines are drawn at the move step, thick ones every ten steps (with very small steps the lines double so they do not crowd).
-- **Steps**: **Move** (in the chosen length unit; mm, cm, in, mil can be typed), **Rotate** (degrees; the rotate handle and Ctrl+E turn by it), **Size** (the scale handle; 0 uses the move step).
-- **Align selected to grid** moves the selected part, with what is mounted on it, to the nearest grid point in X and Y. **Reset to defaults** goes back to 5 mm, 15° and a shown grid.
+- **Show grid** and **Opacity**: the lines on the floor. Thin lines are drawn at the move step, thick ones every ten steps (with very small steps the lines double so they do not crowd). **Plane**: XY is the floor's grid only; with XZ or YZ an upright, see-through grid through the grid's position is drawn as well (Unity's grid plane).
+- **Steps**: **Move** (in the chosen length unit; mm, cm, in, mil can be typed), **Rotate** (degrees; the rotate handle and Ctrl+E turn by it), **Size** (the scale handle; 0 uses the move step). Turn **Same step for X, Y and Z** off and Y and Z take their own move steps (Unity's linked step); drags and the handle snap to each axis' own step, and the floor lines follow.
+- **Grid position** (Unity's Grid Position): where the grid's lines start in X and Y (mm); snapping counts from there too. **From selected** moves it to the selected part's place, **Reset to world** back to the world's origin.
+- **Align selected to grid** moves the selected part, with what is mounted on it, to the nearest grid point in X and Y. **Reset to defaults** goes back to 5 mm, 15°, linked steps and the floor grid at the world's origin.
 
 The settings are saved; every world and assembly opens with them.
 

@@ -30,6 +30,15 @@ namespace RobotWin.Studio.Pages
             Scene.SizeStep = Math.Max(0, s.WorldSizeStepMm) / 1000.0;
             Scene.GridOpacity = s.WorldGridOpacity;
             Scene.GridShown = s.WorldGridShown;
+            // [grid] per-axis steps (linked: all X's), the grid's position and its plane
+            double gy = s.WorldGridLinked ? 0 : Math.Max(0, s.WorldGridYMm) / 1000.0, gz = s.WorldGridLinked ? 0 : Math.Max(0, s.WorldGridZMm) / 1000.0;
+            var origin = new Point(s.WorldGridOriginXMm / 1000.0, s.WorldGridOriginYMm / 1000.0);
+            string plane = s.WorldGridPlane is "xz" or "yz" ? s.WorldGridPlane : "xy";
+            redraw |= Math.Abs(Scene.GridY - gy) > 1e-12 || Math.Abs(Scene.GridZ - gz) > 1e-12 || Scene.GridOrigin != origin || Scene.GridPlane != plane;
+            Scene.GridY = gy;
+            Scene.GridZ = gz;
+            Scene.GridOrigin = origin;
+            Scene.GridPlane = plane;
             if (redraw) Scene.RefreshGrid();
         }
 
@@ -82,12 +91,59 @@ namespace RobotWin.Studio.Pages
                 Save();
             }, box => SliderInput.Attach(box.Slider, box.Box, "0", " %")));
 
+            // [grid] Unity's grid plane: the floor only, or an upright grid through the grid's position too
+            var planes = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 6) };
+            planes.Children.Add(new TextBlock { Text = Lang.T("Düzlem"), Width = 104, VerticalAlignment = VerticalAlignment.Center, Foreground = (Brush)FindResource("B.TextSecondary") });
+            foreach (var (key, label, tip) in new[] { ("xy", "XY", "Yalnız zemindeki ızgara"), ("xz", "XZ", "Zemine ek olarak, ızgaranın yerinden geçen dik XZ ızgarası (Y'ye dik)"), ("yz", "YZ", "Zemine ek olarak, ızgaranın yerinden geçen dik YZ ızgarası (X'e dik)") })
+            {
+                var chip = new RadioButton { Content = label, GroupName = "gridplane", Style = (Style)FindResource("Chip"), IsChecked = s.WorldGridPlane == key || key == "xy" && s.WorldGridPlane is not ("xz" or "yz"), ToolTip = Lang.T(tip) };
+                string k = key;
+                chip.Click += (_, _) =>
+                {
+                    s.WorldGridPlane = k;
+                    Save();
+                };
+                planes.Children.Add(chip);
+            }
+
+            root.Children.Add(planes);
+
             root.Children.Add(new TextBlock { Text = Lang.T("Adımlar"), Style = (Style)FindResource("Text.Overline"), Margin = new Thickness(0, 10, 0, 6) });
-            root.Children.Add(SliderRow(Lang.T("Taşı"), 0.5, 100, Math.Max(0.5, s.WorldGridMm), v =>
+            root.Children.Add(SliderRow(Lang.T(s.WorldGridLinked ? "Taşı" : "Taşı X"), 0.5, 100, Math.Max(0.5, s.WorldGridMm), v =>
             {
                 s.WorldGridMm = Math.Round(v, 4);
                 Save();
             }, box => SliderInput.AttachLength(box.Slider, box.Box)));
+            // [grid] Unity's linked step: off, Y and Z take their own
+            var linked = new CheckBox { Content = Lang.T("X, Y ve Z aynı adım"), IsChecked = s.WorldGridLinked, Margin = new Thickness(104, 0, 0, 6),
+                ToolTip = Lang.T("Kapalıyken Y ve Z kendi taşıma adımlarını alır (Unity'deki bağlı adım)") };
+            linked.Click += (_, _) =>
+            {
+                s.WorldGridLinked = linked.IsChecked == true;
+                if (!s.WorldGridLinked)
+                {
+                    s.WorldGridYMm = s.WorldGridMm;
+                    s.WorldGridZMm = s.WorldGridMm;
+                }
+
+                Save();
+                popup.IsOpen = false;
+                OnGridSnap(anchor, new RoutedEventArgs());
+            };
+            root.Children.Add(linked);
+            if (!s.WorldGridLinked)
+            {
+                root.Children.Add(SliderRow(Lang.T("Taşı Y"), 0.5, 100, Math.Max(0.5, s.WorldGridYMm), v =>
+                {
+                    s.WorldGridYMm = Math.Round(v, 4);
+                    Save();
+                }, box => SliderInput.AttachLength(box.Slider, box.Box)));
+                root.Children.Add(SliderRow(Lang.T("Taşı Z"), 0.5, 100, Math.Max(0.5, s.WorldGridZMm), v =>
+                {
+                    s.WorldGridZMm = Math.Round(v, 4);
+                    Save();
+                }, box => SliderInput.AttachLength(box.Slider, box.Box)));
+            }
             root.Children.Add(SliderRow(Lang.T("Döndür"), 1, 90, Math.Max(1, s.WorldRotateStep), v =>
             {
                 s.WorldRotateStep = Math.Round(v, 2);
@@ -104,6 +160,57 @@ namespace RobotWin.Studio.Pages
                 Style = (Style)FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 10)
             });
 
+            // [grid] Unity's Grid Position: where the lines start; from the selected part, or back to the world's origin
+            root.Children.Add(new TextBlock { Text = Lang.T("Izgaranın yeri"), Style = (Style)FindResource("Text.Overline"), Margin = new Thickness(0, 4, 0, 6) });
+            var place = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 6) };
+            TextBox Coord(string label, double mm, Action<double> set)
+            {
+                place.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0), Foreground = (Brush)FindResource("B.TextSecondary") });
+                var box = new TextBox { Width = 72, Text = mm.ToString("0.###", CultureInfo.CurrentCulture), TextAlignment = TextAlignment.Right, Margin = new Thickness(0, 0, 10, 0), ToolTip = Lang.T("mm; yazıp Enter") };
+                void Apply()
+                {
+                    if (!double.TryParse(box.Text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double v)) return;
+                    set(v);
+                    Save();
+                }
+
+                box.KeyDown += (_, k) =>
+                {
+                    if (k.Key == System.Windows.Input.Key.Enter) Apply();
+                };
+                box.LostKeyboardFocus += (_, _) => Apply();
+                place.Children.Add(box);
+                return box;
+            }
+
+            var ox = Coord("X", s.WorldGridOriginXMm, v => s.WorldGridOriginXMm = v);
+            var oy = Coord("Y", s.WorldGridOriginYMm, v => s.WorldGridOriginYMm = v);
+            root.Children.Add(place);
+            var originButtons = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
+            var fromSelected = new Button { Content = Lang.T("Seçiliden al"), Style = (Style)FindResource("Btn"), Margin = new Thickness(0, 0, 6, 0),
+                ToolTip = Lang.T("Izgaranın yerini seçili parçanın yerine taşır (Unity'deki etkin nesneden kopyala)"), IsEnabled = World?.Find(Scene.Selected) != null };
+            fromSelected.Click += (_, _) =>
+            {
+                if (World?.Find(Scene.Selected) is not { } sel) return;
+                s.WorldGridOriginXMm = Math.Round(sel.Pose.X * 1000, 3);
+                s.WorldGridOriginYMm = Math.Round(sel.Pose.Y * 1000, 3);
+                ox.Text = s.WorldGridOriginXMm.ToString("0.###", CultureInfo.CurrentCulture);
+                oy.Text = s.WorldGridOriginYMm.ToString("0.###", CultureInfo.CurrentCulture);
+                Save();
+            };
+            var toWorld = new Button { Content = Lang.T("Dünyaya sıfırla"), Style = (Style)FindResource("Btn.Ghost"), ToolTip = Lang.T("Izgara dünyanın başlangıç noktasından başlar") };
+            toWorld.Click += (_, _) =>
+            {
+                s.WorldGridOriginXMm = 0;
+                s.WorldGridOriginYMm = 0;
+                ox.Text = "0";
+                oy.Text = "0";
+                Save();
+            };
+            originButtons.Children.Add(fromSelected);
+            originButtons.Children.Add(toWorld);
+            root.Children.Add(originButtons);
+
             var buttons = new WrapPanel();
             var align = new Button { Content = Lang.T("Seçiliyi ızgaraya oturt"), Style = (Style)FindResource("Btn"), Margin = new Thickness(0, 0, 6, 0),
                 ToolTip = Lang.T("Seçili parçayı (ve üstüne takılanları) X ve Y'de en yakın ızgara noktasına taşır") };
@@ -117,6 +224,12 @@ namespace RobotWin.Studio.Pages
                 s.WorldGridMm = 5;
                 s.WorldRotateStep = 15;
                 s.WorldSizeStepMm = 0;
+                s.WorldGridLinked = true;   // [grid]
+                s.WorldGridYMm = 5;
+                s.WorldGridZMm = 5;
+                s.WorldGridOriginXMm = 0;
+                s.WorldGridOriginYMm = 0;
+                s.WorldGridPlane = "xy";
                 Save();
                 popup.IsOpen = false;
                 OnGridSnap(anchor, new RoutedEventArgs());
@@ -175,9 +288,9 @@ namespace RobotWin.Studio.Pages
         {
             var world = World;
             var o = world?.Find(Scene.Selected);
-            double g = Scene.Grid;
-            if (world == null || o == null || g <= 0) return;
-            double dx = Math.Round(o.Pose.X / g) * g - o.Pose.X, dy = Math.Round(o.Pose.Y / g) * g - o.Pose.Y;
+            if (world == null || o == null || Scene.Grid <= 0) return;
+            var at = Scene.NearestGridPoint(o.Pose.X, o.Pose.Y);   // [grid] each axis' step, from the grid's position
+            double dx = at.X - o.Pose.X, dy = at.Y - o.Pose.Y;
             if (Math.Abs(dx) < 1e-9 && Math.Abs(dy) < 1e-9) return;
             Edit(string.Format(CultureInfo.InvariantCulture, "{0}: ızgaraya oturtuldu", o.Name), () => world.MoveAssembly(o, dx, dy, 0));
         }

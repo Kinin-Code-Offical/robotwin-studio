@@ -446,7 +446,7 @@ namespace RobotWin.Studio.World
         }
 
         /// <summary>Point on the ground in front of the camera where new objects appear.</summary>
-        public Point3D DropPoint() => new Point3D(Snap(_target.X), Snap(_target.Y), GroundZAt(Snap(_target.X), Snap(_target.Y))); // [terrain] on the terrain
+        public Point3D DropPoint() => new Point3D(SnapX(_target.X), SnapY(_target.Y), GroundZAt(SnapX(_target.X), SnapY(_target.Y))); // [terrain] on the terrain
 
         public Point3D WorldAnchor(WorldObject o, string pin)
         {
@@ -568,9 +568,10 @@ namespace RobotWin.Studio.World
             var look = FloorLook.Tile(env?.FloorMaterial);
             var tile = look != null
                 ? new ImageBrush(look) { TileMode = TileMode.Tile, ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 1, 1) }
-                : GridBrush();   // [grid] lines at the snap step (World/WorldScene.Grid.cs)
+                : GridBrush(w, d);   // [grid] lines at the snap step, from the grid's position (World/WorldScene.Grid.cs)
             RenderOptions.SetBitmapScalingMode(tile, BitmapScalingMode.HighQuality);
             if (!TerrainReplacesFloor) g.Children.Add(new GeometryModel3D(ground, new DiffuseMaterial(tile)) { BackMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0x10, 0x10, 0x12))) });
+            if (UprightGrid(w, d) is { } upright) g.Children.Add(upright);   // [grid] Unity's grid plane XZ / YZ
             if (env != null)
             {
                 var wall = M.Matte(Color.FromRgb(0x4C, 0x4E, 0x55), 0.05);   // painted grey: a room's wall stands out from the dark backdrop
@@ -1454,12 +1455,12 @@ namespace RobotWin.Studio.World
                 else if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
                 {
                     double dz = -(p.Y - _dragStartScreen.Y) * _distance * 0.0016;
-                    nz = Math.Max(0, Snap(_dragStartZ + dz));
+                    nz = Math.Max(0, SnapZ(_dragStartZ + dz));
                 }
                 else if (OnPlane(p, _dragPlaneZ) is { } q)
                 {
-                    nx = Snap(q.X + _dragOffset.X);
-                    ny = Snap(q.Y + _dragOffset.Y);
+                    nx = SnapX(q.X + _dragOffset.X);   // [grid] each axis its own step, from the grid's position
+                    ny = SnapY(q.Y + _dragOffset.Y);
                 }
 
                 if (!onCorner) SnapDrag(o, p, ref nx, ref ny, ref nz); // [terrain] follow the terrain surface

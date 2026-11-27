@@ -106,6 +106,20 @@ namespace RobotWin.Studio.Shell
         /// <summary>[grid] Size snap of the scale handle in millimetres (0 = the move step).</summary>
         public double WorldSizeStepMm { get; set; }
 
+        /// <summary>[grid] Unity's linked move step: one step for X, Y and Z; off, Y and Z take their own (mm).</summary>
+        public bool WorldGridLinked { get; set; } = true;
+
+        public double WorldGridYMm { get; set; } = 5.0;
+        public double WorldGridZMm { get; set; } = 5.0;
+
+        /// <summary>[grid] Where the grid's lines start (its position, mm), Unity's Grid Position.</summary>
+        public double WorldGridOriginXMm { get; set; }
+
+        public double WorldGridOriginYMm { get; set; }
+
+        /// <summary>[grid] The plane the grid is shown on: "xy" (the floor), "xz" or "yz" (upright, through the grid's position).</summary>
+        public string WorldGridPlane { get; set; } = "xy";
+
         /// <summary>[opacity] How opaque the PCB editor draws tracks, vias, pads and pours (0–1).</summary>
         public double PcbTrackOpacity { get; set; } = 1;
         public double PcbViaOpacity { get; set; } = 1;
