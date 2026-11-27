@@ -126,7 +126,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Kural alanı | yok | yok | 3 |
 | Hiyerarşik sayfa, sayfa pini | yok | yok | 3 |
 | Metin, metin kutusu | Metin (T), çerçeveli = metin kutusu | var | |
-| Tablo | yok | yok | 3 |
+| Tablo | Tablo: sol üst köşeden 3 × 3, ortak tablo düzenleyicisi (hücreler, satır / sütun ekle-çıkar, sütun genişliği, satır yüksekliği, yazı boyu, çizgi), dik kalır, kopyalanır; KiCad table gider ve gelir | var | |
 | Dikdörtgen, daire, yay, çizgi, Bezier, resim | Çiz: çizgi, dikdörtgen, daire, yay, Bezier eğrisi, resim (dik kalır, PNG olarak gömülür) (seçilir, taşınır, döndürülür, kopyalanır; KiCad'e gider ve gelir; görüntüye çizilir) | var | |
 | Silici | Del; araç çubuğunda Silici aracı (her tıklama altındakini siler) | var | |
 | Izgara, birim, imleç, gizli pinler | ızgara (nokta / çizgi / kapalı), artı imleç (Ctrl+Shift+X), göreli orijin, birim (ızgara adımı, mm, mil, inç); gizli pin yok: sembollerin bütün pinleri görünür | var | |

@@ -85,6 +85,13 @@ namespace RobotTwin.CoreSim.Formats
 
         /// <summary>[image] An image's picture (base64 PNG).</summary>
         public string? ImageData { get; set; }
+
+        /// <summary>[table] A table's columns' widths and rows' heights (mm), its cells row by row, their text size (mm).</summary>
+        public List<double>? ColumnWidths { get; set; }
+
+        public List<double>? RowHeights { get; set; }
+        public List<string>? Cells { get; set; }
+        public double TextSize { get; set; }
     }
 
     public sealed class KiCadSchFile
@@ -417,6 +424,25 @@ namespace RobotTwin.CoreSim.Formats
                 shape.Points.Add(c);
                 shape.Points.Add((c.X + r, c.Y));
                 Style(n, shape);
+                file.Shapes.Add(shape);
+            }
+
+            foreach (var n in root.Children("table"))   // [table] its first cell's corner, its columns and rows, its cells' text
+            {
+                var widths = (n.Child("column_widths")?.Items.Skip(1) ?? Enumerable.Empty<SExpression>()).Select(x => double.TryParse(x.Atom, NumberStyles.Float, CultureInfo.InvariantCulture, out double v) ? v : 0).Where(v => v > 0).ToList();
+                var heights = (n.Child("row_heights")?.Items.Skip(1) ?? Enumerable.Empty<SExpression>()).Select(x => double.TryParse(x.Atom, NumberStyles.Float, CultureInfo.InvariantCulture, out double v) ? v : 0).Where(v => v > 0).ToList();
+                var cellNodes = n.Child("cells")?.Children("table_cell").ToList() ?? new List<SExpression>();
+                if (widths.Count == 0 || heights.Count == 0 || cellNodes.Count == 0) continue;
+                var shape = new KiCadSheetShape
+                {
+                    Kind = SheetShapeKind.Table, ColumnWidths = widths, RowHeights = heights,
+                    Cells = cellNodes.Select(c => c.Count > 1 ? c.Items[1].Atom ?? string.Empty : string.Empty).ToList(),
+                    TextSize = cellNodes[0].Child("effects")?.Child("font")?.Child("size")?.Number(1) ?? 1.27,
+                    Width = n.Child("border")?.Child("stroke")?.Child("width")?.Number(1) ?? 0
+                };
+                var origin = At(cellNodes[0]);
+                shape.Points.Add(origin);
+                shape.Points.Add((origin.X + widths.Sum(), origin.Y + heights.Sum()));
                 file.Shapes.Add(shape);
             }
 
@@ -874,6 +900,18 @@ namespace RobotTwin.CoreSim.Formats
                 double G(double mm) => Math.Round(mm * spreadUsed / (2 * MmPerGridUnit)) / 2;
                 var drawn = new SchematicShape { Kind = shape.Kind, Width = shape.Width > 0 ? shape.Width : 0.15, Dashed = shape.Dashed, Filled = shape.Filled, ImageData = shape.ImageData };
                 foreach (var (x, y) in shape.Points) drawn.Points.Add(new GridPoint(G(x + ox), G(y + oy)));
+                if (shape.Kind == SheetShapeKind.Table && shape.ColumnWidths != null && shape.RowHeights != null && shape.Points.Count > 0)
+                {
+                    // [table] each rule laid where the sheet's grid puts it, so the cells span what they spanned
+                    var (tx, ty) = shape.Points[0];
+                    double cx = tx, cy = ty;
+                    drawn.ColumnWidths = shape.ColumnWidths.Select(w => { double a = G(cx + ox); cx += w; return Math.Max(0.5, G(cx + ox) - a); }).ToList();
+                    drawn.RowHeights = shape.RowHeights.Select(h => { double a = G(cy + oy); cy += h; return Math.Max(0.5, G(cy + oy) - a); }).ToList();
+                    drawn.Cells = shape.Cells?.ToList();
+                    drawn.TextSize = shape.TextSize;
+                    drawn.FitTable();
+                }
+
                 if (shape.Kind == SheetShapeKind.Arc && drawn.ArcCircle() == null) drawn.Kind = SheetShapeKind.Line;   // flattened by the grid
                 result.Schematic.Shapes.Add(drawn);
             }

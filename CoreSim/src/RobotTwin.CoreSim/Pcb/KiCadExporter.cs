@@ -1152,6 +1152,35 @@ namespace RobotTwin.CoreSim.Pcb
                     case SheetShapeKind.Arc when sh.Points.Count >= 3:
                         root.Add(new SNode("arc", At("start", sh.Points[0]), At("mid", sh.Points[1]), At("end", sh.Points[2]), stroke, new SNode("fill", new SNode("type", "none")), id));
                         break;
+                    case SheetShapeKind.Table when sh.Points.Count >= 2 && sh.ColumnWidths != null && sh.RowHeights != null:   // [table] KiCad 8's table
+                    {
+                        var rule = new SNode("stroke", new SNode("width", N(sh.Width)), new SNode("type", "solid"));
+                        var cells = new SNode("cells");
+                        double m = sh.CellTextSize * 0.75, gy = sh.Points[0].Y;
+                        for (int r = 0; r < sh.Rows; r++)
+                        {
+                            double gx = sh.Points[0].X;
+                            for (int c = 0; c < sh.Columns; c++)
+                            {
+                                cells.Add(new SNode("table_cell", Q(sh.Cell(r, c)), new SNode("exclude_from_sim", "no"), new SNode("at", N(Mx(gx)), N(My(gy)), "0"),
+                                    new SNode("size", N(sh.ColumnWidths[c] * SchematicGridMm), N(sh.RowHeights[r] * SchematicGridMm)), new SNode("margins", N(m), N(m), N(m), N(m)),
+                                    new SNode("span", "1", "1"), new SNode("fill", new SNode("type", "none")),
+                                    new SNode("effects", new SNode("font", new SNode("size", N(sh.CellTextSize), N(sh.CellTextSize))), new SNode("justify", "left", "top")),
+                                    Uid("schematic:shape:" + i.ToString(CultureInfo.InvariantCulture) + ":" + r.ToString(CultureInfo.InvariantCulture) + ":" + c.ToString(CultureInfo.InvariantCulture))));
+                                gx += sh.ColumnWidths[c];
+                            }
+
+                            gy += sh.RowHeights[r];
+                        }
+
+                        root.Add(new SNode("table", new SNode("column_count", sh.Columns.ToString(CultureInfo.InvariantCulture)),
+                            new SNode("border", new SNode("external", "yes"), new SNode("header", "yes"), rule),
+                            new SNode("separators", new SNode("rows", "yes"), new SNode("cols", "yes"), new SNode("stroke", new SNode("width", N(sh.Width)), new SNode("type", "solid"))),
+                            new SNode("column_widths", sh.ColumnWidths.Select(w => N(w * SchematicGridMm)).ToArray()),
+                            new SNode("row_heights", sh.RowHeights.Select(h => N(h * SchematicGridMm)).ToArray()), cells));
+                        break;
+                    }
+
                     case SheetShapeKind.Image when sh.Points.Count >= 2 && sh.ImageData is { } data:   // [image] centred, scaled from its 300 ppi size
                     {
                         var (pw, _) = EmbeddedImage.SizeMm(data);

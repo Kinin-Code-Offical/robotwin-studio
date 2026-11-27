@@ -36,6 +36,60 @@ namespace RobotWin.Studio.Editor
             Points = { new GridPoint(centre.X - p.W / 2, centre.Y - p.H / 2), new GridPoint(centre.X + p.W / 2, centre.Y + p.H / 2) }
         };
 
+        /// <summary>[table] A 3 × 3 table from the clicked corner, then its cells to fill in.</summary>
+        private void PlaceTable()
+        {
+            var table = SchematicShape.Table(Snap(_mouseGrid), 3, 3);
+            W.BeginChange();
+            Doc.Shapes.Add(table);
+            W.CommitChange(Shell.Lang.T("Tablo eklendi"));
+            Tool = EditorTool.Select;
+            SelectItems(new object[] { table });
+            RequestCommand(SchematicCommand.EditTable, table);
+        }
+
+        /// <summary>[table] The rules and each cell's lines from its top left, in the sheet's ink (the stroke as wide as set).</summary>
+        private void DrawTable(DrawingContext dc, SchematicShape t, Color color)
+        {
+            if (t.ColumnWidths == null || t.RowHeights == null || t.Points.Count < 2) return;
+            var pen = MakePen(color, Math.Max(1, t.Width / 2.54 * _scale), false);
+            var frame = new Rect(ToScreen(t.Points[0]), ToScreen(t.Points[1]));
+            dc.DrawRectangle(null, pen, frame);
+            double x = t.Points[0].X;
+            for (int c = 0; c + 1 < t.Columns; c++)
+            {
+                x += t.ColumnWidths[c];
+                dc.DrawLine(pen, ToScreen(new GridPoint(x, t.Points[0].Y)), ToScreen(new GridPoint(x, t.Points[1].Y)));
+            }
+
+            double y = t.Points[0].Y;
+            for (int r = 0; r + 1 < t.Rows; r++)
+            {
+                y += t.RowHeights[r];
+                dc.DrawLine(pen, ToScreen(new GridPoint(t.Points[0].X, y)), ToScreen(new GridPoint(t.Points[1].X, y)));
+            }
+
+            double em = Math.Max(4, t.CellTextSize / 2.54 * _scale * 1.35), margin = t.CellTextSize * 0.75 / 2.54;
+            y = t.Points[0].Y;
+            for (int r = 0; r < t.Rows; r++)
+            {
+                x = t.Points[0].X;
+                for (int c = 0; c < t.Columns; c++)
+                {
+                    string text = t.Cell(r, c);
+                    if (text.Length > 0)
+                    {
+                        var ft = new FormattedText(text, System.Globalization.CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, Typefaces.Ui, em, SymbolRenderer.Brush(color), Dpi);
+                        dc.DrawText(ft, ToScreen(new GridPoint(x + margin, y + margin * 0.6)));
+                    }
+
+                    x += t.ColumnWidths[c];
+                }
+
+                y += t.RowHeights[r];
+            }
+        }
+
         private void PlaceImage()
         {
             if (PendingImageAt(Snap(_mouseGrid)) is not { } image) return;
@@ -139,6 +193,12 @@ namespace RobotWin.Studio.Editor
 
         private void DrawShape(DrawingContext dc, SchematicShape s, Color color)
         {
+            if (s.Kind == SheetShapeKind.Table)
+            {
+                DrawTable(dc, s, color);
+                return;
+            }
+
             if (s.Kind == SheetShapeKind.Image && s.Points.Count >= 2)
             {
                 // [image] the picture in its frame; picked, its edge in the accent
@@ -174,7 +234,7 @@ namespace RobotWin.Studio.Editor
                 double reach = Math.Max(5, s.Width / 2.54 * _scale / 2 + 3);
                 for (int i = 0; i + 1 < pts.Count; i++)
                     if (Distance(screen, pts[i], pts[i + 1]) <= reach) return s;
-                if ((s.Filled && s.Kind is SheetShapeKind.Rectangle or SheetShapeKind.Circle || s.Kind == SheetShapeKind.Image) && Inside(screen, pts)) return s;
+                if ((s.Filled && s.Kind is SheetShapeKind.Rectangle or SheetShapeKind.Circle || s.Kind is SheetShapeKind.Image or SheetShapeKind.Table) && Inside(screen, pts)) return s;
             }
 
             return null;

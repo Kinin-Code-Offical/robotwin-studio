@@ -152,6 +152,13 @@ namespace RobotWin.Studio.Editor
                     Item("Sil" + many, "Del", DeleteSelection);
                     break;
 
+                case SchematicShape { Kind: SheetShapeKind.Table } table:   // [table]
+                    Item("Tabloyu düzenle…", "E", () => RequestCommand(SchematicCommand.EditTable, table));
+                    Item("Taşı", "M", () => BeginKeyMove(false));
+                    Item("Kopyala", "Ctrl+C", CopySelection);
+                    Item("Sil" + many, "Del", DeleteSelection);
+                    break;
+
                 case NoConnectFlag:
                     Item("NC işaretini sil", "Del", DeleteSelection);
                     Item("Taşı", "M", () => BeginKeyMove(false));

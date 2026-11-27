@@ -166,7 +166,10 @@ namespace RobotTwin.CoreSim.Design
         Bezier,
 
         /// <summary>[image] A picture (a logo, a photo of the wiring, a block diagram) between two corners; it stays upright.</summary>
-        Image
+        Image,
+
+        /// <summary>[table] KiCad's table: ruled cells of text from its top-left corner; it stays upright.</summary>
+        Table
     }
 
     /// <summary>
@@ -197,6 +200,69 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>[image] The picture, base64 PNG (images only).</summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? ImageData { get; set; }
+
+        /// <summary>[table] The columns' widths and the rows' heights in grid steps (tables only).</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<double>? ColumnWidths { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<double>? RowHeights { get; set; }
+
+        /// <summary>[table] The cells' text, row by row ("\n" breaks a line).</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<string>? Cells { get; set; }
+
+        /// <summary>[table] The cells' text height (mm); 0: KiCad's 1.27 mm.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double TextSize { get; set; }
+
+        [JsonIgnore]
+        public int Columns => ColumnWidths?.Count ?? 0;
+
+        [JsonIgnore]
+        public int Rows => RowHeights?.Count ?? 0;
+
+        [JsonIgnore]
+        public double CellTextSize => TextSize > 0 ? TextSize : 1.27;
+
+        /// <summary>[table] A table of the given rows and columns, every cell the same size (grid steps), from its top-left corner.</summary>
+        public static SchematicShape Table(GridPoint corner, int rows, int columns, double cellWidth = 6, double cellHeight = 1.5)
+        {
+            var t = new SchematicShape
+            {
+                Kind = SheetShapeKind.Table,
+                ColumnWidths = Enumerable.Repeat(cellWidth, Math.Max(1, columns)).ToList(),
+                RowHeights = Enumerable.Repeat(cellHeight, Math.Max(1, rows)).ToList(),
+                Cells = Enumerable.Repeat(string.Empty, Math.Max(1, rows) * Math.Max(1, columns)).ToList(),
+                Points = { corner }
+            };
+            t.FitTable();
+            return t;
+        }
+
+        public string Cell(int row, int column) => TableGrid.Cell(Cells, Columns, row, column);
+
+        public void SetCell(int row, int column, string text) => TableGrid.SetCell(Cells ??= new List<string>(), Columns, row, column, text);
+
+        /// <summary>[table] Sets the far corner from the columns and rows, the cells to their count.</summary>
+        public void FitTable()
+        {
+            if (Kind != SheetShapeKind.Table || Points.Count == 0 || ColumnWidths == null || RowHeights == null) return;
+            var far = new GridPoint(Points[0].X + ColumnWidths.Sum(), Points[0].Y + RowHeights.Sum());
+            if (Points.Count < 2) Points.Add(far);
+            else Points[1] = far;
+            Cells ??= new List<string>();
+            int n = Rows * Columns;
+            while (Cells.Count < n) Cells.Add(string.Empty);
+            if (Cells.Count > n) Cells.RemoveRange(n, Cells.Count - n);
+        }
+
+        /// <summary>[table] Adds or takes away rows and columns, the other cells keeping their text.</summary>
+        public void ResizeTable(int rows, int columns)
+        {
+            (ColumnWidths, RowHeights, Cells) = TableGrid.Resize(ColumnWidths ?? new List<double>(), RowHeights ?? new List<double>(), Cells, rows, columns, 6, 1.5);
+            FitTable();
+        }
 
         /// <summary>[image] The middle of the shape's first two points (an image's centre).</summary>
         [JsonIgnore]
@@ -232,7 +298,7 @@ namespace RobotTwin.CoreSim.Design
             var pts = new List<GridPoint>();
             switch (Kind)
             {
-                case SheetShapeKind.Rectangle or SheetShapeKind.Image when Points.Count >= 2:
+                case SheetShapeKind.Rectangle or SheetShapeKind.Image or SheetShapeKind.Table when Points.Count >= 2:
                     var (p, q) = (Points[0], Points[1]);
                     pts.AddRange(new[] { p, new GridPoint(q.X, p.Y), q, new GridPoint(p.X, q.Y), p });
                     break;

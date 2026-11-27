@@ -92,19 +92,9 @@ namespace RobotTwin.CoreSim.Pcb
         }
 
         /// <summary>[table] The text of a cell (empty past the list).</summary>
-        public string Cell(int row, int column)
-        {
-            int i = row * Columns + column;
-            return Cells != null && i >= 0 && i < Cells.Count ? Cells[i] : string.Empty;
-        }
+        public string Cell(int row, int column) => RobotTwin.CoreSim.Design.TableGrid.Cell(Cells, Columns, row, column);
 
-        public void SetCell(int row, int column, string text)
-        {
-            Cells ??= new List<string>();
-            int i = row * Columns + column;
-            while (Cells.Count <= i) Cells.Add(string.Empty);
-            Cells[i] = text;
-        }
+        public void SetCell(int row, int column, string text) => RobotTwin.CoreSim.Design.TableGrid.SetCell(Cells ??= new List<string>(), Columns, row, column, text);
 
         /// <summary>[table] Sets the table's far corner from its columns and rows (after a size or a row or column changes).</summary>
         public void FitTable()
@@ -122,16 +112,7 @@ namespace RobotTwin.CoreSim.Pcb
         /// <summary>[table] Adds or takes away a row or a column, keeping the other cells' text where it was.</summary>
         public void ResizeTable(int rows, int columns)
         {
-            rows = Math.Max(1, rows);
-            columns = Math.Max(1, columns);
-            var old = Enumerable.Range(0, Rows).Select(r => Enumerable.Range(0, Columns).Select(c => Cell(r, c)).ToList()).ToList();
-            double lastW = ColumnWidths is { Count: > 0 } cw ? cw[cw.Count - 1] : 12, lastH = RowHeights is { Count: > 0 } rh ? rh[rh.Count - 1] : 3;
-            ColumnWidths = Enumerable.Range(0, columns).Select(c => ColumnWidths != null && c < ColumnWidths.Count ? ColumnWidths[c] : lastW).ToList();
-            RowHeights = Enumerable.Range(0, rows).Select(r => RowHeights != null && r < RowHeights.Count ? RowHeights[r] : lastH).ToList();
-            Cells = new List<string>();
-            for (int r = 0; r < rows; r++)
-            for (int c = 0; c < columns; c++)
-                Cells.Add(r < old.Count && c < old[r].Count ? old[r][c] : string.Empty);
+            (ColumnWidths, RowHeights, Cells) = RobotTwin.CoreSim.Design.TableGrid.Resize(ColumnWidths ?? new List<double>(), RowHeights ?? new List<double>(), Cells, rows, columns, 12, 3);
             FitTable();
         }
 

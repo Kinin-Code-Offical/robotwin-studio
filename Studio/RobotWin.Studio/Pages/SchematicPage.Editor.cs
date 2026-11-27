@@ -106,6 +106,7 @@ namespace RobotWin.Studio.Pages
                 case SchematicCommand.ShowInPcb: if (part != null) (Window.GetWindow(this) as MainWindow)?.ShowPartInPcb(part.RefDes); break;
                 case SchematicCommand.Find: ShowFind(false); break;
                 case SchematicCommand.EditNote: EditNote(target); break;   // [notes]
+                case SchematicCommand.EditTable when target is SchematicShape table: EditSheetTable(table); break;   // [table]
                 case SchematicCommand.Replace: ShowFind(true); break;
                 case SchematicCommand.Help: ToggleHelp(); break;
                 case SchematicCommand.Erc: RunErc(keepOpen: false); break;
@@ -1091,6 +1092,21 @@ namespace RobotWin.Studio.Pages
                             ?? sch.Parts.FirstOrDefault();
             switch (fault)
             {
+                case "table":   // [table] a parts table beside the circuit, picked; "table-edit": its editor is the picture
+                case "table-edit":
+                {
+                    var table = SchematicShape.Table(new GridPoint(b.MaxX + 4, b.MinY), 4, 3, 7, 1.5);
+                    table.ColumnWidths![2] = 10;
+                    table.FitTable();
+                    string[] cells = { "Ref", "Deger", "Not", "R1", "100", "Kapi direnci", "R2", "10k", "Asagi cekme", "Q1", "IRLZ44N", "Mantik seviyesi" };
+                    for (int i = 0; i < cells.Length; i++) table.SetCell(i / 3, i % 3, cells[i]);
+                    sch.Shapes.Add(table);
+                    Canvas.SelectItems(new object[] { table });
+                    Canvas.InvalidateVisual();
+                    if (fault == "table-edit") EditSheetTable(table);
+                    return;
+                }
+
                 case "image":   // [image] --image-file <png>: a logo beside the circuit, picked
                 {
                     var args = Environment.GetCommandLineArgs();

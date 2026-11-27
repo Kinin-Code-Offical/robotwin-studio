@@ -151,6 +151,9 @@ namespace RobotWin.Studio.Editor
                 case EditorTool.Image:   // [image]
                     PlaceImage();
                     return;
+                case EditorTool.Table:   // [table]
+                    PlaceTable();
+                    return;
                 case EditorTool.Text:   // [notes]
                     RequestCommand(SchematicCommand.EditNote, Snap(_mouseGrid));
                     Tool = EditorTool.Select;
@@ -183,6 +186,9 @@ namespace RobotWin.Studio.Editor
                         return;
                     case SchematicNote dn:   // [notes]
                         RequestCommand(SchematicCommand.EditNote, dn);
+                        return;
+                    case SchematicShape { Kind: SheetShapeKind.Table } dt:   // [table]
+                        RequestCommand(SchematicCommand.EditTable, dt);
                         return;
                     case SchematicWire:
                         if (NetUnderCursor() is { } net) SelectConnection(net);

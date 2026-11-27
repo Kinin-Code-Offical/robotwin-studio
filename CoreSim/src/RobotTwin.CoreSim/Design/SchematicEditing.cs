@@ -234,7 +234,7 @@ namespace RobotTwin.CoreSim.Design
                         case NoConnectFlag nc:
                             nc.Position = RotatePoint(nc.Position, center);
                             break;
-                        case SchematicShape { Kind: SheetShapeKind.Image } img:   // [image] a picture stays upright: only its place turns
+                        case SchematicShape { Kind: SheetShapeKind.Image or SheetShapeKind.Table } img:   // [image] [table] a picture or a table stays upright: only its place turns
                             img.MoveCentreTo(RotatePoint(img.Centre, center));
                             break;
                         case SchematicShape sh:   // [shapes]
@@ -271,7 +271,7 @@ namespace RobotTwin.CoreSim.Design
                     case NoConnectFlag nc:
                         nc.Position = MirrorPoint(nc.Position, center, vertical);
                         break;
-                    case SchematicShape { Kind: SheetShapeKind.Image } img:   // [image] a picture is not read backwards: only its place mirrors
+                    case SchematicShape { Kind: SheetShapeKind.Image or SheetShapeKind.Table } img:   // [image] [table] not read backwards: only its place mirrors
                         img.MoveCentreTo(MirrorPoint(img.Centre, center, vertical));
                         break;
                     case SchematicShape sh:   // [shapes]

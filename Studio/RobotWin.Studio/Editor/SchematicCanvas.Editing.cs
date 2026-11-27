@@ -42,7 +42,10 @@ namespace RobotWin.Studio.Editor
         EditNote,
 
         /// <summary>[fields] KiCad's Symbol Fields Table.</summary>
-        FieldsTable
+        FieldsTable,
+
+        /// <summary>[table] A table's cells and sizes (target: the table).</summary>
+        EditTable
     }
 
     public sealed class SchematicCommandEventArgs : EventArgs
@@ -182,6 +185,7 @@ namespace RobotWin.Studio.Editor
                 EditorTool.Arc => "Yay · başlangıca, yayın bir noktasına, sonra bitişe tıklayın",
                 EditorTool.Bezier => "Bezier eğrisi · başlangıca, bitişe, sonra iki denetim noktasına tıklayın",
                 EditorTool.Image => "Resim · koymak istediğiniz yere tıklayın · Esc vazgeçer",
+                EditorTool.Table => "Tablo · sol üst köşesine tıklayın (3 × 3); sonra hücreler yazılır",
                 EditorTool.Place => "Yerleştir · R döndür · X/Y aynala · Esc bitir",
                 _ => string.Empty
             };

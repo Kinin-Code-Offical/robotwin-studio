@@ -49,6 +49,9 @@ namespace RobotWin.Studio.Editor
         /// <summary>[image] A picture picked from a file, placed where clicked.</summary>
         Image,
 
+        /// <summary>[table] A table placed by its top-left corner, then filled in.</summary>
+        Table,
+
         /// <summary>[erase] KiCad's eraser: every click deletes what is under it (a wire, a part, a label, a note, a flag).</summary>
         Erase
     }

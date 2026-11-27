@@ -218,7 +218,7 @@ namespace RobotWin.Studio.Pages
         private void OnDrawTool(object sender, RoutedEventArgs e)
         {
             var button = (System.Windows.Controls.Primitives.ToggleButton)sender;
-            button.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier;
+            button.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier or EditorTool.Table;
             var menu = new ContextMenu { PlacementTarget = button, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
             foreach (var (text, tool, icon) in new[]
                      {
@@ -235,6 +235,15 @@ namespace RobotWin.Studio.Pages
                 };
                 menu.Items.Add(item);
             }
+
+            // [table] a table: a click puts its top-left corner down
+            var tableItem = new MenuItem { Header = "Tablo", IsChecked = Canvas.Tool == EditorTool.Table, Icon = new RobotWin.Studio.Theme.Icon { Data = (System.Windows.Media.Geometry)FindResource("I.Table"), Size = 14 } };
+            tableItem.Click += (_, _) =>
+            {
+                Canvas.Tool = EditorTool.Table;
+                Canvas.Focus();
+            };
+            menu.Items.Add(tableItem);
 
             // [image] a picture from a file: it follows the cursor until a click puts it down
             var picture = new MenuItem { Header = "Resim…", Icon = new RobotWin.Studio.Theme.Icon { Data = (System.Windows.Media.Geometry)FindResource("I.Picture"), Size = 14 } };
@@ -277,7 +286,7 @@ namespace RobotWin.Studio.Pages
             ToolHighlight.IsChecked = Canvas.Tool == EditorTool.Highlight;   // [highlight]
             ToolJunction.IsChecked = Canvas.Tool == EditorTool.Junction;   // [junction]
             ToolErase.IsChecked = Canvas.Tool == EditorTool.Erase;   // [erase]
-            ToolDraw.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier;   // [shapes]
+            ToolDraw.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier or EditorTool.Table;   // [shapes]
         }
 
         private void OnRotate(object sender, RoutedEventArgs e) => Canvas.RotateSelection();
