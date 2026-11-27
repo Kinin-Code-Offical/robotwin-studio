@@ -1136,7 +1136,10 @@ namespace RobotWin.Studio.Editor
                 var flag = new Point(tip.X + 7, tip.Y - 20 - 3 * i);
                 dc.DrawLine(MakePen(color, 1.4), tip, new Point(flag.X, flag.Y + 8));
                 dc.DrawEllipse(null, MakePen(color, 1.6), tip, 3.5, 3.5);
-                var ft = Text((probe.Kind == ProbeKind.Current ? "A" : "") + (i + 1).ToString(CultureInfo.InvariantCulture), 10, CanvasColor, true);
+                // [theme] the badge's own colour decides its ink (the channel colours are bright: dark letters on them in every theme)
+                double lum = (0.2126 * color.R + 0.7152 * color.G + 0.0722 * color.B) / 255.0;
+                var ink = lum > 0.45 ? Color.FromRgb(0x10, 0x10, 0x12) : Color.FromRgb(0xF4, 0xF4, 0xF6);
+                var ft = Text((probe.Kind == ProbeKind.Current ? "A" : "") + (i + 1).ToString(CultureInfo.InvariantCulture), 10, ink, true);
                 var box = new Rect(flag.X, flag.Y, ft.Width + 8, ft.Height + 2);
                 dc.DrawRoundedRectangle(SymbolRenderer.Brush(color), null, box, 3, 3);
                 dc.DrawText(ft, new Point(box.Left + 4, box.Top + 1));
