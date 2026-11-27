@@ -205,7 +205,12 @@ namespace RobotWin.Studio.Pages
 
             var text = new StackPanel { Margin = new Thickness(0, 5, 0, 5) };
             if (id != null && id == _renaming && World?.Find(id) is { } renamed) text.Children.Add(RenameBox(renamed));   // [hierarchy] F2
-            else text.Children.Add(new TextBlock { Text = title, TextTrimming = TextTrimming.CharacterEllipsis, Foreground = (Brush)FindResource(selected ? "B.Text" : "B.TextSecondary") });
+            else text.Children.Add(new TextBlock
+            {
+                Text = title, TextTrimming = TextTrimming.CharacterEllipsis, Foreground = (Brush)FindResource(selected ? "B.Text" : "B.TextSecondary"),
+                FontWeight = id != null && string.Equals(World?.DefaultParent, id, StringComparison.OrdinalIgnoreCase) ? FontWeights.Bold : FontWeights.Normal,   // [default-parent] bold, as Unity shows it
+                ToolTip = id != null && string.Equals(World?.DefaultParent, id, StringComparison.OrdinalIgnoreCase) ? Shell.Lang.T("Varsayılan üst nesne: yeni nesneler buna takılır") : null
+            });
             text.Children.Add(new TextBlock { Text = subtitle, Style = (Style)FindResource("Text.Caption"), TextTrimming = TextTrimming.CharacterEllipsis });
             Grid.SetColumn(text, 3);
             row.Children.Add(text);

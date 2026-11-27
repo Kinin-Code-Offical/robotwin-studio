@@ -43,6 +43,7 @@ namespace RobotWin.Studio.Pages
                 PrimitiveKind.Revolve => Icon("M.Revolve"),
                 PrimitiveKind.Loft => Icon("M.Loft"),
                 PrimitiveKind.Sweep => Icon("M.Sweep"),
+                PrimitiveKind.Helix => Icon("M.Helix"),
                 _ => Icon("I.Part")
             };
         }
@@ -1154,7 +1155,8 @@ namespace RobotWin.Studio.Pages
                      {
                          (PrimitiveKind.Box, "M.Box"), (PrimitiveKind.Cylinder, "M.Cylinder"), (PrimitiveKind.Cone, "M.Cone"), (PrimitiveKind.Sphere, "M.Sphere"),
                          (PrimitiveKind.Torus, "M.Torus"), (PrimitiveKind.Tube, "M.Tube"), (PrimitiveKind.Wedge, "M.Wedge"), (PrimitiveKind.Plate, "M.Plate"),
-                         (PrimitiveKind.Extrude, "M.Extrude"), (PrimitiveKind.Revolve, "M.Revolve"), (PrimitiveKind.Loft, "M.Loft"), (PrimitiveKind.Sweep, "M.Sweep")
+                         (PrimitiveKind.Extrude, "M.Extrude"), (PrimitiveKind.Revolve, "M.Revolve"), (PrimitiveKind.Loft, "M.Loft"), (PrimitiveKind.Sweep, "M.Sweep"),
+                         (PrimitiveKind.Helix, "M.Helix")
                      })
             {
                 var k = kind;

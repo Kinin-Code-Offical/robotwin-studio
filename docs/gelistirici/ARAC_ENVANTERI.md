@@ -37,7 +37,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Kart istatistikleri | İstatistikler… | var | |
 | Ölç | Ölç (Ctrl+Shift+M) | var | |
 | Aralık / kısıt çözümlemesi (iki öğe arası hangi kural) | Aralık çözümlemesi (palet): iki öğe (hat, via, parça, dolgu), ağlar ve sınıflar, gereken aralık ve kaynağı, her ortak katmanda gerçek aralık | var | |
-| Ayak izini kütüphaneyle karşılaştır | yok | yok | 3 |
+| Ayak izini kütüphaneyle karşılaştır | gerek yok: kart ayak izinin kopyasını tutmaz, kütüphanedekini kullanır (KiCad kopya tuttuğu için karşılaştırır); değişen bir ayak izinin yollara uymayan pedleri DRC ve ratsnest'te görünür | var | |
 | Damla (teardrop) | Damla: ped ve via, eğri / düz, uzunluk ve genişlik oranı ve sınırları; hattın çizgisinde, ovalin ucunda çember; başka ağa aralığı bozacaksa daraltılır ya da konmaz; çizim, Gerber, döküm aralığı (KiCad dışa aktarımına yazılmaz) | var | |
 
 ### Yardımcı çubuk (etkin aracın seçenekleri)
@@ -165,7 +165,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Doğrusal / dairesel çoğaltma | var | var | |
 | Aynala | Ayna kopyası | var | |
 | Referans düzlem, eksen, nokta | Ekle ▸ Referans düzlem (üç nokta, uzaklık, iki düzlemin ortası, eksene dik), eksen (iki nokta, yuvarlak parça, iki düzlemin kesişimi), nokta (seçili nokta, parçaların ortası); katısız, çizgisinden seçilir; ayna kopyası ve dairesel dizi kullanır | var | |
-| Helis, sarma (wrap) | yok | yok | 3 |
+| Helis, sarma (wrap) | Helis (yay): tel helis üstüne süpürülür; ortalama çap, tel çapı, adım, tur sayısı, kapalı uçlar; sarma sonra | kısmi | 3 |
 | Anında 3B (tutamaçla boyutlandırma) | tutamaçlar | var | |
 | Düzenlenebilir özellik geçmişi | parametrik parçalar; Özellik geçmişi: fark, birleşim, kesişim ve delikler özellik olarak kalır (aracın ölçüleri ve yeri, deliğin ölçüsü, türü, derinliği sonradan değişir; bastır, sırala, ayır, sil); radyüs, pah, kabuk ağa uygular | var | |
 
@@ -252,7 +252,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Görünüme taşı, görünümle hizala, görünümü seçime hizala | Görünüme taşı (Ctrl+Alt+F), Görünümle hizala (Ctrl+Shift+F), Görünümü seçime hizala, Odakla | var | |
 | Sürükleyerek üst nesne değiştirme | ağaçta satırı satıra bırak: sabit bağlantı; boş yere bırak: ayır; mekanik bağlantılar korunur | var | |
 | Sahnede referansları bul | kablolar, bağlantılar, ilişkiler | var | |
-| Varsayılan üst nesne | yok | yok | 3 |
+| Varsayılan üst nesne | sahne ağacında sağ tık ▸ Varsayılan üst nesne yap: yeni, yapıştırılan, çoğaltılan nesneler durduğu yerde ona takılır (montaj tabanından); ağaçta kalın, dünyayla kaydedilir | var | |
 | Hiyerarşide arama (ad, tür; etiket, katman) | Sahne sekmesinde arama kutusu: düz liste, t: etiket, l: katman | var | |
 
 ### Denetçi (Inspector)

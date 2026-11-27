@@ -908,6 +908,8 @@ Objects can only be moved while the simulation is stopped. You can also type pos
 
 A right click on a row of the **Scene** tab (as in Unity): **Cut**, **Copy**, **Paste**, **Paste mounted on this**, **Rename** (F2, the name turns into a box in the row), **Duplicate**, **Delete**, **Delete only this**, **Focus**, **Move to view**, **Align with view**, **Align view to selected** (the camera looks out of the part along its +X: what a camera part will see), **Find references in the scene** and **Create ▸** (empty objects, body shapes, every ready part of the library by its category under **Part ▸**, and the board, part, mechanical and environment tabs). Copying, duplicating and deleting take everything mounted on the part, with the joints, cables and mates among them; a copied arm pastes whole into another world too. A right click on empty room opens paste and create.
 
+**Set as default parent** (Unity's Set as Default Parent): from then on every object added, pasted or duplicated is mounted on that object where it stands; with a robot's chassis chosen, sensors and boards are attached to it straight away. An assembly that comes in together is mounted by its base, its parts staying on it. The default parent shows bold in the tree; the same menu clears it, and it is saved with the world.
+
 ### Move, rotate and scale handles
 
 The handles on the selected part work as in Unity; pick them with the four toolbar buttons or W, E, R, Y, and Q puts them away. They are the same in Assembly and World.

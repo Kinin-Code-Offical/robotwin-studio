@@ -422,6 +422,10 @@ namespace RobotTwin.CoreSim.Sandbox
         public const string Extension = ".rwworld";
 
         public string Title { get; set; } = "Yeni Dünya";
+
+        /// <summary>[default-parent] Unity's default parent: the object new objects are mounted on as they are made; null when none.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? DefaultParent { get; set; }
         public string Description { get; set; } = string.Empty;
 
         /// <summary>

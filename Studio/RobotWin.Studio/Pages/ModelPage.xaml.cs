@@ -430,7 +430,7 @@ namespace RobotWin.Studio.Pages
         {
             var menu = new ContextMenu();
             menu.Items.Add(MenuTitle("Ekle · temel şekiller"));
-            foreach (var kind in new[] { PrimitiveKind.Box, PrimitiveKind.Cylinder, PrimitiveKind.Cone, PrimitiveKind.Sphere, PrimitiveKind.Torus, PrimitiveKind.Tube, PrimitiveKind.Wedge, PrimitiveKind.Plate, PrimitiveKind.Extrude, PrimitiveKind.Revolve, PrimitiveKind.Loft, PrimitiveKind.Sweep })
+            foreach (var kind in new[] { PrimitiveKind.Box, PrimitiveKind.Cylinder, PrimitiveKind.Cone, PrimitiveKind.Sphere, PrimitiveKind.Torus, PrimitiveKind.Tube, PrimitiveKind.Wedge, PrimitiveKind.Plate, PrimitiveKind.Extrude, PrimitiveKind.Revolve, PrimitiveKind.Loft, PrimitiveKind.Sweep, PrimitiveKind.Helix })
             {
                 var k = kind;
                 menu.Items.Add(Item(PrimitiveSchema.Name(k), null, () => AddPrimitive(k)));

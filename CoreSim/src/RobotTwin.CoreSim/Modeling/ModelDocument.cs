@@ -38,7 +38,10 @@ namespace RobotTwin.CoreSim.Modeling
         Loft,
 
         /// <summary>[sweep] The profile (<see cref="PrimitiveSpec.Sketch"/>) carried along a 3D path (<see cref="PrimitiveSpec.Path"/>).</summary>
-        Sweep
+        Sweep,
+
+        /// <summary>[helix] A round wire wound on a helix: a coil spring (SolidWorks' helix and spiral, swept).</summary>
+        Helix
     }
 
     /// <summary>Object placement relative to its parent: position (mm), Euler XYZ rotation (degrees), scale.</summary>

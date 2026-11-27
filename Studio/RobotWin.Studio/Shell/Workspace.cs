@@ -903,9 +903,13 @@ namespace RobotWin.Studio.Shell
         }
 
         /// <summary>Snapshot before editing the active world.</summary>
+        /// <summary>[default-parent] The objects there were when the change began: what is new is mounted on the default parent.</summary>
+        private HashSet<string>? _objectsBefore;
+
         public void BeginWorldChange()
         {
             if (_active.World == null) return;
+            _objectsBefore = new HashSet<string>(_active.World.Objects.Select(o => o.Id), StringComparer.OrdinalIgnoreCase);
             _active.WorldUndo.Push(_active.World.ToJson());
             Trim(_active.WorldUndo);
             _active.WorldRedo.Clear();
@@ -914,6 +918,8 @@ namespace RobotWin.Studio.Shell
         public void CommitWorldChange(string? status = null)
         {
             if (_active.World == null) return;
+            if (_objectsBefore != null) RobotTwin.CoreSim.Sandbox.WorldBuilding.AdoptByDefaultParent(_active.World, _objectsBefore);   // [default-parent]
+            _objectsBefore = null;
             RobotTwin.CoreSim.Sandbox.WorldConstraints.Apply(_active.World);   // [constraints] constrained parts follow their sources
             _active.IsDirty = true;
             if (_active.OwnerProject is { } owner) owner.IsDirty = true;   // [assembly] the project holds its Montaj

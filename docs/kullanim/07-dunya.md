@@ -907,6 +907,8 @@ Nesneler yalnızca simülasyon dururken taşınabilir. Konumu ve açıyı denet�
 
 **Sahne** sekmesindeki bir satıra sağ tıklayınca (Unity'deki gibi): **Kes**, **Kopyala**, **Yapıştır**, **Bunun üstüne takılı olarak yapıştır**, **Yeniden adlandır** (F2, ad satırda kutuya döner), **Çoğalt**, **Sil**, **Yalnız bunu sil**, **Odakla**, **Görünüme taşı**, **Görünümle hizala**, **Görünümü seçime hizala** (kamera parçanın gözünden, +X yönüne bakar: bir kamera parçasının ne göreceği), **Sahnede referansları bul** ve **Oluştur ▸** (boş nesneler, gövde şekilleri, kütüphanenin her hazır parçası kategorisine göre **Parça ▸** altında, ayrıca kart, parça, mekanik ve ortam sekmeleri). Kopyalama, çoğaltma ve silme parçaya takılı olan her şeyi, aralarındaki bağlantıları, kabloları ve ilişkileri birlikte alır; kopyalanan bir kol başka bir dünyaya da bütün olarak yapıştırılır. Boş yere sağ tık yapıştırma ve oluşturmayı açar.
 
+**Varsayılan üst nesne yap** (Unity'deki Set as Default Parent): bundan sonra eklenen, yapıştırılan ya da çoğaltılan her nesne, durduğu yerde o nesneye takılır. Örneğin bir robot gövdesi seçilirse sensörler ve kartlar doğrudan gövdeye bağlanır. Birlikte gelen bir montaj tabanından takılır, parçaları tabanda kalır. Varsayılan üst nesne ağaçta kalın yazılır; aynı menüden kaldırılır ve dünyayla kaydedilir.
+
 ### Taşı, döndür, ölçekle tutamaçları
 
 Seçili parçanın üstündeki tutamaçlar Unity'dekiler gibidir; araç çubuğundaki dört düğmeyle ya da W, E, R, Y ile seçilir, Q onları kaldırır. Montaj'da ve Dünya'da aynıdır.

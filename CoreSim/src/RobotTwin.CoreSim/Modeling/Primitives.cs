@@ -89,6 +89,12 @@ namespace RobotTwin.CoreSim.Modeling
                 new ParamSpec("h", "Yükseklik", "mm", 30, 0.01, Big), new ParamSpec("twist", "Burulma", "°", 0, -720, 720),
                 new ParamSpec("seg", "Bölüm sayısı", "", 64, 8, 512, true)
             },
+            [PrimitiveKind.Helix] = new[]
+            {
+                new ParamSpec("d", "Ortalama çap", "mm", 20, 0.1, Big), new ParamSpec("wire", "Tel çapı", "mm", 2, 0.05, Big),
+                new ParamSpec("pitch", "Adım (tur başına yükselme)", "mm", 5, 0.05, Big), new ParamSpec("turns", "Tur sayısı", "", 6, 0.25, 500),
+                new ParamSpec("closed", "Kapalı uçlar (0/1)", "", 1, 0, 1, true), new ParamSpec("seg", "Tur başına bölüm", "", 32, 8, 128, true)
+            },
             [PrimitiveKind.Sweep] = new[]
             {
                 new ParamSpec("seg", "Bölüm sayısı", "", 32, 6, 256, true)
@@ -117,7 +123,8 @@ namespace RobotTwin.CoreSim.Modeling
             PrimitiveKind.Extrude => "Profil",
             PrimitiveKind.Revolve => "Döner gövde",
             PrimitiveKind.Loft => "Geçiş (loft)",
-            PrimitiveKind.Sweep => "Süpürme (sweep)",   // a profile turned about an axis (not "Döndürme": that is the rotation fields' word)
+            PrimitiveKind.Sweep => "Süpürme (sweep)",
+            PrimitiveKind.Helix => "Helis (yay)",   // a profile turned about an axis (not "Döndürme": that is the rotation fields' word)
             _ => "Parça"
         };
 
@@ -202,6 +209,8 @@ namespace RobotTwin.CoreSim.Modeling
 
                 case PrimitiveKind.Part:
                     return RobotParts.Build(s);
+                case PrimitiveKind.Helix:
+                    return Helix(G("d"), G("wire"), G("pitch"), G("turns"), I("closed") == 1, I("seg"));
                 case PrimitiveKind.Sweep:
                 {
                     var path = s.Path ?? new List<double> { 0, 0, 0, 0, 0, 30 };
@@ -561,6 +570,43 @@ namespace RobotTwin.CoreSim.Modeling
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// [helix] A coil spring: a round wire of <paramref name="wire"/> mm wound on a helix of mean diameter
+        /// <paramref name="diameter"/>, <paramref name="pitch"/> mm per turn, <paramref name="turns"/> turns, centred on the
+        /// origin along Z. Closed ends (a compression spring's) wind the first and last turn at the wire's own thickness,
+        /// so the end coils touch. The pitch is kept above the wire so the coils never cut into each other.
+        /// </summary>
+        public static PolyMesh Helix(double diameter, double wire, double pitch, double turns, bool closedEnds, int segmentsPerTurn)
+        {
+            wire = Math.Max(0.01, Math.Min(wire, diameter * 0.9));
+            pitch = Math.Max(pitch, wire * 1.05);
+            turns = Math.Max(0.25, turns);
+            int n = Math.Max(8, segmentsPerTurn);
+            double r = diameter / 2;
+            bool closed = closedEnds && turns > 2;
+            double endPitch = wire * 1.02;
+            // the height wound by the time t turns are made
+            double Rise(double t)
+            {
+                if (!closed) return pitch * t;
+                if (t <= 1) return endPitch * t;
+                if (t >= turns - 1) return endPitch + pitch * (turns - 2) + endPitch * (t - (turns - 1));
+                return endPitch + pitch * (t - 1);
+            }
+
+            double total = Rise(turns);
+            int count = Math.Max(2, (int)Math.Ceiling(turns * n)) + 1;
+            var path = new List<Vec3>(count);
+            for (int i = 0; i < count; i++)
+            {
+                double t = turns * i / (count - 1), a = 2 * Math.PI * t;
+                path.Add(new Vec3(r * Math.Cos(a), r * Math.Sin(a), Rise(t) - total / 2));
+            }
+
+            var profile = Enumerable.Range(0, 16).Select(k => new Vec2(wire / 2 * Math.Cos(2 * Math.PI * k / 16), wire / 2 * Math.Sin(2 * Math.PI * k / 16))).ToList();
+            return Sweep(profile, path, 16);
         }
 
         /// <summary>

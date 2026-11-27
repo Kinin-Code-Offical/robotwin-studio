@@ -401,6 +401,31 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "helix":   // [helix] a compression spring with closed ends, an open coil and a tight one
+                {
+                    var spring = ModelOps.AddPrimitive(doc, PrimitiveKind.Helix);
+                    spring.Name = "Basma yayı";
+                    spring.Color = "#8E98A8";
+                    var coil = ModelOps.AddPrimitive(doc, PrimitiveKind.Helix, 35, 0);
+                    coil.Name = "Açık sarım";
+                    coil.Primitive!.Set("closed", 0);
+                    coil.Primitive.Set("pitch", 8);
+                    coil.Primitive.Set("turns", 4);
+                    coil.Color = "#E0A030";
+                    var tight = ModelOps.AddPrimitive(doc, PrimitiveKind.Helix, -35, 0);
+                    tight.Name = "Çekme yayı";
+                    tight.Primitive!.Set("d", 14);
+                    tight.Primitive.Set("wire", 1.6);
+                    tight.Primitive.Set("pitch", 1.7);
+                    tight.Primitive.Set("turns", 14);
+                    tight.Primitive.Set("closed", 0);
+                    tight.Color = "#3B82C4";
+                    _ed.Load(doc, null);
+                    _ed.Select(spring.Id);
+                    _vp.FrameAll();
+                    break;
+                }
+
                 case "refgeom":   // [refgeom] a bracket mirrored across a tilted reference plane; four pins round a reference axis
                 {
                     var bracket = ModelOps.AddPrimitive(doc, PrimitiveKind.Wedge, 28, 18);

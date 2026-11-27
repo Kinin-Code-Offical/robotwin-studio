@@ -120,6 +120,38 @@ namespace RobotTwin.CoreSim.Sandbox
         /// ObjectB) are active; a part on a switched-off base is off with it.
         /// </summary>
         public static bool ActiveInHierarchy(WorldDocument world, WorldObject o)
+            => ActiveChain(world, o);
+
+        /// <summary>
+        /// [default-parent] Unity's default parent: every object made since <paramref name="before"/> that is not mounted on
+        /// anything is mounted on the world's default parent, where it stands (a pasted assembly is mounted by its base, its
+        /// parts stay on it). Returns how many were; nothing when there is no default parent or it is gone.
+        /// </summary>
+        public static int AdoptByDefaultParent(WorldDocument world, ICollection<string> before)
+        {
+            var parent = world.Find(world.DefaultParent);
+            if (parent == null) return 0;
+            int adopted = 0;
+            foreach (var o in world.Objects.Where(o => !before.Contains(o.Id) && !string.Equals(o.Id, parent.Id, StringComparison.OrdinalIgnoreCase)).ToList())
+            {
+                if (world.Joints.Any(j => string.Equals(j.ObjectA, o.Id, StringComparison.OrdinalIgnoreCase))) continue;   // already rides on something
+                world.Joints.Add(new WorldJoint
+                {
+                    Id = world.NextId("J"),
+                    Kind = WorldJointKind.Fixed,
+                    ObjectA = o.Id,
+                    ObjectB = parent.Id,
+                    AnchorX = o.Pose.X,
+                    AnchorY = o.Pose.Y,
+                    AnchorZ = o.Pose.Z
+                });
+                adopted++;
+            }
+
+            return adopted;
+        }
+
+        private static bool ActiveChain(WorldDocument world, WorldObject o)
         {
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (WorldObject? cur = o; cur != null && seen.Add(cur.Id);)
