@@ -52,6 +52,9 @@ namespace RobotWin.Studio.Modeling
             public Vec3? PlaneStart;
             public readonly List<(ModelObject O, Affine World)> Objects = new List<(ModelObject, Affine)>();
             public readonly Dictionary<int, Vec3> Verts = new Dictionary<int, Vec3>();
+
+            /// <summary>[proportional] The points that move by a share: where each was and its share.</summary>
+            public readonly Dictionary<int, (Vec3 P, double W)> Soft = new Dictionary<int, (Vec3, double)>();
             public Affine EW = Affine.Identity, EI = Affine.Identity;
             public PolyMesh? Base;
             public List<int> Faces = new List<int>();
@@ -349,6 +352,16 @@ namespace RobotWin.Studio.Modeling
 
         private void OnWheel(object sender, MouseWheelEventArgs e)
         {
+            if (_modal is { Kind: ModalKind.Move or ModalKind.Rotate or ModalKind.Scale } pm && Proportional && _ed.Mode == EditorMode.Edit)
+            {
+                // [proportional] Blender: the wheel grows or shrinks the circle of influence while moving
+                ProportionalRadius = Math.Max(0.01, Math.Min(1e5, ProportionalRadius * Math.Pow(1.15, Math.Sign(e.Delta))));
+                RefreshSoft(pm);
+                UpdateModal(e.GetPosition(this));
+                e.Handled = true;
+                return;
+            }
+
             if (_modal is { Kind: ModalKind.LoopCut or ModalKind.Bevel } lc)   // [fillet] the wheel sets a bevel's segments too
             {
                 lc.Typed = string.Empty;
@@ -554,6 +567,7 @@ namespace RobotWin.Studio.Modeling
                     m.EI = ent.Inverse;
                     foreach (int v in vs) m.Verts[v] = _ed.EditMesh!.Vertices[v];
                     m.Pivot = Pivot() ?? Vec3.Zero;
+                    if (kind is ModalKind.Move or ModalKind.Rotate or ModalKind.Scale) RefreshSoft(m);   // [proportional]
                 }
             }
             else
@@ -659,7 +673,8 @@ namespace RobotWin.Studio.Modeling
             double? typed = Typed();
             bool snap = SnapActive;
             string typedText = m.Typed.Length > 0 ? $"[{m.Typed}|]  " : string.Empty;
-            const string hint = "   ·   X/Y/Z eksen · Shift+X düzlem · Ctrl adım · sayı yazın · Enter onay · Esc iptal";
+            string hint = "   ·   X/Y/Z eksen · Shift+X düzlem · Ctrl adım · sayı yazın · Enter onay · Esc iptal"
+                          + (m.Soft.Count > 0 || (Proportional && _ed.Mode == EditorMode.Edit) ? $" · orantılı {ProportionalRadius:0.##} mm (tekerlek)" : string.Empty);
             Affine t;
             switch (m.Kind)
             {
@@ -848,6 +863,12 @@ namespace RobotWin.Studio.Modeling
             {
                 var mesh = _ed.EditMesh!;
                 foreach (var kv in m.Verts) mesh.Vertices[kv.Key] = m.EI.Apply(t.Apply(m.EW.Apply(kv.Value)));
+                foreach (var kv in m.Soft)   // [proportional] each by its share of the move
+                {
+                    var from = m.EW.Apply(kv.Value.P);
+                    mesh.Vertices[kv.Key] = m.EI.Apply(MeshProportional.Blend(from, t.Apply(from), kv.Value.W));
+                }
+
                 RefreshEditMesh();
             }
             else

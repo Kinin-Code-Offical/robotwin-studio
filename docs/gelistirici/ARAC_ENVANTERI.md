@@ -144,7 +144,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Çokgen, kanal (slot), elips, spline | düzgün ve serbest çokgen, kanal (profil şekilleri); ölçülü eskizde çizgi, daire, yay; elips ve spline yok | kısmi | 3 |
 | Eskiz radyüsü, eskiz pahı | köşe noktası seçilince Köşe radyüsü ve Pah (teğet yay / düz kenar, sanal sivri, uzunluk ölçüleri korunur) | var | |
 | Ofset | var | var | |
-| Budama (trim), uzatma | Buda (güçlü budama, kesen öğeye tutulur) ve Uzat, çizgiler için; daire ve yay budama sonra | kısmi | 3 |
+| Budama (trim), uzatma | Buda (güçlü budama, kesen öğeye tutulur): çizgi, daire (kalan yaya döner), yay (kısalır ya da ikiye ayrılır); Uzat çizgiler için | var | |
 | Eskizde aynala, doğrusal / dairesel çoğaltma | Aynala (yardımcı çizgi ekseni, simetri ilişkileri, eksendeki noktalar paylaşılır); Doğrusal çoğalt (adet, X/Y adımı) ve Dairesel çoğalt (seçili nokta çevresinde, açı), kopyalar ölçülerle bir öncekine bağlı | var | |
 | Akıllı ölçü, ilişkiler (çakışık, teğet, eş merkezli, yatay, dikey) | kısıtlar var | var | |
 | Yapı (construction) geometrisi | Yardımcı geometri anahtarı: kesik çizilir, profile girmez | var | |
@@ -193,7 +193,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Döngü kesimi (loop cut), bıçak (knife) | Halka kesim (Ctrl+R, dörtgen halkası boyunca, kesim sayısı tekerlekle); Bıçak (K; kes, sağ ya da sol tarafı sil, açıklık kapatılır) | var | |
 | Döndürerek çoğaltma (spin) | Döndürerek çoğalt: seçili yüzler ya da kenarlar X / Y / Z ekseni çevresinde adım ve açıyla; tam tur kapanır, eksendeki noktalar tek kalır | var | |
 | Birleştir (merge), yüz oluştur | var | var | |
-| Orantılı düzenleme | yok | yok | 3 |
+| Orantılı düzenleme | O: G / R / S'de yarıçap içindeki noktalar yumuşak düşüşle gelir; tekerlek yarıçap, etki çemberi; saklanır | var | |
 | Yapışma, görünüş kipleri, tel kafes, X-ray | var | var | |
 | Tam görünüm (Ctrl+Space), N/T panelleri | Ctrl+Space; N yan paneli, T araç rafını gizler / getirir | var | |
 

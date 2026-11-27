@@ -121,7 +121,9 @@ namespace RobotWin.Studio.Pages
                             ("line", -10, 20, null), ("line", -10, -20, null), ("end", 0, 0, null),
                             ("line", 10, 20, null), ("line", 10, -20, null), ("end", 0, 0, null),
                             ("line", -30, -10, null), ("line", -20, -10, null), ("end", 0, 0, null),
-                            ("trim", 0, 10, null), ("extend", -21, -10, null), ("select", 40, 40, null)
+                            ("trim", 0, 10, null), ("extend", -21, -10, null),
+                            ("circle", 0, 0, null), ("circle", 15, 0, null), ("trim", 0, -15, null),   // a circle across the hash: its bottom piece trimmed out
+                            ("select", 40, 40, null)
                         });
                         editor.UpdateLayout();
                         App.SnapshotTarget = editor.Content as FrameworkElement;
@@ -398,6 +400,35 @@ namespace RobotWin.Studio.Pages
                     _ed.Select(block.Id);
                     _vp.FrameAll();
                     ScrollPropsTo("Özellik geçmişi");
+                    break;
+                }
+
+                case "proportional":   // [proportional] a flat sheet's middle point lifted 12 mm, its 20 mm round following: smooth and sharp falloff
+                {
+                    PolyMesh Sheet(ProportionalFalloff falloff)
+                    {
+                        var m = new PolyMesh();
+                        const int n = 24;
+                        for (int j = 0; j <= n; j++)
+                            for (int i = 0; i <= n; i++) m.AddVertex(new Vec3(-30 + 60.0 * i / n, -30 + 60.0 * j / n, 0));
+                        for (int j = 0; j < n; j++)
+                            for (int i = 0; i < n; i++) m.AddFace(j * (n + 1) + i, j * (n + 1) + i + 1, (j + 1) * (n + 1) + i + 1, (j + 1) * (n + 1) + i);
+                        int mid = n / 2 * (n + 1) + n / 2;
+                        var w = MeshProportional.Weights(m.Vertices, new[] { mid }, 20, falloff);
+                        m.Vertices[mid] += new Vec3(0, 0, 12);
+                        foreach (var kv in w) m.Vertices[kv.Key] = MeshProportional.Blend(m.Vertices[kv.Key], m.Vertices[kv.Key] + new Vec3(0, 0, 12), kv.Value);
+                        return m;
+                    }
+
+                    var smooth = ModelOps.AddMesh(doc, Sheet(ProportionalFalloff.Smooth), "Yumuşak");
+                    smooth.Transform.Position = new Vec3(-35, 0, 0);
+                    smooth.Color = "#3B82C4";
+                    var sharp = ModelOps.AddMesh(doc, Sheet(ProportionalFalloff.Sharp), "Keskin");
+                    sharp.Transform.Position = new Vec3(35, 0, 0);
+                    sharp.Color = "#E0A030";
+                    _ed.Load(doc, null);
+                    _ed.Select(smooth.Id);
+                    _vp.FrameAll();
                     break;
                 }
 

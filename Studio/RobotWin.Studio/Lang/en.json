@@ -8592,6 +8592,13 @@
   "Seçenekler": "Options",
   "Renkli (kapalıyken her şey siyah: toner transferi, film)": "In colour (off: everything black, for toner transfer and film)",
   "Aynala": "Mirror",
+  "Çizginin, dairenin ya da yayın tıklanan parçasını kesiştiği öğeler arasında siler; hiçbir şey kesmiyorsa tamamını": "Deletes the clicked piece of a line, circle or arc between the entities that cross it; all of it when nothing does",
+  "Budamak için bir çizgiye, daireye ya da yaya tıklayın.": "Click a line, a circle or an arc to trim.",
+  "Bir daireyi budamak için onu iki yerden kesen öğeler gerekir.": "To trim a circle, it has to be crossed in two places.",
+  "Orantılı düzenleme kapalı": "Proportional editing off",
+  "Yumuşak": "Smooth",
+  "Keskin": "Sharp",
+  "orantılı": "proportional",
   "Alt nesneleri seç": "Select children",
   "Seçimi tersine çevir": "Invert selection",
   "Yerel ratsnest'i göster": "Show local ratsnest",
@@ -8919,6 +8926,9 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+  "orantılı {…} mm (tekerlek)": "proportional {0} mm (wheel)",
+  "Orantılı düzenleme açık: seçimin {…} mm çevresi de yumuşakça gelir (taşırken tekerlek yarıçapı değiştirir)": "Proportional editing on: {0} mm round the selection comes along softly (the wheel changes the radius while moving)",
+  "Düzenleme modu · {…} · orantılı": "Edit mode · {0} · proportional",
   "Döndürerek çoğalt · {…} ekseni…": "Spin · {0} axis…",
   "{…} ekseni çevresinde…": "Round the {0} axis…",
   "Döndürerek çoğalt ({…} ekseni)": "Spin ({0} axis)",

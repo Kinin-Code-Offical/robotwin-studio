@@ -154,6 +154,9 @@ namespace RobotWin.Studio.Pages
                 case Key.Z:
                     ShowShadingMenu();
                     break;
+                case Key.O when edit && !ctrl && !shift && !alt:   // [proportional] Blender's O
+                    _vp.ToggleProportional();
+                    break;
                 case Key.Tab when !ctrl:
                     _ed.ToggleEditMode();
                     break;

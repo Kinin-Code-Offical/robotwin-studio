@@ -121,7 +121,7 @@ namespace RobotWin.Studio.Modeling
                 (Tool.Rectangle, "Dikdörtgen", "İki köşe"),
                 (Tool.Circle, "Daire", "Merkez, sonra çevre"),
                 (Tool.Arc, "Yay", "Merkez, başlangıç, bitiş (saat yönünün tersine)"),
-                (Tool.Trim, "Buda", "Çizginin tıklanan parçasını kesiştiği öğeler arasında siler; hiçbir şey kesmiyorsa çizginin tamamını"),
+                (Tool.Trim, "Buda", "Çizginin, dairenin ya da yayın tıklanan parçasını kesiştiği öğeler arasında siler; hiçbir şey kesmiyorsa tamamını"),
                 (Tool.Extend, "Uzat", "Çizginin tıklanan yakınındaki serbest ucunu ilk kesiştiği öğeye uzatır")
             })
             {
@@ -477,9 +477,9 @@ namespace RobotWin.Studio.Modeling
             {
                 // [sketch-trim] on the line under the pointer, at the click
                 var target = EntityAt(p);
-                if (target == null || target.Kind != SketchEntityKind.Line)
+                if (target == null || (_tool == Tool.Extend && target.Kind != SketchEntityKind.Line))   // [sketch-trim] trim takes circles and arcs too
                 {
-                    _message = _tool == Tool.Trim ? "Budamak için bir çizgiye tıklayın." : "Uzatmak için bir çizgiye tıklayın.";
+                    _message = _tool == Tool.Trim ? "Budamak için bir çizgiye, daireye ya da yaya tıklayın." : "Uzatmak için bir çizgiye tıklayın.";
                     ShowState();
                     return;
                 }

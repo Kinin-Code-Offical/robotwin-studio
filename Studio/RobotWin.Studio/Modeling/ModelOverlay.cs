@@ -54,7 +54,7 @@ namespace RobotWin.Studio.Modeling
             double x0 = 64;
             dc.DrawText(Text(_vp.ViewName, 12.5, TextBrush, true), new Point(x0, 12));
             string mode = ed.Mode == EditorMode.Edit
-                ? $"Düzenleme modu · {(ed.Element == ElementMode.Vertex ? "Nokta" : ed.Element == ElementMode.Edge ? "Kenar" : "Yüz")}"
+                ? $"Düzenleme modu · {(ed.Element == ElementMode.Vertex ? "Nokta" : ed.Element == ElementMode.Edge ? "Kenar" : "Yüz")}" + (_vp.Proportional ? " · orantılı" : string.Empty)
                 : "Nesne modu";
             string obj = ed.Active?.Name ?? "—";
             dc.DrawText(Text($"({mode})  {obj}", 11.5, MutedBrush), new Point(x0, 30));
@@ -72,6 +72,11 @@ namespace RobotWin.Studio.Modeling
             }
 
             DrawReferences(dc);   // [refgeom]
+            if (_vp.ProportionalCircle is { } pc)   // [proportional] the circle of influence, dashed
+            {
+                var pen = new Pen(MutedBrush, 1) { DashStyle = new DashStyle(new double[] { 4, 3 }, 0) };
+                dc.DrawEllipse(null, pen, pc.Centre, pc.Radius, pc.Radius);
+            }
             DrawNavigator(dc, w);
             if (_vp.GizmoVisible) DrawGizmo(dc);
 

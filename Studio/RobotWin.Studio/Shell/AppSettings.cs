@@ -138,6 +138,11 @@ namespace RobotWin.Studio.Shell
         /// <summary>[crosshair] The PCB view's full-window crosshair; [polar] the cursor read as distance and angle from the origin.</summary>
         public bool PcbFullCrosshair { get; set; }
 
+        /// <summary>[proportional] Blender's proportional editing in the modeller, and its radius (mm).</summary>
+        public bool ModelProportional { get; set; }
+
+        public double ModelProportionalRadius { get; set; } = 20;
+
         /// <summary>[locks] KiCad's Override locks: locked parts move like the rest.</summary>
         public bool PcbOverrideLocks { get; set; }
         public bool PcbPolarCursor { get; set; }

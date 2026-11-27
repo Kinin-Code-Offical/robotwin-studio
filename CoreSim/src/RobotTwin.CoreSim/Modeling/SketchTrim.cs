@@ -76,7 +76,8 @@ namespace RobotTwin.CoreSim.Modeling
         public static string? Trim(ConstrainedSketch sketch, string lineId, double clickX, double clickY)
         {
             var line = sketch.Entity(lineId);
-            if (line == null || line.Kind != SketchEntityKind.Line) return "Budamak için bir çizgiye tıklayın.";
+            if (line is { Kind: SketchEntityKind.Circle or SketchEntityKind.Arc }) return TrimRound(sketch, line, clickX, clickY);   // [sketch-trim] circles and arcs
+            if (line == null || line.Kind != SketchEntityKind.Line) return "Budamak için bir çizgiye, daireye ya da yaya tıklayın.";
             var before = sketch.Clone();
             var a = sketch.Point(line.Start)!;
             var b = sketch.Point(line.End)!;
@@ -122,6 +123,138 @@ namespace RobotTwin.CoreSim.Modeling
             {
                 var p = sketch.AddPoint(a.X + dx * lower.T, a.Y + dy * lower.T);
                 line.End = p.Id;
+                HoldOn(sketch, p, lower.By!);
+                if (!Used(sketch, oldEnd)) sketch.Remove(oldEnd);
+            }
+
+            return Check(sketch, before);
+        }
+
+        /// <summary>
+        /// [sketch-trim] Where the other entities cross a circle or an arc: (the angle, counter-clockwise from the arc's start
+        /// or, for a circle, from +X, in 0 to 2 pi; the entity). For an arc only the crossings within it.
+        /// </summary>
+        private static List<(double A, SketchEntity By)> RoundCrossings(ConstrainedSketch s, SketchEntity round)
+        {
+            var o = s.Point(round.Center)!;
+            bool arc = round.Kind == SketchEntityKind.Arc;
+            double r = arc ? Math.Sqrt(Sq(s.Point(round.Start)!.X - o.X) + Sq(s.Point(round.Start)!.Y - o.Y)) : round.Radius;
+            double a0 = arc ? Math.Atan2(s.Point(round.Start)!.Y - o.Y, s.Point(round.Start)!.X - o.X) : 0;
+            double span = arc ? (Math.Atan2(s.Point(round.End)!.Y - o.Y, s.Point(round.End)!.X - o.X) - a0 + 4 * Math.PI) % (2 * Math.PI) : 2 * Math.PI;
+            var hits = new List<(double, SketchEntity)>();
+            void Hit(double x, double y, SketchEntity by)
+            {
+                double at = (Math.Atan2(y - o.Y, x - o.X) - a0 + 4 * Math.PI) % (2 * Math.PI);
+                if (arc && at > span + 1e-9) return;
+                hits.Add((at, by));
+            }
+
+            foreach (var e in s.Entities)
+            {
+                if (e.Id == round.Id) continue;
+                if (e.Kind == SketchEntityKind.Line)
+                {
+                    var a = s.Point(e.Start)!;
+                    var b = s.Point(e.End)!;
+                    double dx = b.X - a.X, dy = b.Y - a.Y, fx = a.X - o.X, fy = a.Y - o.Y;
+                    double qa = dx * dx + dy * dy, qb = 2 * (fx * dx + fy * dy), qc = fx * fx + fy * fy - r * r, disc = qb * qb - 4 * qa * qc;
+                    if (disc < 0 || qa < 1e-18) continue;
+                    foreach (double t in new[] { (-qb - Math.Sqrt(disc)) / (2 * qa), (-qb + Math.Sqrt(disc)) / (2 * qa) })
+                        if (t >= -Eps && t <= 1 + Eps) Hit(a.X + dx * t, a.Y + dy * t, e);
+                }
+                else
+                {
+                    var c = s.Point(e.Center)!;
+                    double r2 = e.Kind == SketchEntityKind.Arc ? Math.Sqrt(Sq(s.Point(e.Start)!.X - c.X) + Sq(s.Point(e.Start)!.Y - c.Y)) : e.Radius;
+                    double dx = c.X - o.X, dy = c.Y - o.Y, d = Math.Sqrt(dx * dx + dy * dy);
+                    if (d < 1e-12 || d > r + r2 + 1e-12 || d < Math.Abs(r - r2) - 1e-12) continue;   // the same centre, apart, or one inside the other
+                    double along = (r * r - r2 * r2 + d * d) / (2 * d), h = Math.Sqrt(Math.Max(0, r * r - along * along));
+                    double mx = o.X + dx * along / d, my = o.Y + dy * along / d;
+                    foreach (int sgn in h < 1e-12 ? new[] { 1 } : new[] { 1, -1 })
+                    {
+                        double x = mx + sgn * h * -dy / d, y = my + sgn * h * dx / d;
+                        if (e.Kind == SketchEntityKind.Arc && !OnArc(s, e, x, y)) continue;
+                        Hit(x, y, e);
+                    }
+                }
+            }
+
+            return hits;
+        }
+
+        /// <summary>
+        /// [sketch-trim] Power trim on a circle or an arc: the piece between the crossings either side of the click goes. A
+        /// circle needs two crossings and becomes the arc that is left; an arc is shortened from an end or split in two
+        /// (the halves kept equal); an arc or a circle nothing crosses goes whole. Cut ends are held on what cut them.
+        /// </summary>
+        private static string? TrimRound(ConstrainedSketch sketch, SketchEntity round, double clickX, double clickY)
+        {
+            var before = sketch.Clone();
+            var o = sketch.Point(round.Center)!;
+            bool arc = round.Kind == SketchEntityKind.Arc;
+            double r = arc ? Math.Sqrt(Sq(sketch.Point(round.Start)!.X - o.X) + Sq(sketch.Point(round.Start)!.Y - o.Y)) : round.Radius;
+            double a0 = arc ? Math.Atan2(sketch.Point(round.Start)!.Y - o.Y, sketch.Point(round.Start)!.X - o.X) : 0;
+            double span = arc ? (Math.Atan2(sketch.Point(round.End)!.Y - o.Y, sketch.Point(round.End)!.X - o.X) - a0 + 4 * Math.PI) % (2 * Math.PI) : 2 * Math.PI;
+            double click = (Math.Atan2(clickY - o.Y, clickX - o.X) - a0 + 4 * Math.PI) % (2 * Math.PI);
+            var cuts = RoundCrossings(sketch, round).Where(h => !arc || (h.A > Eps && h.A < span - Eps)).OrderBy(h => h.A).ToList();
+            (double X, double Y) At(double a) => (o.X + r * Math.Cos(a0 + a), o.Y + r * Math.Sin(a0 + a));
+            if (cuts.Count == 0)
+            {
+                sketch.Remove(round.Id);   // nothing crosses it: it goes whole, its points with it unless something else uses them
+                foreach (var id in new[] { round.Start, round.End, round.Center })
+                    if (id != null && !Used(sketch, id)) sketch.Remove(id);
+                return Check(sketch, before);
+            }
+
+            if (!arc)
+            {
+                if (cuts.Count < 2) return "Bir daireyi budamak için onu iki yerden kesen öğeler gerekir.";
+                // the crossings either side of the click, going round: what is left runs from the one after to the one before
+                var after = cuts.FirstOrDefault(h => h.A > click);
+                if (after.By == null) after = cuts[0];
+                var beforeCut = cuts.LastOrDefault(h => h.A < click);
+                if (beforeCut.By == null) beforeCut = cuts[cuts.Count - 1];
+                var (sx, sy) = At(after.A);
+                var (ex, ey) = At(beforeCut.A);
+                var start = sketch.AddPoint(sx, sy);
+                var end = sketch.AddPoint(ex, ey);
+                round.Kind = SketchEntityKind.Arc;   // the same entity, so its radius, tangencies and equalities stay
+                round.Start = start.Id;
+                round.End = end.Id;
+                HoldOn(sketch, start, after.By);
+                HoldOn(sketch, end, beforeCut.By);
+                return Check(sketch, before);
+            }
+
+            var lower = cuts.LastOrDefault(h => h.A < click);
+            var upper = cuts.FirstOrDefault(h => h.A > click);
+            string oldStart = round.Start!, oldEnd = round.End!;
+            if (lower.By != null && upper.By != null)
+            {
+                // the middle goes: this arc keeps its start, a new one on the same centre takes its end
+                var (px, py) = At(lower.A);
+                var (qx, qy) = At(upper.A);
+                var p = sketch.AddPoint(px, py);
+                var q = sketch.AddPoint(qx, qy);
+                round.End = p.Id;
+                var rest = sketch.AddArc(o, q, sketch.Point(oldEnd)!, round.Construction);
+                sketch.Constrain(SketchConstraintKind.Equal, round.Id, rest.Id);
+                HoldOn(sketch, p, lower.By);
+                HoldOn(sketch, q, upper.By);
+            }
+            else if (upper.By != null)
+            {
+                var (qx, qy) = At(upper.A);
+                var q = sketch.AddPoint(qx, qy);
+                round.Start = q.Id;
+                HoldOn(sketch, q, upper.By);
+                if (!Used(sketch, oldStart)) sketch.Remove(oldStart);
+            }
+            else
+            {
+                var (px, py) = At(lower.A);
+                var p = sketch.AddPoint(px, py);
+                round.End = p.Id;
                 HoldOn(sketch, p, lower.By!);
                 if (!Used(sketch, oldEnd)) sketch.Remove(oldEnd);
             }
