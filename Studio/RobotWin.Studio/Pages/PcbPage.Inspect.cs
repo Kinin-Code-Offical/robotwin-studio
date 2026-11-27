@@ -170,6 +170,10 @@ namespace RobotWin.Studio.Pages
             W.Status = Lang.T(on ? "Çizgiler yatay, dikey ya da 45° gider" : "Çizgiler her açıda gider");
         }
 
+        private void OnUndo(object sender, RoutedEventArgs e) => W.Undo();   // [bars] the document's history, as on the circuit page
+
+        private void OnRedo(object sender, RoutedEventArgs e) => W.Redo();
+
         private void OnHeadsRotate(object sender, RoutedEventArgs e) => Canvas.RotateSelection();
 
         private void OnHeadsMirror(object sender, RoutedEventArgs e) => Canvas.MirrorSelection();   // [mirror]

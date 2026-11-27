@@ -167,8 +167,8 @@
                                             <ColumnDefinition Width="90"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding Name}" FontFamily="{StaticResource F.Mono}" FontSize="12.5" TextTrimming="CharacterEllipsis" ToolTip="{Binding Where}"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="{StaticResource F.Mono}" FontSize="12.5" Foreground="{Binding ValueBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Value}"/>
+                                        <TextBlock Text="{Binding Name}" FontFamily="{StaticResource F.Mono}" FontSize="{StaticResource T.Body}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Where}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="{StaticResource F.Mono}" FontSize="{StaticResource T.Body}" Foreground="{Binding ValueBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Value}"/>
                                         <TextBlock Grid.Column="2" Text="{Binding Type}" Style="{StaticResource Text.Caption}" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Grid.Column="3" Text="{Binding Address}" FontFamily="{StaticResource F.Mono}" FontSize="12" Foreground="{DynamicResource B.TextSecondary}"/>
                                     </Grid>
@@ -181,7 +181,7 @@
                     <TextBlock x:Name="RegistersNote" DockPanel.Dock="Bottom" Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,0"/>
                     <ScrollViewer DockPanel.Dock="Left" Width="400" Margin="0,0,24,0" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <TextBlock x:Name="CoreLine" FontFamily="{StaticResource F.Mono}" FontSize="12.5"/>
+                            <TextBlock x:Name="CoreLine" FontFamily="{StaticResource F.Mono}" FontSize="{StaticResource T.Body}"/>
                             <TextBlock x:Name="CycleLine" Style="{StaticResource Text.Caption}" Margin="0,2,0,8"/>
                             <ItemsControl x:Name="GeneralRegisters">
                                 <ItemsControl.ItemsPanel>
@@ -223,9 +223,9 @@
                                             <ColumnDefinition Width="70"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding Name}" Foreground="{Binding NameBrush}" FontWeight="{Binding Weight}" FontFamily="{StaticResource F.Mono}" FontSize="12.5" ToolTip="{Binding Tip}"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="{Binding ValueBrush}" FontFamily="{StaticResource F.Mono}" FontSize="12.5" ToolTip="{Binding Tip}"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding Binary}" Foreground="{Binding ValueBrush}" FontFamily="{StaticResource F.Mono}" FontSize="12.5"/>
+                                        <TextBlock Text="{Binding Name}" Foreground="{Binding NameBrush}" FontWeight="{Binding Weight}" FontFamily="{StaticResource F.Mono}" FontSize="{StaticResource T.Body}" ToolTip="{Binding Tip}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="{Binding ValueBrush}" FontFamily="{StaticResource F.Mono}" FontSize="{StaticResource T.Body}" ToolTip="{Binding Tip}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Binary}" Foreground="{Binding ValueBrush}" FontFamily="{StaticResource F.Mono}" FontSize="{StaticResource T.Body}"/>
                                         <TextBlock Grid.Column="3" Text="{Binding Address}" FontFamily="{StaticResource F.Mono}" FontSize="12" Foreground="{DynamicResource B.TextSecondary}"/>
                                         <TextBlock Grid.Column="4" Text="{Binding Flags}" FontFamily="{StaticResource F.Mono}" FontSize="12" Foreground="{DynamicResource B.TextSecondary}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Flags}"/>
                                     </Grid>

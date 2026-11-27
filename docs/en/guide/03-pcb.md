@@ -168,6 +168,8 @@ In the **Nets** tab, **Differential pairs** holds two nets that must run togethe
 
 Upload the Gerber ZIP straight to a board maker.
 
+**Fabrication readiness** (the list icon left of Manufacturing on the top bar): every check before the files go, in one window, each with its outcome: outline and size, design rules (DRC), connectivity (with the names of unconnected nets), whether the pours are up to date, DFM/DFT and test access, drills (how many sizes, the smallest against the rule), the Gerber and drill files read back by the independent reader and laid over the board, the BOM (parts missing a footprint or a value) and the pick-and-place file. What is not checked here (impedance, the fab's own rule set, panelization) says **not checked**. The checks run on a copy of the board in the background; **Save fabrication files…** goes on to the ZIP (with a problem the button reads **Save anyway…**).
+
 ### Plot (SVG / PDF)
 
 **File → Plot the board (SVG / PDF)…** (or **Plot (SVG / PDF)** in the command palette) is KiCad's Plot window. Each layer is drawn 1:1 exactly as its Gerber is written: pours, teardrops, tracks, pads, vias, mask openings, paste, silkscreen and the edge. Format: **PDF: a page per layer**, **SVG: a file per layer** (the layer's name is added to the file name, `board-F_Cu.svg` for instance) or **SVG: all in one file** (the layers stacked as they lie on the board, each in a group of its own). Pick layers one by one or with **All**, **Copper**, **Top side**, **Bottom side**. Options: in colour or all black (toner transfer, film), mirrored, holes open at their real size, the board edge on every layer, and the board's and the layer's name underneath. The choices are remembered.

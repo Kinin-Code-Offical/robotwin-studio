@@ -73,7 +73,7 @@
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <t:Icon x:Name="TabIcon" Data="{StaticResource I.Schematic}" Size="13" Foreground="{DynamicResource B.TextMuted}" Margin="0,0,7,0"/>
                                         <TextBlock x:Name="TabText" Text="{Binding TabTitle}" MaxWidth="190" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                                                   Foreground="{DynamicResource B.TextSecondary}" FontSize="12.5"/>
+                                                   Foreground="{DynamicResource B.TextSecondary}" FontSize="{StaticResource T.Body}"/>
                                         <!-- a pinned tab: its pin (click to unpin) instead of the close button -->
                                         <Button x:Name="TabPin" Style="{StaticResource Btn.Icon}" Width="20" Height="20" Margin="6,0,0,0" Click="OnTabUnpin" ToolTip="Sabitlemeyi kaldır" Visibility="Collapsed">
                                             <t:Icon Data="{StaticResource I.Pin}" Size="11" Foreground="{DynamicResource B.Accent}"/>

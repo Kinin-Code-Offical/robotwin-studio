@@ -40,7 +40,7 @@ namespace RobotWin.Studio.Editor
                 if (ratio < 0.6) continue;   // comfortable: nothing drawn, so the sheet stays readable
                 var r = ScreenRect(part, 0.5);
                 double t = Math.Min(1, (ratio - 0.6) / 0.4);   // 0.6 → 1.0 of the limit: amber → red
-                var c = ratio >= 1 ? Color.FromRgb(0xE5, 0x48, 0x4D) : Blend(Color.FromRgb(0xE8, 0xA3, 0x3D), Color.FromRgb(0xE5, 0x48, 0x4D), t);
+                var c = ratio >= 1 ? CanvasColors.StressHot : Blend(CanvasColors.StressWarm, CanvasColors.StressHot, t);
                 dc.DrawRoundedRectangle(SymbolRenderer.Brush(Color.FromArgb((byte)(0x22 + 0x30 * t), c.R, c.G, c.B)), MakePen(Color.FromArgb(0xC0, c.R, c.G, c.B), 1.2, false), r, 6, 6);
                 var label = Text(Lang.T(what) + $" %{ratio * 100:0}", 10.5, c, false, false);
                 dc.DrawText(label, new Point(r.Right - label.Width, r.Top - label.Height - 2));
@@ -50,7 +50,7 @@ namespace RobotWin.Studio.Editor
         /// <summary>A red ring and the reason round each burnt part.</summary>
         private void DrawFaultLayer(DrawingContext dc)
         {
-            var red = Color.FromRgb(0xE5, 0x48, 0x4D);
+            var red = CanvasColors.StressHot;
             foreach (var part in SheetParts)
             {
                 var devices = Sim.Compiled?.DevicesOf(part.RefDes);
@@ -129,7 +129,7 @@ namespace RobotWin.Studio.Editor
                 if (vdd < 0.5) continue;   // the logic is not powered
                 double v = sim.Simulator.NodeVoltage(node) - (ground > 0 ? sim.Simulator.NodeVoltage(ground) : 0);
                 string level = v >= 0.7 * vdd ? "1" : v <= 0.3 * vdd ? "0" : "?";
-                var color = level == "1" ? Color.FromRgb(0x3C, 0xC0, 0x6A) : level == "0" ? Color.FromRgb(0x8A, 0x8F, 0x9A) : Color.FromRgb(0xE8, 0xA3, 0x3D);
+                var color = level == "1" ? CanvasColors.LogicHigh : level == "0" ? CanvasColors.LogicLow : CanvasColors.LogicUndefined;
                 var at = new Point((kv.Value.A.X + kv.Value.B.X) / 2, (kv.Value.A.Y + kv.Value.B.Y) / 2);
                 var ft = Text(level, 10, Colors.White, true, true);
                 var r = new Rect(at.X - 7, at.Y - 7, 14, 14);

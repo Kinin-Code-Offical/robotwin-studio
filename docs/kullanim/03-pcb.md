@@ -168,6 +168,8 @@ Bir konnektör duvardan dışarı çıkacaksa (USB soketi, DC jakı) **Duvardaki
 
 Gerber ZIP'ini doğrudan kart üreticisine yükleyebilirsiniz.
 
+**Üretime hazırlık** (üst çubukta Üretim'in solundaki liste simgesi): dosyalar gitmeden önce bütün denetimler tek pencerede, her biri sonucuyla: kart kenarı ve ölçüler, tasarım kuralları (DRC), bağlantı bütünlüğü (bağlanmamış hatların adlarıyla), bakır dolguların güncelliği, DFM/DFT ve test erişimi, delikler (çap sayısı, en küçüğü kurala göre), Gerber ve delik dosyalarının bağımsız okuyucuyla kartla karşılaştırılması, BOM (kılıfı ya da değeri eksik parçalar) ve dizgi dosyası. Burada yapılmayan denetimler de (empedans, üreticinin kural seti, panelleme) **denetlenmedi** olarak yazar. Denetimler kartın kopyasında arka planda koşar; **Üretim dosyalarını kaydet…** ZIP'e geçer (bir sorun varsa düğme **Yine de kaydet…** olur).
+
 ### Çizdir (SVG / PDF)
 
 **Dosya → Kartı çizdir (SVG / PDF)…** (ya da komut paletinde **Çizdir (SVG / PDF)**) KiCad'in Çizdir penceresidir. Her katman Gerber'e yazılan çiziminin aynısıyla, 1:1 ölçekte çizilir: dolgular, damlalar, yollar, pedler, via'lar, maske açıklıkları, pasta, serigrafi ve kenar. Biçim: **PDF: her katman bir sayfa**, **SVG: her katman ayrı dosya** (adın sonuna katmanınki eklenir, örneğin `kart-F_Cu.svg`) ya da **SVG: hepsi tek dosyada** (katmanlar kartta durdukları sırayla, her biri kendi grubunda). Katmanlar tek tek ya da **Hepsi**, **Bakır**, **Üst taraf**, **Alt taraf** düğmeleriyle seçilir. Seçenekler: renkli ya da hepsi siyah (toner transferi, film), aynalı, delikler gerçek çapında açık, kart kenarı her katmanda ve altta kartın ve katmanın adı. Seçimler hatırlanır.

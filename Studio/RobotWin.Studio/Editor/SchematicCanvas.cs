@@ -561,7 +561,7 @@ namespace RobotWin.Studio.Editor
                                                                   Doc.Wires.IndexOf(hw) is int hi && hi >= 0 && hi < netlist.WireNets.Count && netlist.WireNets[hi] == net);
                 var geo = Polyline(wire.Points);
                 if (net != null && _highlightNets.Contains(net) && Sim.WallTime <= _highlightUntil)   // [path] the current path glows
-                    dc.DrawGeometry(null, MakePen(Color.FromArgb(0x70, 0xE8, 0xA3, 0x3D), 7), geo);
+                    dc.DrawGeometry(null, MakePen(Color.FromArgb(0x70, CanvasColors.CurrentPath.R, CanvasColors.CurrentPath.G, CanvasColors.CurrentPath.B), 7), geo);
                 if (selected || hovered) dc.DrawGeometry(null, MakePen(Color.FromArgb(selected ? (byte)0x40 : (byte)0x22, Accent.R, Accent.G, Accent.B), 5), geo);
                 dc.DrawGeometry(null, MakePen(selected ? Accent : color, Math.Max(wire.Bus ? 3.2 : 1.3, _scale * (wire.Bus ? 0.3 : 0.1))), geo);
             }

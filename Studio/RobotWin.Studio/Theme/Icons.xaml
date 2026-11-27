@@ -127,5 +127,6 @@
     <Geometry x:Key="I.Leader">M4,20 L14,8 H21 M4,20 L5,16 M4,20 L8,19</Geometry>
     <Geometry x:Key="I.CenterMark">M12,3 V9 M12,15 V21 M3,12 H9 M15,12 H21 M11,12 H13 M12,11 V13</Geometry>
     <Geometry x:Key="I.SimLayers">M3,14 L12,18.5 L21,14 M3,18 L12,22.5 L21,18 M3,10 L12,14.5 L21,10 L12,5.5 Z M7.5,10 L9.5,8.5 L11.5,11 L13.5,8.5 L15.5,10</Geometry>
+    <Geometry x:Key="I.Checklist">M4,6.5 L5.6,8 L8.2,5 M4,12.5 L5.6,14 L8.2,11 M4,18.5 L5.6,20 L8.2,17 M11,6.5 H20 M11,12.5 H20 M11,18.5 H20</Geometry>
     <Geometry x:Key="I.Stackup">M4,6 H20 M4,10 H20 M4,14 H20 M4,18 H20</Geometry>
 </ResourceDictionary>

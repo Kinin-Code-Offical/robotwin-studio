@@ -33,6 +33,10 @@
     <Color x:Key="C.AccentSoft">#1F6E9BFF</Color>
 
     <!-- Semantic (text only) -->
+    <!-- [tokens] selection, focus and info follow the accent in every theme (Shell/Themes.cs) -->
+    <Color x:Key="C.Selection">#336E9BFF</Color>
+    <Color x:Key="C.Focus">#6E9BFF</Color>
+    <Color x:Key="C.Info">#6E9BFF</Color>
     <Color x:Key="C.Success">#5BB98B</Color>
     <Color x:Key="C.Warning">#D4A84B</Color>
     <Color x:Key="C.Danger">#E5484D</Color>
@@ -52,6 +56,9 @@
     <SolidColorBrush x:Key="B.TextDisabled" Color="{StaticResource C.TextDisabled}"/>
     <SolidColorBrush x:Key="B.Accent" Color="{StaticResource C.Accent}"/>
     <SolidColorBrush x:Key="B.AccentSoft" Color="{StaticResource C.AccentSoft}"/>
+    <SolidColorBrush x:Key="B.Selection" Color="{StaticResource C.Selection}"/>
+    <SolidColorBrush x:Key="B.Focus" Color="{StaticResource C.Focus}"/>
+    <SolidColorBrush x:Key="B.Info" Color="{StaticResource C.Info}"/>
     <SolidColorBrush x:Key="B.Success" Color="{StaticResource C.Success}"/>
     <SolidColorBrush x:Key="B.Warning" Color="{StaticResource C.Warning}"/>
     <SolidColorBrush x:Key="B.Danger" Color="{StaticResource C.Danger}"/>

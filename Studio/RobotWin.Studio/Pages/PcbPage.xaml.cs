@@ -141,6 +141,8 @@ namespace RobotWin.Studio.Pages
             };
             W.DocumentChanged += (_, _) =>
             {
+                UndoButton.IsEnabled = W.CanUndo;   // [bars]
+                RedoButton.IsEnabled = W.CanRedo;
                 // Undo/redo replace the board object.
                 if (!ReferenceEquals(Canvas.Board, W.Schematic.Board) && W.Schematic.Board != null && Canvas.Board != null)
                 {
@@ -1044,6 +1046,9 @@ namespace RobotWin.Studio.Pages
                     board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Bezier, Width = 0.3, Points = { new PcbPoint(3, 12), new PcbPoint(8, 7), new PcbPoint(13, 17), new PcbPoint(18, 11) } });
                     Canvas.Refresh();
                     Canvas.SetTool(PcbTool.Rectangle);
+                    break;
+                case "fab-ready":   // [fab-ready] the readiness screen on the routed board
+                    Dispatcher.BeginInvoke(new Action(ShowReadiness), System.Windows.Threading.DispatcherPriority.Loaded);
                     break;
                 case "float-tools":   // [overlays] the tool strip floating over the board, laid across, and the drawing strip open beside it
                     if (_toolsOverlay != null && _overlays != null)

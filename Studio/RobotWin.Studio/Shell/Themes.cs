@@ -240,6 +240,9 @@ namespace RobotWin.Studio.Shell
             var a = AccentFor(palette, accent);
             colors["Accent"] = a;
             colors["AccentSoft"] = Color.FromArgb(palette.Light ? (byte)0x2A : (byte)0x1F, a.R, a.G, a.B);
+            colors["Selection"] = Color.FromArgb(palette.Light ? (byte)0x40 : (byte)0x33, a.R, a.G, a.B);   // [tokens]
+            colors["Focus"] = a;
+            colors["Info"] = a;
             var canvas = colors["Canvas"];
             colors["Scrim"] = Color.FromArgb(0xF0, canvas.R, canvas.G, canvas.B);
             colors["ScrimSoft"] = Color.FromArgb(0xD8, canvas.R, canvas.G, canvas.B);
@@ -325,6 +328,15 @@ namespace RobotWin.Studio.Shell
     /// </summary>
     public static class CanvasColors
     {
+        // [tokens] the technical colours: what a value means on a drawing (stress, logic levels, a current path), the same in
+        // every theme and kept apart from the interface's status colours (B.Success / B.Warning / B.Danger)
+        public static readonly Color StressWarm = Color.FromRgb(0xE8, 0xA3, 0x3D);
+        public static readonly Color StressHot = Color.FromRgb(0xE5, 0x48, 0x4D);
+        public static readonly Color LogicHigh = Color.FromRgb(0x3C, 0xC0, 0x6A);
+        public static readonly Color LogicLow = Color.FromRgb(0x8A, 0x8F, 0x9A);
+        public static readonly Color LogicUndefined = Color.FromRgb(0xE8, 0xA3, 0x3D);
+        public static readonly Color CurrentPath = Color.FromRgb(0xE8, 0xA3, 0x3D);
+
         public static bool Light { get; private set; }
         public static Color Paper { get; private set; } = Color.FromRgb(0x0E, 0x0E, 0x10);
         public static Color GridDot { get; private set; } = Color.FromRgb(0x24, 0x24, 0x28);

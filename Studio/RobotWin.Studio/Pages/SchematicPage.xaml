@@ -70,12 +70,12 @@
                     </Border>
                     <StackPanel x:Name="EditTools" Orientation="Horizontal">
                         <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="8,0"/>
+                        <Button x:Name="UndoButton" Style="{StaticResource Btn.Icon}" ToolTip="Geri al  (Ctrl+Z)" Click="OnUndo"><t:Icon Data="{StaticResource I.Undo}" Size="16"/></Button>
+                        <Button x:Name="RedoButton" Style="{StaticResource Btn.Icon}" ToolTip="Yinele  (Ctrl+Y)" Click="OnRedo"><t:Icon Data="{StaticResource I.Redo}" Size="16"/></Button>
+                        <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="8,0"/>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Döndür  (R)" Click="OnRotate"><t:Icon Data="{StaticResource I.Rotate}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Aynala  (X)" Click="OnMirror"><t:Icon Data="{StaticResource I.Mirror}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Sil  (Del)" Click="OnDelete"><t:Icon Data="{StaticResource I.Delete}" Size="16"/></Button>
-                        <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="8,0"/>
-                        <Button x:Name="UndoButton" Style="{StaticResource Btn.Icon}" ToolTip="Geri al  (Ctrl+Z)" Click="OnUndo"><t:Icon Data="{StaticResource I.Undo}" Size="16"/></Button>
-                        <Button x:Name="RedoButton" Style="{StaticResource Btn.Icon}" ToolTip="Yinele  (Ctrl+Y)" Click="OnRedo"><t:Icon Data="{StaticResource I.Redo}" Size="16"/></Button>
                         <StackPanel x:Name="EditorExtras" Orientation="Horizontal">
                         <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="8,0"/>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Numaralandır (R?, çakışan tanımlayıcılar)" Click="OnAnnotate"><t:Icon Data="{StaticResource I.Spark}" Size="16"/></Button>
@@ -186,7 +186,7 @@
                                     </Grid.ColumnDefinitions>
                                     <ed:SymbolPreview PresetId="{Binding Id}" Margin="2,5,10,5"/>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource B.Text}" FontSize="12.5" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource B.Text}" FontSize="{StaticResource T.Body}" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="{Binding Description}" Foreground="{DynamicResource B.TextMuted}" FontSize="12" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                 </Grid>
@@ -272,7 +272,7 @@
                     <TextBlock x:Name="BaudText" DockPanel.Dock="Right" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="12,0,0,0"/>
                     <TextBox x:Name="SerialInput" Tag="Karta gönder (Enter)" KeyDown="OnSerialKey" FontFamily="{StaticResource F.Mono}"/>
                 </DockPanel>
-                <TextBox x:Name="SerialOutput" IsReadOnly="True" FontFamily="{StaticResource F.Mono}" FontSize="12.5" TextWrapping="Wrap"
+                <TextBox x:Name="SerialOutput" IsReadOnly="True" FontFamily="{StaticResource F.Mono}" FontSize="{StaticResource T.Body}" TextWrapping="Wrap"
                          VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" Background="{DynamicResource B.Canvas}"
                          Foreground="{DynamicResource B.Text}" Padding="10,8"/>
             </DockPanel>

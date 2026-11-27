@@ -49,7 +49,7 @@
                         <Border Width="{DynamicResource Lib.CardWidth}" Height="140" CornerRadius="6" Background="Transparent" BorderBrush="{DynamicResource B.Border}" BorderThickness="1" Padding="12">
                             <DockPanel>
                                 <StackPanel DockPanel.Dock="Bottom">
-                                    <TextBlock Text="{Binding Name}" Foreground="{DynamicResource B.Text}" FontSize="12.5" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Name}" Foreground="{DynamicResource B.Text}" FontSize="{StaticResource T.Body}" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="{Binding Category}" Foreground="{DynamicResource B.TextMuted}" FontSize="12"/>
                                 </StackPanel>
                                 <ed:SymbolPreview PresetId="{Binding Id}" Margin="10,4,10,10"/>
