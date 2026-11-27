@@ -99,6 +99,16 @@ namespace RobotTwin.CoreSim.Design
         public GridPoint Position { get; set; }
 
         /// <summary>
+        /// [directive] KiCad's directive label (netclass flag): it names no net; the net its point is on gets this net
+        /// class, and the board takes it when it is brought up to date. Null: an ordinary label.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? NetClass { get; set; }
+
+        [JsonIgnore]
+        public bool IsDirective => !string.IsNullOrWhiteSpace(NetClass);
+
+        /// <summary>
         /// Drawn as a global label (KiCad's flag shape). A sheet is a single page, so local and
         /// global labels connect the same way: every label with the same name is one net.
         /// </summary>
@@ -419,6 +429,16 @@ namespace RobotTwin.CoreSim.Design
         public List<SchematicWire> Wires { get; set; } = new List<SchematicWire>();
         public List<NetLabel> Labels { get; set; } = new List<NetLabel>();
 
+        /// <summary>[directive] The net classes the sheet's directive labels give: net → class (a later label on the same net wins).</summary>
+        public Dictionary<string, string> NetClassDirectives(Netlist netlist)
+        {
+            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < Labels.Count && i < netlist.LabelNets.Count; i++)
+                if (Labels[i].IsDirective && netlist.LabelNets[i] is { } net)
+                    map[net] = Labels[i].NetClass!.Trim();
+            return map;
+        }
+
         /// <summary>No-connect flags on pins that are intentionally unconnected (silences ERC).</summary>
         public List<NoConnectFlag> NoConnects { get; set; } = new List<NoConnectFlag>();
 
@@ -601,6 +621,7 @@ namespace RobotTwin.CoreSim.Design
 
             foreach (var label in Labels)
             {
+                if (label.IsDirective) continue;   // [directive] it gives a class, not a name
                 if (!string.IsNullOrWhiteSpace(label.Name)) Name(pointIds[label.Position], label.Name.Trim(), IsGroundName(label.Name));
             }
 

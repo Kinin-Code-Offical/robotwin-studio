@@ -265,6 +265,14 @@ namespace RobotTwin.CoreSim.Design
                 bool onSomething = tips.Contains(label.Position) || doc.Wires.Any(w =>
                     w.Points.Any(p => p.Equals(label.Position)) ||
                     Enumerable.Range(0, Math.Max(0, w.Points.Count - 1)).Any(i => SchematicEditing.OnSegmentInterior(label.Position, w.Points[i], w.Points[i + 1])));
+                if (label.IsDirective)
+                {
+                    // [directive] a class flag names nothing: it only has to touch the net it gives the class to
+                    if (!onSomething)
+                        result.Add(new ErcViolation(ErcSeverity.Warning, "label-unconnected", $"'{{{label.NetClass}}}' net sınıfı yönergesi hiçbir kabloya veya pine değmiyor.", label.Position, null, label.NetClass));
+                    continue;
+                }
+
                 if (!onSomething)
                 {
                     result.Add(new ErcViolation(ErcSeverity.Warning, "label-unconnected", $"'{label.Name}' etiketi hiçbir kabloya veya pine değmiyor.", label.Position, null, label.Name));

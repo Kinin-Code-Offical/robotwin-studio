@@ -742,6 +742,19 @@ namespace RobotWin.Studio.Editor
             return label;
         }
 
+        /// <summary>[directive] A directive label (KiCad's netclass flag) at a point, its class opened for typing.</summary>
+        public NetLabel? AddDirectiveAt(GridPoint at)
+        {
+            if (!GuardEditing()) return null;
+            W.BeginChange();
+            var label = new NetLabel { Name = string.Empty, NetClass = "Power", Position = at };
+            Doc.Labels.Add(label);
+            W.CommitChange(Shell.Lang.T("Net sınıfı yönergesi eklendi"));
+            SelectItems(new object[] { label });
+            RequestCommand(SchematicCommand.EditValue, label);
+            return label;
+        }
+
         private void PlaceLabel()
         {
             AddLabelAt(WireSnap(_mouseGrid), _tool == EditorTool.GlobalLabel);

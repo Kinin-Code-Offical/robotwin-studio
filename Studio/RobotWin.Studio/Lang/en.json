@@ -8592,6 +8592,11 @@
   "Seçenekler": "Options",
   "Renkli (kapalıyken her şey siyah: toner transferi, film)": "In colour (off: everything black, for toner transfer and film)",
   "Aynala": "Mirror",
+  "Net sınıfı yönergesi ekle": "Add a net class directive",
+  "Net sınıfı yönergesi eklendi": "Net class directive added",
+  "Net sınıfı yönergesi": "Net class directive",
+  "Net sınıfı yönergesi · bu hat PCB'de bu net sınıfını alır (Power, Default ya da yeni bir ad) · Enter / Esc": "Net class directive · this net takes this net class on the PCB (Power, Default or a new name) · Enter / Esc",
+  "Değdiği hat PCB'de bu net sınıfını alır (Power, Default ya da yeni bir ad: yoksa Default'un kopyası olarak açılır). Hattın adını değiştirmez.": "The net it touches takes this net class on the PCB (Power, Default or a new name: one the board lacks starts as a copy of Default). It does not rename the net.",
   "Yalnız zemindeki ızgara": "The floor's grid only",
   "Zemine ek olarak, ızgaranın yerinden geçen dik XZ ızgarası (Y'ye dik)": "Besides the floor, an upright XZ grid through the grid's position (square to Y)",
   "Zemine ek olarak, ızgaranın yerinden geçen dik YZ ızgarası (X'e dik)": "Besides the floor, an upright YZ grid through the grid's position (square to X)",
@@ -9060,6 +9065,8 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+  "Net sınıfı yönergesi: {…}": "Net class directive: {0}",
+  "'{{…}}' net sınıfı yönergesi hiçbir kabloya veya pine değmiyor.": "'{{0}}' net class directive touches no wire or pin.",
   "{…} çizgi, {…} daire, {…} yay, {…} eğri; {…} kısıt. Kapalı döngüler profil olur: en büyüğü dış şekil, içindekiler delik.": "{0} lines, {1} circles, {2} arcs, {3} curves; {4} constraints. Closed loops become the profile: the largest the outline, the ones inside it holes.",
   "tablo {…} × {…}": "table {0} × {1}",
   "Tablo güncellendi ({…} × {…})": "Table updated ({0} × {1})",

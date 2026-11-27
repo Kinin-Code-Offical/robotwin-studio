@@ -1060,6 +1060,21 @@ namespace RobotTwin.CoreSim.Pcb
                 if (power && liveNets.Contains(net.Name)) board.PowerNets.Add(net.Name);
             }
 
+            // [directive] KiCad's directive labels: the sheet says a net's class, the board follows (a class it does not
+            // have yet starts as a copy of Default, to be set in the board's net classes)
+            foreach (var (net, cls) in schematic.NetClassDirectives(netlist))
+            {
+                if (!liveNets.Contains(net)) continue;
+                if (board.FindClass(cls) == null)
+                {
+                    var made = board.DefaultClass.Clone();
+                    made.Name = cls;
+                    board.NetClasses.Add(made);
+                }
+
+                board.AssignClass(net, board.FindClass(cls)!.Name);
+            }
+
             return board;
         }
 

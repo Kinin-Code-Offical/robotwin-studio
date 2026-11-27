@@ -122,7 +122,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | NC işareti | var | var | |
 | Bağlantı noktası (junction) aracı | J aracı: kesişen telleri birleştirir, yeniden tıklayınca ayırır; T bağlantıları kendiliğinden | var | |
 | Etiket: yerel, global | var | var | |
-| Etiket: hiyerarşik, yönerge | yok | yok | 3 |
+| Etiket: hiyerarşik, yönerge | Net sınıfı yönergesi (netclass flag): hattı adlandırmaz, değdiği hattın PCB net sınıfını verir (yoksa Default kopyası açılır); hiyerarşik etiket sonra | kısmi | 3 |
 | Kural alanı | yok | yok | 3 |
 | Hiyerarşik sayfa, sayfa pini | yok | yok | 3 |
 | Metin, metin kutusu | Metin (T), çerçeveli = metin kutusu | var | |

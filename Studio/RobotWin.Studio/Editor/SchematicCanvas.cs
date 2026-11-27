@@ -401,6 +401,14 @@ namespace RobotWin.Studio.Editor
         private Rect LabelRect(NetLabel label)
         {
             var origin = ToScreen(label.Position);
+            if (label.IsDirective)
+            {
+                // [directive] a stalk up from the wire, a diamond at its top and the class in braces beside it
+                var dt = Text("{" + label.NetClass + "}", 11, LabelColor, true);
+                double stalk = Math.Max(14, 1.2 * _scale);
+                return new Rect(origin.X - 6, origin.Y - stalk - dt.Height / 2 - 2, dt.Width + 22, stalk + dt.Height / 2 + 4);
+            }
+
             var ft = Text(label.Name, 11.5, LabelColor, true);
             double w = ft.Width + 18;
             return LabelFacesLeft(label)
@@ -419,6 +427,32 @@ namespace RobotWin.Studio.Editor
             }
 
             return false;
+        }
+
+        /// <summary>[directive] KiCad's netclass flag: a stalk from the wire, a diamond, and the class in braces.</summary>
+        private void DrawDirective(DrawingContext dc, NetLabel label)
+        {
+            bool selected = _selection.Contains(label);
+            var color = selected ? Accent : LabelColor;
+            var at = ToScreen(label.Position);
+            double stalk = Math.Max(14, 1.2 * _scale);
+            var top = new Point(at.X, at.Y - stalk);
+            var pen = MakePen(color, 1.2);
+            dc.DrawLine(pen, at, top);
+            var diamond = new StreamGeometry();
+            using (var s = diamond.Open())
+            {
+                s.BeginFigure(new Point(top.X, top.Y - 4), true, true);
+                s.LineTo(new Point(top.X + 4, top.Y), true, true);
+                s.LineTo(new Point(top.X, top.Y + 4), true, true);
+                s.LineTo(new Point(top.X - 4, top.Y), true, true);
+            }
+
+            diamond.Freeze();
+            dc.DrawGeometry(SymbolRenderer.Brush(CanvasColor), pen, diamond);
+            var ft = Text("{" + label.NetClass + "}", 11, color, true);
+            dc.DrawText(ft, new Point(top.X + 8, top.Y - ft.Height / 2));
+            dc.DrawEllipse(SymbolRenderer.Brush(WireColor), null, at, 2.2, 2.2);
         }
 
         // ================================================================ rendering
@@ -750,6 +784,12 @@ namespace RobotWin.Studio.Editor
 
         private void DrawLabel(DrawingContext dc, NetLabel label, string? net)
         {
+            if (label.IsDirective)
+            {
+                DrawDirective(dc, label);
+                return;
+            }
+
             var r = LabelRect(label);
             bool left = LabelFacesLeft(label);
             bool selected = _selection.Contains(label);

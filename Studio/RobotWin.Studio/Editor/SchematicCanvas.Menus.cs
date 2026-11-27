@@ -124,6 +124,7 @@ namespace RobotWin.Studio.Editor
                     Item("Bu segmenti sil", "", () => DeleteSegmentAt(wire, at));
                     Item("Etiket ekle", "L", () => AddLabelAt(WireSnap(at), false));
                     Item("Global etiket ekle", "Ctrl+L", () => AddLabelAt(WireSnap(at), true));
+                    Item("Net sınıfı yönergesi ekle", "", () => AddDirectiveAt(WireSnap(at)));   // [directive] KiCad's netclass flag
                     Item("Buradan kablo çiz", "Shift+W", () =>
                     {
                         Tool = EditorTool.Wire;

@@ -674,6 +674,21 @@ namespace RobotWin.Studio.Pages
             {
                 BuildPartInspector(part);
             }
+            else if (selection.Count == 1 && selection.First() is NetLabel { IsDirective: true } directive)
+            {
+                // [directive] KiCad's netclass flag: the class its net takes on the board
+                Section("Net sınıfı yönergesi");
+                var box = new TextBox { Text = directive.NetClass };
+                Commit(box, value =>
+                {
+                    if (string.IsNullOrWhiteSpace(value) || value == directive.NetClass) return;
+                    W.BeginChange();
+                    directive.NetClass = value.Trim();
+                    W.CommitChange($"Net sınıfı yönergesi: {value.Trim()}");
+                });
+                Inspector.Children.Add(box);
+                Inspector.Children.Add(Hint("Değdiği hat PCB'de bu net sınıfını alır (Power, Default ya da yeni bir ad: yoksa Default'un kopyası olarak açılır). Hattın adını değiştirmez."));
+            }
             else if (selection.Count == 1 && selection.First() is NetLabel label)
             {
                 Section("Hat etiketi");

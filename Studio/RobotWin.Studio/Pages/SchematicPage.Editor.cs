@@ -325,6 +325,19 @@ namespace RobotWin.Studio.Pages
             var anchor = Canvas.LabelScreenRect(label);
             var origin = Canvas.TranslatePoint(new Point(0, 0), _overlay);
             anchor.Offset(origin.X, origin.Y);
+            if (label.IsDirective)
+            {
+                // [directive] its class, not a name
+                ShowInlineEditor(anchor, label.NetClass!, "Net sınıfı yönergesi · bu hat PCB'de bu net sınıfını alır (Power, Default ya da yeni bir ad) · Enter / Esc", value =>
+                {
+                    if (value.Length == 0 || value == label.NetClass) return;
+                    W.BeginChange();
+                    label.NetClass = value;
+                    W.CommitChange($"Net sınıfı yönergesi: {value}");
+                });
+                return;
+            }
+
             ShowInlineEditor(anchor, label.Name, (label.Global ? "Global etiket" : "Hat etiketi") + " · aynı ad = aynı hat · Enter / Esc", value =>
             {
                 if (value.Length == 0 || value == label.Name) return;
@@ -1092,6 +1105,21 @@ namespace RobotWin.Studio.Pages
                             ?? sch.Parts.FirstOrDefault();
             switch (fault)
             {
+                case "directive":   // [directive] a Power class flag on the motor's supply net, picked
+                {
+                    var nl = sch.BuildNetlist(W.Library);
+                    int wi = nl.WireNets.FindIndex(n => string.Equals(n, "VBAT", StringComparison.OrdinalIgnoreCase));
+                    if (wi < 0) wi = 0;
+                    if (sch.Wires.Count == 0) return;
+                    var w0 = sch.Wires[wi].Points;
+                    var mid = w0.Count >= 2 ? SchematicEditing.Snap(new GridPoint((w0[0].X + w0[1].X) / 2, (w0[0].Y + w0[1].Y) / 2)) : w0[0];
+                    var flag = new NetLabel { NetClass = "Power", Position = mid };
+                    sch.Labels.Add(flag);
+                    Canvas.SelectItems(new object[] { flag });
+                    Canvas.InvalidateVisual();
+                    return;
+                }
+
                 case "table":   // [table] a parts table beside the circuit, picked; "table-edit": its editor is the picture
                 case "table-edit":
                 {
