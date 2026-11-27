@@ -275,7 +275,7 @@ Kullanıcı geri bildirimi: ikonlar, düğmeler ve yazılar tam hizada değil; a
 - [ ] **Ölçü aletleri:** osiloskop ve mantık analizörü tek zaman ekseninde; çözülen UART/I²C/SPI çerçevesine tıklayınca dalga biçimi ve parça vurgusu; birden çok koşunun üst üste karşılaştırılması; referans/tolerans bantları; kanal adı ve rengi; CSV ve görüntü dışa aktarma.
 - [ ] **PLC/HMI:** PLC çalışma alanı düzeni (bloklar, editör, özellikler, izleme); HMI'ye sürükle-bırak bileşen tasarımı (buton, lamba, gösterge, trend, alarm, motor kontrolü). Merdivende canlı değerler ve HMI panel bağlama var.
 - [ ] **Analiz:** analiz sihirbazı (malzeme, sabit yüzeyler, yükler, ağ, çöz, incele, güvenilirlik); renk ölçeğinde birim, min/maks ve sabit ölçek seçeneği; güvenilirlik özeti (ağ boyu, yakınsama ve GCI, zaman adımı, artıklar, varsayımlar, referans çözüm); sonuçların yan yana karşılaştırılması.
-- [ ] **Kütüphane:** her parçada model durumu rozetleri (3B model, elektriksel model, mekanik model, firmware bağlantısı, veri sayfasıyla karşılaştırma: var / kısmi / yok), üretici, parça numarası, kaynak ve lisans.
+- [~] **Kütüphane:** yapılan: parça ayrıntısında model durumu rozetleri (elektriksel model, PCB kılıfı, 3B model, firmware, model sınırları; var / kısmi / yok, `Pages/LibraryPage.ModelStatus.cs`). Kalan: mekanik model ve veri sayfasıyla karşılaştırma rozetleri, üretici, parça numarası, kaynak ve lisans alanları. İstek: her parçada model durumu rozetleri (3B model, elektriksel model, mekanik model, firmware bağlantısı, veri sayfasıyla karşılaştırma: var / kısmi / yok), üretici, parça numarası, kaynak ve lisans.
 
 ### D4. Birleşik mühendislik deneyimi (P1)
 
