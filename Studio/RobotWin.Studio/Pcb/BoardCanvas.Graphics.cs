@@ -85,6 +85,21 @@ namespace RobotWin.Studio.Pcb
             SetTool(PcbTool.Select);
         }
 
+        /// <summary>[table] A 3 × 3 table from the clicked corner on the drawing layer, then its cells to fill in.</summary>
+        private void PlaceTable(double x, double y)
+        {
+            var board = Board;
+            if (board == null) return;
+            var table = BoardGraphic.Table(SnapX(x), SnapY(y), 3, 3, 12, 3, GraphicDrawLayer);
+            table.Width = DrawWidth;
+            BeforeEdit?.Invoke(this, EventArgs.Empty);
+            board.Graphics.Add(table);
+            Edited($"Çizim eklendi: {table.Describe()} · {LayerName(table.Layer)}");
+            SetTool(PcbTool.Select);
+            Select(table);
+            EditRequested?.Invoke(this, table);
+        }
+
         /// <summary>[image] A picture in its frame, seen through a little so the copper under it still shows.</summary>
         private void DrawImageGraphic(DrawingContext dc, BoardGraphic g, double opacity)
         {
@@ -310,9 +325,10 @@ namespace RobotWin.Studio.Pcb
 
         private void DrawSelectedGraphic(DrawingContext dc, BoardGraphic g)
         {
-            if (g.Shape == GraphicShape.Image && g.Points.Count >= 2)
+            if (g.Shape is GraphicShape.Image or GraphicShape.Table && g.Points.Count >= 2)
             {
-                dc.DrawRectangle(null, P(A(Accent, (byte)0xC0), 2), new Rect(S(g.Points[0].X, g.Points[0].Y), S(g.Points[1].X, g.Points[1].Y)));
+                // [image] [table] the frame round it, not every stroke of its text thickened
+                dc.DrawRectangle(null, P(A(Accent, (byte)0xC0), 2), new Rect(S(g.Points[0].X, g.Points[0].Y) - new Vector(2, 2), S(g.Points[1].X, g.Points[1].Y) + new Vector(2, 2)));
                 return;
             }
 

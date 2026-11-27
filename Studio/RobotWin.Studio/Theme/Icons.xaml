@@ -68,6 +68,7 @@
     <Geometry x:Key="I.DrawRect">M4,6 H20 V18 H4 Z</Geometry>
     <Geometry x:Key="I.DrawCircle">M12,4 A8,8 0 1 1 11.99,4 Z</Geometry>
     <Geometry x:Key="I.DrawArc">M7,18 A7,7 0 1 1 17,18</Geometry>
+    <Geometry x:Key="I.Table">M3,5 H21 V19 H3 Z M3,10 H21 M3,14.5 H21 M9,5 V19 M15,5 V19</Geometry>
     <Geometry x:Key="I.Picture">M3,5 H21 V19 H3 Z M3,16 L9,10 L14,15 L17,12 L21,16 M15.5,8.5 A1.5,1.5 0 1 1 15.49,8.5</Geometry>
     <Geometry x:Key="I.DrawBezier">M3,19 C8,3 16,21 21,5 M3,19 L8,3 M21,5 L16,21</Geometry>
     <Geometry x:Key="I.DrawPolygon">M12,4 L20,10 L17,20 H7 L4,10 Z</Geometry>

@@ -18,7 +18,10 @@ namespace RobotTwin.CoreSim.Pcb
         Bezier,
 
         /// <summary>[image] A reference picture between two corners (KiCad's image): seen while laying out, not made.</summary>
-        Image
+        Image,
+
+        /// <summary>[table] KiCad's table: cells of text in rows and columns, ruled, from its top-left corner.</summary>
+        Table
     }
 
     /// <summary>
@@ -48,6 +51,140 @@ namespace RobotTwin.CoreSim.Pcb
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? ImageData { get; set; }
 
+        /// <summary>[table] The columns' widths (mm), left to right (tables only).</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<double>? ColumnWidths { get; set; }
+
+        /// <summary>[table] The rows' heights (mm), top to bottom (tables only).</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<double>? RowHeights { get; set; }
+
+        /// <summary>[table] The cells' text, row by row ("\n" breaks a line) (tables only).</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<string>? Cells { get; set; }
+
+        /// <summary>[table] The cells' text height (mm); 0: 1.2 mm.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double TextSize { get; set; }
+
+        [JsonIgnore]
+        public int Columns => ColumnWidths?.Count ?? 0;
+
+        [JsonIgnore]
+        public int Rows => RowHeights?.Count ?? 0;
+
+        [JsonIgnore]
+        public double CellTextSize => TextSize > 0 ? TextSize : 1.2;
+
+        /// <summary>[table] A table of the given rows and columns, every cell the same size, from its top-left corner.</summary>
+        public static BoardGraphic Table(double x, double y, int rows, int columns, double cellWidth = 12, double cellHeight = 3, GraphicLayer layer = GraphicLayer.SilkTop)
+        {
+            var t = new BoardGraphic
+            {
+                Shape = GraphicShape.Table, Layer = layer, Width = 0.15,
+                ColumnWidths = Enumerable.Repeat(cellWidth, Math.Max(1, columns)).ToList(),
+                RowHeights = Enumerable.Repeat(cellHeight, Math.Max(1, rows)).ToList(),
+                Cells = Enumerable.Repeat(string.Empty, Math.Max(1, rows) * Math.Max(1, columns)).ToList(),
+                Points = { new PcbPoint(x, y) }
+            };
+            t.FitTable();
+            return t;
+        }
+
+        /// <summary>[table] The text of a cell (empty past the list).</summary>
+        public string Cell(int row, int column)
+        {
+            int i = row * Columns + column;
+            return Cells != null && i >= 0 && i < Cells.Count ? Cells[i] : string.Empty;
+        }
+
+        public void SetCell(int row, int column, string text)
+        {
+            Cells ??= new List<string>();
+            int i = row * Columns + column;
+            while (Cells.Count <= i) Cells.Add(string.Empty);
+            Cells[i] = text;
+        }
+
+        /// <summary>[table] Sets the table's far corner from its columns and rows (after a size or a row or column changes).</summary>
+        public void FitTable()
+        {
+            if (Shape != GraphicShape.Table || Points.Count == 0 || ColumnWidths == null || RowHeights == null) return;
+            var far = new PcbPoint(Points[0].X + ColumnWidths.Sum(), Points[0].Y + RowHeights.Sum());
+            if (Points.Count < 2) Points.Add(far);
+            else Points[1] = far;
+            Cells ??= new List<string>();
+            int n = Rows * Columns;
+            while (Cells.Count < n) Cells.Add(string.Empty);
+            if (Cells.Count > n) Cells.RemoveRange(n, Cells.Count - n);
+        }
+
+        /// <summary>[table] Adds or takes away a row or a column, keeping the other cells' text where it was.</summary>
+        public void ResizeTable(int rows, int columns)
+        {
+            rows = Math.Max(1, rows);
+            columns = Math.Max(1, columns);
+            var old = Enumerable.Range(0, Rows).Select(r => Enumerable.Range(0, Columns).Select(c => Cell(r, c)).ToList()).ToList();
+            double lastW = ColumnWidths is { Count: > 0 } cw ? cw[cw.Count - 1] : 12, lastH = RowHeights is { Count: > 0 } rh ? rh[rh.Count - 1] : 3;
+            ColumnWidths = Enumerable.Range(0, columns).Select(c => ColumnWidths != null && c < ColumnWidths.Count ? ColumnWidths[c] : lastW).ToList();
+            RowHeights = Enumerable.Range(0, rows).Select(r => RowHeights != null && r < RowHeights.Count ? RowHeights[r] : lastH).ToList();
+            Cells = new List<string>();
+            for (int r = 0; r < rows; r++)
+            for (int c = 0; c < columns; c++)
+                Cells.Add(r < old.Count && c < old[r].Count ? old[r][c] : string.Empty);
+            FitTable();
+        }
+
+        /// <summary>[table] The margin inside a cell (mm).</summary>
+        public double CellMargin => CellTextSize * 0.4;
+
+        /// <summary>[table] The rules and the cells' text as strokes, mirrored on a bottom layer as KiCad mirrors them.</summary>
+        private void TableStrokes(List<Segment2> s)
+        {
+            if (ColumnWidths == null || RowHeights == null || Points.Count == 0) return;
+            double x0 = Points[0].X, y0 = Points[0].Y, w = ColumnWidths.Sum(), h = RowHeights.Sum();
+            var mine = new List<Segment2>();
+            foreach (var (a, b) in Edges(new List<PcbPoint> { new PcbPoint(x0, y0), new PcbPoint(x0 + w, y0), new PcbPoint(x0 + w, y0 + h), new PcbPoint(x0, y0 + h) }))
+                mine.Add(new Segment2(a.X, a.Y, b.X, b.Y));
+            double x = x0;
+            for (int c = 0; c + 1 < ColumnWidths.Count; c++)
+            {
+                x += ColumnWidths[c];
+                mine.Add(new Segment2(x, y0, x, y0 + h));
+            }
+
+            double y = y0;
+            for (int r = 0; r + 1 < RowHeights.Count; r++)
+            {
+                y += RowHeights[r];
+                mine.Add(new Segment2(x0, y, x0 + w, y));
+            }
+
+            double size = CellTextSize, m = CellMargin, pitch = size * 1.6;
+            y = y0;
+            for (int r = 0; r < RowHeights.Count; r++)
+            {
+                x = x0;
+                for (int c = 0; c < ColumnWidths.Count; c++)
+                {
+                    var lines = Cell(r, c).Replace("\r", string.Empty).Split('\n');
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        double lw = StrokeFont.Measure(lines[i], size);
+                        StrokeFont.DrawCentered((x1, y1, x2, y2, _) => mine.Add(new Segment2(x1, y1, x2, y2)), lines[i], x + m + lw / 2, y + m + size / 2 + i * pitch, size, Width, 0, false);
+                    }
+
+                    x += ColumnWidths[c];
+                }
+
+                y += RowHeights[r];
+            }
+
+            bool mirrored = Layer is GraphicLayer.SilkBottom or GraphicLayer.FabBottom;
+            double axis = 2 * x0 + w;
+            foreach (var seg in mine) s.Add(mirrored ? new Segment2(axis - seg.X1, seg.Y1, axis - seg.X2, seg.Y2) : seg);
+        }
+
         /// <summary>Whether the points are enough for the shape.</summary>
         public bool IsComplete => Shape switch
         {
@@ -55,6 +192,7 @@ namespace RobotTwin.CoreSim.Pcb
             GraphicShape.Polygon => Points.Count >= 3,
             GraphicShape.Bezier => Points.Count >= 4,
             GraphicShape.Image => Points.Count >= 2 && ImageData != null,
+            GraphicShape.Table => Points.Count >= 2 && Columns > 0 && Rows > 0,
             _ => Points.Count >= 2
         };
 
@@ -90,6 +228,9 @@ namespace RobotTwin.CoreSim.Pcb
                     break;
                 }
 
+                case GraphicShape.Table:
+                    TableStrokes(s);
+                    break;
                 case GraphicShape.Bezier:
                 {
                     var pts = RobotTwin.CoreSim.Design.CubicBezier.Flatten(p[0].X, p[0].Y, p[1].X, p[1].Y, p[2].X, p[2].Y, p[3].X, p[3].Y, tolerance);
@@ -146,9 +287,9 @@ namespace RobotTwin.CoreSim.Pcb
         public double DistanceTo(double x, double y)
         {
             if (!IsComplete) return double.PositiveInfinity;
-            if (Shape == GraphicShape.Image)
+            if (Shape is GraphicShape.Image or GraphicShape.Table)
             {
-                // [image] picked anywhere on the picture
+                // [image] [table] picked anywhere on it
                 double dx = Math.Max(Math.Min(Points[0].X, Points[1].X) - x, Math.Max(0, x - Math.Max(Points[0].X, Points[1].X)));
                 double dy = Math.Max(Math.Min(Points[0].Y, Points[1].Y) - y, Math.Max(0, y - Math.Max(Points[0].Y, Points[1].Y)));
                 return Math.Sqrt(Math.Max(0, dx) * Math.Max(0, dx) + Math.Max(0, dy) * Math.Max(0, dy));
@@ -162,7 +303,7 @@ namespace RobotTwin.CoreSim.Pcb
 
         public (double MinX, double MinY, double MaxX, double MaxY) Bounds()
         {
-            if (Shape == GraphicShape.Image && Points.Count >= 2)
+            if (Shape is GraphicShape.Image or GraphicShape.Table && Points.Count >= 2)
                 return (Math.Min(Points[0].X, Points[1].X), Math.Min(Points[0].Y, Points[1].Y), Math.Max(Points[0].X, Points[1].X), Math.Max(Points[0].Y, Points[1].Y));
             var strokes = Strokes(0.05);
             if (strokes.Count == 0) return (0, 0, 0, 0);
@@ -180,6 +321,7 @@ namespace RobotTwin.CoreSim.Pcb
                 GraphicShape.Rectangle => $"dikdörtgen {Math.Abs(Points[1].X - Points[0].X):0.##} × {Math.Abs(Points[1].Y - Points[0].Y):0.##} mm",
                 GraphicShape.Circle => $"daire Ø{2 * Radius:0.##} mm",
                 GraphicShape.Arc => $"yay R{Radius:0.##} mm, {ArcAngles().Sweep * 180 / Math.PI:0}°",
+                GraphicShape.Table => $"tablo {Rows} × {Columns}",
                 GraphicShape.Image => $"resim {Math.Abs(Points[1].X - Points[0].X):0.##} × {Math.Abs(Points[1].Y - Points[0].Y):0.##} mm",
                 GraphicShape.Bezier => $"eğri {Strokes(0.05).Sum(q => Math.Sqrt((q.X2 - q.X1) * (q.X2 - q.X1) + (q.Y2 - q.Y1) * (q.Y2 - q.Y1))):0.##} mm",
                 _ => $"çokgen, {Points.Count} köşe"

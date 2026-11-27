@@ -517,7 +517,8 @@ namespace RobotWin.Studio.Pages
 
                 case BoardText t:
                 {
-                    var copy = new BoardText { Text = t.Text, X = t.X, Y = t.Y, Size = t.Size, Thickness = t.Thickness, Layer = t.Layer, Rotation = t.Rotation };
+                    // [textbox] the box's width and frame go into the dialog and come back with the rest
+                    var copy = new BoardText { Text = t.Text, X = t.X, Y = t.Y, Size = t.Size, Thickness = t.Thickness, Layer = t.Layer, Rotation = t.Rotation, BoxWidth = t.BoxWidth, Border = t.Border };
                     if (!PcbDialogs.TextProperties(Owner, copy, false, out bool delete)) return;
                     Edit(delete ? "Yazı silindi" : "Yazı güncellendi", () =>
                     {
@@ -532,9 +533,15 @@ namespace RobotWin.Studio.Pages
                         t.Thickness = copy.Thickness;
                         t.Layer = copy.Layer;
                         t.Rotation = copy.Rotation;
+                        t.BoxWidth = copy.BoxWidth;
+                        t.Border = copy.Border;
                     });
                     return;
                 }
+
+                case BoardGraphic { Shape: GraphicShape.Table } table:   // [table] Pages/PcbPage.Table.cs
+                    EditTable(table);
+                    return;
 
                 case BoardComponent c:
                 {
@@ -985,6 +992,21 @@ namespace RobotWin.Studio.Pages
                     UpdateToolOptions();
                     break;
                 }
+                case "table":   // [table] a revision table on the top silkscreen, picked; "table-edit": its editor is the picture
+                case "table-edit":
+                {
+                    var table = BoardGraphic.Table(board.Width - 25, board.Height - 8.4, 3, 2, 8, 2.6);
+                    table.ColumnWidths![1] = 16;
+                    table.FitTable();
+                    string[] cells = { "KART", "MOTOR SURUCU", "REV", "B", "TARIH", "2026-11" };
+                    for (int i = 0; i < cells.Length; i++) table.SetCell(i / 2, i % 2, cells[i]);
+                    board.Graphics.Add(table);
+                    Canvas.Refresh();
+                    Canvas.Select(table);
+                    if (fault == "table-edit") EditTable(table);
+                    break;
+                }
+
                 case "image":   // [image] --image-file <png>: a reference picture on the top silkscreen
                 {
                     var args = Environment.GetCommandLineArgs();

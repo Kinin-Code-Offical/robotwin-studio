@@ -82,7 +82,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Çizgi, yay, dikdörtgen, daire, çokgen | Çizim grubu | var | |
 | Bezier, resim | Bezier eğrisi (başlangıç, bitiş, iki denetim noktası; kollar görünür; Gerber, DRC, 3B ve KiCad gr_curve); Resim (referans resmi: yarı saydam, seçilir, taşınır, üretime girmez; KiCad image) | var | |
 | Yazı | Yazı | var | |
-| Yazı kutusu, tablo | Yazı kutusu: çok satır, genişliğe göre kaydırma, çerçeve; Gerber ve KiCad gr_text_box; tablo sonra | kısmi | 3 |
+| Yazı kutusu, tablo | Yazı kutusu: çok satır, genişliğe göre kaydırma, çerçeve; Gerber ve KiCad gr_text_box; Tablo: hücre ızgarası, satır / sütun ekle-çıkar (yazı korunur), sütun genişliği ve satır yüksekliği, yazı boyu, alt katmanda aynalı; Gerber, DRC, KiCad table | var | |
 | Ölçü (hizalı) | Ölçü çizgisi | var | |
 | Ölçü (dik, yarıçap, kılavuz, merkez) | Ölçü aracında Tür: hizalı, dik (yatay/dikey), yarıçap, kılavuz (not), merkez işareti; yazı geçersiz kılma | var | |
 | Silici (tıklananı sil) | Del; sol şeritte Silici aracı (her tıklama altındakini siler) | var | |

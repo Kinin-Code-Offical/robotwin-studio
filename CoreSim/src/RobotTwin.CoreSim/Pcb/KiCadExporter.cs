@@ -597,6 +597,34 @@ namespace RobotTwin.CoreSim.Pcb
                         break;
                     }
 
+                    case GraphicShape.Table when g.ColumnWidths != null && g.RowHeights != null:   // [table] KiCad 8's table: ruled cells of text
+                    {
+                        var rule = new SNode("stroke", new SNode("width", N(g.Width)), new SNode("type", "solid"));
+                        var cells = new SNode("cells");
+                        double cy = p[0].Y, m = g.CellMargin;
+                        for (int r = 0; r < g.Rows; r++)
+                        {
+                            double cx = p[0].X;
+                            for (int c = 0; c < g.Columns; c++)
+                            {
+                                var effects = new SNode("effects", new SNode("font", new SNode("size", N(g.CellTextSize), N(g.CellTextSize)), new SNode("thickness", N(g.Width))),
+                                    new SNode("justify", g.Layer is GraphicLayer.SilkBottom or GraphicLayer.FabBottom ? "left top mirror" : "left top"));
+                                cells.Add(new SNode("table_cell", Q(g.Cell(r, c)), XY("start", cx, cy), XY("end", cx + g.ColumnWidths[c], cy + g.RowHeights[r]),
+                                    new SNode("margins", N(m), N(m), N(m), N(m)), new SNode("span", "1", "1"), new SNode("layer", Q(layer)),
+                                    Uid("graphic:" + i.ToString(CultureInfo.InvariantCulture) + ":" + r.ToString(CultureInfo.InvariantCulture) + ":" + c.ToString(CultureInfo.InvariantCulture)), effects));
+                                cx += g.ColumnWidths[c];
+                            }
+
+                            cy += g.RowHeights[r];
+                        }
+
+                        yield return new SNode("table", new SNode("column_count", g.Columns.ToString(CultureInfo.InvariantCulture)), new SNode("layer", Q(layer)),
+                            new SNode("border", new SNode("external", "yes"), new SNode("header", "yes"), rule),
+                            new SNode("separators", new SNode("rows", "yes"), new SNode("cols", "yes"), new SNode("stroke", new SNode("width", N(g.Width)), new SNode("type", "solid"))),
+                            new SNode("column_widths", g.ColumnWidths.Select(N).ToArray()), new SNode("row_heights", g.RowHeights.Select(N).ToArray()), cells);
+                        break;
+                    }
+
                     case GraphicShape.Bezier:   // [bezier]
                     {
                         var pts = new SNode("pts");

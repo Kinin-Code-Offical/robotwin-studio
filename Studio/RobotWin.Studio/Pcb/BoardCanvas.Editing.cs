@@ -177,6 +177,9 @@ namespace RobotWin.Studio.Pcb
                 case PcbTool.Image:   // [image]
                     PlaceImage(x, y);
                     return;
+                case PcbTool.Table:   // [table]
+                    PlaceTable(x, y);
+                    return;
                 case PcbTool.Line or PcbTool.Rectangle or PcbTool.Circle or PcbTool.Arc or PcbTool.Polygon or PcbTool.Bezier:   // [graphics]
                     GraphicClick(x, y, e.ClickCount >= 2);
                     return;
@@ -1753,6 +1756,12 @@ namespace RobotWin.Studio.Pcb
                         Add(null);
                         Add(Item("Kopyala", "Ctrl+C", CopySelection));
                         Add(Item("Çoğalt", "Ctrl+D", Duplicate));
+                        Add(Item("Sil", "Del", DeleteSelection));
+                        break;
+                    case BoardGraphic { Shape: GraphicShape.Table } table:   // [table]
+                        Add(Item("Tabloyu düzenle…", "E", () => EditRequested?.Invoke(this, table)));
+                        Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, SnapX(x), SnapY(y))));
+                        Add(null);
                         Add(Item("Sil", "Del", DeleteSelection));
                         break;
                     case BoardText or MountingHole or BoardDimension:

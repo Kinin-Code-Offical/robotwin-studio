@@ -37,7 +37,8 @@ namespace RobotWin.Studio.Pages
                 new ToolChoice(nameof(PcbTool.Arc), "Yay", "I.DrawArc"),
                 new ToolChoice(nameof(PcbTool.Polygon), "Çokgen", "I.DrawPolygon"),
                 new ToolChoice(nameof(PcbTool.Bezier), "Bezier eğrisi", "I.DrawBezier"),   // [bezier]
-                new ToolChoice(nameof(PcbTool.Image), "Resim…", "I.Picture")   // [image]
+                new ToolChoice(nameof(PcbTool.Image), "Resim…", "I.Picture"),   // [image]
+                new ToolChoice(nameof(PcbTool.Table), "Tablo", "I.Table")   // [table]
             });
             ToolFlyout.Attach(ToolRoute, new[]
             {
