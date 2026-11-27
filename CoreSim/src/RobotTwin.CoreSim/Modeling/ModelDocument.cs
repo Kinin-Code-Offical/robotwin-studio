@@ -32,7 +32,13 @@ namespace RobotTwin.CoreSim.Modeling
         Revolve,
 
         /// <summary>A parametric robot part from <see cref="RobotParts"/>.</summary>
-        Part
+        Part,
+
+        /// <summary>[loft] A solid that passes from the bottom profile (<see cref="PrimitiveSpec.Sketch"/>) to the top one (<see cref="PrimitiveSpec.Sketch2"/>).</summary>
+        Loft,
+
+        /// <summary>[sweep] The profile (<see cref="PrimitiveSpec.Sketch"/>) carried along a 3D path (<see cref="PrimitiveSpec.Path"/>).</summary>
+        Sweep
     }
 
     /// <summary>Object placement relative to its parent: position (mm), Euler XYZ rotation (degrees), scale.</summary>
@@ -291,6 +297,15 @@ namespace RobotTwin.CoreSim.Modeling
 
         public Dictionary<string, double> Values { get; set; } = new Dictionary<string, double>(StringComparer.Ordinal);
         public Sketch2D? Sketch { get; set; }
+
+        /// <summary>[loft] The top profile of a loft; null for every other kind.</summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public Sketch2D? Sketch2 { get; set; }
+
+        /// <summary>[sweep] The path a sweep follows: x, y, z (mm) of each point in turn; null for every other kind.</summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public List<double>? Path { get; set; }
+
         public List<HoleSpec>? Holes { get; set; }
 
         /// <summary>[param] Dimensions given by a formula of the model's parameters (key → formula); null when none.</summary>
@@ -312,6 +327,8 @@ namespace RobotTwin.CoreSim.Modeling
             Template = Template,
             Values = new Dictionary<string, double>(Values, StringComparer.Ordinal),
             Sketch = Sketch?.Clone(),
+            Sketch2 = Sketch2?.Clone(),
+            Path = Path == null ? null : new List<double>(Path),
             Holes = Holes?.Select(h => h.Clone()).ToList(),
             Expressions = Expressions == null ? null : new Dictionary<string, string>(Expressions, StringComparer.Ordinal)
         };
@@ -434,6 +451,13 @@ namespace RobotTwin.CoreSim.Modeling
         public PrimitiveSpec? Primitive { get; set; }
         public MeshData? Mesh { get; set; }
 
+        /// <summary>[refgeom] A reference plane, axis or point (Modeling/ModelReferences.cs): no solid, drawn as an outline; null for a part.</summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public ModelReference? Reference { get; set; }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsReference => Reference != null;
+
         [JsonIgnore]
         public bool IsPrimitive => Primitive != null;
 
@@ -493,6 +517,7 @@ namespace RobotTwin.CoreSim.Modeling
             var c = (ModelObject)MemberwiseClone();
             c.Transform = Transform.Clone();
             c.Primitive = Primitive?.Clone();
+            c.Reference = Reference?.Clone();
             c.Mesh = Mesh == null ? null : new MeshData { VertexCount = Mesh.VertexCount, FaceCount = Mesh.FaceCount, Positions = Mesh.Positions, Faces = Mesh.Faces };
             // the cache is immutable by convention, sharing it is safe
             return c;

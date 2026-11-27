@@ -365,6 +365,13 @@ namespace RobotWin.Studio.Pcb
         private (double X, double Y) ToBoard(Point p) => ((p.X - _offset.X) / _scale, (p.Y - _offset.Y) / _scale);
         private double Snap(double v) => GridSize > 0 ? Math.Round(Math.Round(v / GridSize) * GridSize, 6) : v;
 
+        // [origins] a point snaps to the grid as it runs through the board's grid origin (a step, dx or dy, keeps Snap)
+        private double SnapX(double v) => SnapFrom(v, Board?.GridOrigin?.X ?? 0);
+
+        private double SnapY(double v) => SnapFrom(v, Board?.GridOrigin?.Y ?? 0);
+
+        private double SnapFrom(double v, double origin) => GridSize > 0 ? Math.Round(origin + Math.Round((v - origin) / GridSize) * GridSize, 6) : v;
+
         public string Length(double mm) => UseMil
             ? (mm / 0.0254).ToString("0.#", CultureInfo.InvariantCulture) + " mil"
             : mm.ToString("0.###", CultureInfo.InvariantCulture) + " mm";
@@ -486,6 +493,7 @@ namespace RobotWin.Studio.Pcb
             DrawMeasure(dc);
             DrawDimensionPreview(dc);
             DrawMagnetMark(dc);   // [magnet]
+            DrawOrigins(dc, board);   // [origins]
             if (FullCrosshair && IsMouseOver)
             {
                 // [crosshair] KiCad's full-window crosshair: two thin lines through the pointer, edge to edge
@@ -537,8 +545,9 @@ namespace RobotWin.Studio.Pcb
             y0 = Math.Max(0, y0);
             x1 = Math.Min(board.Width, x1);
             y1 = Math.Min(board.Height, y1);
-            for (double x = Math.Ceiling(x0 / g) * g; x <= x1; x += g) dc.DrawLine(pen, S(x, y0), S(x, y1));
-            for (double y = Math.Ceiling(y0 / g) * g; y <= y1; y += g) dc.DrawLine(pen, S(x0, y), S(x1, y));
+            double ox = board.GridOrigin?.X ?? 0, oy = board.GridOrigin?.Y ?? 0;   // [origins] the grid runs through its origin
+            for (double x = ox + Math.Ceiling((x0 - ox) / g) * g; x <= x1; x += g) dc.DrawLine(pen, S(x, y0), S(x, y1));
+            for (double y = oy + Math.Ceiling((y0 - oy) / g) * g; y <= y1; y += g) dc.DrawLine(pen, S(x0, y), S(x1, y));
         }
 
         private StreamGeometry ZoneGeometry(Zone z)
@@ -1064,7 +1073,7 @@ namespace RobotWin.Studio.Pcb
             if (pad != null) return (new PcbPoint(pad.Value.X, pad.Value.Y), pad, null, null);
             var via = HitVia(x, y);
             if (via != null) return (new PcbPoint(via.X, via.Y), null, null, via);
-            return (new PcbPoint(Snap(x), Snap(y)), null, null, null);
+            return (new PcbPoint(SnapX(x), SnapY(y)), null, null, null);
         }
 
         private void RouteClick(double x, double y, bool doubleClick)

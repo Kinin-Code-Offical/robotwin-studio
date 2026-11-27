@@ -49,7 +49,7 @@ namespace RobotTwin.CoreSim.Sandbox
             f.Joints.AddRange(joints.Select(Copy));
             f.Cables.AddRange(world.Cables.Where(c => set.Contains(c.A.ObjectId) && set.Contains(c.B.ObjectId)).Select(Copy));
             if (world.Mates != null)
-                f.Mates.AddRange(world.Mates.Where(m => set.Contains(m.A.Object) && set.Contains(m.B.Object)).Select(m => m.Clone()));
+                f.Mates.AddRange(world.Mates.Where(m => m.Features.All(x => set.Contains(x.Object))).Select(m => m.Clone()));
             var jointIds = new HashSet<string>(joints.Select(j => j.Id), StringComparer.OrdinalIgnoreCase);
             if (world.Couplings != null)
                 f.Couplings.AddRange(world.Couplings.Where(c => jointIds.Contains(c.JointA) && jointIds.Contains(c.JointB)).Select(Copy));
@@ -131,6 +131,8 @@ namespace RobotTwin.CoreSim.Sandbox
                     used.Add(m.Id);
                     m.A.Object = ids[src.A.Object];
                     m.B.Object = ids[src.B.Object];
+                    if (m.C != null) m.C.Object = ids[src.C!.Object];   // [mate-adv]
+                    if (m.D != null) m.D.Object = ids[src.D!.Object];
                     world.Mates.Add(m);
                 }
             }

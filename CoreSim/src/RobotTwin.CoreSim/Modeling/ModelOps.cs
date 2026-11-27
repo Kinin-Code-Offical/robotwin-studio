@@ -232,9 +232,13 @@ namespace RobotTwin.CoreSim.Modeling
         /// Mirrored copies across the document plane through <paramref name="center"/> perpendicular to <paramref name="axis"/>
         /// (left/right versions of a part). Symmetric primitives stay parametric.
         /// </summary>
-        public static List<ModelObject> MirrorCopy(ModelDocument doc, IEnumerable<ModelObject> objects, Axis axis, Vec3 center)
+        public static List<ModelObject> MirrorCopy(ModelDocument doc, IEnumerable<ModelObject> objects, Axis axis, Vec3 center) =>
+            MirrorCopy(doc, objects, AxisVector(axis), center);
+
+        /// <summary>[refgeom] Mirrored copies across any plane: through <paramref name="center"/>, square to <paramref name="normal"/>.</summary>
+        public static List<ModelObject> MirrorCopy(ModelDocument doc, IEnumerable<ModelObject> objects, Vec3 normal, Vec3 center)
         {
-            var mirror = Affine.Mirror(AxisVector(axis), center);
+            var mirror = Affine.Mirror(normal.Normalized(), center);
             var localMirror = Affine.Scale(new Vec3(-1, 1, 1));
             var result = new List<ModelObject>();
             foreach (var o in objects.ToList())
@@ -288,7 +292,11 @@ namespace RobotTwin.CoreSim.Modeling
         /// <paramref name="count"/> − 1 copies rotated about an axis through <paramref name="center"/>;
         /// <paramref name="totalDegrees"/> = 360 spreads them evenly around the circle.
         /// </summary>
-        public static List<ModelObject> ArrayCircular(ModelDocument doc, IEnumerable<ModelObject> objects, int count, double totalDegrees, Axis axis, Vec3 center)
+        public static List<ModelObject> ArrayCircular(ModelDocument doc, IEnumerable<ModelObject> objects, int count, double totalDegrees, Axis axis, Vec3 center) =>
+            ArrayCircular(doc, objects, count, totalDegrees, AxisVector(axis), center);
+
+        /// <summary>[refgeom] A circular pattern about any axis: along <paramref name="axis"/>, through <paramref name="center"/>.</summary>
+        public static List<ModelObject> ArrayCircular(ModelDocument doc, IEnumerable<ModelObject> objects, int count, double totalDegrees, Vec3 axis, Vec3 center)
         {
             var result = new List<ModelObject>();
             var src = objects.ToList();
@@ -296,7 +304,7 @@ namespace RobotTwin.CoreSim.Modeling
             double step = Math.Abs(totalDegrees) >= 359.999 ? totalDegrees / count : count > 1 ? totalDegrees / (count - 1) : 0;
             for (int i = 1; i < count; i++)
             {
-                var rot = Affine.Translate(center) * Affine.Rotate(AxisVector(axis), step * i) * Affine.Translate(-center);
+                var rot = Affine.Translate(center) * Affine.Rotate(axis.Normalized(), step * i) * Affine.Translate(-center);
                 foreach (var o in src)
                 {
                     var c = o.Clone();

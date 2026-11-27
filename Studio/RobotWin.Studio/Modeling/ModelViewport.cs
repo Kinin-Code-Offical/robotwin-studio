@@ -593,7 +593,7 @@ namespace RobotWin.Studio.Modeling
             return (best, bestT, bestP, bestFace);
         }
 
-        public string? PickObject(Point screen) => RayPick(screen).Entry?.Obj.Id;
+        public string? PickObject(Point screen) => PickReference(screen) ?? RayPick(screen).Entry?.Obj.Id;   // [refgeom] outlines first
 
         /// <summary>[fillet] The segments the next bevel starts with: 1 a chamfer, more a round (the Yuvarla button sets 8).</summary>
         public int NextBevelSegments { get; set; } = 1;

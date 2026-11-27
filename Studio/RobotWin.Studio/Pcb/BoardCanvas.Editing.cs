@@ -172,7 +172,7 @@ namespace RobotWin.Studio.Pcb
                     DimensionClick(x, y);
                     return;
                 case PcbTool.Text:
-                    TextRequested?.Invoke(this, new PcbPoint(Snap(x), Snap(y)));
+                    TextRequested?.Invoke(this, new PcbPoint(SnapX(x), SnapY(y)));
                     return;
                 case PcbTool.Line or PcbTool.Rectangle or PcbTool.Circle or PcbTool.Arc or PcbTool.Polygon:   // [graphics]
                     GraphicClick(x, y, e.ClickCount >= 2);
@@ -188,7 +188,7 @@ namespace RobotWin.Studio.Pcb
                     return;
                 case PcbTool.Hole:
                     BeforeEdit?.Invoke(this, EventArgs.Empty);
-                    Board.MountingHoles.Add(new MountingHole { X = Snap(x), Y = Snap(y), Drill = HoleDrill, PadDiameter = HolePad });
+                    Board.MountingHoles.Add(new MountingHole { X = SnapX(x), Y = SnapY(y), Drill = HoleDrill, PadDiameter = HolePad });
                     Edited($"Montaj deliği eklendi (Ø{HoleDrill:0.##} mm)");
                     return;
             }
@@ -352,7 +352,7 @@ namespace RobotWin.Studio.Pcb
 
             if (_moving)
             {
-                ApplyMove(Snap(x) - _moveOrigin.X, Snap(y) - _moveOrigin.Y);
+                ApplyMove(SnapX(x) - _moveOrigin.X, SnapY(y) - _moveOrigin.Y);
                 InvalidateVisual();
                 return;
             }
@@ -417,7 +417,7 @@ namespace RobotWin.Studio.Pcb
             switch (_drag)
             {
                 case DragKind.Group:
-                    BeginMove(MoveKind.Drag, false, Snap(_dragStartBoard.X), Snap(_dragStartBoard.Y));
+                    BeginMove(MoveKind.Drag, false, SnapX(_dragStartBoard.X), SnapY(_dragStartBoard.Y));
                     return;
                 default:
                     BeforeEdit?.Invoke(this, EventArgs.Empty);
@@ -448,7 +448,7 @@ namespace RobotWin.Studio.Pcb
             switch (_drag)
             {
                 case DragKind.Group:
-                    ApplyMove(Snap(x) - _moveOrigin.X, Snap(y) - _moveOrigin.Y);
+                    ApplyMove(SnapX(x) - _moveOrigin.X, SnapY(y) - _moveOrigin.Y);
                     break;
                 case DragKind.Segment when _selected is Track track:
                     RestoreTracks();
@@ -463,12 +463,12 @@ namespace RobotWin.Studio.Pcb
                 }
 
                 case DragKind.ZoneVertex when _selected is Zone zone:
-                    zone.Outline[_vertexIndex] = new PcbPoint(Snap(x), Snap(y));
+                    zone.Outline[_vertexIndex] = new PcbPoint(SnapX(x), SnapY(y));
                     _zoneGeo.Remove(zone);
                     break;
                 case DragKind.OutlineVertex:
-                    board.Outline[_vertexIndex].X = Math.Max(0, Snap(x));
-                    board.Outline[_vertexIndex].Y = Math.Max(0, Snap(y));
+                    board.Outline[_vertexIndex].X = Math.Max(0, SnapX(x));
+                    board.Outline[_vertexIndex].Y = Math.Max(0, SnapY(y));
                     break;
             }
         }
@@ -722,7 +722,7 @@ namespace RobotWin.Studio.Pcb
         public void BeginMoveSelection()
         {
             Focus();
-            BeginMove(MoveKind.Move, false, Snap(_cursor.X), Snap(_cursor.Y));
+            BeginMove(MoveKind.Move, false, SnapX(_cursor.X), SnapY(_cursor.Y));
         }
 
         /// <summary>Starts moving the selection with the mouse (click drops it, Esc / right click restores it).</summary>
@@ -1011,7 +1011,7 @@ namespace RobotWin.Studio.Pcb
                 }
             }
 
-            _clipOrigin = (Snap(_cursor.X), Snap(_cursor.Y));
+            _clipOrigin = (SnapX(_cursor.X), SnapY(_cursor.Y));
             Say($"{Clipboard.Count} öğe kopyalandı · Ctrl+V: yapıştır");
         }
 
@@ -1105,7 +1105,7 @@ namespace RobotWin.Studio.Pcb
                 return;
             }
 
-            ApplyMove(Snap(_cursor.X) - _moveOrigin.X, Snap(_cursor.Y) - _moveOrigin.Y);
+            ApplyMove(SnapX(_cursor.X) - _moveOrigin.X, SnapY(_cursor.Y) - _moveOrigin.Y);
             InvalidateVisual();
         }
 
@@ -1189,7 +1189,7 @@ namespace RobotWin.Studio.Pcb
                         return;
                     case Key.R:
                         foreach (var (c, _, _, _) in _moveComps) c.Rotation = (c.Rotation + (shift ? 270 : 90)) % 360;
-                        ApplyMove(Snap(_cursor.X) - _moveOrigin.X, Snap(_cursor.Y) - _moveOrigin.Y);
+                        ApplyMove(SnapX(_cursor.X) - _moveOrigin.X, SnapY(_cursor.Y) - _moveOrigin.Y);
                         InvalidateVisual();
                         return;
                 }
@@ -1334,12 +1334,12 @@ namespace RobotWin.Studio.Pcb
                     return;
                 case Key.M:
                     if (_sel.Count == 0 && HitAny(_cursor.X, _cursor.Y) is { } m) Select(m);
-                    BeginMove(MoveKind.Move, false, Snap(_cursor.X), Snap(_cursor.Y));
+                    BeginMove(MoveKind.Move, false, SnapX(_cursor.X), SnapY(_cursor.Y));
                     return;
                 case Key.G:
                     if (_sel.Count == 0 && HitAny(_cursor.X, _cursor.Y) is { } g) Select(g);
                     if (_sel.Count == 1 && _selected is Track) BeginSegmentDrag();
-                    else BeginMove(MoveKind.Drag, false, Snap(_cursor.X), Snap(_cursor.Y));
+                    else BeginMove(MoveKind.Drag, false, SnapX(_cursor.X), SnapY(_cursor.Y));
                     return;
                 case Key.D:
                     BeginSegmentDrag();
@@ -1561,7 +1561,7 @@ namespace RobotWin.Studio.Pcb
             if (board == null) return;
             string net = NetAt(x, y) ?? string.Empty;
             var router = new InteractiveRouter(board, net);
-            double vx = Snap(x), vy = Snap(y);
+            double vx = SnapX(x), vy = SnapY(y);
             if (!router.ViaClear(vx, vy, CopperLayer.Top, CopperLayer.Bottom))
             {
                 Say("Via buraya sığmıyor (aralık / delik kuralı)");
@@ -1634,8 +1634,8 @@ namespace RobotWin.Studio.Pcb
                 Add(new MenuItem { Header = $"{_sel.Count} öğe seçili", IsEnabled = false });
                 Add(Item("Grupla", "Ctrl+G", GroupSelection));   // [group]
                 if (_sel.Any(o => BoardGroups.GroupOf(o) != null)) Add(Item("Grubu çöz", "Ctrl+Shift+G", UngroupSelection));
-                Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, Snap(x), Snap(y))));
-                Add(Item("Sürükle (yollarla)", "G", () => BeginMove(MoveKind.Drag, false, Snap(x), Snap(y))));
+                Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, SnapX(x), SnapY(y))));
+                Add(Item("Sürükle (yollarla)", "G", () => BeginMove(MoveKind.Drag, false, SnapX(x), SnapY(y))));
                 if (_sel.OfType<BoardComponent>().Any())
                 {
                     Add(Item("Döndür", "R", () => RotateSelection()));
@@ -1662,8 +1662,8 @@ namespace RobotWin.Studio.Pcb
                         Add(Item(c.Side == CopperLayer.Top ? "Alt yüze çevir" : "Üst yüze çevir", "F", FlipSelection, !c.Locked));
                         Add(Item(c.Locked ? "Kilidi aç" : "Kilitle", "L", ToggleLock));
                         Add(null);
-                        Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, Snap(x), Snap(y)), !c.Locked));
-                        Add(Item("Sürükle (yollarla)", "G", () => BeginMove(MoveKind.Drag, false, Snap(x), Snap(y)), !c.Locked));
+                        Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, SnapX(x), SnapY(y)), !c.Locked));
+                        Add(Item("Sürükle (yollarla)", "G", () => BeginMove(MoveKind.Drag, false, SnapX(x), SnapY(y)), !c.Locked));
                         Add(null);
                         Add(Item("Özellikler…", "E", () => EditRequested?.Invoke(this, c)));
                         Add(Item("Footprint değiştir…", null, () => ChangeFootprintRequested?.Invoke(this, c)));
@@ -1693,7 +1693,7 @@ namespace RobotWin.Studio.Pcb
                             Edited($"{t.Net} yolu {PcbLayers.DisplayName(l)} katmanına");
                         }, true, t.Layer == l))));
                         Add(Item("Sürükle (açıyı koru)", "D", BeginSegmentDrag));
-                        Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, Snap(x), Snap(y))));
+                        Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, SnapX(x), SnapY(y))));
                         Add(Item("Buradan yol çiz", "X", () =>
                         {
                             SetTool(PcbTool.Route);
@@ -1718,8 +1718,8 @@ namespace RobotWin.Studio.Pcb
                                 SelectWholeTrack();
                             }
                         }));
-                        Add(Item("Sürükle (yollarla)", "G", () => BeginMove(MoveKind.Drag, false, Snap(x), Snap(y))));
-                        Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, Snap(x), Snap(y))));
+                        Add(Item("Sürükle (yollarla)", "G", () => BeginMove(MoveKind.Drag, false, SnapX(x), SnapY(y))));
+                        Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, SnapX(x), SnapY(y))));
                         Add(Item("Buradan yol çiz", "X", () =>
                         {
                             SetTool(PcbTool.Route);
@@ -1749,7 +1749,7 @@ namespace RobotWin.Studio.Pcb
                     {
                         var item = _selected!;
                         Add(Item("Özellikler…", "E", () => EditRequested?.Invoke(this, item)));
-                        Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, Snap(x), Snap(y))));
+                        Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, SnapX(x), SnapY(y))));
                         if (item is BoardText) Add(Item("Döndür", "R", () => RotateSelection()));
                         Add(null);
                         Add(Item("Kopyala", "Ctrl+C", CopySelection));
@@ -1782,13 +1782,14 @@ namespace RobotWin.Studio.Pcb
                             SetTool(PcbTool.Dimension);
                             DimensionClick(x, y);
                         }));
-                        Add(Item("Yazı ekle", "T", () => TextRequested?.Invoke(this, new PcbPoint(Snap(x), Snap(y)))));
+                        Add(Item("Yazı ekle", "T", () => TextRequested?.Invoke(this, new PcbPoint(SnapX(x), SnapY(y)))));
                         Add(Item("Montaj deliği", null, () =>
                         {
                             BeforeEdit?.Invoke(this, EventArgs.Empty);
-                            board.MountingHoles.Add(new MountingHole { X = Snap(x), Y = Snap(y), Drill = HoleDrill, PadDiameter = HolePad });
+                            board.MountingHoles.Add(new MountingHole { X = SnapX(x), Y = SnapY(y), Drill = HoleDrill, PadDiameter = HolePad });
                             Edited("Montaj deliği eklendi");
                         }));
+                        Add(OriginMenu(board, x, y));   // [origins]
                         Add(null);
                         Add(Item("Tümünü seç", "Ctrl+A", SelectAll));
                         Add(Item("Dolguları doldur", "B", () => RefillRequested?.Invoke(this, EventArgs.Empty), board.Zones.Count > 0));

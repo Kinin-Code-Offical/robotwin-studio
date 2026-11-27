@@ -27,6 +27,8 @@ With **Add** or **Shift+A**:
 
 - **Basic shapes**: box, cylinder, cone, sphere, torus, tube, wedge, perforated plate.
 - **Profile**: extrude a rectangle, circle, polygon, channel or a free sketch to a thickness. A **Draft** angle (SolidWorks' draft) leans the walls inwards going up and opens the holes, for parts that come out of a mould or print easily; a negative angle widens instead.
+- **Loft**: a solid passing from the bottom profile to the top one (SolidWorks' and Fusion's loft): a funnel from a square base to a round mouth, a duct transition. Either profile can be a rectangle, circle, polygon or channel; **Height** is the distance between them, **Twist** turns the top profile.
+- **Sweep**: carries a section along a 3D path (SolidWorks' and Fusion's sweep): a handle, a pipe, a bent bar, a cable duct. The section comes from the profile editor, the path is typed into **Path points** as "x,y,z; …" (mm). At a corner the section lies in the bisecting plane, so the wall keeps its thickness round the bend; the section does not turn about the path as it goes.
 - **Revolve**: turn a profile around an axis into a solid.
 - **Robot parts**: 2WD chassis plate, SG90 servo bracket, L bracket, wheel hub, enclosure + lid. Their dimensions can be changed later.
 
@@ -40,6 +42,7 @@ You can also draw a profile as a dimensioned sketch. Select the profile and pres
 4. Select the point where two lines meet and **Corner fillet** and **Chamfer** appear beside an mm box (SolidWorks' sketch fillet and sketch chamfer). The lines are cut back and joined by an arc tangent to both (its radius comes as a dimension) or by a straight edge. The corner stays as a virtual sharp on the lines' extensions, and the lines' length dimensions keep measuring to it. With **Construction geometry** on, what is drawn makes no edge of the profile; it only guides.
 5. **Mirror**: select one construction line (the axis) together with the lines, circles and arcs to mirror. The copies land on the other side of the axis; each copied point is held symmetric to its original, so the copy follows any later change. Points on the axis are shared, not copied; copied circles stay equal to their originals.
 6. **Trim** (SolidWorks' power trim): the clicked piece of a line, between the crossings on either side, goes; a line nothing crosses goes whole. A cut end is held on the entity that cut it. **Extend**: the line's free end nearer the click runs on to the first line, circle or arc ahead of it. A trimmed or extended line loses its length dimension (that line is no longer there).
+7. **Linear pattern / Circular pattern** (SolidWorks' sketch pattern): with lines, circles or arcs selected, a **Qty** box (the original included) and the X and Y step (mm) appear below; select a point as well and the copies turn round it, with the **Angle** they spread over in place of the step (360° is a full turn, evenly spaced). Each copy is held to the one before it by dimensions: in a row, a horizontal and a vertical dimension; round a point, construction spokes from the centre, equal and at the step's angle. Move or grow the original and the whole pattern follows; change any one gap's dimension in the constraint list.
 
 Each change is solved at once and the drawing settles onto the dimensions. The right side of the window shows the sketch's state:
 - how many degrees of freedom are left;
@@ -96,6 +99,8 @@ To split an object in two, select it and press **K** (or **Slice**). Click the s
 ![A sliced tube, a bevelled block and a solidified tray](../../images/en/modeler-cut.png)
 
 Other object operations: **Ctrl+J** join, mirror copy (X / Y / Z), linear and circular array, **Ctrl+P** set parent, **Alt+P** clear parent, **Shift+D** duplicate, **H** hide, **Alt+H** show all.
+
+**Reference geometry** (SolidWorks' reference plane, axis and point): **Add** (Shift+A) ▸ **Reference plane**, **Reference axis** or **Reference point** is made from what is selected. A plane: through three points selected in edit mode, 20 mm from a selected plane, half way between two selected parallel planes, or square to a selected axis. An axis: through two points, along a selected round part (cylinder, cone, tube, torus, revolve), or where two selected planes meet. A point: at a selected point or at the middle of the selected parts. With nothing selected, a level plane, an upright axis or a point comes at the middle of the view. References have no solid: they stay out of export, mass and the assembly; each is drawn as a thin frame, a dashed axis line or a cross, with its name, and is selected by clicking its line. Moving, turning and parenting work as on any object; the inspector shows only its place and drawn size. With a plane selected together with parts, right-click ▸ **Mirror copy · across Plane1** mirrors the parts in that plane; with an axis selected, **Circular array…** spreads the copies round that axis.
 
 As in Blender, **N** hides and brings back the side panel on the right (parts and properties), **T** the tool shelf on the left; **Ctrl+Space** clears everything round the view.
 

@@ -50,7 +50,7 @@ namespace RobotWin.Studio.Modeling
     /// State of the modelling workspace: the document, object and element selection,
     /// edit mode and undo/redo (whole-document snapshots, so every operation is undoable).
     /// </summary>
-    public sealed class ModelEditor
+    public sealed partial class ModelEditor
     {
         private sealed class Snapshot
         {

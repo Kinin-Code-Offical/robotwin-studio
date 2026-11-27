@@ -27,6 +27,8 @@ Bir dosyada istediğiniz kadar parça olur:
 
 - **Temel şekiller:** Kutu, Silindir, Koni, Küre, Simit, Boru, Kama, Delikli plaka.
 - **Profil:** dikdörtgen, daire, çokgen, kanal veya serbest bir çizimi kalınlık vererek uzatın (ekstrüzyon). **Koniklik (draft)** açısı (SolidWorks'teki draft) duvarları yukarı doğru içe eğer, delikleri genişletir: kalıptan çıkacak ya da kolay basılacak parçalar için. Eksi açı tersine genişletir.
+- **Geçiş (loft):** alt profilden üst profile geçen katı (SolidWorks ve Fusion'daki loft): kare tabandan yuvarlak ağza bir huni, bir hava kanalı geçişi. İki profil de dikdörtgen, daire, çokgen ya da kanal olabilir; **Yükseklik** aralarındaki mesafe, **Burulma** üst profili döndürür (burgu).
+- **Süpürme (sweep):** bir kesiti 3B bir yol boyunca taşır (SolidWorks ve Fusion'daki sweep): kulp, boru, bükülmüş çubuk, kablo kanalı. Kesit profil düzenleyicisiyle, yol **Yol noktaları** kutusuna "x,y,z; …" (mm) yazılarak verilir. Köşelerde kesit ikiye bölen düzlemde durur, böylece duvar kalınlığı bükümde korunur; kesit yol boyunca kendi çevresinde dönmez.
 - **Döndürme:** bir profili eksen etrafında döndürerek gövde oluşturun.
 - **Robot parçaları:** 2WD şasi plakası, SG90 servo braketi, L braket, Tekerlek göbeği, Muhafaza kutusu + kapak. Bunların ölçüleri sonradan değiştirilebilir.
 
@@ -40,6 +42,7 @@ Bir profili ölçülü eskizle de çizebilirsiniz. Profili seçin, denetçide **
 4. İki çizginin birleştiği köşe noktasını seçince mm kutusunun yanında **Köşe radyüsü** ve **Pah** çıkar (SolidWorks'teki eskiz radyüsü ve eskiz pahı). Çizgiler geri kesilir; radyüs iki çizgiye teğet bir yayla (yarıçapı ölçü olarak gelir), pah düz bir kenarla birleştirir. Köşe, çizgilerin uzantısında sanal sivri olarak kalır; çizgilerin uzunluk ölçüleri ona kadar ölçmeye devam eder. **Yardımcı geometri** açıkken çizilenler profile girmez, yalnız yol gösterir.
 5. **Aynala**: tek bir yardımcı çizgiyi (eksen) ve aynalanacak çizgi, daire ve yayları birlikte seçin. Kopyalar eksenin öbür yanına gelir; her kopya noktası aslına simetri ilişkisiyle bağlıdır, yani aslı değişince kopya da izler. Eksen üstündeki noktalar kopyalanmaz, paylaşılır; kopyalanan daireler aslıyla eşit kalır.
 6. **Buda** (SolidWorks'teki güçlü budama): bir çizginin tıklanan parçası, iki yanındaki kesişimler arasında silinir; hiçbir şey kesmiyorsa çizginin tamamı gider. Kesilen uç, onu kesen öğenin üstünde tutulur. **Uzat**: çizginin tıklanan yakınındaki serbest ucu, önünde kesiştiği ilk çizgi, daire ya da yaya kadar uzar. Budanan ya da uzatılan çizginin uzunluk ölçüsü kaldırılır (artık o çizgi yok).
+7. **Doğrusal çoğalt / Dairesel çoğalt** (SolidWorks'teki eskiz çoğaltma): çizgi, daire ya da yay seçince altta **Adet** (aslı dahil) ile X ve Y adımı (mm) çıkar; bir nokta da seçerseniz onun çevresinde döndürür, adımın yerine yayılma **Açı**sı gelir (360° tam tur, eşit aralık). Her kopya bir öncekine ölçüyle bağlıdır: sırada yatay ve dikey ölçü, dairede merkezden çıkan yardımcı kollar arasında eşitlik ve açı. Aslı taşınınca ya da büyüyünce bütün sıra izler; bir aralığın ölçüsünü kısıt listesinden değiştirebilirsiniz.
 
 Her değişiklik hemen çözülür ve çizim ölçülere oturur. Pencerenin sağında eskizin durumu yazar:
 - kaç serbestlik kaldığı;
@@ -96,6 +99,8 @@ Bir nesneyi iki parçaya ayırmak için nesneyi seçin ve **K**'ye (ya da **Dili
 ![Dilimlenmiş boru, pah kırılmış blok, kalınlık verilmiş tepsi](../images/modeler-cut.png)
 
 Diğer nesne işlemleri: **Ctrl+J** birleştir, ayna kopya (X / Y / Z), doğrusal ve dairesel dizi, **Ctrl+P** ebeveyn yap, **Alt+P** ebeveyni kaldır, **Shift+D** çoğalt, **H** gizle, **Alt+H** hepsini göster.
+
+**Referans geometri** (SolidWorks'teki referans düzlem, eksen ve nokta): **Ekle** (Shift+A) ▸ **Referans düzlem**, **Referans eksen** ya da **Referans nokta** seçime göre yapılır. Düzlem: düzenleme kipinde seçili üç noktadan, seçili bir düzlemden 20 mm uzakta, seçili iki paralel düzlemin ortasında ya da seçili bir eksene dik. Eksen: iki noktadan, seçili yuvarlak bir parçanın (silindir, koni, boru, simit, döner gövde) ekseninde ya da seçili iki düzlemin kesiştiği yerde. Nokta: seçili noktada ya da seçili parçaların ortasında. Seçim yoksa görünümün ortasında yatay bir düzlem, dik bir eksen ya da bir nokta gelir. Referansların katısı yoktur: dışa aktarmaya, kütleye ve montaja girmez; ince bir çerçeve, kesik bir eksen çizgisi ya da bir artı olarak adıyla çizilir ve çizgisine tıklanarak seçilir. Taşıma, döndürme ve ebeveyn bağı her nesnedeki gibidir; denetçide yalnız yeri ve çizim boyu vardır. Bir düzlem parçalarla birlikte seçiliyken sağ tık ▸ **Ayna kopyası · Düzlem1 düzlemine göre** parçaları o düzleme göre aynalar; bir eksen seçiliyken **Dairesel dizi…** kopyaları o eksenin çevresinde dağıtır.
 
 Blender'daki gibi **N** sağdaki yan paneli (parçalar ve özellikler), **T** soldaki araç rafını gizler ve geri getirir; **Ctrl+Space** görünümün çevresindeki her şeyi kaldırır.
 

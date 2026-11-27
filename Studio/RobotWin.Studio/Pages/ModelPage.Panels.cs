@@ -26,6 +26,8 @@ namespace RobotWin.Studio.Pages
 
         private Geometry IconFor(ModelObject o)
         {
+            if (o.Reference is { } r)   // [refgeom]
+                return Icon(r.Kind == ReferenceKind.Plane ? "M.RefPlane" : r.Kind == ReferenceKind.Axis ? "M.RefAxis" : "M.RefPoint");
             if (o.Primitive == null) return Icon("M.Edit");
             return o.Primitive.Kind switch
             {
@@ -39,6 +41,8 @@ namespace RobotWin.Studio.Pages
                 PrimitiveKind.Plate => Icon("M.Plate"),
                 PrimitiveKind.Extrude => Icon("M.Extrude"),
                 PrimitiveKind.Revolve => Icon("M.Revolve"),
+                PrimitiveKind.Loft => Icon("M.Loft"),
+                PrimitiveKind.Sweep => Icon("M.Sweep"),
                 _ => Icon("I.Part")
             };
         }
@@ -298,6 +302,14 @@ namespace RobotWin.Studio.Pages
 
             var o = _ed.Active ?? objs.Last();
             ObjectHeader(o, objs.Count);
+            if (o.Reference != null)
+            {
+                // [refgeom] a reference has no solid: its place, its drawn size and what it is for; nothing about material
+                TransformSection(o);
+                ReferenceSection(o);
+                return;
+            }
+
             TransformSection(o);
             ShapeOpsSection(objs);
             if (o.Primitive != null) PrimitiveSection(o);
@@ -336,7 +348,9 @@ namespace RobotWin.Studio.Pages
                 if (t.Length > 0 && t != o.Name) _ed.Do("Yeniden adlandırıldı: " + t, () => o.Name = t, ModelChange.Selection);
             };
             Props.Children.Add(nameBox);
-            string kind = o.Primitive != null
+            string kind = o.Reference is { } rf
+                ? (rf.Kind == ReferenceKind.Plane ? "Referans düzlem" : rf.Kind == ReferenceKind.Axis ? "Referans eksen" : "Referans nokta") + " · katı yok, yalnız ölçü yeri"
+                : o.Primitive != null
                 ? (o.Primitive.Kind == PrimitiveKind.Part ? RobotParts.Find(o.Primitive.Template)?.Name ?? "Parça" : PrimitiveSchema.Name(o.Primitive.Kind)) + " · parametrik"
                 : $"Düzenlenebilir ağ · {o.LocalMesh().Vertices.Count} nokta, {o.LocalMesh().Faces.Count} yüz";
             if (count > 1) kind += $" · {count} nesne seçili (etkin nesne gösteriliyor)";
@@ -355,6 +369,7 @@ namespace RobotWin.Studio.Pages
             Num(host, "Döndürme X", t.RX, "°", v => t.RX = v, "Döndürme", false, 5, 2);
             Num(host, "Döndürme Y", t.RY, "°", v => t.RY = v, "Döndürme", false, 5, 2);
             Num(host, "Döndürme Z", t.RZ, "°", v => t.RZ = v, "Döndürme", false, 5, 2);
+            if (o.IsReference) return;   // [refgeom] no scale and no size: a reference's size is its drawn size
             Num(host, "Ölçek X", t.SX, "", v => t.SX = v == 0 ? 1e-4 : v, "Ölçek", false, 0.05, 4);
             Num(host, "Ölçek Y", t.SY, "", v => t.SY = v == 0 ? 1e-4 : v, "Ölçek", false, 0.05, 4);
             Num(host, "Ölçek Z", t.SZ, "", v => t.SZ = v == 0 ? 1e-4 : v, "Ölçek", false, 0.05, 4);
@@ -404,6 +419,17 @@ namespace RobotWin.Studio.Pages
             if (spec.Kind == PrimitiveKind.Plate) PlateHoles(spec);
             if (spec.Kind == PrimitiveKind.Extrude) SketchSection(spec);
             if (spec.Kind == PrimitiveKind.Revolve) RevolveSection(spec);
+            if (spec.Kind == PrimitiveKind.Sweep) SweepSection(spec);   // [sweep] Pages/ModelPage.Sweep.cs
+            if (spec.Kind == PrimitiveKind.Loft)   // [loft] the two profiles it passes between
+            {
+                spec.Sketch ??= new Sketch2D();
+                spec.Sketch2 ??= new Sketch2D { Outer = SketchShape.Circle(20) };
+                Section("Alt profil");
+                ShapeEditor(spec.Sketch.Outer, false);
+                Section("Üst profil");
+                ShapeEditor(spec.Sketch2.Outer, false);
+                Caption("İki profil aynı sayıda noktaya bölünür ve sağdan (+X) başlayarak eşlenir; Burulma üst profili döndürür.");
+            }
             var conv = SmallButton("Düzenlenebilir ağa dönüştür", _ed.ConvertToMesh, "Parametreler kaybolur; nokta/kenar/yüz düzenlemesi açılır (Tab da dönüştürür)");
             conv.Margin = new Thickness(0, 6, 0, 0);
             conv.HorizontalAlignment = HorizontalAlignment.Left;
@@ -1127,7 +1153,7 @@ namespace RobotWin.Studio.Pages
                      {
                          (PrimitiveKind.Box, "M.Box"), (PrimitiveKind.Cylinder, "M.Cylinder"), (PrimitiveKind.Cone, "M.Cone"), (PrimitiveKind.Sphere, "M.Sphere"),
                          (PrimitiveKind.Torus, "M.Torus"), (PrimitiveKind.Tube, "M.Tube"), (PrimitiveKind.Wedge, "M.Wedge"), (PrimitiveKind.Plate, "M.Plate"),
-                         (PrimitiveKind.Extrude, "M.Extrude"), (PrimitiveKind.Revolve, "M.Revolve")
+                         (PrimitiveKind.Extrude, "M.Extrude"), (PrimitiveKind.Revolve, "M.Revolve"), (PrimitiveKind.Loft, "M.Loft"), (PrimitiveKind.Sweep, "M.Sweep")
                      })
             {
                 var k = kind;

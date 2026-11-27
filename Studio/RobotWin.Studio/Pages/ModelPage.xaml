@@ -15,6 +15,11 @@
         <Geometry x:Key="M.Tube">M5,6 A7,2.5 0 1 0 19,6 A7,2.5 0 1 0 5,6 M9,6 A3,1 0 1 0 15,6 A3,1 0 1 0 9,6 M5,6 V18 A7,2.5 0 0 0 19,18 V6</Geometry>
         <Geometry x:Key="M.Wedge">M3,18 H21 L3,7 Z M3,18 L7,15 H21 M7,15 L3,7</Geometry>
         <Geometry x:Key="M.Plate">M3,10 L12,6 L21,10 L12,14 Z M3,10 V12.5 L12,16.5 L21,12.5 V10 M10,10 A1.6,0.8 0 1 0 10.01,10 M15,10 A1.6,0.8 0 1 0 15.01,10</Geometry>
+        <Geometry x:Key="M.Sweep">M5,19 V9 A4,4 0 0 1 9,5 H15 A4,4 0 0 1 19,9 V19 M3,19 H7 M17,19 H21</Geometry>
+        <Geometry x:Key="M.RefPlane">M3,17 L8,7 H21 L16,17 Z</Geometry>
+        <Geometry x:Key="M.RefAxis">M4,20 L6.5,17.5 M8.5,15.5 L11,13 M13,11 L15.5,8.5 M17.5,6.5 L20,4</Geometry>
+        <Geometry x:Key="M.RefPoint">M12,5 V9 M12,15 V19 M5,12 H9 M15,12 H19 M10.5,12 A1.5,1.5 0 1 0 13.5,12 A1.5,1.5 0 1 0 10.5,12</Geometry>
+        <Geometry x:Key="M.Loft">M4,19 H16 L20,16 H8 Z M8,8 A4,1.6 0 1 0 16,8 A4,1.6 0 1 0 8,8 M4,19 L8,8 M16,19 L16,8 M20,16 L16,8</Geometry>
         <Geometry x:Key="M.Extrude">M5,14 V8 L9,5 H19 V11 L15,14 Z M5,8 H15 V14 M15,8 L19,5 M12,19 V16 M10,17.5 L12,19.5 L14,17.5</Geometry>
         <Geometry x:Key="M.Revolve">M12,3 V21 M12,5 C17,5 15,10 18,12 C15,14 17,19 12,19 M5,9 A7,2.4 0 0 0 19,9</Geometry>
         <Geometry x:Key="M.Union">M4,6 H14 V10 H20 V20 H10 V16 H4 Z</Geometry>

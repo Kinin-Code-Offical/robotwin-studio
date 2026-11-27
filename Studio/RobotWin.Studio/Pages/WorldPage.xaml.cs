@@ -1476,7 +1476,11 @@ namespace RobotWin.Studio.Pages
             ToolCable.IsChecked = tool == WorldTool.Cable;
             ToolJoint.IsChecked = tool == WorldTool.Joint;
             ToolMate.IsChecked = tool == WorldTool.Mate;
-            if (tool != WorldTool.Mate) _mateFirst = null;   // [mate] a half-made pair is dropped
+            if (tool != WorldTool.Mate)
+            {
+                _mateFirst = null;   // [mate] a half-made pair is dropped
+                _matePending = null;   // [mate-adv] and a symmetric or width mate waiting for its plane or faces
+            }
             if (tool == WorldTool.Joint && Scene.Selected == null) W.Status = "Önce takılacak nesneyi seçin, sonra takılacağı yeri tıklayın";
         }
 
@@ -1943,6 +1947,12 @@ namespace RobotWin.Studio.Pages
             if (template == "mate")
             {
                 MateSnapshot();   // [mate] Pages/WorldPage.Mates.cs
+                return;
+            }
+
+            if (template == "mate-width")
+            {
+                MateWidthSnapshot();   // [mate-adv]
                 return;
             }
 

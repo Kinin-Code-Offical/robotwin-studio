@@ -289,6 +289,9 @@ namespace RobotTwin.CoreSim.Pcb
                 Stackup(board),
                 new SNode("pad_to_mask_clearance", N(MaskExpansion)),
                 new SNode("allow_soldermask_bridges_in_footprints", "no"));
+            // [origins] KiCad's drill/place file origin and grid origin, where this board has them
+            if (board.AuxOrigin is { } aux) setup.Add(new SNode("aux_axis_origin", N(aux.X), N(aux.Y)));
+            if (board.GridOrigin is { } grid) setup.Add(new SNode("grid_origin", N(grid.X), N(grid.Y)));
             if (embedRules)
             {
                 // Board-level rule tokens of the KiCad 5 board format; KiCad 6-8 still parse

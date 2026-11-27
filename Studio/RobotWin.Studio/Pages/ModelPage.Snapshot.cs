@@ -91,7 +91,7 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            if (demo is "sketch" or "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim")
+            if (demo is "sketch" or "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim" or "sketch-pattern")
             {
                 // [sketch] A motor bracket drawn as a dimensioned sketch: a 50 × 40 plate with a round end tangent to its
                 // sides, a bolt hole and a bearing seat round the end's centre, fully constrained; extruded 6 mm.
@@ -106,9 +106,9 @@ namespace RobotWin.Studio.Pages
                 _ed.Load(bracket, null);
                 _ed.Select(plate.Id);
                 _vp.FrameAll();
-                if (demo is "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim")
+                if (demo is "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim" or "sketch-pattern")
                 {
-                    var start = demo is "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim" ? new ConstrainedSketch() : plate.Primitive.Sketch.Constrained;
+                    var start = demo is "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim" or "sketch-pattern" ? new ConstrainedSketch() : plate.Primitive.Sketch.Constrained;
                     var editor = new SketchEditorWindow(Window.GetWindow(this), start, _ => { });
                     editor.Show();
                     if (demo == "sketch-trim")
@@ -122,6 +122,29 @@ namespace RobotWin.Studio.Pages
                             ("line", 10, 20, null), ("line", 10, -20, null), ("end", 0, 0, null),
                             ("line", -30, -10, null), ("line", -20, -10, null), ("end", 0, 0, null),
                             ("trim", 0, 10, null), ("extend", -21, -10, null), ("select", 40, 40, null)
+                        });
+                        editor.UpdateLayout();
+                        App.SnapshotTarget = editor.Content as FrameworkElement;
+                        return;
+                    }
+
+                    if (demo == "sketch-pattern")
+                    {
+                        // [sketch-pattern] a row of four 6 mm holes at a 12 mm pitch, and six bolt holes round a centre
+                        editor.UpdateLayout();
+                        SketchEditorWindow.PatternDefaults(4, 12, 0, 360);
+                        editor.Script(new (string, double, double, string?)[]
+                        {
+                            ("circle", -30, -15, null), ("circle", -27, -15, null),
+                            ("select", -27, -15, null), ("relate", 0, 0, "Doğrusal çoğalt")
+                        });
+                        SketchEditorWindow.PatternDefaults(6, 12, 0, 360);
+                        editor.Script(new (string, double, double, string?)[]
+                        {
+                            ("construction", 0, 0, null), ("circle", 20, 12, null), ("circle", 32, 12, null), ("construction", 0, 0, null),
+                            ("circle", 32, 12, null), ("circle", 34.5, 12, null),
+                            ("select", 34.5, 12, null), ("add", 20, 12, null), ("relate", 0, 0, "Dairesel çoğalt"),
+                            ("select", -30, -15, null)
                         });
                         editor.UpdateLayout();
                         App.SnapshotTarget = editor.Content as FrameworkElement;
@@ -344,6 +367,47 @@ namespace RobotWin.Studio.Pages
                     _ed.Status($"Fark: 'Motor plakası' (6 araç) · {plate.LocalMesh().Faces.Count} yüz · kapalı (su geçirmez)");
                     if (demo is "section" or "section-props") ShowSection(SectionAxis.Y, 0);
                     if (demo == "section-props") OnSectionProps(this, new RoutedEventArgs());
+                    break;
+                }
+
+                case "refgeom":   // [refgeom] a bracket mirrored across a tilted reference plane; four pins round a reference axis
+                {
+                    var bracket = ModelOps.AddPrimitive(doc, PrimitiveKind.Wedge, 28, 18);
+                    bracket.Name = "Braket";
+                    bracket.Color = "#3B82C4";
+                    var plane = ModelReferences.Add(doc, ReferenceKind.Plane, new Vec3(0, 10, 15), new Vec3(1, 0.35, 0), size: 50);
+                    ModelReferences.MirrorCopy(doc, new[] { bracket }, plane).Single().Color = "#3B82C4";
+                    var pin = ModelOps.AddPrimitive(doc, PrimitiveKind.Cylinder, 18, -40);
+                    pin.Primitive!.Set("d", 6);
+                    pin.Primitive.Set("h", 14);
+                    pin.Transform.Position = new Vec3(18, -40, 7);
+                    pin.Name = "Pim";
+                    pin.Color = "#E87A2C";
+                    var axis = ModelReferences.Add(doc, ReferenceKind.Axis, new Vec3(0, -40, 10), Vec3.UnitZ, size: 40);
+                    ModelReferences.ArrayCircular(doc, new[] { pin }, 4, 360, axis).ForEach(c => c.Color = "#E87A2C");
+                    ModelReferences.PointAt(doc, new Vec3(0, -40, 0));
+                    _ed.Load(doc, null);
+                    _ed.Select(plane.Id);
+                    _vp.FrameAll();
+                    break;
+                }
+
+                case "loft":   // [loft] a square base into a round top, and a twisted one beside it
+                {
+                    var funnel = ModelOps.AddPrimitive(doc, PrimitiveKind.Loft);
+                    funnel.Name = "Geçiş";
+                    funnel.Color = "#3B82C4";
+                    var twist = ModelOps.AddPrimitive(doc, PrimitiveKind.Loft, 45, 0);
+                    twist.Name = "Burulmuş";
+                    twist.Primitive!.Sketch2 = new Sketch2D { Outer = SketchShape.Rect(30, 30) };
+                    twist.Primitive.Set("twist", 90);
+                    twist.Color = "#E87A2C";
+                    var handle = ModelOps.AddPrimitive(doc, PrimitiveKind.Sweep, 0, 50);   // [sweep] a bent bar beside them
+                    handle.Name = "Kulp";
+                    handle.Color = "#2E9E6B";
+                    _ed.Load(doc, null);
+                    _ed.Select(funnel.Id);
+                    _vp.FrameAll();
                     break;
                 }
 

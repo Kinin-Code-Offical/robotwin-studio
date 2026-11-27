@@ -430,7 +430,7 @@ namespace RobotWin.Studio.Pages
         {
             var menu = new ContextMenu();
             menu.Items.Add(MenuTitle("Ekle · temel şekiller"));
-            foreach (var kind in new[] { PrimitiveKind.Box, PrimitiveKind.Cylinder, PrimitiveKind.Cone, PrimitiveKind.Sphere, PrimitiveKind.Torus, PrimitiveKind.Tube, PrimitiveKind.Wedge, PrimitiveKind.Plate, PrimitiveKind.Extrude, PrimitiveKind.Revolve })
+            foreach (var kind in new[] { PrimitiveKind.Box, PrimitiveKind.Cylinder, PrimitiveKind.Cone, PrimitiveKind.Sphere, PrimitiveKind.Torus, PrimitiveKind.Tube, PrimitiveKind.Wedge, PrimitiveKind.Plate, PrimitiveKind.Extrude, PrimitiveKind.Revolve, PrimitiveKind.Loft, PrimitiveKind.Sweep })
             {
                 var k = kind;
                 menu.Items.Add(Item(PrimitiveSchema.Name(k), null, () => AddPrimitive(k)));
@@ -444,6 +444,12 @@ namespace RobotWin.Studio.Pages
                 menu.Items.Add(Item(t.Id == "enclosure" ? "Muhafaza kutusu + kapak" : t.Name, null, () => AddPart(id)));
             }
 
+            // [refgeom] SolidWorks' reference geometry, made from what is selected
+            menu.Items.Add(new Separator());
+            menu.Items.Add(MenuTitle("Referans geometri"));
+            menu.Items.Add(Item("Referans düzlem", null, () => _ed.AddReference(ReferenceKind.Plane, DropPoint())));
+            menu.Items.Add(Item("Referans eksen", null, () => _ed.AddReference(ReferenceKind.Axis, DropPoint())));
+            menu.Items.Add(Item("Referans nokta", null, () => _ed.AddReference(ReferenceKind.Point, DropPoint())));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("STL / OBJ / PLY içe aktar…", null, () => OnImport(this, new RoutedEventArgs())));
             Open(menu, target);
@@ -524,6 +530,9 @@ namespace RobotWin.Studio.Pages
             menu.Items.Add(Item("Ayna kopyası · X (sağ/sol)", null, () => _ed.MirrorCopy(Axis.X), any));
             menu.Items.Add(Item("Ayna kopyası · Y (ön/arka)", null, () => _ed.MirrorCopy(Axis.Y), any));
             menu.Items.Add(Item("Ayna kopyası · Z (alt/üst)", null, () => _ed.MirrorCopy(Axis.Z), any));
+            var mirrorPlane = _ed.SelectedReferences(ReferenceKind.Plane);
+            if (mirrorPlane.Count == 1)   // [refgeom] across the selected reference plane
+                menu.Items.Add(Item($"Ayna kopyası · {mirrorPlane[0].Name} düzlemine göre", null, () => _ed.MirrorAcross(mirrorPlane[0]), _ed.SelectedObjects.Any(o => !o.IsReference)));
             menu.Items.Add(Item("Yerinde aynala · X", null, () => _ed.MirrorInPlace(Axis.X), any));
             menu.Items.Add(Item("Doğrusal dizi…", null, LinearArrayDialog, any));
             menu.Items.Add(Item("Dairesel dizi…", null, CircularArrayDialog, any));
@@ -557,6 +566,15 @@ namespace RobotWin.Studio.Pages
 
         private void CircularArrayDialog()
         {
+            var axes = _ed.SelectedReferences(ReferenceKind.Axis);
+            if (axes.Count == 1)
+            {
+                // [refgeom] about the selected reference axis
+                var ra = ParamDialog.Show(Owner, "Dairesel dizi", $"Kopyalar {axes[0].Name} ekseni çevresinde dağıtılır (360° = tam daire).", ("Adet (toplam)", 6), ("Toplam açı (°)", 360));
+                if (ra != null) _ed.ArrayCircularAbout((int)Math.Round(ra[0]), ra[1], axes[0]);
+                return;
+            }
+
             var r = ParamDialog.Show(Owner, "Dairesel dizi", "Kopyalar Z ekseni etrafında, merkez noktası çevresinde dağıtılır (360° = tam daire).",
                 ("Adet (toplam)", 6), ("Toplam açı (°)", 360), ("Merkez X (mm)", 0), ("Merkez Y (mm)", 0));
             if (r == null) return;

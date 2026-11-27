@@ -479,6 +479,7 @@ Akım sınırını sürücünün **Akım sınırı** değeriyle ayarlayın; bu, 
 - **Eş eksenli:** mil deliğinde.
 - **Paralel**, **dik**, **mesafe** ve **açı**.
 - **Mesafe sınırı** ve **açı sınırı** (SolidWorks'teki gelişmiş ilişkiler): parça bir aralıkta serbesttir; aralığın dışındaysa yakın ucuna getirilir. Şimdiki değerin çevresinde (±10 mm, ±15°) gelir, iki ucu denetçide **En az** ve **En çok** ile değiştirilir. Aralığın içindeyken serbestlik sayısını azaltmaz ve tekrar sayılmaz.
+- **Simetrik** ve **Genişlik** (SolidWorks'teki gelişmiş ilişkiler; menüde üç noktayla biter, ek seçim ister): **Simetrik** için iki yüz, iki eksen ya da iki noktadan sonra herhangi bir parçada simetri düzlemi olacak yüzü tıklayın; ikinci, birincinin o düzlemdeki ayna görüntüsüne oturur. **Genişlik** için önce oluğun bir yüzünü, sonra tırnağın bir yüzünü, ardından oluğun öbür yüzünü ve tırnağın öbür yüzünü tıklayın; tırnak oluğun tam ortasına, yüzleri oluğunkilere paralel oturur (oluk tek parçada ya da iki duvarda olabilir). Denetçideki **Ortadan kayma** tırnağı ortadan kaydırır. Esc yarım seçimi bırakır.
 
 Sabit parça yerinde kalır, öteki parça olabildiğince az hareketle yerine oturur. Vidalı ya da gruplu parçalar onunla birlikte gider. Parçanın denetçisinde **Montaj ilişkileri** bölümü vardır. Burada aralıkları ve açıları değiştirebilir, ilişkiyi kaldırabilirsiniz; parçanın kaç serbestliği kaldığı da yazar. Örneğin deliğindeki milin iki serbestliği kalır (kayar ve döner), omzu da yatağa dayanırsa bire iner.
 

@@ -78,7 +78,20 @@ namespace RobotTwin.CoreSim.Sandbox
         LimitDistance,
 
         /// <summary>[mate-limit] SolidWorks' limit angle: two faces or axes between <see cref="WorldMate.Value"/> and <see cref="WorldMate.Value2"/> degrees apart.</summary>
-        LimitAngle
+        LimitAngle,
+
+        /// <summary>
+        /// [mate-adv] SolidWorks' symmetric: A and B (two faces, two axes or two points) mirror images of each other in the
+        /// plane <see cref="WorldMate.C"/>, a face of any part.
+        /// </summary>
+        Symmetric,
+
+        /// <summary>
+        /// [mate-adv] SolidWorks' width (centred): a tab between its faces B and D held in the middle of a groove between the
+        /// faces A and C, its middle plane on the groove's (the groove's faces on one part or two, as two walls make one;
+        /// <see cref="WorldMate.Value"/> moves the tab off the middle, m).
+        /// </summary>
+        Width
     }
 
     public sealed class WorldMate
@@ -95,7 +108,28 @@ namespace RobotTwin.CoreSim.Sandbox
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
         public double Value2 { get; set; }
 
-        public WorldMate Clone() => new WorldMate { Id = Id, Kind = Kind, A = A.Clone(), B = B.Clone(), Value = Value, Value2 = Value2 };
+        /// <summary>[mate-adv] Symmetric: the symmetry plane. Width: the groove's other face.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public MateFeature? C { get; set; }
+
+        /// <summary>[mate-adv] Width: the tab's other face.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public MateFeature? D { get; set; }
+
+        /// <summary>Every feature the mate names: A, B and, where it has them, C and D.</summary>
+        [JsonIgnore]
+        public IEnumerable<MateFeature> Features
+        {
+            get
+            {
+                yield return A;
+                yield return B;
+                if (C != null) yield return C;
+                if (D != null) yield return D;
+            }
+        }
+
+        public WorldMate Clone() => new WorldMate { Id = Id, Kind = Kind, A = A.Clone(), B = B.Clone(), C = C?.Clone(), D = D?.Clone(), Value = Value, Value2 = Value2 };
     }
 
     public enum MateState
@@ -156,11 +190,23 @@ namespace RobotTwin.CoreSim.Sandbox
             MateKind.Concentric => a == MateFeatureKind.Axis && b == MateFeatureKind.Axis,
             MateKind.Parallel or MateKind.Perpendicular or MateKind.Angle or MateKind.LimitAngle => a != MateFeatureKind.Point && b != MateFeatureKind.Point,
             MateKind.Distance or MateKind.LimitDistance => a == MateFeatureKind.Plane,
+            MateKind.Symmetric => a == b,   // [mate-adv] its plane comes third
+            MateKind.Width => a == MateFeatureKind.Plane && b == MateFeatureKind.Plane,
             _ => false
         };
 
+        /// <summary>Whether a whole mate fits: its first two features, and the plane or faces that symmetric and width take besides.</summary>
+        public static bool Fits(WorldMate m) => Fits(m.Kind, m.A.Kind, m.B.Kind) && m.Kind switch
+        {
+            MateKind.Symmetric => m.C?.Kind == MateFeatureKind.Plane,
+            MateKind.Width => m.C?.Kind == MateFeatureKind.Plane && m.D?.Kind == MateFeatureKind.Plane,
+            _ => true
+        };
+
         /// <summary>Adds a mate between two features and solves; one that contradicts the others is taken back.</summary>
-        public static (WorldMate Mate, MateResult Result) Add(WorldDocument w, MateKind kind, MateFeature a, MateFeature b, double value = 0, double value2 = 0)
+        /// <param name="c">[mate-adv] Symmetric: the symmetry plane. Width: the groove's other face (on <paramref name="a"/>'s part).</param>
+        /// <param name="d">[mate-adv] Width: the tab's other face (on <paramref name="b"/>'s part).</param>
+        public static (WorldMate Mate, MateResult Result) Add(WorldDocument w, MateKind kind, MateFeature a, MateFeature b, double value = 0, double value2 = 0, MateFeature? c = null, MateFeature? d = null)
         {
             w.Mates ??= new List<WorldMate>();
             var used = new HashSet<string>(w.Mates.Select(m => m.Id), StringComparer.Ordinal);
@@ -171,7 +217,7 @@ namespace RobotTwin.CoreSim.Sandbox
                 if (!used.Contains(id)) break;
             }
 
-            var mate = new WorldMate { Id = id, Kind = kind, A = a, B = b, Value = value, Value2 = value2 };
+            var mate = new WorldMate { Id = id, Kind = kind, A = a, B = b, C = c, D = d, Value = value, Value2 = value2 };
             w.Mates.Add(mate);
             var r = Solve(w);
             if (r.State == MateState.Conflicting)
@@ -203,13 +249,13 @@ namespace RobotTwin.CoreSim.Sandbox
         public static void Prune(WorldDocument w)
         {
             if (w.Mates == null) return;
-            w.Mates.RemoveAll(m => w.Find(m.A.Object) == null || w.Find(m.B.Object) == null || m.A.Object == m.B.Object || !Fits(m.Kind, m.A.Kind, m.B.Kind));
+            w.Mates.RemoveAll(m => m.Features.Any(f => w.Find(f.Object) == null) || m.A.Object == m.B.Object || !Fits(m));
             if (w.Mates.Count == 0) w.Mates = null;
         }
 
         /// <summary>The mates naming an object.</summary>
         public static IEnumerable<WorldMate> Of(WorldDocument w, string objectId) =>
-            w.Mates?.Where(m => m.A.Object == objectId || m.B.Object == objectId) ?? Enumerable.Empty<WorldMate>();
+            w.Mates?.Where(m => m.Features.Any(f => f.Object == objectId)) ?? Enumerable.Empty<WorldMate>();
 
         // ------------------------------------------------------------------ solving
 
@@ -324,7 +370,7 @@ namespace RobotTwin.CoreSim.Sandbox
 
             var byRoot = new Dictionary<string, Group>(StringComparer.Ordinal);
             var result = new Dictionary<string, Group>(StringComparer.Ordinal);
-            var involved = new HashSet<string>(mates.SelectMany(m => new[] { Root(m.A.Object), Root(m.B.Object) }), StringComparer.Ordinal);
+            var involved = new HashSet<string>(mates.SelectMany(m => m.Features.Select(f => Root(f.Object))), StringComparer.Ordinal);
             foreach (var o in w.Objects)
             {
                 string root = Root(o.Id);
@@ -359,9 +405,10 @@ namespace RobotTwin.CoreSim.Sandbox
                     component.Add(g);
                     foreach (var k in mates)
                     {
-                        Group a = result[k.A.Object], b = result[k.B.Object];
-                        if (a == g && seen.Add(b)) stack.Push(b);
-                        if (b == g && seen.Add(a)) stack.Push(a);
+                        var joined = k.Features.Select(f => result[f.Object]).ToList();   // [mate-adv] three or four parts
+                        if (!joined.Contains(g)) continue;
+                        foreach (var other in joined)
+                            if (seen.Add(other)) stack.Push(other);
                     }
                 }
 
@@ -378,8 +425,8 @@ namespace RobotTwin.CoreSim.Sandbox
         /// </summary>
         public static (WorldJoint? Joint, string? Why) JointFor(WorldDocument w, string objectId)
         {
-            var mates = w.Mates?.Where(m => w.Find(m.A.Object) != null && w.Find(m.B.Object) != null).ToList() ?? new List<WorldMate>();
-            var mine = mates.FirstOrDefault(m => m.A.Object == objectId || m.B.Object == objectId);
+            var mates = w.Mates?.Where(m => m.Features.All(f => w.Find(f.Object) != null)).ToList() ?? new List<WorldMate>();
+            var mine = mates.FirstOrDefault(m => m.Features.Any(f => f.Object == objectId));
             if (mine == null) return (null, "ilişkisi yok");
             var groups = Groups(w, mates);
             var g = groups[objectId];
@@ -394,7 +441,7 @@ namespace RobotTwin.CoreSim.Sandbox
             var j = LeastSquares.Jacobian(G, x0, rows.Length);
             // This part's six columns, over the rows of the mates that touch its group.
             var cols = Enumerable.Range(g.Index, 6).ToArray();
-            var mineRows = Enumerable.Range(0, owners.Count).Where(r => groups[mates[owners[r]].A.Object] == g || groups[mates[owners[r]].B.Object] == g).ToList();
+            var mineRows = Enumerable.Range(0, owners.Count).Where(r => mates[owners[r]].Features.Any(f => groups[f.Object] == g)).ToList();
             var basis = new List<double[]>();
             foreach (int r in mineRows)
             {
@@ -484,9 +531,10 @@ namespace RobotTwin.CoreSim.Sandbox
                     var g = stack.Pop();
                     foreach (var k in mates)
                     {
-                        Group a = groups[k.A.Object], b = groups[k.B.Object];
-                        if (a == g && set.Add(b)) stack.Push(b);
-                        if (b == g && set.Add(a)) stack.Push(a);
+                        var joined = k.Features.Select(f => groups[f.Object]).ToList();
+                        if (!joined.Contains(g)) continue;
+                        foreach (var other in joined)
+                            if (set.Add(other)) stack.Push(other);
                     }
                 }
 
@@ -600,6 +648,67 @@ namespace RobotTwin.CoreSim.Sandbox
                     case MateKind.Angle:
                         rows.Add(da.Dot(db) - Math.Cos(m.Value * Math.PI / 180));
                         break;
+                    case MateKind.Symmetric:
+                    {
+                        // [mate-adv] B is A mirrored in the plane C: its point, and its direction for a face or an axis
+                        var (pc, dc) = Place(m.C!, groups, x);
+                        var nc = dc.Normalized();
+                        var ra = pa - nc * (2 * (pa - pc).Dot(nc));
+                        var rd = da - nc * (2 * da.Dot(nc));
+                        if (m.A.Kind == MateFeatureKind.Point)
+                        {
+                            var e = pb - ra;
+                            rows.Add(e.X);
+                            rows.Add(e.Y);
+                            rows.Add(e.Z);
+                            break;
+                        }
+
+                        var (ru, rv) = Square(rd);
+                        if (m.A.Kind == MateFeatureKind.Plane)
+                        {
+                            if (rank)
+                            {
+                                rows.Add(ru.Dot(db));
+                                rows.Add(rv.Dot(db));
+                            }
+                            else
+                            {
+                                var e = db - rd;
+                                rows.Add(e.X);
+                                rows.Add(e.Y);
+                                rows.Add(e.Z);
+                            }
+
+                            rows.Add((pb - ra).Dot(rd));
+                        }
+                        else
+                        {
+                            rows.Add(ru.Dot(db));
+                            rows.Add(rv.Dot(db));
+                            rows.Add((pb - ra).Dot(ru));
+                            rows.Add((pb - ra).Dot(rv));
+                        }
+
+                        break;
+                    }
+
+                    case MateKind.Width:
+                    {
+                        // [mate-adv] the tab's middle plane on the groove's: square to the groove's faces, half way between them
+                        var (pc, dc) = Place(m.C!, groups, x);
+                        var (pd, dd) = Place(m.D!, groups, x);
+                        var across = da - dc;
+                        var n = across.Length > 1e-9 ? across.Normalized() : da;
+                        var tab = db - dd;
+                        var t = tab.Length > 1e-9 ? tab.Normalized() : db;
+                        var (nu, nv) = Square(n);
+                        rows.Add(nu.Dot(t));
+                        rows.Add(nv.Dot(t));
+                        rows.Add(((pb + pd) * 0.5 - (pa + pc) * 0.5).Dot(n) - m.Value);
+                        break;
+                    }
+
                     case MateKind.LimitDistance:
                     case MateKind.LimitAngle:
                     {

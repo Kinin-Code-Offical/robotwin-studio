@@ -88,7 +88,7 @@ namespace RobotWin.Studio.Pcb
             var pts = new List<PcbPoint> { mid };
             pts.AddRange(_dpPath);
             var last = pts[pts.Count - 1];
-            var leg = InteractiveRouter.Elbow(last, new PcbPoint(Snap(x), Snap(y)), diagonalFirst: false);
+            var leg = InteractiveRouter.Elbow(last, new PcbPoint(SnapX(x), SnapY(y)), diagonalFirst: false);
             pts.AddRange(leg.Skip(1));
             return pts;
         }

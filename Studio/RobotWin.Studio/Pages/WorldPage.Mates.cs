@@ -23,6 +23,9 @@ namespace RobotWin.Studio.Pages
         /// <summary>The first face or axis picked, waiting for the second.</summary>
         private MateFeature? _mateFirst;
 
+        /// <summary>[mate-adv] A symmetric or width mate waiting for its plane or its other two faces, and what is picked so far.</summary>
+        private (MateKind Kind, List<MateFeature> Picked)? _matePending;
+
         /// <summary>What the last mate change came to (shown under the part's mates).</summary>
         private MateResult? _mateResult;
 
@@ -32,6 +35,12 @@ namespace RobotWin.Studio.Pages
             var o = world?.Find(id);
             if (world == null || o == null) return;
             var feature = Feature(o, new Vec3(point.X, point.Y, point.Z), new Vec3(normal.X, normal.Y, normal.Z).Normalized());
+            if (_matePending is { } pending)
+            {
+                PickMore(world, pending.Kind, pending.Picked, feature, o.Name);
+                return;
+            }
+
             if (_mateFirst == null || _mateFirst.Object == id)
             {
                 _mateFirst = feature;
@@ -104,6 +113,8 @@ namespace RobotWin.Studio.Pages
             MateKind.Distance => "Mesafe",
             MateKind.LimitDistance => "Mesafe sınırı",
             MateKind.LimitAngle => "Açı sınırı",
+            MateKind.Symmetric => "Simetrik",
+            MateKind.Width => "Genişlik",
             _ => "Açı"
         };
 
@@ -138,6 +149,21 @@ namespace RobotWin.Studio.Pages
             // [mate-limit] SolidWorks' advanced mates: a range around where it is now, both ends then set in the inspector
             Item(MateKind.LimitDistance, $"Mesafe sınırı: şimdiki {distance * 1000:0.##} mm ± 10 mm", Math.Round(distance - 0.01, 6), Math.Round(distance + 0.01, 6));
             Item(MateKind.LimitAngle, $"Açı sınırı: şimdiki {angle:0.#}° ± 15°", Math.Round(Math.Max(0, angle - 15), 2), Math.Round(Math.Min(180, angle + 15), 2));
+            // [mate-adv] SolidWorks' symmetric and width: these two first, the plane or the other two faces picked next
+            void More(MateKind kind, string text, string next)
+            {
+                if (!WorldMates.Fits(kind, a.Kind, b.Kind)) return;
+                var mi = new MenuItem { Header = text };
+                mi.Click += (_, _) =>
+                {
+                    _matePending = (kind, new List<MateFeature> { a, b });
+                    W.Status = next;
+                };
+                menu.Items.Add(mi);
+            }
+
+            More(MateKind.Symmetric, "Simetrik… (sonra simetri düzlemi)", "Simetrik: simetri düzlemi olacak yüzü tıklayın (Esc vazgeçer)");
+            More(MateKind.Width, "Genişlik… (ilki oluğun, ikincisi tırnağın yüzü)", "Genişlik: oluğun öbür yüzünü tıklayın (Esc vazgeçer)");
             if (menu.Items.Count == 0)
             {
                 W.Status = "Bu ikisi arasında kurulabilecek ilişki yok (bir yüz ya da eksen seçin)";
@@ -147,11 +173,31 @@ namespace RobotWin.Studio.Pages
             menu.IsOpen = true;
         }
 
-        private void AddMate(WorldDocument world, MateKind kind, MateFeature a, MateFeature b, double value, double value2 = 0)
+        /// <summary>[mate-adv] The symmetric mate's plane, or the width mate's groove face then tab face; the mate is made once all are in.</summary>
+        private void PickMore(WorldDocument world, MateKind kind, List<MateFeature> picked, MateFeature f, string partName)
+        {
+            if (f.Kind != MateFeatureKind.Plane)
+            {
+                W.Status = $"{MateName(kind)}: eksen ya da nokta değil, bir yüz seçin";
+                return;
+            }
+
+            picked.Add(f);
+            if (kind == MateKind.Width && picked.Count == 3)
+            {
+                W.Status = "Genişlik: tırnağın öbür yüzünü tıklayın (Esc vazgeçer)";
+                return;
+            }
+
+            _matePending = null;
+            AddMate(world, kind, picked[0], picked[1], 0, 0, picked[2], picked.Count > 3 ? picked[3] : null);
+        }
+
+        private void AddMate(WorldDocument world, MateKind kind, MateFeature a, MateFeature b, double value, double value2 = 0, MateFeature? c = null, MateFeature? d = null)
         {
             // Tried on a copy first: a contradicting mate leaves no step in the undo history.
             var trial = WorldDocument.FromJson(world.ToJson());
-            var (_, tried) = WorldMates.Add(trial, kind, a.Clone(), b.Clone(), value, value2);
+            var (_, tried) = WorldMates.Add(trial, kind, a.Clone(), b.Clone(), value, value2, c?.Clone(), d?.Clone());
             if (tried.State == MateState.Conflicting)
             {
                 _mateResult = tried;
@@ -160,7 +206,7 @@ namespace RobotWin.Studio.Pages
             }
 
             MateResult? r = null;
-            Edit(MateName(kind), () => r = WorldMates.Add(world, kind, a, b, value, value2).Result);
+            Edit(MateName(kind), () => r = WorldMates.Add(world, kind, a, b, value, value2, c, d).Result);
             _mateResult = r;
             if (r != null) W.Status = MateName(kind) + ": " + Describe(world, r, b.Object);
         }
@@ -238,6 +284,8 @@ namespace RobotWin.Studio.Pages
                 Inspector.Children.Add(row);
                 if (mate.Kind is MateKind.Mate or MateKind.Flush or MateKind.Distance)
                     Inspector.Children.Add(NumberField("Aralık (mm)", mate.Value * 1000, v => SetMateValue(world, mate, v / 1000), -1e5, 1e5, "0.###"));
+                else if (mate.Kind == MateKind.Width)   // [mate-adv] SolidWorks' width by dimension: off the middle
+                    Inspector.Children.Add(NumberField("Ortadan kayma (mm)", mate.Value * 1000, v => SetMateValue(world, mate, v / 1000), -1e5, 1e5, "0.###"));
                 else if (mate.Kind == MateKind.Angle)
                     Inspector.Children.Add(NumberField("Açı (°)", mate.Value, v => SetMateValue(world, mate, v), 0, 180, "0.##"));
                 else if (mate.Kind == MateKind.LimitDistance)   // [mate-limit] both ends
@@ -273,6 +321,44 @@ namespace RobotWin.Studio.Pages
         /// the block's top, level 50 mm apart; the hub's round side and the shaft's, on one axis), the picks and the
         /// result in ROBOTWIN_SNAPSHOT_LOG.
         /// </summary>
+        /// <summary>
+        /// [mate-adv] The snapshot "mate-width": a tab dropped crooked between two walls, centred in the groove by a width
+        /// mate and set on the floor by a flush one; a second block mirrored to the first across the middle plane.
+        /// </summary>
+        private void MateWidthSnapshot()
+        {
+            var w = new WorldDocument { Title = "Genişlik ve simetrik" };
+            var floor = w.AddBody("box", 0.3, 0.2, 0.02, new WorldPose());
+            floor.Name = "Taban";
+            floor.Color = "#8A8F98";
+            floor.IsStatic = true;
+            var left = w.AddBody("box", 0.3, 0.02, 0.02, new WorldPose { Y = -0.04, Z = 0.02 });
+            left.Name = "Sol duvar";
+            left.IsStatic = true;
+            var right = w.AddBody("box", 0.3, 0.02, 0.02, new WorldPose { Y = 0.04, Z = 0.02 });
+            right.Name = "Sağ duvar";
+            right.IsStatic = true;
+            var tab = w.AddBody("box", 0.04, 0.03, 0.04, new WorldPose { X = 0.06, Y = 0.012, Z = 0.06, Yaw = 14 });
+            tab.Name = "Tırnak";
+            tab.Color = "#3B82C4";
+            var twin = w.AddBody("box", 0.04, 0.03, 0.04, new WorldPose { X = -0.02, Y = -0.01, Z = 0.09, Yaw = -20 });
+            twin.Name = "İkiz";
+            twin.Color = "#2F9E6E";
+            _main.NewWorld(w);
+            OnShown();
+            var world = World!;
+            MateFeature F(WorldObject o, double x, double y, double z, double nx, double ny, double nz) =>
+                new MateFeature { Object = o.Id, Kind = MateFeatureKind.Plane, X = x, Y = y, Z = z, DX = nx, DY = ny, DZ = nz };
+            AddMate(world, MateKind.Width, F(left, 0, 0.01, 0, 0, 1, 0), F(tab, 0, -0.015, 0, 0, -1, 0), 0, 0, F(right, 0, -0.01, 0, 0, -1, 0), F(tab, 0, 0.015, 0, 0, 1, 0));
+            AddMate(world, MateKind.Flush, F(floor, 0, 0, 0.01, 0, 0, 1), F(tab, 0, 0, 0.02, 0, 0, 1), 0.04);
+            // the twin: the tab's left face mirrored across the plane x = 0 (the floor's middle), standing on the floor too
+            AddMate(world, MateKind.Flush, F(floor, 0, 0, 0.01, 0, 0, 1), F(twin, 0, 0, 0.02, 0, 0, 1), 0.04);
+            AddMate(world, MateKind.Symmetric, F(tab, -0.02, 0, 0, -1, 0, 0), F(twin, 0.02, 0, 0, 1, 0, 0), 0, 0, F(floor, 0, 0, 0, 1, 0, 0));
+            Scene.FrameAll();
+            Scene.Select(tab.Id);
+            BuildInspector();
+        }
+
         private void MateSnapshot()
         {
             var w = new WorldDocument { Title = "Montaj ilişkileri" };

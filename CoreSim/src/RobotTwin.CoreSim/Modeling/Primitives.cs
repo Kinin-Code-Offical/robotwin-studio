@@ -84,6 +84,15 @@ namespace RobotTwin.CoreSim.Modeling
                 new ParamSpec("h", "Kalınlık (Z)", "mm", 5, 0.01, Big), new ParamSpec("draft", "Koniklik (draft)", "°", 0, -30, 30),
                 new ParamSpec("seg", "Bölüm sayısı", "", 48, 8, 256, true)
             },
+            [PrimitiveKind.Loft] = new[]
+            {
+                new ParamSpec("h", "Yükseklik", "mm", 30, 0.01, Big), new ParamSpec("twist", "Burulma", "°", 0, -720, 720),
+                new ParamSpec("seg", "Bölüm sayısı", "", 64, 8, 512, true)
+            },
+            [PrimitiveKind.Sweep] = new[]
+            {
+                new ParamSpec("seg", "Bölüm sayısı", "", 32, 6, 256, true)
+            },
             [PrimitiveKind.Revolve] = new[]
             {
                 new ParamSpec("angle", "Açı", "°", 360, 1, 360), new ParamSpec("seg", "Bölüm sayısı", "", 48, 3, 256, true)
@@ -106,7 +115,9 @@ namespace RobotTwin.CoreSim.Modeling
             PrimitiveKind.Wedge => "Kama",
             PrimitiveKind.Plate => "Delikli plaka",
             PrimitiveKind.Extrude => "Profil",
-            PrimitiveKind.Revolve => "Döner gövde",   // a profile turned about an axis (not "Döndürme": that is the rotation fields' word)
+            PrimitiveKind.Revolve => "Döner gövde",
+            PrimitiveKind.Loft => "Geçiş (loft)",
+            PrimitiveKind.Sweep => "Süpürme (sweep)",   // a profile turned about an axis (not "Döndürme": that is the rotation fields' word)
             _ => "Parça"
         };
 
@@ -129,6 +140,18 @@ namespace RobotTwin.CoreSim.Modeling
                 };
             }
             else if (kind == PrimitiveKind.Plate) s.Holes = new List<HoleSpec>();
+            else if (kind == PrimitiveKind.Sweep)
+            {
+                // [sweep] a 10 mm round bar bent into a handle: up, across, down
+                s.Sketch = new Sketch2D { Outer = SketchShape.Circle(10) };
+                s.Path = new List<double> { -30, 0, 0, -30, 0, 30, 30, 0, 30, 30, 0, 0 };
+            }
+            else if (kind == PrimitiveKind.Loft)
+            {
+                // [loft] a square base passing into a round top: a funnel, a transition duct
+                s.Sketch = new Sketch2D { Outer = SketchShape.Rect(30, 30) };
+                s.Sketch2 = new Sketch2D { Outer = SketchShape.Circle(20) };
+            }
 
             return s;
         }
@@ -179,6 +202,19 @@ namespace RobotTwin.CoreSim.Modeling
 
                 case PrimitiveKind.Part:
                     return RobotParts.Build(s);
+                case PrimitiveKind.Sweep:
+                {
+                    var path = s.Path ?? new List<double> { 0, 0, 0, 0, 0, 30 };
+                    var pts = Enumerable.Range(0, path.Count / 3).Select(i => new Vec3(path[3 * i], path[3 * i + 1], path[3 * i + 2])).ToList();
+                    return Sweep((s.Sketch ?? new Sketch2D()).Outer.ToPolygon(I("seg")), pts, Math.Max(6, I("seg")));
+                }
+                case PrimitiveKind.Loft:
+                {
+                    int seg = I("seg");
+                    var bottom = (s.Sketch ?? new Sketch2D()).Outer.ToPolygon(seg);
+                    var top = (s.Sketch2 ?? s.Sketch ?? new Sketch2D()).Outer.ToPolygon(seg);
+                    return Loft(bottom, top, G("h"), G("twist"), Math.Max(8, seg));
+                }
                 default:
                     return Box(20, 20, 20);
             }
@@ -478,6 +514,152 @@ namespace RobotTwin.CoreSim.Modeling
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// [loft] A closed outline walked from where it crosses the ray from its middle along +X, counter-clockwise, at
+        /// <paramref name="n"/> points spaced evenly along its length: two outlines read this way pair point for point.
+        /// </summary>
+        public static List<Vec2> Resample(IReadOnlyList<Vec2> loop, int n)
+        {
+            var ring = Ccw(loop.ToList(), true);
+            int m = ring.Count;
+            double cx = ring.Average(p => p.X), cy = ring.Average(p => p.Y);
+            // where the outline crosses the +X ray from its middle: the start of the walk
+            int start = 0;
+            double best = double.MaxValue;
+            for (int i = 0; i < m; i++)
+            {
+                double a = Math.Abs(Math.Atan2(ring[i].Y - cy, ring[i].X - cx));
+                if (a < best)
+                {
+                    best = a;
+                    start = i;
+                }
+            }
+
+            var walk = Enumerable.Range(0, m).Select(i => ring[(start + i) % m]).ToList();
+            var cum = new double[m + 1];
+            for (int i = 0; i < m; i++)
+            {
+                var p = walk[i];
+                var q = walk[(i + 1) % m];
+                cum[i + 1] = cum[i] + Math.Sqrt((q.X - p.X) * (q.X - p.X) + (q.Y - p.Y) * (q.Y - p.Y));
+            }
+
+            double total = cum[m];
+            var result = new List<Vec2>(n);
+            int k = 0;
+            for (int j = 0; j < n; j++)
+            {
+                double s = total * j / n;
+                while (k < m - 1 && cum[k + 1] < s) k++;
+                double span = cum[k + 1] - cum[k], t = span > 1e-12 ? (s - cum[k]) / span : 0;
+                var p = walk[k];
+                var q = walk[(k + 1) % m];
+                result.Add(new Vec2(p.X + (q.X - p.X) * t, p.Y + (q.Y - p.Y) * t));
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// [sweep] A profile carried along a path: at each point of the path a ring of the profile, square to the path
+        /// (rotation-minimising frames, so it does not twist round the path), joined ring to ring and closed at both
+        /// ends. At a corner the ring lies in the bisecting plane, stretched across the bend by 1/cos of half the turn,
+        /// so the wall keeps its thickness round it (a mitred pipe).
+        /// </summary>
+        public static PolyMesh Sweep(List<Vec2> profile, List<Vec3> path, int n)
+        {
+            var m = new PolyMesh();
+            var pts = new List<Vec3>();
+            foreach (var p in path)
+                if (pts.Count == 0 || (p - pts[pts.Count - 1]).Length > 1e-9) pts.Add(p);
+            if (profile.Count < 3 || pts.Count < 2) return m;
+            var ring = Resample(profile, n);
+            int count = pts.Count;
+            var tangents = new Vec3[count];
+            for (int i = 0; i < count; i++)
+            {
+                var before = i > 0 ? (pts[i] - pts[i - 1]).Normalized() : (pts[1] - pts[0]).Normalized();
+                var after = i < count - 1 ? (pts[i + 1] - pts[i]).Normalized() : before;
+                var t = before + after;
+                tangents[i] = t.Length > 1e-9 ? t.Normalized() : after;
+            }
+
+            // the first frame: a side square to the path, then carried along by the smallest turn each step
+            var first = (pts[1] - pts[0]).Normalized();
+            var side = Math.Abs(first.Z) < 0.9 ? new Vec3(0, 0, 1).Cross(first).Normalized() : new Vec3(1, 0, 0).Cross(first).Normalized();
+            var rings = new List<int[]>();
+            Vec3 prevT = first, u = side;
+            for (int i = 0; i < count; i++)
+            {
+                var segIn = i > 0 ? (pts[i] - pts[i - 1]).Normalized() : first;
+                // carry the side round the turn from the previous segment's direction to this one's
+                var axis = prevT.Cross(segIn);
+                double sin = axis.Length, cos = prevT.Dot(segIn);
+                if (sin > 1e-9) u = Quat.FromAxisAngle(axis.Normalized(), Math.Atan2(sin, cos)).Rotate(u);
+                prevT = segIn;
+                var tangent = tangents[i];
+                var u2 = (u - tangent * u.Dot(tangent)).Normalized();
+                var v2 = tangent.Cross(u2).Normalized();
+                // the mitre: across the bend the ring is stretched so the wall keeps its thickness
+                double half = i > 0 && i < count - 1 ? Math.Acos(Math.Max(-1, Math.Min(1, segIn.Dot((pts[i + 1] - pts[i]).Normalized())))) / 2 : 0;
+                double stretch = 1 / Math.Max(0.2, Math.Cos(half));
+                var bendDir = i > 0 && i < count - 1 ? ((pts[i + 1] - pts[i]).Normalized() - segIn) : new Vec3(0, 0, 0);
+                if (bendDir.Length > 1e-9) bendDir = (bendDir - tangent * bendDir.Dot(tangent)).Normalized();
+                var idx = new int[ring.Count];
+                for (int k = 0; k < ring.Count; k++)
+                {
+                    var off = u2 * ring[k].X + v2 * ring[k].Y;
+                    if (bendDir.Length > 1e-9) off += bendDir * (off.Dot(bendDir) * (stretch - 1));
+                    idx[k] = m.AddVertex(pts[i] + off);
+                }
+
+                rings.Add(idx);
+            }
+
+            for (int i = 0; i + 1 < rings.Count; i++)
+            {
+                var a = rings[i];
+                var b = rings[i + 1];
+                for (int k = 0; k < a.Length; k++)
+                {
+                    int j = (k + 1) % a.Length;
+                    m.AddFace(a[k], a[j], b[j], b[k]);
+                }
+            }
+
+            m.AddFace(Enumerable.Reverse(rings[0]).ToArray());
+            m.AddFace(rings[rings.Count - 1].ToArray());
+            return m;
+        }
+
+        /// <summary>[loft] A solid from the bottom outline (z = −h/2) to the top one (z = +h/2), turned by <paramref name="twistDegrees"/>.</summary>
+        public static PolyMesh Loft(List<Vec2> bottom, List<Vec2> top, double height, double twistDegrees, int n)
+        {
+            var m = new PolyMesh();
+            if (bottom.Count < 3 || top.Count < 3) return m;
+            var a = Resample(bottom, n);
+            var b = Resample(top, n);
+            if (Math.Abs(twistDegrees) > 1e-9)
+            {
+                double t = twistDegrees * Math.PI / 180, c = Math.Cos(t), s = Math.Sin(t);
+                b = b.Select(p => new Vec2(p.X * c - p.Y * s, p.X * s + p.Y * c)).ToList();
+            }
+
+            double z0 = -height / 2, z1 = height / 2;
+            var bi = a.Select(p => m.AddVertex(new Vec3(p.X, p.Y, z0))).ToArray();
+            var ti = b.Select(p => m.AddVertex(new Vec3(p.X, p.Y, z1))).ToArray();
+            for (int i = 0; i < n; i++)
+            {
+                int j = (i + 1) % n;
+                m.AddFace(bi[i], bi[j], ti[j], ti[i]);
+            }
+
+            m.AddFace(ti.ToArray());
+            m.AddFace(Enumerable.Reverse(bi).ToArray());
+            return m;
         }
 
         public static PolyMesh Extrude(List<Vec2> outer, List<List<Vec2>> holes, double height, double draftDegrees = 0)

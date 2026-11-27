@@ -38,6 +38,11 @@ namespace RobotTwin.CoreSim.Pcb
         /// <summary>What was moved to put the outline's corner at the origin (subtracted from every coordinate).</summary>
         public (double X, double Y) Shift { get; set; }
 
+        /// <summary>[origins] The board's drill/place file origin and grid origin (after the shift); null where KiCad has none.</summary>
+        public PcbPoint? AuxOrigin { get; set; }
+
+        public PcbPoint? GridOrigin { get; set; }
+
         public List<string> Warnings { get; } = new List<string>();
     }
 
@@ -113,6 +118,16 @@ namespace RobotTwin.CoreSim.Pcb
             }
 
             layout.Shift = (ox, oy);
+            PcbPoint? Origin(string name)
+            {
+                var n = root.Child("setup")?.Child(name);
+                if (n == null || n.Count < 3) return null;
+                double x = n.Number(1), y = n.Number(2);
+                return x == 0 && y == 0 ? (PcbPoint?)null : new PcbPoint(x - ox, y - oy);   // KiCad writes (0, 0) for none
+            }
+
+            layout.AuxOrigin = Origin("aux_axis_origin");
+            layout.GridOrigin = Origin("grid_origin");
 
             // ---- footprints: placements, and the mounting holes this board writes as footprints
             foreach (var f in root.Children("footprint", "module"))
@@ -372,6 +387,8 @@ namespace RobotTwin.CoreSim.Pcb
                 board.MountingHoles.AddRange(layout.Holes);
             }
 
+            if (layout.AuxOrigin != null) board.AuxOrigin = layout.AuxOrigin;   // [origins]
+            if (layout.GridOrigin != null) board.GridOrigin = layout.GridOrigin;
             if (layout.Size is { } size && board.Outline.Count == 0)
             {
                 board.Width = Math.Round(size.Width, 4);

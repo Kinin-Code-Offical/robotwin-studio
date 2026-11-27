@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using RobotTwin.CoreSim.Mechanics;
+using RobotTwin.CoreSim.Modeling;
 
 namespace RobotWin.Studio.Modeling
 {
@@ -70,6 +71,7 @@ namespace RobotWin.Studio.Modeling
                 dc.DrawText(ft, new Point(r.X + 12, r.Y + 6));
             }
 
+            DrawReferences(dc);   // [refgeom]
             DrawNavigator(dc, w);
             if (_vp.GizmoVisible) DrawGizmo(dc);
 
@@ -95,6 +97,45 @@ namespace RobotWin.Studio.Modeling
                     dc.DrawText(ft, new Point(r.X + 8, r.Y + 4));
                     dc.DrawText(ft2, new Point(r.X + 8, r.Y + 6 + ft.Height));
                 }
+            }
+        }
+
+        /// <summary>[refgeom] Reference planes (a lightly filled square), axes (a centre line) and points (a cross), each named; flat, no shading.</summary>
+        private void DrawReferences(DrawingContext dc)
+        {
+            var sel = new HashSet<string>(_vp.Editor.Selected);
+            foreach (var (o, lines, label) in _vp.ReferenceOutlines())
+            {
+                bool on = sel.Contains(o.Id);
+                Color col;
+                try
+                {
+                    col = on ? Color.FromRgb(0xF0, 0xA0, 0x30) : (Color)ColorConverter.ConvertFromString(o.Color);
+                }
+                catch (FormatException)
+                {
+                    col = Color.FromRgb(0x5B, 0x8D, 0xEF);
+                }
+
+                var pen = new Pen(new SolidColorBrush(col), on ? 2 : 1.2);
+                if (o.Reference!.Kind == ReferenceKind.Axis) pen.DashStyle = new DashStyle(new double[] { 8, 3, 2, 3 }, 0);   // a centre line
+                if (o.Reference.Kind == ReferenceKind.Plane && lines.Count == 4)
+                {
+                    var g = new StreamGeometry();
+                    using (var c = g.Open())
+                    {
+                        c.BeginFigure(lines[0].A, true, true);
+                        for (int i = 1; i < 4; i++) c.LineTo(lines[i].A, true, false);
+                    }
+
+                    dc.DrawGeometry(new SolidColorBrush(Color.FromArgb(on ? (byte)0x30 : (byte)0x18, col.R, col.G, col.B)), pen, g);
+                }
+                else
+                {
+                    foreach (var (a, b) in lines) dc.DrawLine(pen, a, b);
+                }
+
+                dc.DrawText(Text(o.Name, 11, new SolidColorBrush(col)), label);
             }
         }
 

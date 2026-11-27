@@ -114,7 +114,9 @@ namespace RobotTwin.CoreSim.Pcb
                     continue;
                 }
 
-                var got = new GerberRaster(-margin, -margin, board.Width + 2 * margin, board.Height + 2 * margin, pixel);
+                // [origins] the files measure from the fabrication origin: the same pixels, shifted to it
+                var fab = board.FabOrigin;
+                var got = new GerberRaster(-margin - fab.X, -margin - (hgt - fab.Y), board.Width + 2 * margin, board.Height + 2 * margin, pixel);
                 got.Draw(image);
                 check.ExpectedArea = expected.Count() * pixel * pixel;
                 check.FileArea = got.Count() * pixel * pixel;
@@ -322,7 +324,8 @@ namespace RobotTwin.CoreSim.Pcb
             check.Expected = expected.Count;
 
             // Match hole for hole (the file is in the Y-up frame; positions to 1 µm, diameters to 1 µm after the tool table's rounding).
-            var left = holes.Select(hh => (hh.D, hh.X, Y: board.Height - hh.Y)).ToList();
+            var fab = board.FabOrigin;   // [origins]
+            var left = holes.Select(hh => (hh.D, X: hh.X + fab.X, Y: fab.Y - hh.Y)).ToList();
             foreach (var e in expected)
             {
                 int k = left.FindIndex(hh => Math.Abs(hh.X - e.X) < 2e-3 && Math.Abs(hh.Y - e.Y) < 2e-3);

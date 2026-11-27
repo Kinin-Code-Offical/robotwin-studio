@@ -650,6 +650,21 @@ namespace RobotTwin.CoreSim.Pcb
         public List<MountingHole> MountingHoles { get; set; } = new List<MountingHole>();
         public List<BoardText> Texts { get; set; } = new List<BoardText>();
 
+        /// <summary>[origins] KiCad's grid origin: the editor's grid runs through this point (mm, board frame); null = through the board's corner.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public PcbPoint? GridOrigin { get; set; }
+
+        /// <summary>
+        /// [origins] KiCad's drill/place file origin: the Gerber, drill and pick-and-place files measure from this point
+        /// (X right, Y up), as a board house or an assembly fixture wants; null = from the board's bottom-left corner.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public PcbPoint? AuxOrigin { get; set; }
+
+        /// <summary>[origins] Where the fabrication files' (0, 0) lies in the board frame (Y down).</summary>
+        [JsonIgnore]
+        public PcbPoint FabOrigin => AuxOrigin ?? new PcbPoint(0, Height);
+
         /// <summary>
         /// [net-colors] KiCad's net colours: a net given a colour ("#RRGGBB") shows its copper (tracks, teardrops, pours, vias)
         /// in it instead of its layer's colour, so a supply or a bus can be followed across the board. View only: nothing made

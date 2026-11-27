@@ -36,7 +36,7 @@ namespace RobotWin.Studio.Pcb
         {
             _magnetMark = null;
             var board = Board;
-            if (board == null) return new PcbPoint(Snap(x), Snap(y));
+            if (board == null) return new PcbPoint(SnapX(x), SnapY(y));
             double reach = 8 / _scale;
             bool On(MagnetMode m) => m == MagnetMode.Always || (m == MagnetMode.Creating && creating);
             PcbPoint Mark(double px, double py)
@@ -104,7 +104,7 @@ namespace RobotWin.Studio.Pcb
                 }
             }
 
-            return found is { } f ? Mark(f.X, f.Y) : new PcbPoint(Snap(x), Snap(y));
+            return found is { } f ? Mark(f.X, f.Y) : new PcbPoint(SnapX(x), SnapY(y));
         }
 
         /// <summary>[angle45] KiCad's "Constrain to H, V, 45°": drawn lines, zone and edge corners leave the last point level, upright or at 45°.</summary>

@@ -86,7 +86,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Ölçü (hizalı) | Ölçü çizgisi | var | |
 | Ölçü (dik, yarıçap, kılavuz, merkez) | Ölçü aracında Tür: hizalı, dik (yatay/dikey), yarıçap, kılavuz (not), merkez işareti; yazı geçersiz kılma | var | |
 | Silici (tıklananı sil) | Del; sol şeritte Silici aracı (her tıklama altındakini siler) | var | |
-| Izgara orijini, delik orijini | yok | yok | 3 |
+| Izgara orijini, delik orijini | sağ tık ▸ Orijin: ızgara orijini (ızgara ve yakalama ondan geçer), delik/yerleşim orijini (Gerber, delik, CPL oradan ölçer); mıknatısla, KiCad'e yazılır ve okunur | var | |
 
 ### Paneller
 
@@ -145,7 +145,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Eskiz radyüsü, eskiz pahı | köşe noktası seçilince Köşe radyüsü ve Pah (teğet yay / düz kenar, sanal sivri, uzunluk ölçüleri korunur) | var | |
 | Ofset | var | var | |
 | Budama (trim), uzatma | Buda (güçlü budama, kesen öğeye tutulur) ve Uzat, çizgiler için; daire ve yay budama sonra | kısmi | 3 |
-| Eskizde aynala, doğrusal / dairesel çoğaltma | Aynala (yardımcı çizgi ekseni, simetri ilişkileri, eksendeki noktalar paylaşılır); eskizde çoğaltma sonra | kısmi | 3 |
+| Eskizde aynala, doğrusal / dairesel çoğaltma | Aynala (yardımcı çizgi ekseni, simetri ilişkileri, eksendeki noktalar paylaşılır); Doğrusal çoğalt (adet, X/Y adımı) ve Dairesel çoğalt (seçili nokta çevresinde, açı), kopyalar ölçülerle bir öncekine bağlı | var | |
 | Akıllı ölçü, ilişkiler (çakışık, teğet, eş merkezli, yatay, dikey) | kısıtlar var | var | |
 | Yapı (construction) geometrisi | Yardımcı geometri anahtarı: kesik çizilir, profile girmez | var | |
 
@@ -155,7 +155,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | --- | --- | --- | --- |
 | Ekstrüzyon ile katı | Ekstrüzyon, yüz çıkarma | var | |
 | Döndürerek katı | Döner gövde | var | |
-| Süpürme, loft, sınır ile katı | yok | yok | 2 |
+| Süpürme, loft, sınır ile katı | Geçiş (loft): alt ve üst profil, burulma; Süpürme (sweep): kesit 3B yol boyunca, gönyeli köşeler; sınır ile katı sonra | kısmi | 3 |
 | Ekstrüzyon ile kes, döndürerek kes | Boolean fark | var | |
 | Delik sihirbazı (havşa, vida, cıvata) | Delik sihirbazı (geçiş, silindir başlı, havşa, kılavuz, gömme somun; M2–M8, ISO ölçüleri; yüzeye tıkla) | var | |
 | Radyüs (kenar yuvarlatma) | Yuvarla (radyüs): iki yüze teğet dairesel yay, parça sayısı, küresel köşeler | var | |
@@ -164,7 +164,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Draft, kaburga (rib) | profil uzatmada koniklik (draft) açısı: duvarlar içe, delikler dışa; kaburga sonra | kısmi | 3 |
 | Doğrusal / dairesel çoğaltma | var | var | |
 | Aynala | Ayna kopyası | var | |
-| Referans düzlem, eksen, nokta | yok | yok | 2 |
+| Referans düzlem, eksen, nokta | Ekle ▸ Referans düzlem (üç nokta, uzaklık, iki düzlemin ortası, eksene dik), eksen (iki nokta, yuvarlak parça, iki düzlemin kesişimi), nokta (seçili nokta, parçaların ortası); katısız, çizgisinden seçilir; ayna kopyası ve dairesel dizi kullanır | var | |
 | Helis, sarma (wrap) | yok | yok | 3 |
 | Anında 3B (tutamaçla boyutlandırma) | tutamaçlar | var | |
 | Düzenlenebilir özellik geçmişi | parametrik parçalar | kısmi | 1 |
@@ -190,7 +190,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Ekle (temel şekiller) | Ekle (Shift+A) | var | |
 | Nesne / düzenleme kipi, nokta / kenar / yüz seçimi | var | var | |
 | Çıkar (extrude), içe kaydır (inset), pah (bevel), alt böl | var | var | |
-| Döngü kesimi (loop cut), bıçak (knife) | yok | yok | 2 |
+| Döngü kesimi (loop cut), bıçak (knife) | Halka kesim (Ctrl+R, dörtgen halkası boyunca, kesim sayısı tekerlekle); Bıçak (K; kes, sağ ya da sol tarafı sil, açıklık kapatılır) | var | |
 | Döndürerek çoğaltma (spin) | yok | yok | 3 |
 | Birleştir (merge), yüz oluştur | var | var | |
 | Orantılı düzenleme | yok | yok | 3 |
@@ -203,7 +203,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | --- | --- | --- | --- |
 | Bileşen ekle, taşı, döndür | var | var | |
 | Standart ilişkiler (çakışık, paralel, dik, teğet, eş merkezli, mesafe, açı) | Hizala | var | |
-| Gelişmiş ilişkiler (sınır, genişlik, simetrik) | mesafe sınırı, açı sınırı (aralıkta serbest, uçta tutar); genişlik ve simetrik sonra | kısmi | 3 |
+| Gelişmiş ilişkiler (sınır, genişlik, simetrik) | mesafe sınırı, açı sınırı (aralıkta serbest, uçta tutar); simetrik (iki yüz, eksen ya da nokta bir düzlemde ayna); genişlik (tırnak oluğun ortasında, ortadan kayma) | var | |
 | Mekanik ilişkiler (dişli, kam, kremayer) | eşleme: dişli, kayış, kremayer-pinyon, kayışlı taşıyıcı, vidalı mil, kam ve itici (harmonik, tepe sayısı); boşluk, verim, kayış esnemesi | var | |
 | Çakışma algılama | Çakışma algılama (hacim, değenler, bağlı parçalar, yalnız seçili) | var | |
 | Boşluk doğrulama | Boşluk doğrulama (en az boşluk, GJK ile kesin mesafe, iki uç arası çizgi) | var | |

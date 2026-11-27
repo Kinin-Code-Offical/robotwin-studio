@@ -817,6 +817,15 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "origins":   // [origins] the drill/place origin on the bottom-left mounting hole, a 2.54 mm grid run from a hole at the top
+                    board.MountingHoles.Add(new MountingHole { X = 4, Y = board.Height - 4, Drill = 3.2, PadDiameter = 6 });
+                    board.MountingHoles.Add(new MountingHole { X = 4, Y = 4, Drill = 3.2, PadDiameter = 6 });
+                    board.AuxOrigin = new RobotTwin.CoreSim.Pcb.PcbPoint(4, board.Height - 4);
+                    board.GridOrigin = new RobotTwin.CoreSim.Pcb.PcbPoint(4, 4);
+                    Canvas.GridSize = 2.54;
+                    Canvas.Refresh();
+                    break;
+
                 case "rats-curve":   // [rats-curve] the board unrouted, its ratsnest drawn as curves
                     board.Tracks.Clear();
                     board.Vias.Clear();

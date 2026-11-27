@@ -87,12 +87,15 @@ namespace RobotTwin.CoreSim.Pcb
             private readonly StringBuilder _sb = new StringBuilder();
             private readonly Dictionary<string, int> _apertures = new Dictionary<string, int>(StringComparer.Ordinal);
             private readonly StringBuilder _body = new StringBuilder();
-            private readonly double _height;
+            private readonly double _ox, _oy;
             private int _current = -1;
 
-            public GerberWriter(double boardHeight, string function, string polarity = "Positive")
+            /// <summary>[origins] Coordinates measured from the board's fabrication origin, X right and Y up.</summary>
+            public GerberWriter(BoardDocument board, string function, string polarity = "Positive")
             {
-                _height = boardHeight;
+                var o = board.FabOrigin;
+                _ox = o.X;
+                _oy = o.Y;
                 _sb.Append("%TF.GenerationSoftware,RobotWin,Studio,2.0*%\n");
                 _sb.Append("%TF.FileFunction,").Append(function).Append("*%\n");
                 _sb.Append("%TF.FilePolarity,").Append(polarity).Append("*%\n");
@@ -103,9 +106,9 @@ namespace RobotTwin.CoreSim.Pcb
 
             private static string D(double v) => v.ToString("0.######", CultureInfo.InvariantCulture);
 
-            private string X(double x) => "X" + F(x);
+            private string X(double x) => "X" + F(x - _ox);
 
-            private string Y(double y) => "Y" + F(_height - y);
+            private string Y(double y) => "Y" + F(_oy - y);
 
             private void Select(string template)
             {
@@ -207,7 +210,7 @@ namespace RobotTwin.CoreSim.Pcb
             string function = layer == CopperLayer.Top ? "Copper,L1,Top"
                 : layer == CopperLayer.Bottom ? "Copper,L" + count.ToString(CultureInfo.InvariantCulture) + ",Bot"
                 : "Copper,L" + index.ToString(CultureInfo.InvariantCulture) + ",Inr";
-            var g = new GerberWriter(board.Height, function);
+            var g = new GerberWriter(board, function);
             PlotCopper(g, board, layer);
             return g.ToString();
         }
@@ -255,7 +258,7 @@ namespace RobotTwin.CoreSim.Pcb
 
         private static string Mask(BoardDocument board, CopperLayer side)
         {
-            var g = new GerberWriter(board.Height, side == CopperLayer.Top ? "Soldermask,Top" : "Soldermask,Bot", "Negative");
+            var g = new GerberWriter(board, side == CopperLayer.Top ? "Soldermask,Top" : "Soldermask,Bot", "Negative");
             PlotMask(g, board, side);
             return g.ToString();
         }
@@ -272,7 +275,7 @@ namespace RobotTwin.CoreSim.Pcb
 
         private static string Paste(BoardDocument board, CopperLayer side)
         {
-            var g = new GerberWriter(board.Height, side == CopperLayer.Top ? "Paste,Top" : "Paste,Bot");
+            var g = new GerberWriter(board, side == CopperLayer.Top ? "Paste,Top" : "Paste,Bot");
             PlotPaste(g, board, side);
             return g.ToString();
         }
@@ -285,7 +288,7 @@ namespace RobotTwin.CoreSim.Pcb
 
         private static string Silkscreen(BoardDocument board, CopperLayer side)
         {
-            var g = new GerberWriter(board.Height, side == CopperLayer.Top ? "Legend,Top" : "Legend,Bot");
+            var g = new GerberWriter(board, side == CopperLayer.Top ? "Legend,Top" : "Legend,Bot");
             PlotSilk(g, board, side);
             return g.ToString();
         }
@@ -335,7 +338,7 @@ namespace RobotTwin.CoreSim.Pcb
 
         private static string Outline(BoardDocument board)
         {
-            var g = new GerberWriter(board.Height, "Profile,NP");
+            var g = new GerberWriter(board, "Profile,NP");
             PlotOutline(g, board);
             return g.ToString();
         }
@@ -408,14 +411,15 @@ namespace RobotTwin.CoreSim.Pcb
                   .Append(tools[i].ToString("0.000", CultureInfo.InvariantCulture)).Append('\n');
             }
 
+            var fab = board.FabOrigin;   // [origins]
             sb.Append("%\nG90\nG05\n");
             for (int i = 0; i < tools.Count; i++)
             {
                 sb.Append('T').Append((i + 1).ToString(CultureInfo.InvariantCulture)).Append('\n');
                 foreach (var h in holes.Where(h => Math.Round(h.D, 3) == tools[i]))
                 {
-                    sb.Append('X').Append(h.X.ToString("0.000", CultureInfo.InvariantCulture))
-                      .Append('Y').Append((board.Height - h.Y).ToString("0.000", CultureInfo.InvariantCulture)).Append('\n');
+                    sb.Append('X').Append((h.X - fab.X).ToString("0.000", CultureInfo.InvariantCulture))
+                      .Append('Y').Append((fab.Y - h.Y).ToString("0.000", CultureInfo.InvariantCulture)).Append('\n');
                 }
             }
 
@@ -451,6 +455,7 @@ namespace RobotTwin.CoreSim.Pcb
         public static string PickAndPlace(BoardDocument board, Design.Fitting? fitting = null)
         {
             var sb = new StringBuilder("Designator,Val,Package,Mid X,Mid Y,Layer,Rotation\n");
+            var fab = board.FabOrigin;   // [origins] from the drill/place origin, Y up
             foreach (var c in Fitted(board, fitting).OrderBy(c => c.RefDes, StringComparer.Ordinal))
             {
                 var fp = FootprintLibrary.Get(c.FootprintId);
@@ -459,8 +464,8 @@ namespace RobotTwin.CoreSim.Pcb
                 int rot = ((c.Rotation % 360) + 360) % 360;
                 if (c.Side == CopperLayer.Bottom) rot = (360 - rot) % 360;
                 sb.Append(c.RefDes).Append(',').Append(Csv(ValueOf(c, fitting))).Append(',').Append(Csv(c.FootprintId)).Append(',')
-                  .Append(((box.MinX + box.MaxX) / 2).ToString("0.###", CultureInfo.InvariantCulture)).Append("mm,")
-                  .Append((board.Height - (box.MinY + box.MaxY) / 2).ToString("0.###", CultureInfo.InvariantCulture)).Append("mm,")
+                  .Append(((box.MinX + box.MaxX) / 2 - fab.X).ToString("0.###", CultureInfo.InvariantCulture)).Append("mm,")
+                  .Append((fab.Y - (box.MinY + box.MaxY) / 2).ToString("0.###", CultureInfo.InvariantCulture)).Append("mm,")
                   .Append(c.Side == CopperLayer.Top ? "Top" : "Bottom").Append(',')
                   .Append(rot.ToString(CultureInfo.InvariantCulture)).Append('\n');
             }

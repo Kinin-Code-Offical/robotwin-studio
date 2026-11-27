@@ -745,6 +745,90 @@ namespace RobotWin.Studio.Modeling
 
         private List<SketchEntity> SelEntities => _selection.Select(id => _sk.Entity(id)).Where(e => e != null).Select(e => e!).ToList();
 
+        private static int _patternCount = 3;
+        private static double _patternDx = 10, _patternDy, _patternAngle = 360;
+
+        /// <summary>[sketch-pattern] The pattern row's starting values (the snapshot demo sets them; the row remembers the last used).</summary>
+        internal static void PatternDefaults(int count, double dx, double dy, double angle)
+        {
+            _patternCount = count;
+            _patternDx = dx;
+            _patternDy = dy;
+            _patternAngle = angle;
+        }
+
+        /// <summary>
+        /// [sketch-pattern] The pattern row under the relations: the count (the original included) and either the step in
+        /// X and Y (mm) or, with a centre point chosen, the angle the copies spread over (360° = all the way round).
+        /// </summary>
+        private void PatternRow(List<SketchEntity> ents, SketchPoint? centre)
+        {
+            var row = new WrapPanel { Margin = new Thickness(0, 2, 0, 8) };
+            TextBox Box(string label, double value, string unit, string tip)
+            {
+                row.Children.Add(new TextBlock { Text = label, Margin = new Thickness(0, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center, Style = R<Style>("Text.Caption") });
+                var b = new TextBox { Text = value.ToString("0.##", CultureInfo.InvariantCulture), Width = 48, HorizontalContentAlignment = HorizontalAlignment.Right, VerticalContentAlignment = VerticalAlignment.Center, ToolTip = tip, Margin = new Thickness(0, 0, 2, 4) };
+                row.Children.Add(b);
+                row.Children.Add(new TextBlock { Text = unit, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center, Style = R<Style>("Text.Caption") });
+                return b;
+            }
+
+            static bool Read(TextBox b, out double v) => double.TryParse(b.Text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out v);
+            var count = Box("Adet", _patternCount, "", "Kaç tane (aslı dahil)");
+            TextBox? dx = null, dy = null, angle = null;
+            if (centre == null)
+            {
+                dx = Box("X", _patternDx, "mm", "Her kopyanın bir öncekine X adımı");
+                dy = Box("Y", _patternDy, "mm", "Her kopyanın bir öncekine Y adımı");
+            }
+            else angle = Box("Açı", _patternAngle, "°", "Kopyaların yayıldığı açı; 360° tam tur");
+
+            string name = centre == null ? "Doğrusal çoğalt" : "Dairesel çoğalt";
+            var go = new Button
+            {
+                Content = name, Style = R<Style>("Btn.Ghost"), Margin = new Thickness(0, 0, 6, 4), Padding = new Thickness(8, 4, 8, 4),
+                ToolTip = centre == null
+                    ? "Seçilenleri adım adım sıralar; kopyalar ölçülerle aslına bağlı, aslı değişince izler"
+                    : "Seçilenleri seçili noktanın çevresinde döndürerek çoğaltır; kopyalar açı ölçüsüyle aslını izler"
+            };
+            go.Click += (_, _) =>
+            {
+                if (!Read(count, out double n) || n < 2 || n > 500) return;
+                _patternCount = (int)Math.Round(n);
+                string? why = null;
+                var ids = ents.Select(e => e.Id).ToList();
+                if (centre == null)
+                {
+                    if (!Read(dx!, out double x) || !Read(dy!, out double y)) return;
+                    _patternDx = x;
+                    _patternDy = y;
+                    Change(name, () =>
+                    {
+                        why = SketchPattern.Linear(_sk, ids, _patternCount, x, y);
+                        if (why == null) _selection.Clear();
+                    });
+                }
+                else
+                {
+                    if (!Read(angle!, out double a) || Math.Abs(a) < 1e-9) return;
+                    _patternAngle = a;
+                    Change(name, () =>
+                    {
+                        why = SketchPattern.Circular(_sk, ids, centre.Id, _patternCount, a);
+                        if (why == null) _selection.Clear();
+                    });
+                }
+
+                if (why != null)
+                {
+                    _message = why;
+                    ShowState();
+                }
+            };
+            row.Children.Add(go);
+            _relations.Children.Add(row);
+        }
+
         private void FillRelations()
         {
             _relations.Children.Clear();
@@ -890,6 +974,10 @@ namespace RobotWin.Studio.Modeling
                 CornerButton("Pah", "Köşeyi düz bir kenarla keser (iki çizgide de aynı geri çekme)", SketchCorners.Chamfer);
                 _relations.Children.Add(row);
             }
+
+            // [sketch-pattern] SolidWorks' Linear / Circular Sketch Pattern: lines, circles, arcs in a row, or round one chosen point
+            if (ents.Count >= 1 && pts.Count <= 1)
+                PatternRow(ents, pts.Count == 1 ? pts[0] : null);
 
             if (_selection.Count > 0)
             {
