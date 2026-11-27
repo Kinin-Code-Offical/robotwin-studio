@@ -187,17 +187,27 @@ namespace RobotWin.Studio
                 StatusBar.Visibility = v ? Visibility.Visible : Visibility.Collapsed;
             }));
             var scale = Sub("Arayüz ölçeği");
+            var auto = Item("Otomatik (ekrana oranlı)", null, () =>
+            {
+                AppSettings.Current.UiScaleAuto = true;   // [uiscale]
+                AppSettings.Current.Save();
+                ApplyUiScale(AppSettings.Current.UiScale);
+            });
+            auto.IsCheckable = true;
+            auto.IsChecked = AppSettings.Current.UiScaleAuto;
+            scale.Items.Add(auto);
             foreach (var (label, value) in new[] { ("%75", 0.75), ("%90", 0.9), ("%100", 1.0), ("%110", 1.1), ("%125", 1.25), ("%150", 1.5) })
             {
                 double v = value;
                 var it = Item(label, null, () =>
                 {
                     AppSettings.Current.UiScale = v;
+                    AppSettings.Current.UiScaleAuto = false;
                     AppSettings.Current.Save();
                     ApplyUiScale(v);
                 });
                 it.IsCheckable = true;
-                it.IsChecked = Math.Abs(AppSettings.Current.UiScale - v) < 1e-3;
+                it.IsChecked = !AppSettings.Current.UiScaleAuto && Math.Abs(AppSettings.Current.UiScale - v) < 1e-3;
                 scale.Items.Add(it);
             }
 

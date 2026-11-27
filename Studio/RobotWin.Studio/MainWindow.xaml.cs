@@ -191,7 +191,11 @@ namespace RobotWin.Studio
             StatusText.Text = W.Status;
 
             StateChanged += (_, _) => OnStateChanged();
-            SizeChanged += (_, _) => FitTitleBar();   // [layout] the title bar at large display scales
+            SizeChanged += (_, _) =>
+            {
+                if (AppSettings.Current.UiScaleAuto) ApplyUiScale(AppSettings.Current.UiScale);   // [uiscale] proportional to the window
+                FitTitleBar();   // [layout] the title bar at large display scales
+            };
             SourceInitialized += (_, _) => ApplyWindowsCorners();
             ContentRendered += (_, _) => Dispatcher.BeginInvoke(new Action(OfferGuideOnFirstStart), System.Windows.Threading.DispatcherPriority.ApplicationIdle);   // [guide]
             _behavior = new WindowBehavior(this, MaxButton);
@@ -295,6 +299,7 @@ namespace RobotWin.Studio
                 yield return new PaletteCommand(view, label, () =>
                 {
                     AppSettings.Current.UiScale = sc;
+                    AppSettings.Current.UiScaleAuto = false;
                     AppSettings.Current.Save();
                 });
             }
@@ -1688,12 +1693,29 @@ namespace RobotWin.Studio
             RecentFiles.Limit = Math.Max(3, s.RecentFileCount);
         }
 
-        /// <summary>Scales the whole interface (Ayarlar → Görünüm).</summary>
+        /// <summary>The window size the interface is laid out for at 100 % (a full-HD screen, maximized, less the taskbar).</summary>
+        private const double DesignWidth = 1920, DesignHeight = 1032;
+
+        private double _uiScale = 1.0;
+
+        /// <summary>
+        /// Scales the whole interface (Ayarlar → Görünüm). [uiscale] Automatic (the default): by the window, so the layout
+        /// keeps its proportions on any screen and at any display scale (60–150 %).
+        /// </summary>
         public void ApplyUiScale(double scale)
         {
-            scale = Math.Max(0.75, Math.Min(1.75, scale));
+            if (AppSettings.Current.UiScaleAuto && ActualWidth > 0 && ActualHeight > 0)
+                scale = Math.Round(Math.Min(ActualWidth / DesignWidth, ActualHeight / DesignHeight), 2);
+            scale = AppSettings.Current.UiScaleAuto ? Math.Max(0.6, Math.Min(1.5, scale)) : Math.Max(0.75, Math.Min(1.75, scale));
+            if (Math.Abs(scale - _uiScale) < 0.005 && Root.LayoutTransform is not null && (Root.LayoutTransform != Transform.Identity || Math.Abs(scale - 1) < 1e-3)) return;
+            _uiScale = scale;
             Root.LayoutTransform = Math.Abs(scale - 1.0) < 1e-3 ? Transform.Identity : new ScaleTransform(scale, scale);
+            // the title bar's drag area scales with it
+            if (System.Windows.Shell.WindowChrome.GetWindowChrome(this) is { } chrome) chrome.CaptionHeight = 42 * scale;
         }
+
+        /// <summary>[uiscale] The scale the interface is drawn at now.</summary>
+        public double UiScaleNow => _uiScale;
 
         // ================================================================ chrome
 
@@ -1754,7 +1776,7 @@ namespace RobotWin.Studio
         /// </summary>
         private void FitTitleBar()
         {
-            double w = ActualWidth;
+            double w = ActualWidth / Math.Max(0.01, _uiScale);   // the interface's own width (scaled, it may have room again)
             var narrow = w < 1280 ? Visibility.Collapsed : Visibility.Visible;
             var narrower = w < 1100 ? Visibility.Collapsed : Visibility.Visible;
             WorkspaceLabel.Visibility = narrow;

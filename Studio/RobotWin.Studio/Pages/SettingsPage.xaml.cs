@@ -120,11 +120,13 @@ namespace RobotWin.Studio.Pages
             ThemeCard();   // [theme] the gallery (Pages/SettingsPage.Themes.cs)
             Card("Arayüz", "Boyut ve göstergeler.", c =>
             {
-                c.Children.Add(Choice("Arayüz ölçeği", new[] { ("%75", 0.75), ("%90", 0.9), ("%100", 1.0), ("%110", 1.1), ("%125", 1.25), ("%150", 1.5) }, S.UiScale, v =>
+                // [uiscale] 0 stands for automatic: proportional to the window
+                c.Children.Add(Choice("Arayüz ölçeği", new[] { ("Otomatik", 0.0), ("%75", 0.75), ("%90", 0.9), ("%100", 1.0), ("%110", 1.1), ("%125", 1.25), ("%150", 1.5) }, S.UiScaleAuto ? 0.0 : S.UiScale, v =>
                 {
-                    S.UiScale = v;
-                    (Window.GetWindow(this) as MainWindow)?.ApplyUiScale(v);
-                }, "Yüksek çözünürlüklü ekranlarda veya sunumlarda büyütün."));
+                    S.UiScaleAuto = v <= 0;
+                    if (v > 0) S.UiScale = v;
+                    (Window.GetWindow(this) as MainWindow)?.ApplyUiScale(S.UiScale);
+                }, "Otomatik: arayüz pencereyle orantılı (1920 × 1080'de %100); küçük ekranda ya da büyük ekran ölçeğinde simgeler ve paneller aynı oranda küçülür, kaydırma ya da taşma olmaz. Sunum için sabit bir ölçek seçin."));
                 c.Children.Add(Toggle("Performans göstergesi (FPS, kare süreleri)", S.ShowPerf, v =>
                 {
                     S.ShowPerf = v;

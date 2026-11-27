@@ -12,7 +12,7 @@ Make sure you downloaded it from the project's GitHub Releases page, then choose
 Yes. Choose **Portable** on the installer's "how to install" page and a folder on the stick (or run `RobotWinStudio-Setup-<version>.exe /S /PORTABLE /D=E:\RobotWin`); only the files are written, no shortcuts or registry entries are created. The release's `-win-x64-portable.zip` is the same folder, ready to unzip.
 
 **The interface is too small / too large.**
-Set it between 75 % and 150 % with **View → Interface scale**.
+**View → Interface scale** is **Automatic** by default: the interface scales in proportion to the screen. For larger or smaller, pick a fixed scale between 75 % and 150 %.
 
 **Can the interface be in English?**
 Yes: English is the default language, and Turkish is the interface's own. Choose the language on the installer's first page or in **Settings → General → Language** (it applies everywhere once the app is opened again). For another language, take the English pack (`Lang/en.json`) as a model and put your own pack in `%APPDATA%\RobotWin\lang`. The documentation is complete in both Turkish and English.

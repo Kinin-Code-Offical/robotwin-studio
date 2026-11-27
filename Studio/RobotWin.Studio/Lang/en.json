@@ -8592,6 +8592,8 @@
   "Seçenekler": "Options",
   "Renkli (kapalıyken her şey siyah: toner transferi, film)": "In colour (off: everything black, for toner transfer and film)",
   "Aynala": "Mirror",
+  "Otomatik (ekrana oranlı)": "Automatic (proportional to the screen)",
+  "Otomatik: arayüz pencereyle orantılı (1920 × 1080'de %100); küçük ekranda ya da büyük ekran ölçeğinde simgeler ve paneller aynı oranda küçülür, kaydırma ya da taşma olmaz. Sunum için sabit bir ölçek seçin.": "Automatic: the interface in proportion to the window (100 % at 1920 × 1080); on a small screen or at a large display scale icons and panels shrink by the same ratio, nothing scrolls or spills over. Pick a fixed scale for presenting.",
   "Kart kenarı ve ölçüler": "Outline and size",
   "Kart kenarı kapalı değil: üretici kartın biçimini bilemez": "The outline is not closed: the fab cannot know the board's shape",
   "Tasarım kuralları (DRC)": "Design rules (DRC)",

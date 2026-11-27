@@ -12,7 +12,7 @@ Dosyayı projenin GitHub Sürümler sayfasından indirdiğinizden emin olun, son
 Evet. Kurulum dosyasının "kurulum biçimi" sayfasında **Taşınabilir**'i ve bellekteki bir klasörü seçin (ya da `RobotWinStudio-Setup-<sürüm>.exe /S /PORTABLE /D=E:\RobotWin` çalıştırın); yalnızca dosyalar yazılır, kısayol ve kayıt defteri girdisi oluşturulmaz. Sürümdeki `-win-x64-portable.zip` aynı klasörün açılmaya hazır hâlidir.
 
 **Arayüz çok küçük / çok büyük.**
-**Görünüm → Arayüz ölçeği** ile %75–%150 arasında ayarlayın.
+**Görünüm → Arayüz ölçeği** varsayılan olarak **Otomatik**tir: arayüz ekranla orantılı ölçeklenir. Daha büyük ya da küçük isterseniz %75–%150 arasında sabit bir ölçek seçin.
 
 **Arayüz İngilizce olabilir mi?**
 Evet: varsayılan dil İngilizcedir, Türkçe de arayüzün kendi dilidir. Dili kurulumun ilk sayfasında ya da **Ayarlar → Genel → Dil**'de seçin (uygulama yeniden açılınca her yerde geçerli olur). Başka bir dil için İngilizce paketi (`Lang/en.json`) örnek alıp kendi paketinizi `%APPDATA%\RobotWin\lang` klasörüne koyabilirsiniz. Belgeler Türkçe ve İngilizce eksiksiz ayrı ayrıdır.

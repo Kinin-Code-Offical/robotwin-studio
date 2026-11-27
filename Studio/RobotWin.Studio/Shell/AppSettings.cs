@@ -74,6 +74,13 @@ namespace RobotWin.Studio.Shell
         /// <summary>Whole-interface zoom (0.75 – 1.75).</summary>
         public double UiScale { get; set; } = 1.0;
 
+        /// <summary>
+        /// [uiscale] The interface follows the window: at 1920 × 1080 it is 100 %, on a smaller screen (or a large display
+        /// scale) everything shrinks by the same ratio, icons and panels alike, instead of scrolling or wrapping; on a larger
+        /// one it grows. Off: <see cref="UiScale"/> as chosen.
+        /// </summary>
+        public bool UiScaleAuto { get; set; } = true;
+
         /// <summary>Particle effects (smoke, sparks, fire) in 2D and 3D.</summary>
         public bool Effects { get; set; } = true;
 

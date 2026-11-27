@@ -83,7 +83,7 @@ The guide stays in the bottom right corner as a small card. At each step it says
 - **Folding the bottom pane:** ⌄ at the right of the bottom pane folds it to a thin strip of its tabs; a click on a tab or ⌃ opens it again. The World page starts with its bottom pane folded; it opens by itself when something such as serial output arrives.
 - **Sliders:** the value box beside every slider takes a typed value (Enter applies, ↑/↓ steps, Shift a large step).
 - **Full screen (F11):** leave with **Esc** or **F11**.
-- **Interface scale:** **View → Interface scale**, 75–150 %.
+- **Interface scale:** **View → Interface scale**. The default is **Automatic (proportional to the screen)**: the interface scales with the window; at 1920 × 1080 it is 100 %, on a smaller screen or at a large Windows display scale (150 %, 200 %) icons, text and panels shrink by the same ratio, on a large screen they grow (60–150 %). Nothing scrolls, spills over or wraps into a second column; the proportions stay the same on every screen. A fixed scale (75–150 %) can be chosen for presenting or by preference.
 
 ## Files
 

@@ -43,6 +43,16 @@ namespace RobotWin.Studio.Shell
                     found.Add(new Finding("kırpılmış", Name(c), Path(c), string.Format(CultureInfo.InvariantCulture, "{0:0} px dışarıda ({1})", clip.Off, clip.By)));
             }
 
+            // [keys] reached and seen from the keyboard: Tab comes to it, and a ring shows where the focus is
+            foreach (var (c, _) in controls)
+            {
+                if (c is TextBoxBase || !c.IsEnabled) continue;   // a text box shows its caret
+                if (!c.Focusable || (c is Control k && !k.IsTabStop))
+                    found.Add(new Finding("klavyeyle ulaşılamaz", Name(c), Path(c), "Tab bu denetime gelmiyor (Focusable / IsTabStop kapalı)"));
+                else if (c.FocusVisualStyle == null)
+                    found.Add(new Finding("odak görünmez", Name(c), Path(c), "klavye odağı geldiğinde hiçbir işaret yok (FocusVisualStyle boş)"));
+            }
+
             // over another one
             for (int i = 0; i < controls.Count; i++)
             {

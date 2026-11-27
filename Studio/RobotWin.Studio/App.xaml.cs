@@ -407,7 +407,9 @@ namespace RobotWin.Studio
                 var root = SnapshotTarget ?? (FrameworkElement)window.Content;
                 root.UpdateLayout();
                 var dpi = VisualTreeHelper.GetDpi(window);
-                var bmp = new RenderTargetBitmap((int)(root.ActualWidth * dpi.DpiScaleX), (int)(root.ActualHeight * dpi.DpiScaleY),
+                // [uiscale] a scaled interface: its size on screen, not its own unscaled one
+                var shown = root.LayoutTransform is { } lt && !lt.Value.IsIdentity ? lt.TransformBounds(new Rect(root.RenderSize)) : new Rect(root.RenderSize);
+                var bmp = new RenderTargetBitmap((int)Math.Ceiling(shown.Width * dpi.DpiScaleX), (int)Math.Ceiling(shown.Height * dpi.DpiScaleY),
                     96 * dpi.DpiScaleX, 96 * dpi.DpiScaleY, PixelFormats.Pbgra32);
                 bmp.Render(root);
                 var shot = WithPopups(bmp, root, dpi);   // [code] open popups (completion list, call tip) are windows of their own

@@ -83,7 +83,7 @@ Rehber sağ altta küçük bir kart olarak durur. Her adımda neye basacağını
 - **Alt bölmeyi katlamak:** alt bölmenin sağındaki ⌄ onu yalnız sekmelerinin kaldığı ince bir şeride indirir; bir sekmeye tıklamak ya da ⌃ geri açar. Dünya sayfası ilk açılışta alt bölmesi katlı başlar; seri çıktı gibi bir şey gelince kendi açılır.
 - **Kaydırıcılar:** her kaydırıcının yanındaki değer kutusuna değer yazılabilir (Enter uygular, ↑/↓ adım atar, Shift büyük adım).
 - **Tam ekran (F11):** **Esc** veya **F11** ile çıkılır.
-- **Arayüz ölçeği:** **Görünüm → Arayüz ölçeği** (%75–%150).
+- **Arayüz ölçeği:** **Görünüm → Arayüz ölçeği**. Varsayılan **Otomatik (ekrana oranlı)**: arayüz pencereyle orantılı ölçeklenir; 1920 × 1080'de %100'dür, daha küçük ekranda ya da Windows'un büyük ekran ölçeğinde (%150, %200) simgeler, yazılar ve paneller aynı oranda küçülür, büyük ekranda büyür (%60–%150). Böylece hiçbir şey kaymaz, taşmaz, ikinci sütuna geçmez; oranlar her ekranda aynı kalır. Sunum ya da başka bir tercih için sabit bir ölçek (%75–%150) seçilebilir.
 
 ## Dosyalar
 
