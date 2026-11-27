@@ -22,6 +22,7 @@ namespace RobotWin.Studio.World
     {
         public readonly System.Collections.Generic.List<(Point Anchor, Point? A, Point? B)> Joints = new System.Collections.Generic.List<(Point, Point?, Point?)>();
         public readonly System.Collections.Generic.List<Point[]> Limits = new System.Collections.Generic.List<Point[]>();
+        public readonly System.Collections.Generic.List<Point[]> Turns = new System.Collections.Generic.List<Point[]>();
         public Point? Com;
 
         private static readonly Brush Amber = Frozen(new SolidColorBrush(Color.FromRgb(0xF2, 0xB8, 0x3B)));
@@ -56,6 +57,36 @@ namespace RobotWin.Studio.World
                 // its two ends: where it stops
                 dc.DrawEllipse(Amber, null, line[0], 2.5, 2.5);
                 dc.DrawEllipse(Amber, null, line[^1], 2.5, 2.5);
+            }
+
+            // [technical] which way a shaft's torque turns: an arc round it with its head where it pushes
+            foreach (var arc in Turns)
+            {
+                if (arc.Length < 3) continue;
+                var g = new StreamGeometry();
+                using (var s = g.Open())
+                {
+                    s.BeginFigure(arc[0], false, false);
+                    for (int i = 1; i < arc.Length; i++) s.LineTo(arc[i], true, true);
+                }
+
+                g.Freeze();
+                dc.DrawGeometry(null, AxisPen, g);
+                var tip = arc[^1];
+                var dir = tip - arc[^2];
+                if (dir.Length < 1e-6) continue;
+                dir.Normalize();
+                var side = new Vector(-dir.Y, dir.X);
+                var head = new StreamGeometry();
+                using (var s = head.Open())
+                {
+                    s.BeginFigure(tip + dir * 5, true, true);
+                    s.LineTo(tip - dir * 3 + side * 4.5, true, true);
+                    s.LineTo(tip - dir * 3 - side * 4.5, true, true);
+                }
+
+                head.Freeze();
+                dc.DrawGeometry(Amber, null, head);
             }
 
             foreach (var (anchor, a, b) in Joints)
@@ -112,6 +143,7 @@ namespace RobotWin.Studio.World
         private Point3D? _techCom;
         private readonly System.Collections.Generic.List<(Point3D Anchor, Point3D? A, Point3D? B)> _techJoints = new System.Collections.Generic.List<(Point3D, Point3D?, Point3D?)>();
         private readonly System.Collections.Generic.List<Point3D[]> _techLimits = new System.Collections.Generic.List<Point3D[]>();
+        private readonly System.Collections.Generic.List<Point3D[]> _techTurns = new System.Collections.Generic.List<Point3D[]>();
 
         private bool _showTechnical = true;
 
@@ -154,6 +186,7 @@ namespace RobotWin.Studio.World
             _techCom = null;
             _techJoints.Clear();
             _techLimits.Clear();
+            _techTurns.Clear();
             if (!_showTechnical || World == null || Selected == null || !_items.TryGetValue(Selected, out var it) || it.Model.Bounds.IsEmpty)
             {
                 PlaceTechLabel();
@@ -185,12 +218,38 @@ namespace RobotWin.Studio.World
             var (com, mass, speed) = BodyOf(it, bounds);
             _techCom = com;
 
+            // [technical] a servo's or motor's output shaft: its axis through the horn / shaft, and while the world runs the
+            // way its torque turns (an arrowed arc round it) with the torque in the label
+            double? torque = null;
+            if (it.Model.Port is { } port)
+            {
+                var pivot = it.Current.Transform(port.Pivot);
+                var shaft = it.Current.Transform(port.Axis);
+                if (shaft.Length > 1e-9)
+                {
+                    shaft.Normalize();
+                    double reach = Math.Max(0.008, Math.Min(0.08, size * 0.5));
+                    _techJoints.Add((pivot, pivot - shaft * reach * 0.3, pivot + shaft * reach));
+                    if (Session is { State: not Simulation.SimState.Stopped } && Session.Physics?.PortJoint(it.Object.Id) is { } rotor)
+                    {
+                        double t = Math.Abs(rotor.MotorTorque) > 1e-9 ? rotor.MotorTorque : rotor.DriveTorque;
+                        if (Math.Abs(t) > 1e-6)
+                        {
+                            torque = t;
+                            _techTurns.Add(TurnArc(pivot + shaft * reach * 0.6, shaft, Math.Max(0.006, Math.Min(0.04, size * 0.22)), Math.Sign(t)));
+                        }
+                    }
+                }
+            }
+
+
             int cables = World.Cables.Count(TiedToSelection);
             var parts = new System.Collections.Generic.List<string> { string.IsNullOrEmpty(it.Object.Name) ? it.Object.Id : it.Object.Name };
             if (mass > 0) parts.Add(mass < 1 ? (mass * 1000).ToString("0.#", CultureInfo.CurrentCulture) + " g" : mass.ToString("0.###", CultureInfo.CurrentCulture) + " kg");
             parts.Add(Lang.T(cables + " kablo"));
             parts.Add(Lang.T(joints + " bağlantı"));
             if (speed is double v && Session is { State: not Simulation.SimState.Stopped }) parts.Add(v.ToString("0.00", CultureInfo.CurrentCulture) + " m/s");
+            if (torque is double tq) parts.Add("τ " + tq.ToString("0.000", CultureInfo.CurrentCulture) + " N·m");
             _techText.Text = string.Join(" · ", parts);
             _techAt = new Point3D(bounds.X + bounds.SizeX / 2, bounds.Y + bounds.SizeY / 2, bounds.Z + bounds.SizeZ);
             PlaceTechLabel();
@@ -244,6 +303,23 @@ namespace RobotWin.Studio.World
             return pts;
         }
 
+        /// <summary>Three quarters of a circle round an axis, turning the way the right hand's fingers do for a positive sign.</summary>
+        private static Point3D[] TurnArc(Point3D centre, Vector3D axis, double radius, int sign)
+        {
+            var u = Vector3D.CrossProduct(axis, Math.Abs(axis.Z) < 0.9 ? new Vector3D(0, 0, 1) : new Vector3D(1, 0, 0));
+            u.Normalize();
+            var w = Vector3D.CrossProduct(axis, u);
+            const int n = 18;
+            var pts = new Point3D[n + 1];
+            for (int i = 0; i <= n; i++)
+            {
+                double a = sign * 1.5 * Math.PI * i / n;
+                pts[i] = centre + (u * Math.Cos(a) + w * Math.Sin(a)) * radius;
+            }
+
+            return pts;
+        }
+
         private static Point3D Middle(Rect3D b) => new Point3D(b.X + b.SizeX / 2, b.Y + b.SizeY / 2, b.Z + b.SizeZ / 2);
 
         /// <summary>
@@ -292,6 +368,14 @@ namespace RobotWin.Studio.World
             {
                 var screen = line.Select(p => On(p)).ToList();
                 if (screen.All(p => p != null)) _techMarks.Limits.Add(screen.Select(p => p!.Value).ToArray());
+            }
+
+            hadMarks |= _techMarks.Turns.Count > 0;
+            _techMarks.Turns.Clear();
+            foreach (var arc in _techTurns)
+            {
+                var screen = arc.Select(p => On(p)).ToList();
+                if (screen.All(p => p != null)) _techMarks.Turns.Add(screen.Select(p => p!.Value).ToArray());
             }
             _techMarks.Com = On(_techCom);
             if (hadMarks || _techMarks.Com != null || _techMarks.Joints.Count > 0) _techMarks.InvalidateVisual();
