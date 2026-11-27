@@ -243,6 +243,8 @@ In either mode, with an ESP32 chosen on the Code page, the **Real board** menu d
 3. **Upload to the real board → COMx**: boards connected by USB are listed; picking one builds the sketch and writes it with `esptool`. The board enters upload mode by itself; if it does not, hold its BOOT button during the upload.
 4. **Export the merged image (.bin)**: bootloader, partition table and application in one file, written at address 0x0 by web flashers or `esptool`.
 
+**Gamepad sketches (Bluepad32):** a sketch with `#include <Bluepad32.h>` is built for the real board with Bluepad32's own Arduino-ESP32 core (Bluepad32 4.1.0 by Ricardo Quesada; BTstack inside). **Install the Bluepad32 core** on the menu downloads it once (about 800 MB, 2.7 GB installed; into a separate, short folder, because this core hands the compiler some 180 include paths and a long folder takes it past Windows' command-line limit). **Build for the real board** and **Upload to the real board** then choose this core by themselves. As the core is based on Arduino-ESP32 2.x, RobotWin adds a small compatibility header on top of the sketch's file while building: 3.x calls such as `ledcAttach(pin, …)` and `ledcWrite(pin, …)` go to the 2.x calls through a channel per pin. You do not change your sketch, and error messages still give your own line numbers. This core makes no merged image; the upload writes the four files one by one. In the simulation a Bluepad32 board runs in the fast mode in both modes (the emulator has no Bluetooth yet).
+
 The detailed plan of the two modes and the emulator's stages: [The two ESP32 run modes](../../ESP32_MODES.md).
 
 ### ESP32 compatibility
@@ -266,7 +268,8 @@ Like the Arduino table: whether each feature works in the two modes, how it was 
 | Deep / light sleep | ✓ | ✓ | deep sleep twice for 200 ms with `RTC_DATA_ATTR` kept; light sleep 0.5 s, woken at once by GPIO4 | |
 | Preferences (NVS), LittleFS | ✓ | ✓ | a boot counter, a file written and read back | |
 | Wi-Fi station and softAP, UDP, TCP | ✓ (the world's virtual network) | ✓ (the firmware's own lwIP) | DHCP, UDP both ways, TCP client and server; a station joining the softAP | no Internet: the network is inside the world |
-| ESP-NOW, BLE, Bluepad32 | ✓ | — | `Esp32RadioTests`, `GamepadCarTests` | a sketch using them runs in the fast mode |
+| ESP-NOW, BLE | ✓ | — | `Esp32RadioTests` | a sketch using them runs in the fast mode |
+| Bluepad32 (PS4 / PS5 / Xbox gamepad) | ✓ | built for the real board (Bluepad32 core); runs in the fast mode on the emulator | `GamepadCarTests`; the *ps5-car* and *ps5-plane* templates' sketches built with Bluepad32 4.1.0 (718 / 749 KB) | not tried on a real board (none at hand) |
 | TLS, mDNS | — | — | | not yet |
 | Floating point (FPU) | ✓ | ✓ (single-precision FPU) | `XtensaCoreTests` | the emulator lacks the FPU divide / square-root sequences and MAC16 |
 | Breakpoints, stepping | — | — | | Arduino Uno / Nano only |

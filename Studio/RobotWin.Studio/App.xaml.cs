@@ -744,15 +744,18 @@ namespace RobotWin.Studio
                     return 4;
                 }
 
-                if (!Firmware.ArduinoCompiler.Esp32ToolchainInstalled)
+                // [bluepad32] a gamepad sketch builds with Bluepad32's core, the others with Arduino-ESP32's
+                bool gamepad = Firmware.ArduinoCompiler.UsesBluepad32(File.ReadAllText(sketch));
+                if (gamepad ? !Firmware.ArduinoCompiler.Esp32Bluepad32Installed : !Firmware.ArduinoCompiler.Esp32ToolchainInstalled)
                 {
                     if (!install)
                     {
-                        Line("ESP32 araç zinciri kurulu değil: --esp32-install ile kurun.");
+                        Line(gamepad ? "Bluepad32 çekirdeği kurulu değil: --esp32-install ile kurun." : "ESP32 araç zinciri kurulu değil: --esp32-install ile kurun.");
                         return 2;
                     }
 
-                    if (!Firmware.ArduinoCompiler.InstallEsp32ToolchainAsync(Line).GetAwaiter().GetResult()) return 3;
+                    bool ok = gamepad ? Firmware.ArduinoCompiler.InstallEsp32Bluepad32Async(Line).GetAwaiter().GetResult() : Firmware.ArduinoCompiler.InstallEsp32ToolchainAsync(Line).GetAwaiter().GetResult();
+                    if (!ok) return 3;
                 }
 
                 string source = new RobotTwin.CoreSim.Formats.FirmwareSource { Source = File.ReadAllText(sketch) }.Bundle();

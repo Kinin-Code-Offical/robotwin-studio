@@ -27,12 +27,14 @@ namespace RobotWin.Studio.Pages
         private void OnHardware(object sender, RoutedEventArgs e)
         {
             var menu = new ContextMenu { PlacementTarget = HardwareButton, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
-            bool installed = ArduinoCompiler.Esp32ToolchainInstalled;
-            if (!installed)
-            {
+            // [bluepad32] a gamepad sketch builds with Bluepad32's own core, installed apart
+            bool gamepad = _folder != null && ArduinoCompiler.UsesBluepad32(_folder.ToFirmware(ArduinoCompiler.Esp32Target).Bundle());
+            bool installed = gamepad ? ArduinoCompiler.Esp32Bluepad32Installed : ArduinoCompiler.Esp32ToolchainInstalled;
+            if (!ArduinoCompiler.Esp32ToolchainInstalled)
                 Item(menu, $"ESP32 araç zincirini kur (Arduino-ESP32 {ArduinoCompiler.Esp32CoreVersion}, yaklaşık 4 GB)", InstallToolchain);
-                menu.Items.Add(new Separator());
-            }
+            if (!ArduinoCompiler.Esp32Bluepad32Installed)
+                Item(menu, $"Bluepad32 çekirdeğini kur (kumandalı çizimler; Bluepad32 {ArduinoCompiler.Esp32Bluepad32Version}, yaklaşık 2,7 GB)", InstallBluepad32);
+            if (!ArduinoCompiler.Esp32ToolchainInstalled || !ArduinoCompiler.Esp32Bluepad32Installed) menu.Items.Add(new Separator());
 
             Item(menu, "Gerçek kart için derle", () => _ = BuildForBoard(), installed && _folder != null);
             var upload = new MenuItem { Header = "Gerçek karta yükle", IsEnabled = installed && _folder != null };
@@ -67,6 +69,19 @@ namespace RobotWin.Studio.Pages
             End(ok ? "ESP32 araç zinciri kuruldu" : "ESP32 araç zinciri kurulamadı (günlüğe bakın)", ok);
         }
 
+        /// <summary>[bluepad32] Installs Bluepad32's core, after asking (it is a separate download).</summary>
+        internal async void InstallBluepad32()
+        {
+            if (Dialog.Show(OwnerWindow!, "Bluepad32 çekirdeği",
+                    $"Kablosuz kumanda (PS4, PS5, Xbox, Switch …) kullanan çizimler gerçek ESP32 için Bluepad32'nin kendi Arduino-ESP32 çekirdeğiyle derlenir (Bluepad32 {ArduinoCompiler.Esp32Bluepad32Version}, Ricardo Quesada; BTstack içinde). RobotWin'in kendi klasörüne indirilip kurulsun mu? İndirme yaklaşık 800 MB, kurulu hali 2,7 GB; Arduino IDE'nize dokunulmaz. Simülasyonun hızlı modu bunsuz da çalışır.",
+                    "İndir ve kur", "Vazgeç") != 0) return;
+            var work = Begin();
+            BuildLog.Text = string.Empty;
+            BuildStatus.Text = "Bluepad32 çekirdeği kuruluyor…";
+            bool ok = await ArduinoCompiler.InstallEsp32Bluepad32Async(Log, work.Token);
+            End(ok ? "Bluepad32 çekirdeği kuruldu" : "Bluepad32 çekirdeği kurulamadı (günlüğe bakın)", ok);
+        }
+
         /// <summary>Builds the open sketch for a real ESP32; true when the images are ready.</summary>
         private async Task<bool> BuildForBoard()
         {
@@ -75,7 +90,9 @@ namespace RobotWin.Studio.Pages
             string bundle = _folder.ToFirmware(ArduinoCompiler.Esp32Target).Bundle();
             if (_hardwareOut != null && _hardwareBuiltFrom == FirmwareSource.HashOf(bundle) && Directory.Exists(_hardwareOut)) return true;
             var work = Begin();
-            BuildLog.Text = $"Gerçek ESP32 için derleniyor (Arduino-ESP32 {ArduinoCompiler.Esp32CoreVersion}, xtensa-esp32-elf-gcc) …\n";
+            BuildLog.Text = ArduinoCompiler.UsesBluepad32(bundle)
+                ? $"Gerçek ESP32 için derleniyor (Bluepad32 {ArduinoCompiler.Esp32Bluepad32Version} çekirdeği, xtensa-esp32-elf-gcc 8.4) …\n"
+                : $"Gerçek ESP32 için derleniyor (Arduino-ESP32 {ArduinoCompiler.Esp32CoreVersion}, xtensa-esp32-elf-gcc) …\n";
             BuildStatus.Text = "Gerçek kart için derleniyor…";
             string key = SafeName(_folder.Title) + "-" + (_target?.Key ?? "klasor").Replace(':', '_');
             var result = await ArduinoCompiler.CompileEsp32HardwareAsync(bundle, key, Log, work.Token);

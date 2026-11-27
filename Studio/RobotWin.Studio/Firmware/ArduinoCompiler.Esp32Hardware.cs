@@ -32,32 +32,123 @@ namespace RobotWin.Studio.Firmware
         /// </summary>
         private static readonly (string Name, string Version)[] Esp32Companions = { ("ESP32Servo", "3.2.1") };
 
-        private static bool CompanionsInstalled =>
-            Esp32Companions.All(c => Directory.Exists(Path.Combine(Esp32ToolchainRoot, "user", "libraries", c.Name)));
+        private static bool CompanionsInstalled(bool bluepad) =>
+            Esp32Companions.All(c => Directory.Exists(Path.Combine(bluepad ? Esp32Bluepad32Root : Esp32ToolchainRoot, "user", "libraries", c.Name)));
 
-        /// <summary>Installs the companion libraries that are missing (a toolchain installed before they were added gets them on its next build).</summary>
-        private static async Task<bool> EnsureCompanionsAsync(string cli, Action<string> progress, CancellationToken cancel)
+        /// <summary>
+        /// Installs the companion libraries that are missing (a toolchain installed before they were added gets them on its
+        /// next build); [bluepad32] into Bluepad32's own folder for its core.
+        /// </summary>
+        private static async Task<bool> EnsureCompanionsAsync(string cli, Action<string> progress, CancellationToken cancel, bool bluepad = false)
         {
-            if (CompanionsInstalled) return true;
-            if (await RunAsync(Esp32Cli(cli, new[] { "lib", "update-index", "--no-color" }), progress, cancel).ConfigureAwait(false) != 0) return false;
+            if (CompanionsInstalled(bluepad)) return true;
+            ProcessStartInfo Cli(string[] a) => bluepad ? Bluepad32Cli(cli, a) : Esp32Cli(cli, a);
+            if (await RunAsync(Cli(new[] { "lib", "update-index", "--no-color" }), progress, cancel).ConfigureAwait(false) != 0) return false;
+            string root = bluepad ? Esp32Bluepad32Root : Esp32ToolchainRoot;
             foreach (var (name, version) in Esp32Companions)
             {
-                if (Directory.Exists(Path.Combine(Esp32ToolchainRoot, "user", "libraries", name))) continue;
+                if (Directory.Exists(Path.Combine(root, "user", "libraries", name))) continue;
                 progress($"{name} {version} kuruluyor …");
-                if (await RunAsync(Esp32Cli(cli, new[] { "lib", "install", name + "@" + version, "--no-color" }), progress, cancel).ConfigureAwait(false) != 0) return false;
+                if (await RunAsync(Cli(new[] { "lib", "install", name + "@" + version, "--no-color" }), progress, cancel).ConfigureAwait(false) != 0) return false;
             }
 
-            return CompanionsInstalled;
+            return CompanionsInstalled(bluepad);
+        }
+
+        // ------------------------------------------------------------------ [bluepad32] the core for gamepad sketches
+
+        /// <summary>
+        /// [bluepad32] Bluepad32's own Arduino-ESP32 core (BTstack inside; Ricardo Quesada's package, built on the 2.x core):
+        /// what a sketch using Bluepad32 is built with for the real chip.
+        /// </summary>
+        public const string Esp32Bluepad32Version = "4.1.0";
+
+        public const string Esp32Bluepad32Fqbn = "esp32-bluepad32:esp32:esp32";
+
+        private const string Esp32Bluepad32Index = "https://raw.githubusercontent.com/ricardoquesada/esp32-arduino-lib-builder/master/bluepad32_files/package_esp32_bluepad32_index.json";
+
+        /// <summary>
+        /// Where the Bluepad32 core lives: a root of its own, kept short on purpose: its 2.x core passes some 180 include
+        /// paths on the compiler's command line, which under a longer folder goes past Windows' 32 767-character limit
+        /// (as long as Arduino IDE's own folder, it stays well under). ROBOTWIN_BLUEPAD32_ROOT moves it (tests).
+        /// </summary>
+        public static string Esp32Bluepad32Root =>
+            Environment.GetEnvironmentVariable("ROBOTWIN_BLUEPAD32_ROOT") is { Length: > 0 } root ? root : Path.Combine(LocalAppData, "RobotWinStudio", "bp32");
+
+        public static bool Esp32Bluepad32Installed =>
+            Directory.Exists(Path.Combine(Esp32Bluepad32Root, "data", "packages", "esp32-bluepad32", "hardware", "esp32", Esp32Bluepad32Version));
+
+        /// <summary>The sketch includes Bluepad32 (and so builds with its core).</summary>
+        public static bool UsesBluepad32(string source) =>
+            source.Contains("<Bluepad32.h>", StringComparison.Ordinal) || source.Contains("\"Bluepad32.h\"", StringComparison.Ordinal);
+
+        /// <summary>
+        /// Why a sketch cannot be built for the real chip yet, or null: one using Bluepad32 needs Bluepad32's core, which is
+        /// installed apart (Kod → Gerçek kart → Bluepad32 çekirdeğini kur); the fast mode runs it either way.
+        /// </summary>
+        public static string? Esp32HardwareBlocker(string source) =>
+            UsesBluepad32(source) && !Esp32Bluepad32Installed
+                ? "Bluepad32 kullanan çizim gerçek kart için Bluepad32'nin kendi ESP32 çekirdeğiyle derlenir: Kod → Gerçek kart → Bluepad32 çekirdeğini kur (hızlı modda kurmadan çalışır)."
+                : null;
+
+        private static ProcessStartInfo Bluepad32Cli(string cli, IEnumerable<string> args)
+        {
+            var psi = Esp32Cli(cli, args);
+            string root = Esp32Bluepad32Root;
+            psi.Environment["ARDUINO_DIRECTORIES_DATA"] = Path.Combine(root, "data");
+            psi.Environment["ARDUINO_DIRECTORIES_DOWNLOADS"] = Path.Combine(root, "downloads");
+            psi.Environment["ARDUINO_DIRECTORIES_USER"] = Path.Combine(root, "user");
+            // its tools (the 2.x compilers, esptool) come from Espressif's index
+            psi.Environment["ARDUINO_BOARD_MANAGER_ADDITIONAL_URLS"] = Esp32PackageIndex + " " + Esp32Bluepad32Index;
+            return psi;
         }
 
         /// <summary>
-        /// Why a sketch cannot be built for the real chip by this toolchain yet, or null: Bluepad32 needs its own
-        /// Arduino-ESP32 variant (BTstack inside), which RobotWin does not install yet; the fast mode runs it.
+        /// [bluepad32] Installs Bluepad32's core (about 800 MB to download, 2.7 GB installed, once) into its own short folder;
+        /// the downloaded archives are removed once unpacked.
         /// </summary>
-        public static string? Esp32HardwareBlocker(string source) =>
-            source.Contains("<Bluepad32.h>", StringComparison.Ordinal) || source.Contains("\"Bluepad32.h\"", StringComparison.Ordinal)
-                ? "Bluepad32 kullanan çizim gerçek kart için Bluepad32'nin kendi ESP32 çekirdeğini gerektirir; RobotWin onu henüz kurmuyor (hızlı modda çalışır)."
-                : null;
+        public static async Task<bool> InstallEsp32Bluepad32Async(Action<string> progress, CancellationToken cancel = default)
+        {
+            if (Esp32Bluepad32Installed) return true;
+            string? cli = FindCli();
+            if (cli == null)
+            {
+                progress("arduino-cli bulunamadı: Ayarlar → Güncellemeler → Bileşenleri değiştir ile Arduino derleyicisini ekleyin ya da Ayarlar → Derleyiciler'den bir arduino-cli seçin.");
+                return false;
+            }
+
+            foreach (var dir in new[] { "data", "downloads", "user" }) Directory.CreateDirectory(Path.Combine(Esp32Bluepad32Root, dir));
+            progress("Bluepad32 paket listesi indiriliyor …");
+            if (await RunAsync(Bluepad32Cli(cli, new[] { "core", "update-index", "--no-color" }), progress, cancel).ConfigureAwait(false) != 0) return false;
+            progress($"Bluepad32 {Esp32Bluepad32Version} çekirdeği kuruluyor (Bluepad32 ve BTstack, 2.x derleyicileri, esptool) …");
+            int code = await RunAsync(Bluepad32Cli(cli, new[] { "core", "install", "esp32-bluepad32:esp32@" + Esp32Bluepad32Version, "--no-color" }), progress, cancel).ConfigureAwait(false);
+            if (code != 0 || !Esp32Bluepad32Installed) return false;
+            try
+            {
+                Directory.Delete(Path.Combine(Esp32Bluepad32Root, "downloads"), true);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// [bluepad32] The 3.x LEDC calls a sketch makes (ledcAttach / ledcWrite by pin) on Bluepad32's 2.x core: a header
+        /// written beside the sketch and included by its own file only (one line on top, taken off the messages' line numbers).
+        /// </summary>
+        private static void AddV3Compat(string sketchDir)
+        {
+            string header = Path.Combine(AppContext.BaseDirectory, "Firmware", "rw_esp32_v3.h");
+            if (!File.Exists(header)) return;
+            File.Copy(header, Path.Combine(sketchDir, "rw_esp32_v3.h"), true);
+            string main = Path.Combine(sketchDir, "sketch.ino");
+            File.WriteAllText(main, "#include \"rw_esp32_v3.h\"\n" + File.ReadAllText(main), new UTF8Encoding(false));
+        }
+
+        /// <summary>The build marks which core made it (the upload goes with the same core's esptool).</summary>
+        private const string CoreMark = "rw-core.txt";
 
         /// <summary>
         /// [neopixel] Libraries RobotWin writes itself for the real-chip build (no download), so a sketch builds the same in
@@ -208,7 +299,8 @@ namespace RobotWin.Studio.Firmware
             var result = new BuildResult();
             var watch = Stopwatch.StartNew();
             string? cli = FindCli();
-            if (cli == null || !Esp32ToolchainInstalled)
+            bool bluepad = UsesBluepad32(source);   // [bluepad32] its own core, its own folder
+            if (cli == null || (!bluepad && !Esp32ToolchainInstalled))
             {
                 result.Log = cli == null
                     ? "arduino-cli bulunamadı: Ayarlar → Güncellemeler → Bileşenleri değiştir ile Arduino derleyicisini ekleyin ya da Ayarlar → Derleyiciler'den bir arduino-cli seçin."
@@ -224,7 +316,7 @@ namespace RobotWin.Studio.Firmware
                 return result;
             }
 
-            if (!await EnsureCompanionsAsync(cli, l => progress?.Invoke(l), cancel).ConfigureAwait(false))
+            if (!await EnsureCompanionsAsync(cli, l => progress?.Invoke(l), cancel, bluepad).ConfigureAwait(false))
             {
                 result.Log = "ESP32 için gereken kütüphaneler kurulamadı (ESP32Servo).";
                 result.Diagnostics.Add(new CodeDiagnostic(1, 0, true, result.Log));
@@ -241,14 +333,15 @@ namespace RobotWin.Studio.Firmware
             }
 
             WriteSketch(source, sketchDir);
-            var args = new List<string> { "compile", "--fqbn", Esp32HardwareFqbn, "--output-dir", outDir, "--warnings", "default", "--no-color", sketchDir };
+            if (bluepad) AddV3Compat(sketchDir);
+            var args = new List<string> { "compile", "--fqbn", bluepad ? Esp32Bluepad32Fqbn : Esp32HardwareFqbn, "--output-dir", outDir, "--warnings", "default", "--no-color", sketchDir };
             foreach (var root in LibraryRoots.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 args.Add("--libraries");
                 args.Add(root);
             }
 
-            if (BundledEsp32Libraries() is { } bundled)
+            if (!bluepad && BundledEsp32Libraries() is { } bundled)   // the RMT API they use is the 3.x core's
             {
                 // After the user's own: arduino-cli prefers an installed library of the header's name over ours.
                 args.Add("--libraries");
@@ -256,7 +349,7 @@ namespace RobotWin.Studio.Firmware
             }
 
             var log = new StringBuilder();
-            int code = await RunAsync(Esp32Cli(cli, args), l =>
+            int code = await RunAsync(bluepad ? Bluepad32Cli(cli, args) : Esp32Cli(cli, args), l =>
             {
                 lock (log) log.AppendLine(l);
                 progress?.Invoke(l);
@@ -264,10 +357,18 @@ namespace RobotWin.Studio.Firmware
             result.Success = code == 0;
             result.Log = log.ToString();
             ReadLog(result);
+            if (bluepad)
+            {
+                // [bluepad32] the compat header's line on top of the sketch's own file: its messages back to the sketch's lines
+                var moved = result.Diagnostics.Select(d => d.File == "sketch.ino" && d.Line > 1 ? new CodeDiagnostic(d.Line - 1, d.Column, d.IsError, d.Message, d.File) : d).ToList();
+                result.Diagnostics.Clear();
+                result.Diagnostics.AddRange(moved);
+            }
             string bin = Path.Combine(outDir, "sketch.ino.bin");
             if (result.Success && File.Exists(bin))
             {
                 result.OutputFolder = outDir;
+                File.WriteAllText(Path.Combine(outDir, CoreMark), bluepad ? Esp32Bluepad32Fqbn : Esp32HardwareFqbn);
                 string elf = Path.Combine(outDir, "sketch.ino.elf");
                 if (File.Exists(elf)) result.Elf = File.ReadAllBytes(elf);
                 CacheEsp32Hardware(source, outDir);
@@ -370,9 +471,11 @@ namespace RobotWin.Studio.Firmware
         public static async Task<bool> UploadEsp32Async(string outputFolder, string port, Action<string> progress, CancellationToken cancel = default)
         {
             string? cli = FindCli();
-            if (cli == null || !Esp32ToolchainInstalled) return false;
-            var args = new[] { "upload", "-p", port, "--fqbn", Esp32HardwareFqbn, "--input-dir", outputFolder, "--no-color" };
-            return await RunAsync(Esp32Cli(cli, args), progress, cancel).ConfigureAwait(false) == 0;
+            string mark = Path.Combine(outputFolder, CoreMark);
+            bool bluepad = File.Exists(mark) && File.ReadAllText(mark).Trim() == Esp32Bluepad32Fqbn;   // [bluepad32]
+            if (cli == null || (bluepad ? !Esp32Bluepad32Installed : !Esp32ToolchainInstalled)) return false;
+            var args = new[] { "upload", "-p", port, "--fqbn", bluepad ? Esp32Bluepad32Fqbn : Esp32HardwareFqbn, "--input-dir", outputFolder, "--no-color" };
+            return await RunAsync(bluepad ? Bluepad32Cli(cli, args) : Esp32Cli(cli, args), progress, cancel).ConfigureAwait(false) == 0;
         }
 
         /// <summary>The single image (bootloader + partitions + application at their offsets) web flashers and esptool write at 0x0.</summary>

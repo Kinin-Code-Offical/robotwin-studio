@@ -243,6 +243,8 @@ Hangi modda olursanız olun, Kod sayfasında ESP32 seçiliyken **Gerçek kart** 
 3. **Gerçek karta yükle → COMx**: USB kablosuyla bağlı kart listelenir; seçince çizim derlenip `esptool` ile yazılır. Kart yükleme kipine kendiliğinden geçer; geçmezse yükleme sırasında kartın BOOT düğmesine basılı tutun.
 4. **Birleşik imajı (.bin) dışa aktar**: önyükleyici, bölüm tablosu ve uygulama tek dosyada; web tabanlı yükleyiciler ya da `esptool` ile 0x0 adresine yazılır.
 
+**Kumandalı çizimler (Bluepad32):** `#include <Bluepad32.h>` içeren bir çizim gerçek kart için Bluepad32'nin kendi Arduino-ESP32 çekirdeğiyle derlenir (Bluepad32 4.1.0, Ricardo Quesada; içinde BTstack). Menüdeki **Bluepad32 çekirdeğini kur** onu bir kez indirir (yaklaşık 800 MB, kurulu hali 2,7 GB; ayrı ve kısa bir klasöre, çünkü bu çekirdek derleyiciye 180 kadar başlık yolu verir ve uzun bir klasörde Windows'un komut satırı sınırını aşar). Sonra **Gerçek kart için derle** ve **Gerçek karta yükle** bu çekirdeği kendiliğinden seçer. Bu çekirdek Arduino-ESP32'nin 2.x sürümüne dayandığı için RobotWin derlerken çizimin dosyasının başına küçük bir uyum başlığı ekler: `ledcAttach(pin, …)` ve `ledcWrite(pin, …)` gibi 3.x çağrıları pin başına bir kanalla 2.x çağrılarına gider. Çiziminizi değiştirmeniz gerekmez ve hata iletileri yine kendi satır numaralarınızı gösterir. Birleşik imaj bu çekirdekte üretilmez; yükleme menüsü dört dosyayı ayrı ayrı yazar. Simülasyonda Bluepad32'li kart her iki modda da hızlı modda çalışır (emülatörde henüz Bluetooth yok).
+
 İki modun ayrıntılı planı ve emülatörün aşamaları: [ESP32'nin iki çalışma modu](../gelistirici/ESP32_MODLARI.md).
 
 ### ESP32 uyumluluğu
@@ -266,7 +268,8 @@ Arduino'daki tablo gibi: her özelliğin iki modda çalışıp çalışmadığı
 | Derin / hafif uyku | ✓ | ✓ | iki kez 200 ms derin uyku, `RTC_DATA_ATTR` korunur; hafif uykuda 0,5 s, GPIO4 ile hemen uyanış | |
 | Preferences (NVS), LittleFS | ✓ | ✓ | açılış sayacı, dosya yazıp okuma | |
 | Wi-Fi istasyon ve softAP, UDP, TCP | ✓ (dünyanın sanal ağı) | ✓ (yazılımın kendi lwIP'si) | DHCP, iki yönde UDP, TCP istemci ve sunucu; softAP'ye katılan istasyon | İnternet yok: ağ dünyanın içindedir |
-| ESP-NOW, BLE, Bluepad32 | ✓ | — | `Esp32RadioTests`, `GamepadCarTests` | bunları kullanan çizim hızlı modda çalışır |
+| ESP-NOW, BLE | ✓ | — | `Esp32RadioTests` | bunları kullanan çizim hızlı modda çalışır |
+| Bluepad32 (PS4 / PS5 / Xbox kumandası) | ✓ | gerçek kart için derlenir (Bluepad32 çekirdeği); emülatörde hızlı modda çalışır | `GamepadCarTests`; *ps5-car* ve *ps5-plane* şablonlarının çizimleri Bluepad32 4.1.0 ile derlendi (718 / 749 KB) | gerçek kartta denenmedi (elde kart yok) |
 | TLS, mDNS | — | — | | henüz yok |
 | Kayan nokta (FPU) | ✓ | ✓ (tek duyarlıklı FPU) | `XtensaCoreTests` | emülatörde FPU bölme / karekök dizileri ve MAC16 eksik |
 | Kesme noktası, adım adım | — | — | | yalnız Arduino Uno / Nano |

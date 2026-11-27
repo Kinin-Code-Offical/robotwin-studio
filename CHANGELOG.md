@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Gamepad sketches for the real ESP32:** a sketch using Bluepad32 is built and uploaded with Bluepad32's own core (4.1.0), installed once from Code → Real board → Install the Bluepad32 core into a short folder of its own; a small header, added to the sketch's file only, maps the 3.x LEDC calls to the 2.x core, and error lines stay the sketch's own. The ps5-car and ps5-plane templates build.
 - **Large-scene benchmark:** `--bench … --bench-copies N` builds each template N times over in one world (objects, joints and cables), and every bench line now gives p95, p99, the worst frame and the process memory.
 - **One type scale:** window and dialog headings, list rows and notes take their sizes from the theme's type scale (two steps added: Heading 17, Headline 24), read from code through `TypeScale`; hard-coded sizes and colours outside the drawings went from 135 to 62.
 - **Theme colours:** the World page's warnings (a burned or overloaded cable, a cable that does not fit) use the theme's danger and warning colours, and the import window's footprint preview the canvas colours, so both read right in light themes too.
