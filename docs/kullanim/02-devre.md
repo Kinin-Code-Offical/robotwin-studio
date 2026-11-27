@@ -80,6 +80,7 @@ Aynı adı taşıyan etiketler birbirine bağlıdır; `GND` adı toprak demektir
 | F1 veya ? | Tüm kısayollar |
 
 - **Numaralandır:** parça adlarını (R1, R2, C1…) satıra veya sütuna göre sırayla verir; PCB ve montajdaki adlar da güncellenir.
+- **Alan tablosu** (boş yere sağ tık; KiCad'deki sembol alan tablosu): şemadaki bütün parçalar referans, tür, değer, kılıf ve açıklamayla tek tabloda. Aynı tür ve değerdekiler bir satırda toplanır (istenirse parça parça). Bir satırın değeri yazılınca ya da listeden seçilince o satırdaki bütün parçalar değişir ve tek adımda geri alınır. Birimli değerler (4k7, 100nF) okunamazsa kabul edilmez. Referansa tıklamak o parçaları şemada seçer.
 - **Elektriksel kural denetimi (ERC):** bağlanmamış pinleri, tek pinli hatları, çıkış çakışmalarını ve beslemesiz güç girişlerini bulur. Bir satıra sağ tıklayınca işaret notuyla **İstisna olarak işaretle…** (parça ve hatla birlikte tutulur, parça taşınsa da geçerli) ya da kuralın önemi (hata, uyarı, bilgi, **Denetleme**) seçilir; ikisi de şemayla kaydedilir ve geri alınır. **İstisnalar** kutusu kabul edilenleri de listeler.
 - **PCB kılıfı:** parçanın PCB'de kullanacağı ayak izini seçin.
 

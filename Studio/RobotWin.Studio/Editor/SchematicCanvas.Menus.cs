@@ -188,6 +188,7 @@ namespace RobotWin.Studio.Editor
                             WireMode = _wireMode switch { WireMode.Orthogonal => WireMode.Diagonal45, WireMode.Diagonal45 => WireMode.Free, _ => WireMode.Orthogonal });
                         Sep();
                         Item("Numaralandır…", "", () => RequestCommand(SchematicCommand.Annotate));
+                        Item("Alan tablosu…", "", () => RequestCommand(SchematicCommand.FieldsTable));   // [fields]
                         Item("Elektriksel kural denetimi (ERC)", "", () => RequestCommand(SchematicCommand.Erc));
                         Item("Bul / değiştir…", "Ctrl+F", () => RequestCommand(SchematicCommand.Find));
                         Item("Multimetre uçlarını yerleştir", "", () => BeginLeadPlacement(true));

@@ -80,6 +80,7 @@ Labels with the same name are connected; the name `GND` means ground. As in KiCa
 | F1 or ? | All shortcuts |
 
 - **Annotate**: numbers part names (R1, R2, C1…) by row or column; the names on the PCB and in the assembly follow.
+- **Fields table** (right-click empty space; KiCad's Symbol Fields Table): every part of the sheet in one table with its reference, kind, value, package and description. The same kind and value share a row (or one row per part if you like). A row's value typed or picked from its list changes every part of the row, one step to undo; a value with a unit that does not read (4k7, 100nF) is refused. Clicking the references selects those parts on the sheet.
 - **Electrical rules check (ERC)**: finds unconnected pins, single-pin nets, output conflicts and unpowered power inputs. Right-clicking a row offers **Mark as exclusion…** with a note (kept with the part and the net, so it holds when the part moves) or the rule's severity (error, warning, info, **Do not check**); both are saved with the schematic and can be undone. The **Exclusions** box lists the accepted ones too.
 - **PCB footprint**: choose the footprint the part uses on the PCB.
 

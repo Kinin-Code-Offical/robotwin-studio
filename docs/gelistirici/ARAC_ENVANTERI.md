@@ -113,7 +113,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Numaralandır | var | var | |
 | ERC (önem, istisna) | var | var | |
 | Simülatör | yerleşik | var | |
-| Ayak izi ata, alan tablosu, BOM | Ayak izi atama tablosu (palet; pedsiz pin uyarısı, satırdan değiştir), BOM penceresi; alan tablosu sonra | kısmi | 3 |
+| Ayak izi ata, alan tablosu, BOM | Ayak izi atama tablosu (palet; pedsiz pin uyarısı, satırdan değiştir), BOM penceresi; Alan tablosu (gruplu ya da parça parça, satırın değeri bütün parçalarına, seçenekli değer listeden) | var | |
 | Seç | var | var | |
 | Hat vurgula aracı | ` tuşu ve araç çubuğunda Hattı vurgula aracı (pin, tel, etiket; kartta da vurgular) | var | |
 | Sembol, güç sembolü | var | var | |

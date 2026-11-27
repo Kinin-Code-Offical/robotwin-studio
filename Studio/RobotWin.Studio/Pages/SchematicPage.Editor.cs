@@ -110,6 +110,7 @@ namespace RobotWin.Studio.Pages
                 case SchematicCommand.Help: ToggleHelp(); break;
                 case SchematicCommand.Erc: RunErc(keepOpen: false); break;
                 case SchematicCommand.Annotate: ShowAnnotateDialog(); break;
+                case SchematicCommand.FieldsTable: ShowFieldsTable(); break;   // [fields] Pages/SchematicPage.FieldsTable.cs
                 case SchematicCommand.ExportBom: ExportBom(); break;
                 case SchematicCommand.ExportNetlist: ExportText("KiCad netlist (*.net)|*.net", ".net", () => KiCadExporter.ExportNetlist(W.Schematic, W.Library, W.Schematic.Title), "KiCad netlist"); break;
                 case SchematicCommand.ExportSpice: ExportText("SPICE netlist (*.cir)|*.cir", ".cir", () => SpiceExporter.ExportSpice(W.Schematic, W.Library), "SPICE netlist"); break;
@@ -1069,6 +1070,9 @@ namespace RobotWin.Studio.Pages
                             ?? sch.Parts.FirstOrDefault();
             switch (fault)
             {
+                case "fields":   // [fields] the Symbol Fields Table, grouped, the window is the picture
+                    ShowFieldsTable();
+                    return;
                 case "erase-units":   // [erase] [units] the eraser chosen, the corner's coordinates in mm (not saved)
                     Canvas.Units = "mm";
                     Canvas.Tool = EditorTool.Erase;

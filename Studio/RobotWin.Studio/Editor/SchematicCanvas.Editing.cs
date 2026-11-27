@@ -39,7 +39,10 @@ namespace RobotWin.Studio.Editor
         Print,
 
         /// <summary>[notes] A new text where the text tool was clicked (target: the grid point), or an existing one edited (target: the note).</summary>
-        EditNote
+        EditNote,
+
+        /// <summary>[fields] KiCad's Symbol Fields Table.</summary>
+        FieldsTable
     }
 
     public sealed class SchematicCommandEventArgs : EventArgs
