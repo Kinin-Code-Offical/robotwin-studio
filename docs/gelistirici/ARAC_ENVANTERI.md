@@ -95,7 +95,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Görünüm: katmanlar | Katmanlar | var | |
 | Görünüm: nesneler (görünürlük, saydamlık) | görünürlük anahtarları; yol, via, ped, dolgu saydamlığı (kaydırıcı + yazılır, saklanır) | var | |
 | Görünüm: ağlar (renk, sınıf) | Hatlar sekmesi: sınıf, vurgula ve ağ rengi (12 düz renk; bakır her katmanda o renkte, kartla kaydedilir, üretim dosyalarını değiştirmez) | var | |
-| Görünüm ön ayarları, görüş alanları | Katmanlar sekmesinde ön ayar: tüm katmanlar, üst / alt taraf, yalnız bakır, yalnız etkin katman; görüş alanları sonra | kısmi | 3 |
+| Görünüm ön ayarları, görüş alanları | Katmanlar sekmesinde ön ayar: tüm katmanlar, üst / alt taraf, yalnız bakır, yalnız etkin katman; görüş alanları: şimdiki görünümü adla kaydet, tıkla dön, sil (kartla kaydedilir) | var | |
 | Seçim süzgeci | var | var | |
 | Özellikler paneli | var (taşınır, küçülür, ayrılır) | var | |
 
@@ -247,7 +247,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Yeniden adlandır, çoğalt, sil | F2 satırda; çoğalt ve sil takılı olanlarla, "yalnız bunu sil" | var | |
 | Tümünü seç, seçimi kaldır, tersine çevir, alt nesneleri seç; ağaçta çoklu seçim | Ctrl+tık (sahne ve ağaç), ağaçta Shift+tık aralık, sahnede Shift+sürükle dikdörtgen, Ctrl+A, Ctrl+I tersine çevir, sağ tık ▸ Alt nesneleri seç; tutamaç, kopyala, kes, çoğalt, sil hepsine | var | |
 | Boş nesne, boş alt nesne, boş üst nesne (grup) | Boş nesne (Ctrl+Alt+N), boş alt (Alt+Shift+N), boş üst (Ctrl+Shift+G); düzenleyicide grup, çalıştırmada yok (altındakiler onun takılı olduğu yere geçer) | var | |
-| Sağ tıkta Oluştur ▸ türler (gövde şekilleri, ışık, kamera, ses, sensör, kart …) | Oluştur ▸ boş nesneler, gövde şekilleri, Parça ▸ kategoriler (kütüphanenin her hazır parçası: sensör, kamera, motor …) ve palet sekmeleri; ışık ve ses türü sonra | kısmi | 3 |
+| Sağ tıkta Oluştur ▸ türler (gövde şekilleri, ışık, kamera, ses, sensör, kart …) | Oluştur ▸ boş nesneler, gövde şekilleri, Parça ▸ kategoriler (kütüphanenin her hazır parçası: sensör, kamera, motor …), Işık ▸ (LED, lamba: akımla yanan gerçek parçalar), Ses ▸ (buzzer, hoparlör) ve palet sekmeleri | var | |
 | Etkin / devre dışı (Alt+Shift+A) | adın solunda kutu, Alt+Shift+A, ağaç menüsü; kapalı nesne ve üstündekiler sahneden ve çalıştırmadan çıkar (fizik, devre, sensörler), ağaçta soluk | var | |
 | Görünüme taşı, görünümle hizala, görünümü seçime hizala | Görünüme taşı (Ctrl+Alt+F), Görünümle hizala (Ctrl+Shift+F), Görünümü seçime hizala, Odakla | var | |
 | Sürükleyerek üst nesne değiştirme | ağaçta satırı satıra bırak: sabit bağlantı; boş yere bırak: ayır; mekanik bağlantılar korunur | var | |

@@ -112,6 +112,26 @@ namespace RobotWin.Studio.Pages
                 }
             };
             create.Items.Add(parts);
+
+            // [create] Unity's Create ▸ Light and Audio: here they are real parts that light and sound when powered (an LED,
+            // a lamp; a buzzer, a speaker), so the menus list those parts of the library
+            MenuItem Kind(string header, Func<string, bool> fits)
+            {
+                var menu = new MenuItem { Header = header };
+                foreach (var preset in Lib.Presets.Where(x => fits((x.Id + " " + x.Name).ToLowerInvariant())).OrderBy(x => x.Name, StringComparer.CurrentCulture))
+                {
+                    string id = preset.Id;
+                    var item = MenuEntry(preset.Name, null, () => AddComponent(id));
+                    item.ToolTip = preset.Description;
+                    menu.Items.Add(item);
+                }
+
+                if (menu.Items.Count == 0) menu.IsEnabled = false;
+                return menu;
+            }
+
+            create.Items.Add(Kind("Işık", t => (t.Contains("led") || t.Contains("lamp") || t.Contains("lamba") || t.Contains("ampul")) && !t.Contains("curtain") && !t.Contains("perde") && !t.Contains("oled")));
+            create.Items.Add(Kind("Ses", t => t.Contains("buzzer") || t.Contains("speaker") || t.Contains("hoparl") || t.Contains("zil")));
             void Tab(string header, System.Windows.Controls.Primitives.ToggleButton tab)
             {
                 create.Items.Add(MenuEntry(header, null, () =>

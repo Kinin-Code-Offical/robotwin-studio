@@ -833,6 +833,18 @@ namespace RobotWin.Studio.Pages
                     Canvas.Refresh();
                     break;
 
+                case "viewports":   // [viewports] two saved views on the Layers tab, the second shown
+                    board.Viewports = new System.Collections.Generic.List<BoardViewport>
+                    {
+                        new BoardViewport { Name = "Güç girişi", X = 8, Y = 12, Width = 22 },
+                        new BoardViewport { Name = "MOSFET", X = 24, Y = 16, Width = 18 }
+                    };
+                    Tabs.SelectedIndex = 1;
+                    UpdateLayersPanel();
+                    UpdateLayout();
+                    Canvas.ShowView(board.Viewports[1]);
+                    break;
+
                 case "local-rats":   // [local-rats] the board unrouted, its ratsnest off: only Q1's lines, KiCad's local ratsnest
                     board.Tracks.Clear();
                     board.Vias.Clear();
@@ -2066,6 +2078,7 @@ namespace RobotWin.Studio.Pages
             var presetBox = Combo(presets, _layerPreset, p => ApplyLayerPreset(p, board), p => Shell.Lang.T(p));
             presetBox.ToolTip = Shell.Lang.T("Görünüm ön ayarı: hangi katmanların gösterileceği tek seçimde");
             LayersPanel.Children.Add(Row("Ön ayar", presetBox, 150));
+            ViewportsSection(board);   // [viewports] Pages/PcbPage.Viewports.cs
             LayersPanel.Children.Add(Overline("Bakır katmanları", 8));
             foreach (var layer in board.CopperLayers())
             {

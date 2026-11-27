@@ -631,6 +631,15 @@ namespace RobotTwin.CoreSim.Pcb
         };
     }
 
+    /// <summary>[viewports] KiCad 8's viewport: a named view of the board, its middle and how wide a stretch it shows (mm).</summary>
+    public sealed class BoardViewport
+    {
+        public string Name { get; set; } = string.Empty;
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Width { get; set; } = 50;
+    }
+
     /// <summary>
     /// The PCB layout: a 2/4/6-layer board with a rectangular (rounded) or polygon outline,
     /// parts, tracks, vias, zones, net classes, mounting holes and drawings.
@@ -661,6 +670,10 @@ namespace RobotTwin.CoreSim.Pcb
         public List<Zone> Zones { get; set; } = new List<Zone>();
         public List<MountingHole> MountingHoles { get; set; } = new List<MountingHole>();
         public List<BoardText> Texts { get; set; } = new List<BoardText>();
+
+        /// <summary>[viewports] The saved views (KiCad 8's Viewports panel); null when none.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<BoardViewport>? Viewports { get; set; }
 
         /// <summary>[origins] KiCad's grid origin: the editor's grid runs through this point (mm, board frame); null = through the board's corner.</summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

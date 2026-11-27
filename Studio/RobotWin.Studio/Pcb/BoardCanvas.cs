@@ -385,6 +385,22 @@ namespace RobotWin.Studio.Pcb
             InvalidateVisual();
         }
 
+        /// <summary>[viewports] The view as it is now: its middle on the board and the width it shows (mm).</summary>
+        public BoardViewport CurrentView(string name)
+        {
+            var (x, y) = ToBoard(new Point(ActualWidth / 2, ActualHeight / 2));
+            return new BoardViewport { Name = name, X = Math.Round(x, 3), Y = Math.Round(y, 3), Width = Math.Round(ActualWidth / _scale, 3) };
+        }
+
+        /// <summary>[viewports] Goes back to a saved view: its middle in the middle, its width across the window.</summary>
+        public void ShowView(BoardViewport v)
+        {
+            if (ActualWidth < 10 || v.Width <= 0) return;
+            _scale = Math.Max(0.5, ActualWidth / v.Width);
+            _offset = new Vector(ActualWidth / 2 - v.X * _scale, ActualHeight / 2 - v.Y * _scale);
+            InvalidateVisual();
+        }
+
         public void ZoomTo(double x, double y)
         {
             _scale = Math.Max(_scale, 14);

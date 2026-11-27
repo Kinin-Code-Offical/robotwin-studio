@@ -340,6 +340,37 @@ public class LangTests
     }
 
     [Fact]
+    public void ThePackHasEveryKeyOnce()
+    {
+        // [lang] a key written twice reads as the last one only: the pack must say each text once
+        string? dir = System.AppContext.BaseDirectory;
+        while (dir != null && !System.IO.Directory.Exists(System.IO.Path.Combine(dir, "Studio", "RobotWin.Studio"))) dir = System.IO.Path.GetDirectoryName(dir);
+        Assert.NotNull(dir);
+        var bytes = System.IO.File.ReadAllBytes(System.IO.Path.Combine(dir!, "Studio", "RobotWin.Studio", "Lang", "en.json"));
+        var reader = new System.Text.Json.Utf8JsonReader(bytes, new System.Text.Json.JsonReaderOptions { CommentHandling = System.Text.Json.JsonCommentHandling.Skip });
+        var seen = new System.Collections.Generic.Stack<System.Collections.Generic.HashSet<string>>();
+        var twice = new System.Collections.Generic.List<string>();
+        while (reader.Read())
+        {
+            switch (reader.TokenType)
+            {
+                case System.Text.Json.JsonTokenType.StartObject:
+                    seen.Push(new System.Collections.Generic.HashSet<string>(System.StringComparer.Ordinal));
+                    break;
+                case System.Text.Json.JsonTokenType.EndObject:
+                    seen.Pop();
+                    break;
+                case System.Text.Json.JsonTokenType.PropertyName:
+                    string key = reader.GetString()!;
+                    if (!seen.Peek().Add(key)) twice.Add(key);
+                    break;
+            }
+        }
+
+        Assert.True(twice.Count == 0, "Keys written twice in en.json:\n" + string.Join("\n", twice.Take(40)));
+    }
+
+    [Fact]
     public void TurkishTranslatesNothing()
     {
         Lang.Load("tr");
