@@ -11,8 +11,11 @@ namespace RobotWin.Studio.World
     /// <summary>
     /// [vertex-snap] Unity's vertex snapping (hold V while moving): the corner of the dragged part nearest the cursor is
     /// taken at the start, and while the cursor comes within a few pixels of another part's corner the part moves so
-    /// that the two corners meet exactly. A part's corners are those of its shape's box in its own axes (8, turned with
-    /// it), so boxes, boards and parts line up edge to edge. Works on a free drag and on the move handle's middle.
+    /// that the two corners meet exactly; away from every corner, the grabbed corner rides on the surface under the
+    /// cursor (vertex to surface). A part's corners are those of its shape's box in its own axes (8, turned with it), so
+    /// boxes, boards and parts line up edge to edge. Works on a free drag and on the move handle's middle. While V is
+    /// held the handles themselves stand on the selected part's corner nearest the cursor (pivot to vertex): the move
+    /// handle carries that corner, the rotate and scale handles turn and size about it.
     /// </summary>
     public sealed partial class WorldScene
     {
@@ -22,6 +25,38 @@ namespace RobotWin.Studio.World
         private const double VertexReach = 18;
 
         private static bool VertexSnapHeld => Keyboard.IsKeyDown(Key.V);
+
+        /// <summary>[vertex-pivot] The selected part's corner the handles stand on while V is held (null: its own pivot).</summary>
+        private Point3D? _vertexPivot;
+
+        /// <summary>[vertex-pivot] Shown without V being held (the snapshot's --vertex-pivot).</summary>
+        private bool _vertexPivotPinned;
+
+        /// <summary>[vertex-pivot] With V held and nothing dragged, the handles go to the selected part's corner nearest the cursor.</summary>
+        private void UpdateVertexPivot(Point p)
+        {
+            if (_vertexPivotPinned) return;
+            Point3D? corner = null;
+            if (VertexSnapHeld && World?.Find(Selected) is { } o && _items.TryGetValue(o.Id, out var it))
+                corner = Corners(it).Select(c => (C: c, D: (Project(c).Screen - p).Length)).OrderBy(x => x.D).Select(x => (Point3D?)x.C).FirstOrDefault();
+            if (corner == _vertexPivot) return;
+            _vertexPivot = corner;
+            if (corner != null) _hint.Text = Shell.Lang.T("Köşe yakalama (V): tutamaç köşede; sürüklemek o köşeyi taşır, döndürmek o köşe çevresinde döndürür");
+            _gizmoLayer?.InvalidateVisual();
+        }
+
+        /// <summary>[vertex-pivot] The snapshot's --vertex-pivot: the handles on the selected part's corner nearest the given screen point.</summary>
+        public void PinVertexPivot(Point screen)
+        {
+            if (World?.Find(Selected) is not { } o || !_items.TryGetValue(o.Id, out var it)) return;
+            _vertexPivot = Corners(it).Select(c => (C: c, D: (Project(c).Screen - screen).Length)).OrderBy(x => x.D).Select(x => (Point3D?)x.C).FirstOrDefault();
+            _vertexPivotPinned = _vertexPivot != null;
+            _gizmoLayer?.InvalidateVisual();
+        }
+
+        /// <summary>[vertex-pivot] Where the handles stand for a part: its V corner when one is taken.</summary>
+        private Point3D? VertexPivotFor(WorldObject o) =>
+            (VertexSnapHeld || _vertexPivotPinned) && _vertexPivot is { } vp && string.Equals(o.Id, Selected, StringComparison.OrdinalIgnoreCase) ? vp : null;
 
         /// <summary>
         /// The snapshot's --vertex-snap: the selected part moved so that its corner nearest the other part meets that part's
@@ -88,7 +123,16 @@ namespace RobotWin.Studio.World
                 }
             }
 
-            _hint.Text = Shell.Lang.T(target != null ? "Köşe yakalama: tutulan köşe öbür parçanın köşesine oturdu" : "Köşe yakalama (V): imleci başka bir parçanın köşesine götürün");
+            bool onSurface = false;
+            if (target == null && RayHitExcept(p, moving) is { } surface)
+            {
+                // [vertex-snap] no corner near: the grabbed corner onto the surface under the cursor
+                target = surface;
+                onSurface = true;
+            }
+
+            _hint.Text = Shell.Lang.T(target == null ? "Köşe yakalama (V): imleci başka bir parçanın köşesine ya da yüzeyine götürün"
+                : onSurface ? "Köşe yakalama: tutulan köşe yüzeye oturdu" : "Köşe yakalama: tutulan köşe öbür parçanın köşesine oturdu");
             if (target is not { } t) return false;
             var at = t - _vertexOffset.Value;
             nx = at.X;

@@ -1478,6 +1478,7 @@ namespace RobotWin.Studio.World
             }
 
             if (MarqueeMove(p)) return;   // [multiselect]
+            if (_orbit == null && _gizmoDrag == GizmoPart.None) UpdateVertexPivot(p);   // [vertex-pivot] World/WorldScene.VertexSnap.cs
             if (_orbit == null)
             {
                 if (Tool == WorldTool.Cable) ShowPinTip(p);

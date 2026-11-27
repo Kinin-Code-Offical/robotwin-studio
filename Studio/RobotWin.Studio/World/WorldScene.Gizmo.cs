@@ -124,6 +124,8 @@ namespace RobotWin.Studio.World
                 origin = new Point3D(b.X + b.SizeX / 2, b.Y + b.SizeY / 2, b.Z + b.SizeZ / 2);
             }
 
+            if (VertexPivotFor(o) is { } corner) origin = corner;   // [vertex-pivot] V held: on the corner nearest the cursor
+
             if (!GizmoLocal && !forScale) return (origin, new Vector3D(1, 0, 0), new Vector3D(0, 1, 0), new Vector3D(0, 0, 1));
             var q = o.Pose.Orientation;   // scale always runs along the part's own axes (as Unity's)
             return (origin, V(q.Rotate(Vec3.UnitX)), V(q.Rotate(Vec3.UnitY)), V(q.Rotate(Vec3.UnitZ)));

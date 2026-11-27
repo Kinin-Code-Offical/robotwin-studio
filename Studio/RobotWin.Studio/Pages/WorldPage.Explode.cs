@@ -436,6 +436,8 @@ namespace RobotWin.Studio.Pages
                 PickGizmo(args[gz + 1] switch { "rotate" => RobotWin.Studio.World.GizmoMode.Rotate, "scale" => RobotWin.Studio.World.GizmoMode.Scale, "all" => RobotWin.Studio.World.GizmoMode.All, _ => RobotWin.Studio.World.GizmoMode.Move });
             }
 
+            if (args.Contains("--vertex-pivot")) Scene.PinVertexPivot(new Point(Scene.ActualWidth, Scene.ActualHeight));   // [vertex-pivot] the handles on the selection's near right corner, as V held there puts them
+
             if (args.Contains("--switch-off")) ToggleActive(World?.Find(Scene.Selected));   // [active] the selection switched off
             int also = Array.IndexOf(args, "--select-also");   // [multiselect] another object Ctrl+clicked into the selection
             if (also >= 0 && also + 1 < args.Length && World?.Objects.FirstOrDefault(x => x.Name.Contains(args[also + 1], StringComparison.CurrentCultureIgnoreCase)) is { } extra)
