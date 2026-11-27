@@ -46,6 +46,7 @@ namespace RobotWin.Studio
             ProblemsHub.Register(ProblemsHub.Code, () => On("code", _code.CodeProblems));
             ProblemsHub.Register(ProblemsHub.Assembly, () => CheckArea(montaj: true));   // [problems] the project check's two areas (MainWindow.Check.cs)
             ProblemsHub.Register(ProblemsHub.Project, () => CheckArea(montaj: false));
+            ProblemsHub.Register(ProblemsHub.ModelLimits, ModelLimitsArea);   // [limits]
             ProblemsHub.Changed += ScheduleProblems;
             W.DocumentChanged += (_, _) =>
             {
@@ -64,6 +65,33 @@ namespace RobotWin.Studio
                 RefreshProblems();
             };
             ScheduleProblems();
+        }
+
+        /// <summary>
+        /// [limits] The Problems panel's "Model sınırları" area: for each part of the circuit whose model leaves something
+        /// out (no thermal noise, no core loss, the radio a model …), what it is, as worth knowing; a row shows the part.
+        /// None when no part has a noted limit.
+        /// </summary>
+        private AreaReport? ModelLimitsArea()
+        {
+            var doc = W.ActiveDocument;
+            if (doc.Kind == DocumentKind.World) return null;
+            var r = new AreaReport();
+            foreach (var group in W.Schematic.Parts.GroupBy(p => p.PartId, StringComparer.OrdinalIgnoreCase))
+            {
+                var limits = RobotTwin.CoreSim.Design.ModelLimits.Of(group.Key);
+                if (limits.Count == 0) continue;
+                var parts = group.Select(p => p.RefDes).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
+                string name = W.Library.Find(group.Key)?.Name ?? group.Key;
+                foreach (var limit in limits)
+                    r.Problems.Add(new Problem(ProblemsHub.ModelLimits, ProblemLevel.Info, $"{string.Join(", ", parts.Take(4))}{(parts.Count > 4 ? " …" : string.Empty)} ({name})", limit, () =>
+                    {
+                        Navigate("schematic");
+                        Dispatcher.BeginInvoke(new Action(() => _schematic.Canvas.HighlightParts(parts)), DispatcherPriority.Loaded);
+                    }));
+            }
+
+            return r.Problems.Count == 0 ? null : r;
         }
 
         private void ScheduleProblems()

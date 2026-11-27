@@ -8592,6 +8592,7 @@
   "Seçenekler": "Options",
   "Renkli (kapalıyken her şey siyah: toner transferi, film)": "In colour (off: everything black, for toner transfer and film)",
   "Aynala": "Mirror",
+  "Model sınırları": "Model limits",
   "Otomatik (ekrana oranlı)": "Automatic (proportional to the screen)",
   "Otomatik: arayüz pencereyle orantılı (1920 × 1080'de %100); küçük ekranda ya da büyük ekran ölçeğinde simgeler ve paneller aynı oranda küçülür, kaydırma ya da taşma olmaz. Sunum için sabit bir ölçek seçin.": "Automatic: the interface in proportion to the window (100 % at 1920 × 1080); on a small screen or at a large display scale icons and panels shrink by the same ratio, nothing scrolls or spills over. Pick a fixed scale for presenting.",
   "Kart kenarı ve ölçüler": "Outline and size",
@@ -9310,6 +9311,7 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+  "{…}: {…} bilgi": "{0}: {1} notes",
   "{…} × {…} mm, {…} bakır katman, {…} mm kalınlık": "{0} × {1} mm, {2} copper layers, {3} mm thick",
   "{…} × {…} mm, {…} bakır katman, {…} mm kalınlık · çoğu üreticinin 500 mm sınırını aşıyor": "{0} × {1} mm, {2} copper layers, {3} mm thick · over most fabs' 500 mm limit",
   "{…} hata, {…} uyarı ({…})": "{0} errors, {1} warnings ({2})",

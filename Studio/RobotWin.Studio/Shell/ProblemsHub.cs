@@ -63,6 +63,9 @@ namespace RobotWin.Studio.Shell
         public const string Assembly = "Montaj";
         public const string Project = "Proje";
 
+        /// <summary>[limits] What the parts' simulation models leave out (worth knowing when reading a result).</summary>
+        public const string ModelLimits = "Model sınırları";
+
         private static readonly List<(string Area, Func<AreaReport?> Source)> Sources = new List<(string, Func<AreaReport?>)>();
 
         /// <summary>Raised when an area's result changed (a check ran, an edit made one out of date).</summary>
@@ -119,7 +122,11 @@ namespace RobotWin.Studio.Shell
         /// <summary>One area's line in the window's header ("Devre: tamam", "PCB: 2 hata, 1 uyarı", "Kod: denetlenmedi").</summary>
         public static string Summary(string area, AreaReport r)
         {
-            if (r.Errors + r.Warnings == 0) return r.NotChecked != null ? $"{area}: denetlenmedi" : $"{area}: tamam";
+            if (r.Errors + r.Warnings == 0)
+            {
+                int notes = r.Problems.Count;   // only worth knowing: said as such, not "tamam"
+                return r.NotChecked != null ? $"{area}: denetlenmedi" : notes > 0 ? $"{area}: {notes} bilgi" : $"{area}: tamam";
+            }
             string s = r.Errors > 0 && r.Warnings > 0 ? $"{r.Errors} hata, {r.Warnings} uyarı" : r.Errors > 0 ? $"{r.Errors} hata" : $"{r.Warnings} uyarı";
             return $"{area}: {s}" + (r.NotChecked != null ? " (eski)" : string.Empty);
         }
