@@ -154,7 +154,7 @@ namespace RobotWin.Studio.Pages
                     () => W.Project.FirmwareFor(part.RefDes),
                     () => W.FirmwareFor(part.RefDes, fqbn),
                     status => W.MarkFirmwareChanged(status),
-                    BuiltinSource(part.Parameters)));
+                    BuiltinSource(part.Parameters)) { Parameters = part.Parameters });
             }
 
             var worldDoc = W.ActiveDocument.Kind == DocumentKind.World ? W.ActiveDocument : W.Documents.FirstOrDefault(d => d.Kind == DocumentKind.World);
@@ -178,7 +178,7 @@ namespace RobotWin.Studio.Pages
                         list.Add(new CodeTarget("w:" + o.Id, o.Name, world.Title, fqbn,
                             () => obj.Firmware,
                             () => obj.Firmware = new FirmwareSource { BoardRefDes = obj.Id, Target = fqbn },
-                            Dirty, BuiltinSource(obj.Parameters)));
+                            Dirty, BuiltinSource(obj.Parameters)) { Parameters = obj.Parameters });
                     }
                     else if (o.Kind == WorldObjectKind.Board && world.FindDesign(o.DesignId) is { } design && world.Objects.First(x => x.DesignId == o.DesignId) == o)
                     {
@@ -197,7 +197,7 @@ namespace RobotWin.Studio.Pages
                                     pkg.Firmware.Add(fw);
                                     return fw;
                                 },
-                                Dirty, BuiltinSource(part.Parameters)));
+                                Dirty, BuiltinSource(part.Parameters)) { Parameters = part.Parameters });
                         }
                     }
                 }
@@ -400,10 +400,38 @@ namespace RobotWin.Studio.Pages
         private void UpdateTargetText()
         {
             string fqbn = Fqbn;
-            HardwareButton.Visibility = ArduinoCompiler.IsEsp32(fqbn) ? Visibility.Visible : Visibility.Collapsed;   // [esp32hw]
-            TargetText.Text = ArduinoCompiler.IsEsp32(fqbn)
-                ? "ESP32 · MSVC ile yerel derleme · Arduino-ESP32 API (GPIO, ADC, LEDC, I²C, SPI, FreeRTOS, Wi-Fi ve BLE taklidi)"
-                : $"{fqbn} · avr-gcc (arduino-cli) · ATmega328P @ 16 MHz emülasyonu";
+            bool esp = ArduinoCompiler.IsEsp32(fqbn);
+            bool hardware = esp && RobotTwin.CoreSim.Design.Esp32Parts.IsHardwareMode((_target ?? _folder?.Board)?.Parameters);
+            HardwareButton.Visibility = esp ? Visibility.Visible : Visibility.Collapsed;   // [esp32hw]
+            TargetText.Text = Lang.T(!esp ? $"{fqbn} · avr-gcc (arduino-cli) · ATmega328P @ 16 MHz emülasyonu"
+                : hardware ? "ESP32 · donanım uyumlu: Espressif araç zinciriyle gerçek yonga derlemesi, RobotWin'in Xtensa emülatöründe"
+                : "ESP32 · hızlı simülasyon: MSVC ile yerel derleme · Arduino-ESP32 API (GPIO, ADC, LEDC, I²C, SPI, FreeRTOS, Wi-Fi ve BLE taklidi)");
+            // [mode-badge] how this board runs, always in sight beside it (the roadmap's "çalışma modu rozeti")
+            ModeBadgeText.Text = Lang.T(!esp ? "AVR emülasyonu" : hardware ? "Donanım uyumlu" : "Hızlı simülasyon");
+            ModeBadge.ToolTip = Lang.T(!esp
+                ? "ATmega328P'nin kendisi emüle edilir: derlenen .hex komut komut çalışır"
+                : hardware
+                    ? "Donanım uyumlu: çizim gerçek yonga için derlenir ve Xtensa emülatöründe çalışır (yavaş, gerçeğe en yakın). Tıklayın: hızlı simülasyona geç"
+                    : "Hızlı simülasyon: çizim bilgisayarda yerel derlenir, Arduino-ESP32 API'si modellenir (hızlı, çok kart). Tıklayın: donanım uyumlu moda geç");
+            ModeBadge.Visibility = (_target ?? _folder?.Board) is null ? Visibility.Collapsed : Visibility.Visible;   // no board: nothing runs
+            ModeBadge.IsEnabled = !esp || (_target ?? _folder?.Board)?.Parameters != null;
+            ModeBadge.Cursor = esp ? System.Windows.Input.Cursors.Hand : null;
+        }
+
+        /// <summary>[mode-badge] The ESP32's run mode switched from its badge (one undo step for a project's board; the next run takes it).</summary>
+        private void OnModeBadge(object sender, RoutedEventArgs e)
+        {
+            var t = _target ?? _folder?.Board;
+            if (t?.Parameters is not { } parameters || !ArduinoCompiler.IsEsp32(Fqbn)) return;
+            bool hardware = RobotTwin.CoreSim.Design.Esp32Parts.IsHardwareMode(parameters);
+            string to = hardware ? RobotTwin.CoreSim.Design.Esp32Parts.FastMode : RobotTwin.CoreSim.Design.Esp32Parts.HardwareMode;
+            bool project = t.Key.StartsWith("p:", StringComparison.Ordinal);
+            if (project) W.BeginChange();
+            parameters[RobotTwin.CoreSim.Design.Esp32Parts.ModeKey] = to;
+            if (project) W.CommitChange(Lang.T($"{t.Title}: {to}"));
+            else t.Changed(Lang.T($"{t.Title}: {to}"));   // a world's or a board design's: saved with the world
+            UpdateTargetText();
+            W.Status = Lang.T(W.Simulation.IsActive ? $"{t.Title} {to} moduna alındı; durdurup yeniden başlatınca bu modda çalışır" : $"{t.Title} {to} moduna alındı");
         }
 
         private void OnTargetChanged(object sender, SelectionChangedEventArgs e)

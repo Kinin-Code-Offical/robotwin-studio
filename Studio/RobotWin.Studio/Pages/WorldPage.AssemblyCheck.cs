@@ -11,7 +11,8 @@ namespace RobotWin.Studio.Pages
     /// [assembly-check] One assembly report in the Problems panel (the roadmap's "tek montaj doğrulama raporu"): the checks
     /// the Montaj and the World already have, run together with **Denetle**: parts that overlap (SolidWorks' interference
     /// detection, joined parts left out), holes of two parts that run into each other off-axis (the bolt that would not
-    /// go through), cables too short or too tight for where their plugs are. A row selects the part or the cable; an edit
+    /// go through), cables too short or too tight for where their plugs are, and each board against the box its PCB is
+    /// built into (the board and its parts to the walls, the floor and the lid). A row selects the part or the cable; an edit
     /// makes the result out of date until it is checked again.
     /// </summary>
     public partial class WorldPage
@@ -34,7 +35,7 @@ namespace RobotWin.Studio.Pages
             var r = new AreaReport { Check = RunAssemblyCheck };
             if (!ReferenceEquals(_checkedWorld, world))
             {
-                r.NotChecked = "Montaj denetimi bu dünya için çalışmadı: çakışma, delik hizası ve kablo boyları";
+                r.NotChecked = "Montaj denetimi bu dünya için çalışmadı: çakışma, delik hizası, kablo boyları ve kart kutusu";
                 return r;
             }
 
@@ -70,6 +71,20 @@ namespace RobotWin.Studio.Pages
                 if (!bad) continue;
                 string id = c.Id, name = c.Name is { Length: > 0 } n ? n : c.Id;
                 found.Add(new Problem(area, ProblemLevel.Warning, "Kablo boyu", name + ": " + verdict, () => Scene.SelectCable(id)));
+            }
+
+            // [assembly-check] each board design once: its PCB's box (PCB → DRC → Kutu), the board and its parts against it
+            var designs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var o in world.Objects)
+            {
+                if (o.Kind != WorldObjectKind.Board || o.DesignId == null || !designs.Add(o.DesignId)) continue;
+                if (world.FindDesign(o.DesignId)?.Package.Schematic.Board is not { Enclosure: { } box } board) continue;
+                string id = o.Id, name = NameOf(o.Id);
+                foreach (var v in RobotTwin.CoreSim.Pcb.EnclosureCheck.Check(board, box))
+                {
+                    found.Add(new Problem(area, v.Severity == RobotTwin.CoreSim.Pcb.DrcSeverity.Error ? ProblemLevel.Error : ProblemLevel.Warning,
+                        "Kart kutusu", name + ": " + v.Message, () => Scene.Select(id)));
+                }
             }
 
             _checkedWorld = world;

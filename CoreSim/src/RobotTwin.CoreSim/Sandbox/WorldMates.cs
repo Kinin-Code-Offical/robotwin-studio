@@ -183,6 +183,25 @@ namespace RobotTwin.CoreSim.Sandbox
     /// </summary>
     public static class WorldMates
     {
+        /// <summary>
+        /// [mate-suggest] The relation two picked features most likely mean, from how they lie now (as SolidWorks' smart
+        /// mates guess it): two faces turned towards each other rest on each other, two facing the same way are flush, two
+        /// shafts or holes in line share their axis, a shaft standing on a face is perpendicular to it and one lying along
+        /// it parallel; crosswise, perpendicular; anything else keeps its angle. Within about 25° of each case. Null for a point.
+        /// </summary>
+        public static MateKind? Likely(MateFeatureKind a, Vec3 da, MateFeatureKind b, Vec3 db)
+        {
+            if (a == MateFeatureKind.Point || b == MateFeatureKind.Point || da.Length < 1e-12 || db.Length < 1e-12) return null;
+            double dot = da.Normalized().Dot(db.Normalized()), along = Math.Abs(dot);
+            const double inLine = 0.9, across = 0.15;
+            if (a == MateFeatureKind.Plane && b == MateFeatureKind.Plane)
+                return dot < -inLine ? MateKind.Mate : dot > inLine ? MateKind.Flush : along < across ? MateKind.Perpendicular : MateKind.Angle;
+            if (a == MateFeatureKind.Axis && b == MateFeatureKind.Axis)
+                return along > inLine ? MateKind.Concentric : along < across ? MateKind.Perpendicular : MateKind.Angle;
+            // a face and an axis: the axis along the face's normal stands on it
+            return along > inLine ? MateKind.Perpendicular : along < across ? MateKind.Parallel : MateKind.Angle;
+        }
+
         /// <summary>Whether a relation can join these two kinds of feature.</summary>
         public static bool Fits(MateKind kind, MateFeatureKind a, MateFeatureKind b) => kind switch
         {

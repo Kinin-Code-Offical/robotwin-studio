@@ -231,7 +231,7 @@ Desteklenenler:
 
 ## Gerçek ESP32 kartı: iki çalışma modu
 
-ESP32 kartının denetçisinde **Çalışma modu** iki seçeneklidir:
+ESP32 kartının denetçisinde **Çalışma modu** iki seçeneklidir. Kod sayfasında kart seçicinin yanındaki rozet hedef kartın modunu her zaman gösterir (**Hızlı simülasyon**, **Donanım uyumlu**; Arduino kartlarında **AVR emülasyonu**); projedeki ya da dünyadaki ESP32'de rozete tıklamak öbür moda geçirir (geri alınabilir, simülasyon çalışıyorsa sonraki başlatmada geçerli olur):
 
 - **hızlı simülasyon** (varsayılan): yukarıda anlatılan yol. Çok sayıda ESP32'li sahneler ve hızlı deneme için.
 - **donanım uyumlu**: çizim, Espressif'in gerçek ESP32 araç zinciriyle (Arduino-ESP32 3.3.13, `xtensa-esp32-elf-gcc`) derlenir; çıktı gerçek karta yüklenebilir. Devre simülasyonunda bu yazılım, yongaya gidecek hâliyle, RobotWin'in kendi Xtensa emülatöründe çalışır: iki çekirdek, FreeRTOS, ROM ve yazmaç düzeyinde GPIO, LEDC (PWM), ADC, DAC, dokunma pinleri, zamanlayıcılar, bekçiler, Serial, Serial1 ve Serial2 (iki yönde), I2C (Wire) ve SPI, karta bağlı modüllerle; böylece `analogRead` gerçek yonganın verdiği kodları verir (0 V yakınındaki ölü bölgesi, 3,1 V yakınındaki bükülmesiyle) ve seri monitör gerçek UART'ın tuttuğu hızı gösterir (115200 için 115942). Değişiklikten sonraki ilk çalıştırma çizimi arka planda gerçek yonga için derler ve bu arada hızlı modda çalışır; sonraki çalıştırma emülatördedir. Olay günlüğü hangi motorun çalıştığını yazar. Dünya simülasyonunda da aynısı geçerli. Henüz modellenmeyenler: Wi-Fi/BLE ve kamera; bunları kullanan bir çizim (WiFi.h, esp_now.h, BLEDevice.h, esp_camera.h …) hızlı modda çalışır ve olay günlüğü nedenini yazar.

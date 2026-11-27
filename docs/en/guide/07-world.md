@@ -504,7 +504,7 @@ Set the current limit with the driver's **Current limit** value; it stands for t
 
 **A Z axis with an Arduino:** the `z-axis-stepper` firmware in the **Stepper Z axis with Arduino** template (built in, no libraries) drives an A4988 from an Uno: D2 → DIR, D3 → STEP, D8 → EN. It lifts the carriage 40 mm on a T8 lead screw and lowers it again, raising and lowering the speed at a steady acceleration (the ramp AccelStepper makes). A motor started at full speed without a ramp stalls; ramped, it follows.
 
-**Assembly mates:** place parts by their faces and axes relative to each other. Pick the **Align** tool on the toolbar (H) and click a face or axis on two parts; clicking the round side of a shaft, wheel or gear picks its axis. The menu that opens offers the relations that fit:
+**Assembly mates:** place parts by their faces and axes relative to each other. Pick the **Align** tool on the toolbar (H) and click a face or axis on two parts; clicking the round side of a shaft, wheel or gear picks its axis. The menu that opens offers the relations that fit; the one the two most likely mean from how they lie now is first, in bold and marked **suggested**, and Enter takes it (faces turned to each other mate, faces the same way are flush, axes in line are concentric, a shaft standing on a face is perpendicular to it):
 - **Face to face:** two faces against each other.
 - **Flush:** two faces the same way, in one plane.
 - **Concentric:** a shaft in its hole.

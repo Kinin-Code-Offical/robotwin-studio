@@ -97,6 +97,15 @@ namespace RobotWin.Studio.Pages
                 case "wire-dangling":
                     // a stub drawn past its pin or left over after a part moved: the segment ending there goes
                     return ("Boştaki kablo parçasını sil", () => RemoveAt("Boştaki kablo parçası silindi", s => TrimDangling(s, v)));
+                case "single-pin-net" or "label-single" when NetCompletions.For(W.Schematic, W.Library, v) is { } complete:
+                    // [problems] a one-pin net finished: its label written as the net it was meant for, or put on the free pin of its name
+                    return (complete.Text, () =>
+                    {
+                        W.BeginChange();
+                        complete.ApplyTo(W.Schematic);
+                        W.CommitChange(Lang.T($"Tek pinli hat tamamlandı: {v.Net}"));
+                        BuildErcPanel();
+                    });
                 case "label-unconnected" when v.Net != null:
                     return ("Hiçbir şeye değmeyen etiketi sil", () => RemoveAt("Bağlanmamış etiket silindi", s => s.Labels.RemoveAll(l => l.Position.Equals(v.Location) && Schematic.SameSheet(l.Sheet, v.Sheet))));
                 default:

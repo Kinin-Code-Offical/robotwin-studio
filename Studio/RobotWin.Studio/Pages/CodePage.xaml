@@ -21,6 +21,9 @@
                     <t:Icon Data="{StaticResource I.Chip}" Size="16" Foreground="{DynamicResource B.TextMuted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <ComboBox x:Name="TargetBox" Width="260" SelectionChanged="OnTargetChanged"
                               ToolTip="Kodun yükleneceği kart: projedeki ya da açık dünyadaki her Arduino Uno, Nano ve ESP32"/>
+                    <Button x:Name="ModeBadge" Style="{StaticResource Btn.Ghost}" Margin="8,0,0,0" Padding="8,0" MinHeight="24" VerticalAlignment="Center" Click="OnModeBadge">
+                        <TextBlock x:Name="ModeBadgeText" Style="{StaticResource Text.Caption}" Foreground="{DynamicResource B.Text}"/>
+                    </Button>
                     <t:Icon Data="{StaticResource I.Library}" Size="16" Foreground="{DynamicResource B.TextMuted}" VerticalAlignment="Center" Margin="14,0,8,0"/>
                     <ComboBox x:Name="TemplateBox" Width="170" SelectionChanged="OnTemplate" ToolTip="Örnek kod: seçilen örnek bu klasöre yazılır"/>
                     <Border Width="1" Height="22" Background="{DynamicResource B.Border}" Margin="12,0"/>

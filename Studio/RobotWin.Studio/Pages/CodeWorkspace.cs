@@ -100,6 +100,9 @@ namespace RobotWin.Studio.Pages
         private readonly Action<string?> _changed;
 
         public string Key { get; }
+
+        /// <summary>[mode-badge] The board's parameters (its run mode among them); null when not known.</summary>
+        public Dictionary<string, string>? Parameters { get; init; }
         public string Title { get; }
 
         /// <summary>"proje" or the world's title.</summary>

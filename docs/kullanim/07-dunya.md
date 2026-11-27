@@ -504,7 +504,7 @@ Akım sınırını sürücünün **Akım sınırı** değeriyle ayarlayın; bu, 
 
 **Arduino ile Z ekseni:** **Arduino ile step motorlu Z ekseni** şablonundaki `z-axis-stepper` yazılımı (yerleşik, kütüphanesiz) bir Uno'dan A4988'i sürer: D2 → DIR, D3 → STEP, D8 → EN. Taşıyıcıyı T8 vidalı milde 40 mm kaldırır ve indirir. Hızı sabit ivmeyle artırıp azaltır (AccelStepper'ın yaptığı rampa). Rampasız tam hızla başlayan motor durur, rampayla başlayan izler.
 
-**Montaj ilişkileri:** parçaları yüzlerinden ve eksenlerinden birbirine göre yerleştirin. Araç çubuğundaki **Hizala** aracını (H) seçin, iki parçada birer yüz ya da eksen tıklayın; milin, tekerin ya da dişlinin yuvarlak yanına tıklamak ekseni seçer. Açılan menüde uygun ilişkiler çıkar:
+**Montaj ilişkileri:** parçaları yüzlerinden ve eksenlerinden birbirine göre yerleştirin. Araç çubuğundaki **Hizala** aracını (H) seçin, iki parçada birer yüz ya da eksen tıklayın; milin, tekerin ya da dişlinin yuvarlak yanına tıklamak ekseni seçer. Açılan menüde uygun ilişkiler çıkar; ikisinin şimdiki duruşundan en olası olanı en üstte, kalın ve **önerilen** yazılıdır, Enter onu kurar (karşılıklı yüzler yüz yüze, aynı yöne bakanlar aynı hizada, aynı doğrultudaki eksenler eş eksenli, yüze dik duran mil dik):
 - **Yüz yüze:** iki yüz birbirine dayanır.
 - **Aynı hizada:** iki yüz aynı yöne bakar ve aynı düzlemde durur.
 - **Eş eksenli:** mil deliğinde.

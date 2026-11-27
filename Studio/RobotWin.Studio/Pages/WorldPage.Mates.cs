@@ -131,12 +131,18 @@ namespace RobotWin.Studio.Pages
             var (pa, da) = Where(world, a);
             var (pb, db) = Where(world, b);
             double distance = (pb - pa).Dot(da), angle = Math.Acos(Math.Max(-1, Math.Min(1, da.Dot(db)))) * 180 / Math.PI;
+            // [mate-suggest] the relation the two most likely mean goes first, marked, and Enter takes it
+            var likely = WorldMates.Likely(a.Kind, da, b.Kind, db);
+            if (likely is { } lk && !WorldMates.Fits(lk, a.Kind, b.Kind)) likely = null;
             void Item(MateKind kind, string text, double value = 0, double value2 = 0)
             {
                 if (!WorldMates.Fits(kind, a.Kind, b.Kind)) return;
-                var mi = new MenuItem { Header = text };
+                bool suggested = kind == likely;
+                var mi = new MenuItem { Header = suggested ? Shell.Lang.T(text) + " · " + Shell.Lang.T("önerilen") : text };
+                if (suggested) mi.FontWeight = FontWeights.SemiBold;
                 mi.Click += (_, _) => AddMate(world, kind, a, b, value, value2);
-                menu.Items.Add(mi);
+                if (suggested) menu.Items.Insert(0, mi);
+                else menu.Items.Add(mi);
             }
 
             Item(MateKind.Mate, "Yüz yüze (birbirine dayalı)");
@@ -171,6 +177,7 @@ namespace RobotWin.Studio.Pages
             }
 
             menu.IsOpen = true;
+            if (likely != null && menu.Items[0] is MenuItem first) first.Dispatcher.BeginInvoke(new Action(() => first.Focus()), System.Windows.Threading.DispatcherPriority.Input);
         }
 
         /// <summary>[mate-adv] The symmetric mate's plane, or the width mate's groove face then tab face; the mate is made once all are in.</summary>
