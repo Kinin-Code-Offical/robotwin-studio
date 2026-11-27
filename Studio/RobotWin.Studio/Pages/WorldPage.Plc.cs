@@ -52,11 +52,48 @@ namespace RobotWin.Studio.Pages
                 }
             }, "Dünya çalışıyorsa program PLC'ye de yüklenir ve soğuk başlar", true));
             row.Children.Add(Small("Yeniden başlat", () => _session.Physics?.RestartPlc(o.Id), "Hatadan sonra PLC'yi STOP'tan RUN'a alır (değişkenler baştan)"));
+            row.Children.Add(Small("Çalışma alanı…", () => OpenPlcWorkspace(o), "Program, değişken tablosu, blok kütüphanesi, canlı izleme grafiği ve derleme konsolu tek pencerede"));
             Inspector.Children.Add(row);
             Inspector.Children.Add(check);
             Inspector.Children.Add(Caption("Durum"));
             StatusBlock();
             Inspector.Children.Add(Note("G/Ç: I0–I7 → %IX0.0–%IX0.7, Q0–Q7 ← %QX0.0–%QX0.7, %MW0–%MW255 bellek sözcükleri. Türler BOOL, INT, DINT, UINT, WORD, REAL, TIME; bloklar TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS; Modbus istemcisi MB_READ, MB_WRITE."));
+        }
+
+        private World.PlcWorkspace? _plcWorkspace;
+
+        /// <summary>[plc-workspace] The PLC's workspace (World/PlcWorkspace.cs): one at a time, brought forward when open.</summary>
+        internal World.PlcWorkspace? OpenPlcWorkspace(WorldObject o)
+        {
+            if (_plcWorkspace is { IsLoaded: true })
+            {
+                _plcWorkspace.Activate();
+                return _plcWorkspace;
+            }
+
+            o.Parameters.TryGetValue("program", out var text);
+            _plcWorkspace = new World.PlcWorkspace(Window.GetWindow(this), o.Name, string.IsNullOrWhiteSpace(text) ? CellParts.PlcExample : text!,
+                name => _session.State == SimState.Stopped ? double.NaN : _session.Physics?.PlcOf(o.Id)?.Program?.Read(name) ?? double.NaN,
+                () =>
+                {
+                    var sb = new StringBuilder();
+                    PlcStatus(o, _session.State == SimState.Stopped ? null : _session.Physics, sb);
+                    return sb.ToString().Split('\n')[0].Trim();
+                },
+                () => _session.Time,
+                source =>
+                {
+                    Edit("PLC programı kaydedildi", () => o.Parameters["program"] = source);
+                    if (_session.State != SimState.Stopped && _session.Physics is { } ph)
+                    {
+                        var errors = ph.LoadPlcProgram(o.Id, source);
+                        W.Status = errors.Count == 0 ? "PLC programı yüklendi: RUN" : "PLC programı derlenmedi: " + errors[0];
+                    }
+                },
+                () => _session.Physics?.RestartPlc(o.Id));
+            _plcWorkspace.Closed += (_, _) => _plcWorkspace = null;
+            _plcWorkspace.Show();
+            return _plcWorkspace;
         }
 
         /// <summary>[plc] A ladder PLC: its check, the editor window, restart, and the same live state.</summary>

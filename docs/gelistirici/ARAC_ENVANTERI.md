@@ -270,6 +270,35 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Sabit kuvvet | Sabit kuvvet bileşeni: kuvvet ve tork, dünya ya da kendi eksenlerinde; açılıp kapanır, kopyalanır | var | |
 | Etiket, katman (çarpışma katmanları), statik | adın altında Etiket ve Katman; katman ekle, çarpışma matrisi (fizikte maske); Sabit = statik | var | |
 
+## PLC ve HMI (OpenPLC Editor 4.4, FUXA 1.3)
+
+27 Kasım 2026'da incelendi: OpenPLC Editor'ün resmi belgeleri (çalışma alanı, konsol, hata ayıklayıcı; uygulamanın kendisi ekran denetimi izni verilmediği için açılmadı, indirilen kopya silindi) ve FUXA'nın resmi belgeleri ile düzenleyici kayıtları (FUXA'nın taşınabilir sürümü yok: Node.js sunucusu).
+
+### PLC çalışma alanı (OpenPLC Editor)
+
+| Araç | Bizde | Durum | Öncelik |
+| --- | --- | --- | --- |
+| Etkinlik çubuğu: gezgin, kaynak denetimi, arama, araç kutusu, derle, çalıştır, hata ayıklayıcı | PLC'nin denetçideki kartı (dil, program), Merdiven penceresi; derleme yazarken, çalıştırma dünyayla | kısmi | 2 |
+| Proje ağacı: fonksiyonlar, fonksiyon blokları, programlar, veri tipleri, kaynak (global değişkenler, görevler, örnekler), aygıtlar, sunucular | tek program (ST ya da merdiven), değişkenler VAR … END_VAR; Modbus ve OPC UA sunucusu PLC'nin ayarlarında | kısmi | 2 |
+| Kütüphane kataloğu: blokları gövdeye sürükle | merdivende TON, CTU, karşılaştırma blokları hücre olarak | kısmi | 2 |
+| POU'nun üstünde değişken tablosu, tablo ↔ VAR metni geçişi | Merdiven penceresinin solunda VAR metni | kısmi | 2 |
+| Dil başına araç kutusu (LD: blok, bobin, kontak, sil) | Merdiven penceresinin araç düğmeleri (kontak, bobin, S/R, kenar, TON, CTU, karşılaştırma, bağ) | var | |
+| Konsol: derleme adımları, düzey süzgeci, arama, dışa aktarma, hataya tıklayıp satıra gitme | derleme hataları basamak / satır numarasıyla; olaylar günlüğü | kısmi | 3 |
+| Hata ayıklayıcı: canlı değişkenler zaman grafiğinde | merdivende enerji geçen kontak ve bobinler canlı; değişkenler render'ın zaman çizelgesinde ve grafiklerinde | kısmi | 2 |
+
+### HMI tasarımcısı (FUXA)
+
+| Araç | Bizde | Durum | Öncelik |
+| --- | --- | --- | --- |
+| Görünümler listesi (birden çok ekran, başlangıç görünümü) | tek panel | yok | 3 |
+| Palet bölümleri: Genel (seç, çizgi, dikdörtgen, daire, metin, resim), Kontroller (değer, giriş, düğme, seçim, anahtar, gösterge, grafik, kaydırıcı), Şekiller, Süreç (pompa, vana, tank, motor), Animasyon | HMI tasarımcısının paleti: göstergeler (lamba, sayı, çubuk, kadran, trend), kontroller (düğme, anahtar, ayar değeri, motor), alarm listesi, yazı | var | |
+| Cetvelli tuval, ızgara, yakınlaştırma, seç / taşı / boyutlandır | panel tuvali: ızgaraya yakalama, sürükle-taşı, köşe tutamaçlarıyla boyut, oklarla kaydır, Sil, Ctrl+D çoğalt | var | |
+| Sağda katlanır özellikler: konum ve boyut, hizalama, çizgi, etkileşim | sağda: konum ve boyut, etiket, bağlama (PLC ve değişken listesi), aralık ve birim, trendin serileri ve süresi, motorun rolleri | var | |
+| Çift tıkla bağlama penceresi: değer, birim, biçim; eylemler; yetki | özellikler panelinde bağlama; yetki ve eylemler yok | kısmi | 3 |
+| Alarmlar: etiket başına HH / H / L / mesaj düzeyleri, etkin ve geçmiş liste, alarm başına eylem | alarm tanımları (PLC değişkeni, düzey, koşul, eşik, metin); etkin liste, onaylama, geçmiş; panelde alarm şeridi | var | |
+| Trend: çizgi grafikler, makine durumu şeritleri, kayıt | trend göstergesi (dört seriye kadar, kayan pencere) | kısmi | 2 |
+| Düzen ayarları: başlangıç görünümü, yakınlaştırma, gezinme menüsü, başlıkta alarm bildirimi | panel boyutu ön ayarları; başlıkta etkin alarm sayısı | kısmi | 3 |
+
 ## Sıra
 
 Öncelik 1 olanlar şu gruplar hâlinde yapılır:
@@ -285,4 +314,4 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 
 Sonra öncelik 2 ve 3. Her grup bitince bu tablo güncellenir.
 
-Durum: öncelik 1'in ilk grupları bitti (PCB, Şema, Parça, Montaj). Unity incelemesinden çıkan öncelik 1'lerden ızgara ve yakalama penceresi, sahne ağacının sağ tık menüsü, etkin / devre dışı, bileşenli Denetçi, Bileşen ekle, bileşen ve dönüşüm menüleri, fizik gövdesinin sönüm ve kilitleri bitti; çoklu seçim ve boş nesneler de geldi; boş nesneler, bileşen kartının ? yardımı ve sahnede dikdörtgenle seçim de geldi; bileşeni aç / kapa da geldi.
+Durum: öncelik 1'in ilk grupları bitti (PCB, Şema, Parça, Montaj). Unity incelemesinden çıkan öncelik 1'lerden ızgara ve yakalama penceresi, sahne ağacının sağ tık menüsü, etkin / devre dışı, bileşenli Denetçi, Bileşen ekle, bileşen ve dönüşüm menüleri, fizik gövdesinin sönüm ve kilitleri bitti; çoklu seçim ve boş nesneler de geldi; boş nesneler, bileşen kartının ? yardımı ve sahnede dikdörtgenle seçim de geldi; bileşeni aç / kapa da geldi. PLC ve HMI incelemesinden HMI tasarımcısı (palet, ızgaralı panel, özellikler, alarmlar) geldi; sırada PLC çalışma alanı (proje ağacı, kütüphane kataloğu, değişken tablosu, canlı izleme grafiği) var.

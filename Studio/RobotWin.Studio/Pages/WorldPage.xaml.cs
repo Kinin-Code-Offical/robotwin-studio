@@ -113,7 +113,9 @@ namespace RobotWin.Studio.Pages
             };
             W.WorldChanged += (_, _) =>
             {
-                if (W.ActiveWorld != null && W.ActiveWorld == _shown && !_terrainQuiet) Refresh(); // [terrain] strokes do not rebuild the scene
+                if (W.ActiveWorld != null && W.ActiveWorld == _shown && !_terrainQuiet && !_hmiQuiet) Refresh(); // [terrain] strokes do not rebuild the scene; [hmi] nor do panel edits
+                if (!_hmiQuiet) _hmiDesigner?.Rebind(W.ActiveWorld);   // [hmi-designer] an undo hands it the world as it is now
+                if (_dockHmi != null && DockShowing("hmi", _dockHmi)) BuildHmiPanel();   // [hmi] the panel as it is now
             };
             AppSettings.Changed += (_, _) => ApplyGridSettings();
             PreviewKeyDown += OnKeys;
@@ -2090,6 +2092,7 @@ namespace RobotWin.Studio.Pages
             if (World == null || World.Title != t.Build().Title) _main.NewWorld(t.Build());
             OnShown();
             Scene.FrameAll();
+            HmiSnapshotSetup();   // [hmi-designer] "…:hmi" / "…:hmi-designer": a PLC and a panel to show
             if (simulate != null && double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double secs))
             {
                 PlaneSnapshotSetup();   // [ps5plane]
@@ -2207,6 +2210,7 @@ namespace RobotWin.Studio.Pages
             FinishTerrainSnapshot(simulate != null); // [terrain]
             PlaneSnapshotFinish();   // [ps5plane] Pages/WorldPage.Plane.cs (after the terrain framing)
             ExperimentSnapshot();   // [experiment]
+            HmiSnapshotFinish();   // [hmi-designer]
         }
     }
 

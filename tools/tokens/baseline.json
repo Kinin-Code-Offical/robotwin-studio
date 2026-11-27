@@ -7,7 +7,6 @@
   "Pages/ModelPage.Analysis.cs": 10,
   "Pages/SchematicPage.Editor.cs": 1,
   "Pages/SettingsPage.Themes.cs": 1,
-  "Pages/WorldPage.Hmi.cs": 1,
   "Pages/WorldPage.SceneTree.cs": 5,
   "Pages/WorldPage.Sense.cs": 10,
   "Pages/WorldPage.Terrain.cs": 1,
@@ -20,5 +19,5 @@
   "Shell/ThemeBrushes.cs": 2,
   "Simulation/SimulationSession.cs": 6
  },
- "total": 55
+ "total": 54
 }

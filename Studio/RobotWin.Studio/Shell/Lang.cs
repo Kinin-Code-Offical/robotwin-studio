@@ -50,7 +50,7 @@ namespace RobotWin.Studio.Shell
         /// </summary>
         public static void Translate(FrameworkElement? e)
         {
-            if (e == null || !Active) return;
+            if (e == null || !Active || (bool)e.GetValue(KeepProperty)) return;
             switch (e)
             {
                 case TextBlock tb:
@@ -87,6 +87,17 @@ namespace RobotWin.Studio.Shell
 
             Set(e, FrameworkElement.ToolTipProperty);
         }
+
+        /// <summary>
+        /// [lang] Texts that are code, not language (a PLC's VAR, a type, an address): set on an element, it and everything
+        /// inside it stay as written. Inherited down the tree.
+        /// </summary>
+        public static readonly DependencyProperty KeepProperty = DependencyProperty.RegisterAttached("Keep", typeof(bool), typeof(Lang),
+            new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.Inherits));
+
+        public static void SetKeep(DependencyObject d, bool value) => d.SetValue(KeepProperty, value);
+
+        public static bool GetKeep(DependencyObject d) => (bool)d.GetValue(KeepProperty);
 
         private static void Set(DependencyObject d, DependencyProperty p)
         {

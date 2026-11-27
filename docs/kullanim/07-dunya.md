@@ -244,6 +244,10 @@ Hücre panelindeki **Sapma** satırı, kolun ucunun tuttuğu ağırlık altında
 
 **Parçalar → Robot Hücresi → PLC** sekiz sayısal girişi (I0–I7 → `%IX0.0`–`%IX0.7`) ve sekiz çıkışı (Q0–Q7 ← `%QX0.0`–`%QX0.7`) olan, IEC 61131-3 Yapısal Metin (ST) çalıştıran bir PLC'dir. Her **çevrim süresinde** girişleri okur (G/Ç geriliminin yarısının üstü 1), programı bir kez çalıştırır ve çıkışları yazar. Denetçideki düzenleyicide program yazılırken denetlenir; hata satırıyla birlikte gösterilir. **Kaydet ve PLC'ye yükle** dünya çalışırken programı PLC'ye de yükler (soğuk başlar). Panelde RUN/STOP, tarama sayısı, giriş ve çıkış bitleri ve değişkenler canlı görünür; PLC'nin lambası RUN'da yeşil, STOP'ta kırmızıdır.
 
+**Çalışma alanı…** programı kendi penceresinde açar: solda proje ağacı (program, değişkenler, programın tanımladığı fonksiyon blokları ve fonksiyonlar; birine tıklayınca satırına gidilir) ve blok kütüphanesi (zamanlayıcılar, sayıcılar, kenarlar, tutucular, Modbus, fonksiyonlar; tıklayınca çağrısı imlecin yerine yazılır), ortada **Program**, **Değişkenler** ve **İzleme** sekmeleri, altta konsol. **Değişkenler** `VAR` bloklarını tablo olarak gösterir: bölüm, ad, adres (`%IX0.0`, `%QX0.0`, `%MW0`), tür, ilk değer, açıklama ve dünya çalışırken canlı değer; tabloda yapılan her değişiklik program metnine yazılır, tablonun tutamadığı satırlar (aynı satırda birden çok ad, `TYPE` blokları) olduğu gibi kalır. **İzle** kutusu işaretli değişkenler (en çok dört) **İzleme** sekmesinde son saniyeleriyle çizilir. Konsol denetimin iletilerini gösterir; bir hataya tıklayınca satırına gidilir. Başlıkta RUN/STOP, tarama sayısı ve çevrim süresi canlı yazar; **Kaydet ve PLC'ye yükle** (Ctrl+S) programı kaydeder, dünya çalışıyorsa PLC'ye de yükler.
+
+![PLC çalışma alanı](../images/plc-workspace.png)
+
 Desteklenenler: `VAR … END_VAR` (`AT %IX0.0`, `%QX0.0`, `%MW0` adresleriyle), BOOL, INT, DINT, UINT, WORD, REAL, TIME (`T#1s500ms`), 16#FF ve 2#1010 sayıları; TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS blokları; Modbus istemcisi MB_READ ve MB_WRITE (aşağıda); `IF … ELSIF … ELSE`, `CASE … OF` (istasyonun adımları), `FOR`, `WHILE`, `REPEAT`, `EXIT`; ABS, SQRT, MIN, MAX, LIMIT, SEL ve `INT_TO_REAL` gibi dönüşümler. Tamsayılar PLC'deki gibi taşar (INT 16 bit). Derlenmeyen program ya da çalışırken hata (sıfıra bölme, bitmeyen döngü) PLC'yi STOP'a alır ve çıkışları düşürür; **Yeniden başlat** RUN'a döndürür. Yeni PLC; lamba, flaşör ve bir itici istasyonu (parça gelince silindiri ileri sür, ileride geri çek, geride say) içeren örnek programla gelir. **Modbus TCP sunucusu** açılırsa (öntanımlı port 5021) SCADA ya da HMI PLC'ye bağlanır: tutma yazmaçları `%MW0`–`%MW255` (yazılabilir; program bir sonraki taramada görür), ayrık girişler `%IX`, bobinler `%QX`.
 
 **Modbus istemcisi.** PLC, dünyadaki başka Modbus cihazlarını (uzak G/Ç modülleri, Modbus'ı açık başka PLC'ler) tesis ağı üzerinden birim kimliğiyle okur ve yazar:
@@ -301,7 +305,20 @@ END_FUNCTION_BLOCK
 
 ### HMI (operatör paneli)
 
-Alt paneldeki **HMI** sekmesi, PLC'lerin değişkenlerine bağlı bir operatör panelidir. **+ Gösterge** kartında türü (lamba, düğme, anahtar, sayı, ayar, çubuk), PLC'yi ve değişkeni (programdaki adıyla ya da `%MW3` gibi bir adresle) seçip **Ekle**'ye basın. Dünya çalışırken lambalar ve sayılar programın değerlerini gösterir; **düğme** basılı tutulduğu sürece değişkeni TRUE yapar (operatörün parmağı gibi), **anahtar** açıp kapatır, **ayar** yazılan değeri Enter ile programa verir. Girişe (`%IX`) bağlı değişkenler yazılamaz: onları pinleri belirler. Panel dünyayla birlikte kaydedilir.
+Alt paneldeki **HMI** sekmesi, PLC'lerin değişkenlerine bağlı bir operatör panelidir. Panel **Tasarla…** ile açılan **HMI tasarımcısında** çizilir:
+
+- **Palet** (solda): göstergeler (lamba, sayı, çubuk, kadran, trend), kontroller (düğme, anahtar, ayar değeri, motor), alarm listesi ve yazı. Bir öğeyi panele sürükleyin ya da tıklayın.
+- **Panel** (ortada): bir HMI ekranının boyutunda (800 × 480, 1024 × 600, 1280 × 800, 1024 × 768), ızgaralı. Öğe sürüklenerek taşınır, köşesinden çekilerek boyutlanır; seçiliyken oklar ızgara adımı kadar (Shift ile 1 piksel) kaydırır, **Sil** kaldırır, **Ctrl+D** çoğaltır. Yakınlık %50–150.
+- **Özellikler** (sağda): etiket, PLC ve değişken (programdaki değişkenlerin listesi ya da `%MW3` gibi bir adres), çubuk, kadran, ayar ve trend için aralık, birim; trendin en çok dört serisi ve gösterdiği süre; motorun **Başlat**, **Durdur**, **Çalışıyor**, **Arıza** değişkenleri; konum ve boyut.
+- **Alarmlar** sekmesi: her alarm bir PLC değişkenine bağlıdır: düzeyi (HH çok yüksek, H yüksek, L düşük, LL çok düşük, mesaj), koşulu (`>=`, `>`, `<=`, `<`, `=`, `<>`) ve eşiği, operatörün okuyacağı metni.
+
+Her değişiklik geri alınabilir ve panel dünyayla birlikte kaydedilir; tasarımcıdan önce yapılmış paneller sıra sıra yerleştirilir.
+
+![HMI tasarımcısı](../images/hmi-designer.png)
+
+Dünya çalışırken panel canlıdır: lambalar, sayılar, çubuk ve kadran programın değerlerini gösterir, trend son saniyeleri çizer; **düğme** basılı tutulduğu sürece değişkeni TRUE yapar (operatörün parmağı gibi), **anahtar** açıp kapatır, **ayar** yazılan değeri Enter ile programa verir, motorun **Başlat** ve **Durdur** düğmeleri de basılıyken TRUE yazar. Alarm koşul tutunca gelir, bırakınca gider; alarm listesinde onaylanana kadar kalır (tıklayınca ya da **Onayla** ile hepsi), sekmenin üstünde etkin ve onaysız alarm sayısı yazar. Panel kendi boyutunda, kaydırma çubuklarıyla görünür; **Sığdır** sekmeye sığdırır. Girişe (`%IX`) bağlı değişkenler yazılamaz: onları pinleri belirler.
+
+![Çalışan HMI paneli](../images/hmi-panel.png)
 
 ### Pnömatik silindir
 

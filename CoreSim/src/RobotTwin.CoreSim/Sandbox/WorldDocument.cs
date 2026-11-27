@@ -569,6 +569,12 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>[hmi] The operator panel's elements, bound to the PLCs' variables; null when the world has none.</summary>
         public List<HmiWidget>? Hmi { get; set; }
 
+        /// <summary>[hmi-designer] The panel's size and grid; null: the default 800 × 480 screen.</summary>
+        public HmiPanelSettings? HmiPanel { get; set; }
+
+        /// <summary>[hmi-alarms] The panel's alarms on the PLCs' variables; null when there are none.</summary>
+        public List<HmiAlarm>? HmiAlarms { get; set; }
+
         /// <summary>[objs] Workshop lighting 0 (dark room) … 1 (bright); the world's own lights matter more in the dark.</summary>
         public double RoomLight { get; set; } = 1.0;
         /// <summary>

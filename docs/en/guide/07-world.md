@@ -244,6 +244,10 @@ The **limit switch**'s roller lever reaches out along +X. When something pushes 
 
 **Parts → Robot Cell → PLC** is a PLC with eight digital inputs (I0–I7 → `%IX0.0`–`%IX0.7`) and eight outputs (Q0–Q7 ← `%QX0.0`–`%QX0.7`) that runs IEC 61131-3 Structured Text (ST). Every **cycle time** it reads its inputs (1 above half the I/O voltage), runs the program once and writes its outputs. The editor in the inspector checks the program as you write it and shows errors with their line. **Save and download to the PLC** also downloads the program into a running world's PLC (it starts cold). The panel shows RUN/STOP, the scan count, the input and output bits and the variables live; the PLC's lamp is green in RUN and red in STOP.
 
+**Workspace…** opens the program in a window of its own: the project tree on the left (the program, its variables, the function blocks and functions it defines; a click goes to the line) and the block library (timers, counters, edges, latches, Modbus, functions; a click writes the call at the cursor), the **Program**, **Variables** and **Watch** tabs in the middle, and the console below. **Variables** shows the `VAR` blocks as a table: section, name, address (`%IX0.0`, `%QX0.0`, `%MW0`), type, initial value, comment and, while the world runs, the live value; every change in the table is written into the program's text, and lines the table cannot hold (several names on one line, `TYPE` blocks) stay as they are. Variables ticked **Watch** (up to four) are drawn with their last seconds in the **Watch** tab. The console shows the check's messages; a click on an error goes to its line. The title shows RUN/STOP, the scan count and the cycle time live; **Save and download to the PLC** (Ctrl+S) saves the program and, if the world is running, downloads it into the PLC.
+
+![PLC workspace](../../images/en/plc-workspace.png)
+
 Supported: `VAR … END_VAR` (with `AT %IX0.0`, `%QX0.0`, `%MW0` addresses), BOOL, INT, DINT, UINT, WORD, REAL, TIME (`T#1s500ms`), 16#FF and 2#1010 numbers; the TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD, SR, RS blocks; the Modbus client blocks MB_READ and MB_WRITE (below); `IF … ELSIF … ELSE`, `CASE … OF` (a station's steps), `FOR`, `WHILE`, `REPEAT`, `EXIT`; ABS, SQRT, MIN, MAX, LIMIT, SEL and conversions such as `INT_TO_REAL`. Integers wrap as in a PLC (INT is 16-bit). A program that does not compile, or a fault while running (division by zero, a loop that does not end), puts the PLC in STOP with its outputs off; **Restart** takes it back to RUN. A new PLC comes with an example program: a lamp, a flasher and a pusher station (when a part comes, drive the cylinder out, bring it back when it is out, count when it is back). Turn on its **Modbus TCP server** (port 5021 by default) and a SCADA or HMI connects to the PLC: holding registers are `%MW0`–`%MW255` (writable; the program sees a write at its next scan), discrete inputs `%IX`, coils `%QX`.
 
 **Modbus client.** The PLC reads and writes the world's other Modbus devices (remote I/O modules, other PLCs with Modbus on) over the plant network by their unit ID:
@@ -301,7 +305,20 @@ With **Language** set to *Ladder* the program is a ladder diagram (LD): **Open t
 
 ### HMI (operator panel)
 
-The **HMI** tab in the bottom panel is an operator panel bound to the PLCs' variables. In the **+ Element** card choose the kind (lamp, button, switch, number, set point, bar), the PLC and the variable (by its name in the program, or an address such as `%MW3`), then press **Add**. While the world runs, lamps and numbers show the program's values; a **button** holds its variable TRUE while pressed (as an operator's finger), a **switch** turns it on and off, a **set point** gives the program the value typed when Enter is pressed. Variables bound to an input (`%IX`) cannot be written: their pins set them. The panel is saved with the world.
+The **HMI** tab in the bottom panel is an operator panel bound to the PLCs' variables. The panel is drawn in the **HMI designer**, opened with **Design…**:
+
+- **Palette** (left): indicators (lamp, number, bar, dial, trend), controls (button, switch, set point, motor), the alarm list and text. Drag an element onto the panel, or click it.
+- **Panel** (middle): the size of an HMI screen (800 × 480, 1024 × 600, 1280 × 800, 1024 × 768), on a grid. Drag an element to move it, pull a corner to size it; with one selected the arrows nudge it by the grid step (Shift: 1 pixel), **Delete** removes it, **Ctrl+D** duplicates it. Zoom 50–150 %.
+- **Properties** (right): label, PLC and variable (from the program's variables, or an address such as `%MW3`), the range of a bar, dial, set point or trend, the unit; a trend's up to four series and the time it shows; a motor's **Start**, **Stop**, **Running** and **Fault** variables; position and size.
+- **Alarms** tab: each alarm is bound to a PLC variable: its level (HH high-high, H high, L low, LL low-low, message), its condition (`>=`, `>`, `<=`, `<`, `=`, `<>`) and threshold, and the text the operator reads.
+
+Every change can be undone and the panel is saved with the world; panels made before the designer are laid out row by row.
+
+![HMI designer](../../images/en/hmi-designer.png)
+
+While the world runs the panel is live: lamps, numbers, the bar and the dial show the program's values and a trend draws the last seconds; a **button** holds its variable TRUE while pressed (as an operator's finger), a **switch** turns it on and off, a **set point** gives the program the value typed when Enter is pressed, and a motor's **Start** and **Stop** write TRUE while pressed too. An alarm comes when its condition holds and goes when it stops; it stays in the alarm list until acknowledged (click it, or **Acknowledge** for all), and the tab's bar counts the active and unacknowledged alarms. The panel is shown at its own size with scroll bars; **Fit** fits it to the tab. Variables bound to an input (`%IX`) cannot be written: their pins set them.
+
+![A running HMI panel](../../images/en/hmi-panel.png)
 
 ### Pneumatic cylinder
 
