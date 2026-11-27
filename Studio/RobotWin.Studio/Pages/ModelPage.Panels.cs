@@ -1127,6 +1127,20 @@ namespace RobotWin.Studio.Pages
             wrap.Children.Add(SmallButton("Kalınlık ver", () => _vp.StartModal(ModalKind.Solidify), "Yüzeye içe doğru et kalınlığı verir: açık yüzey kalın bir duvar, kapalı gövde içi boş kabuk olur"));
             wrap.Children.Add(SmallButton("Kabuk", StartShell, "SolidWorks'teki kabuk: seçili yüzler açılır, gövdenin geri kalanı içe doğru duvar kalınlığı alır (kutu, kapak, muhafaza)"));
             wrap.Children.Add(SmallButton("Alt böl", _ed.Subdivide));
+            Button? spin = null;
+            spin = SmallButton("Döndürerek çoğalt…", () =>   // [spin] Blender's Spin, about one of the object's axes
+            {
+                var menu = new ContextMenu { PlacementTarget = spin, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+                foreach (var (axisName, axis) in SpinAxes)
+                {
+                    var mi = new MenuItem { Header = Shell.Lang.T($"{axisName} ekseni çevresinde…") };
+                    mi.Click += (_, _) => SpinDialog(axisName, axis);
+                    menu.Items.Add(mi);
+                }
+
+                menu.IsOpen = true;
+            }, "Blender'daki Spin: seçili yüzleri ya da kenarları bir eksen çevresinde adım adım döndürerek çoğaltır; tam turda kendine kapanır (torna gibi)");
+            wrap.Children.Add(spin);
             wrap.Children.Add(SmallButton("Yumuşat", _ed.SmoothSubdivide, "Catmull–Clark: tüm ağ"));
             wrap.Children.Add(SmallButton("Birleştir  M", _ed.MergeAtCenter));
             wrap.Children.Add(SmallButton("Yüz yap  F", _ed.Fill));

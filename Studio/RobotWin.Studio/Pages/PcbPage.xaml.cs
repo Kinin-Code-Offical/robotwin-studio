@@ -72,6 +72,7 @@ namespace RobotWin.Studio.Pages
             Canvas.Constrain45 = AppSettings.Current.PcbConstrain45;   // [angle45]
             Canvas.CurvedRatsnest = AppSettings.Current.PcbCurvedRatsnest;   // [rats-curve]
             Canvas.FullCrosshair = AppSettings.Current.PcbFullCrosshair;   // [crosshair]
+            Canvas.OverrideLocks = AppSettings.Current.PcbOverrideLocks;   // [locks]
             Angle45Toggle.IsChecked = Canvas.Constrain45;
             InitDock();   // [dock-min]
             Canvas.SelectionChanged += (_, _) => UpdateSelection();
@@ -823,6 +824,14 @@ namespace RobotWin.Studio.Pages
                     board.AuxOrigin = new RobotTwin.CoreSim.Pcb.PcbPoint(4, board.Height - 4);
                     board.GridOrigin = new RobotTwin.CoreSim.Pcb.PcbPoint(4, 4);
                     Canvas.GridSize = 2.54;
+                    Canvas.Refresh();
+                    break;
+
+                case "local-rats":   // [local-rats] the board unrouted, its ratsnest off: only Q1's lines, KiCad's local ratsnest
+                    board.Tracks.Clear();
+                    board.Vias.Clear();
+                    Canvas.ShowRatsnest = false;
+                    Canvas.LocalRatsnest.Add(board.Components.FirstOrDefault(c => c.RefDes.StartsWith("Q", StringComparison.OrdinalIgnoreCase))?.RefDes ?? board.Components[0].RefDes);
                     Canvas.Refresh();
                     break;
 
@@ -2090,6 +2099,13 @@ namespace RobotWin.Studio.Pages
             LayersPanel.Children.Add(Overline("Görünüm"));
             LayersPanel.Children.Add(Switch("Serigrafi", Canvas.ShowSilk, v => { Canvas.ShowSilk = v; Canvas.InvalidateVisual(); }));
             LayersPanel.Children.Add(Switch("Ratsnest", Canvas.ShowRatsnest, v => { Canvas.ShowRatsnest = v; Canvas.InvalidateVisual(); }));
+            LayersPanel.Children.Add(Caption("Kapalıyken seçili parçaların ve sağ tık ▸ Yerel ratsnest'i göster ile işaretlenenlerin çizgileri görünür (KiCad'deki yerel ratsnest).", 4));   // [local-rats]
+            LayersPanel.Children.Add(Switch("Kilitleri geçersiz kıl", Canvas.OverrideLocks, v =>   // [locks] KiCad's Override locks
+            {
+                Canvas.OverrideLocks = v;
+                AppSettings.Current.PcbOverrideLocks = v;
+                AppSettings.Current.Save();
+            }));
             LayersPanel.Children.Add(Switch("Tam ekran artı imleç", Canvas.FullCrosshair, v =>   // [crosshair]
             {
                 Canvas.FullCrosshair = v;

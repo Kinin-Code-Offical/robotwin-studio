@@ -57,6 +57,25 @@ namespace RobotWin.Studio.Pages
             Scene.SelectMany(ids);
         }
 
+        /// <summary>[multiselect] Unity's Select Invert (Ctrl+I): every object that was not selected, and none that was.</summary>
+        private void InvertSelection()
+        {
+            if (World is not { } world) return;
+            var was = new HashSet<string>(Scene.SelectedAll, StringComparer.OrdinalIgnoreCase);
+            var ids = world.Objects.Select(o => o.Id).Where(id => !was.Contains(id)).ToList();
+            if (ids.Count == 0) Scene.Select(null);
+            else Scene.SelectMany(ids);
+        }
+
+        /// <summary>[multiselect] Unity's Select Children: the object and everything mounted on it, down the tree.</summary>
+        private void SelectChildren(string id)
+        {
+            if (World is not { } world || world.Find(id) == null) return;
+            var ids = new List<string> { id };
+            ids.AddRange(world.MountedOn(id).Select(o => o.Id));
+            Scene.SelectMany(ids.Distinct(StringComparer.OrdinalIgnoreCase).ToList());
+        }
+
         /// <summary>The inspector's line under the name when more than one object is selected.</summary>
         private void MultiSelectNote()
         {

@@ -1009,6 +1009,24 @@ namespace RobotWin.Studio.Modeling
             });
         }
 
+        /// <summary>
+        /// [spin] Blender's Spin: the selected faces (or the selected edges, when no whole face is selected) swept round an
+        /// axis of the object through a point of it (mm, the object's own frame) in steps (CoreSim Modeling/MeshSpin.cs).
+        /// </summary>
+        public void Spin(Vec3 axis, Vec3 center, double degrees, int steps)
+        {
+            if (!RequireEdit()) return;
+            var faces = SelectedFaceList();
+            var edges = faces.Count > 0 ? new List<(int A, int B)>() : SelectedEdges();
+            if (faces.Count == 0 && edges.Count == 0)
+            {
+                Status("Döndürerek çoğaltmak için yüz ya da kenar seçin");
+                return;
+            }
+
+            Do($"Döndürerek çoğaltıldı: {steps} adım, {degrees:0.#}°", () => SelectResult(MeshSpin.Spin(EditMesh!, faces, edges, center, axis, degrees, steps)));
+        }
+
         public void SmoothSubdivide()
         {
             if (!RequireEdit()) return;

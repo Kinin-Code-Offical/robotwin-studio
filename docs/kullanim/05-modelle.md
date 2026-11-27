@@ -129,6 +129,7 @@ Seçim: **Alt+tık** (sürüklemeden) tıklanan kenarın halkasını seçer, yü
 | I | İçe öteleme (inset) |
 | K | Bıçak: ekrana çizilen çizgi boyunca keser (seçim varsa yalnız seçili yüzleri). **C** kipi değiştirir: kes / sağ tarafı sil / sol tarafı sil; silinen tarafın açıklığı kapatılır |
 | Ctrl+R | Halka kesim: fareyle bir kenarın üzerine gelin, dörtgen halkası boyunca yeni kenar halkaları eklenir; tekerlek veya +/− kesim sayısını değiştirir |
+| Sağ tık ▸ Döndürerek çoğalt | Blender'daki Spin: seçili yüzler (yüz yoksa seçili kenarlar) nesnenin X, Y ya da Z ekseni çevresinde, verilen merkezden geçen eksende **Adım sayısı** kadar adımla **Açı** kadar döndürülerek çoğaltılır. 360° tam tur kendine kapanır (bir profilden kasnak, flanş, vazo); daha azı uçta seçimin bir kopyasıyla kapanır. Eksen üstündeki noktalar tek kalır, böylece eksene değen bir profil dolu bir gövde olur. |
 | Ctrl+B | Pah kır (bevel): seçili kenarların yerine düz pah yüzü; fareyle genişlik ya da mm yazın. Üç pahın buluştuğu köşeye köşe yüzü eklenir. Tekerlek ya da **+** parça sayısını artırır: pah yuvarlanır |
 | Yuvarla (radyüs) | SolidWorks'teki radyüs: seçili kenarlar iki yüze teğet dairesel bir yayla yuvarlanır (8 parçayla başlar, tekerlekle değişir); her kenarı yuvarlanmış köşe küre parçasıyla kapanır, gövde kapalı kalır |
 | F | Yüz doldur |

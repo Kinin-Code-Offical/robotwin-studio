@@ -1594,6 +1594,9 @@ namespace RobotWin.Studio.Pages
                 case Key.A when mods == ModifierKeys.Control:   // [multiselect] Unity's Select All
                     SelectAllObjects();
                     break;
+                case Key.I when mods == ModifierKeys.Control:   // [multiselect] Unity's Select Invert
+                    InvertSelection();
+                    break;
                 case Key.A when mods == (ModifierKeys.Alt | ModifierKeys.Shift):   // [active] Unity's Toggle Active State
                     ToggleActive(World?.Find(Scene.Selected));
                     break;

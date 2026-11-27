@@ -129,6 +129,7 @@ Selection: **Alt+click** (without dragging) selects the loop of the clicked edge
 | I | Inset |
 | K | Knife: cuts along a line drawn on the screen (only the selected faces when there is a selection). **C** switches the mode: cut / delete the right side / delete the left side; the opening of the deleted side is capped |
 | Ctrl+R | Loop cut: hover over an edge and new edge loops are added along its ring of quads; the wheel or +/− changes the number of cuts |
+| Right-click ▸ Spin | Blender's Spin: the selected faces (with no face, the selected edges) are copied round the object's X, Y or Z axis through the given centre, **Steps** times through the **Angle**. A whole 360° turn closes on itself (a pulley, a flange, a vase from a profile); less ends in a copy of the selection. Points on the axis stay single, so a profile touching the axis becomes a solid body. |
 | Ctrl+B | Bevel: flat chamfer faces in place of the selected edges; set the width with the mouse or type mm. A corner face closes the corner where three chamfers meet. The wheel or **+** adds segments: the chamfer becomes round |
 | Round (fillet) | SolidWorks' fillet: the selected edges are rounded by a circular arc tangent to both faces (starts with 8 segments, the wheel changes them); a corner whose edges are all rounded closes with a piece of a sphere and the body stays closed |
 | F | Fill a face |

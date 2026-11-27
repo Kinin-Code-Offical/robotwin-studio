@@ -63,6 +63,8 @@ namespace RobotWin.Studio.Pages
                 menu.Items.Add(MenuEntry("Görünümle hizala", "Ctrl+Shift+F", () => { Scene.Select(o.Id); AlignWithView(); }));   // [align-view]
                 menu.Items.Add(MenuEntry("Görünümü seçime hizala", string.Empty, () => { Scene.Select(o.Id); AlignViewToSelected(); }));
                 menu.Items.Add(MenuEntry("Sahnede referansları bul", null, () => FindReferences(o)));
+                menu.Items.Add(MenuEntry("Alt nesneleri seç", null, () => SelectChildren(o.Id)));   // [multiselect] Unity's Select Children
+                menu.Items.Add(MenuEntry("Seçimi tersine çevir", "Ctrl+I", InvertSelection));
                 // [default-parent] Unity's Set as Default Parent: new objects are mounted on it as they are made
                 bool isDefault = string.Equals(World?.DefaultParent, o.Id, StringComparison.OrdinalIgnoreCase);
                 menu.Items.Add(MenuEntry(isDefault ? "Varsayılan üst nesne olmaktan çıkar" : "Varsayılan üst nesne yap", null, () =>

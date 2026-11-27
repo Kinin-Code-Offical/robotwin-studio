@@ -137,6 +137,9 @@ namespace RobotWin.Studio.Shell
 
         /// <summary>[crosshair] The PCB view's full-window crosshair; [polar] the cursor read as distance and angle from the origin.</summary>
         public bool PcbFullCrosshair { get; set; }
+
+        /// <summary>[locks] KiCad's Override locks: locked parts move like the rest.</summary>
+        public bool PcbOverrideLocks { get; set; }
         public bool PcbPolarCursor { get; set; }
 
         /// <summary>[rats-curve] The PCB ratsnest drawn as curves.</summary>

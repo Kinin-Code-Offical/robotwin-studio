@@ -465,7 +465,7 @@ namespace RobotWin.Studio.Pcb
             if (ShowDrawings) DrawDrawings(dc, board);
             DrawGraphics(dc, board);   // [graphics] each by its layer's switch
             DrawRuleAreas(dc, board);   // [keepout]
-            if (ShowRatsnest) DrawRatsnest(dc, board);
+            if (ShowRatsnest || LocalRatsnest.Count > 0 || _sel.OfType<BoardComponent>().Any()) DrawRatsnest(dc, board);   // [local-rats]
             DrawSelection(dc, board);
             DrawGraphicPreview(dc);   // [graphics]
             DrawDiffPreview(dc);   // [diffroute]
@@ -758,9 +758,13 @@ namespace RobotWin.Studio.Pcb
         private void DrawRatsnest(DrawingContext dc, BoardDocument board)
         {
             var pen = P(A(Rats, (byte)0xB0), 1, true);
+            // [local-rats] with the board's ratsnest off, KiCad's local ratsnest: the lines of the parts it was switched on for, and of the selected ones
+            var own = ShowRatsnest ? null : new HashSet<BoardComponent>(board.Components.Where(c => LocalRatsnest.Contains(c.RefDes)).Concat(_sel.OfType<BoardComponent>()));
+            if (own is { Count: 0 }) return;
             foreach (var (net, a, b) in board.Ratsnest())
             {
                 if (HighlightNet != null && !string.Equals(net, HighlightNet, StringComparison.OrdinalIgnoreCase)) continue;
+                if (own != null && !own.Contains(a.Component) && !own.Contains(b.Component)) continue;
                 if (!CurvedRatsnest)
                 {
                     dc.DrawLine(pen, S(a.X, a.Y), S(b.X, b.Y));
@@ -791,6 +795,15 @@ namespace RobotWin.Studio.Pcb
             base.OnMouseLeave(e);
             if (FullCrosshair) InvalidateVisual();   // [crosshair] gone with the pointer
         }
+
+        /// <summary>[local-rats] The parts (by reference) whose ratsnest is drawn while the board's is switched off.</summary>
+        public HashSet<string> LocalRatsnest { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>[locks] KiCad's Override locks: locked parts move, turn and flip like the rest (the lock stays on them).</summary>
+        public bool OverrideLocks { get; set; }
+
+        /// <summary>Whether a part's lock holds it now.</summary>
+        private bool Held(BoardComponent c) => c.Locked && !OverrideLocks;
 
         /// <summary>[rats-curve] Draws the ratsnest as gentle curves (KiCad's option): overlapping straight lines on one row are told apart.</summary>
         public bool CurvedRatsnest { get; set; }

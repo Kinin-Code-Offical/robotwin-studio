@@ -401,6 +401,32 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "spin":   // [spin] a V-groove pulley spun a whole turn from its profile, and an L profile spun 270°
+                {
+                    PolyMesh Profile(params (double R, double Z)[] pts)
+                    {
+                        var m = new PolyMesh();
+                        var ids = pts.Select(q => m.AddVertex(new Vec3(q.R, 0, q.Z))).ToArray();
+                        m.AddFace(ids);
+                        return m;
+                    }
+
+                    var pulley = Profile((4, 0), (12, 0), (12, 2), (9, 5), (12, 8), (12, 10), (4, 10));
+                    MeshSpin.Spin(pulley, new[] { 0 }, Array.Empty<(int, int)>(), Vec3.Zero, Vec3.UnitZ, 360, 48);
+                    var a1 = ModelOps.AddMesh(doc, pulley, "Kasnak");
+                    a1.Transform.Position = new Vec3(-20, 0, 0);
+                    a1.Color = "#E0A030";
+                    var ell = Profile((8, 0), (14, 0), (14, 3), (11, 3), (11, 12), (8, 12));
+                    MeshSpin.Spin(ell, new[] { 0 }, Array.Empty<(int, int)>(), Vec3.Zero, Vec3.UnitZ, 270, 18);
+                    var a2 = ModelOps.AddMesh(doc, ell, "Yarım flanş");
+                    a2.Transform.Position = new Vec3(20, 0, 0);
+                    a2.Color = "#3B82C4";
+                    _ed.Load(doc, null);
+                    _ed.Select(a1.Id);
+                    _vp.FrameAll();
+                    break;
+                }
+
                 case "helix":   // [helix] a compression spring with closed ends, an open coil and a tight one
                 {
                     var spring = ModelOps.AddPrimitive(doc, PrimitiveKind.Helix);

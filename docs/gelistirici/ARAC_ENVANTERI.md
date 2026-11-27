@@ -49,7 +49,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Etkin katman | katman listesi | var | |
 | Katman çifti (via ile geçilen) | Katmanlar sekmesinde iki liste; V yol çizerken via koyup çiftin öbürüne, çizmezken etkin katmanı çiftin öbürüne geçirir (saklanır; kartta olmayan çift üst ↔ alt) | var | |
 | Izgara, yakınlık | ızgara panelde; mıknatıs: pedlere, yollara (hiç / çizerken / her zaman), çizimlere ve kenara; elmas işaret | var | |
-| Kilitleri geçersiz kıl | yok | yok | 3 |
+| Kilitleri geçersiz kıl | Katmanlar sekmesinde anahtar: kilitli parçalar taşınır, döndürülür, çevrilir (kilit kalır); saklanır | var | |
 
 ### Sol çubuk (görünüm anahtarları)
 
@@ -70,7 +70,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Araç | Bizde | Durum | Öncelik |
 | --- | --- | --- | --- |
 | Seç | var | var | |
-| Yerel ratsnest (bir parçanınki) | yok | yok | 3 |
+| Yerel ratsnest (bir parçanınki) | ratsnest kapalıyken seçili parçalarınki; sağ tık ▸ Yerel ratsnest'i göster / gizle | var | |
 | Ayak izi yerleştir | Parça ekle | var | |
 | Yol | Yol (X) | var | |
 | Fark çifti yolu | Fark çifti yolu (ortak orta hat, gönyeli köşe, 45° ped çıkışı, uzunluk ve fark, ters uç ve yakın bakır uyarısı) | var | |
@@ -191,7 +191,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Nesne / düzenleme kipi, nokta / kenar / yüz seçimi | var | var | |
 | Çıkar (extrude), içe kaydır (inset), pah (bevel), alt böl | var | var | |
 | Döngü kesimi (loop cut), bıçak (knife) | Halka kesim (Ctrl+R, dörtgen halkası boyunca, kesim sayısı tekerlekle); Bıçak (K; kes, sağ ya da sol tarafı sil, açıklık kapatılır) | var | |
-| Döndürerek çoğaltma (spin) | yok | yok | 3 |
+| Döndürerek çoğaltma (spin) | Döndürerek çoğalt: seçili yüzler ya da kenarlar X / Y / Z ekseni çevresinde adım ve açıyla; tam tur kapanır, eksendeki noktalar tek kalır | var | |
 | Birleştir (merge), yüz oluştur | var | var | |
 | Orantılı düzenleme | yok | yok | 3 |
 | Yapışma, görünüş kipleri, tel kafes, X-ray | var | var | |
@@ -245,7 +245,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | --- | --- | --- | --- |
 | Kes, kopyala, yapıştır; alt nesne olarak yapıştır (yerel ya da dünya dönüşümünü koruyarak) | Kes / kopyala / yapıştır (takılı olanlar, bağlantılar, kablolar, ilişkiler); seçilinin üstüne takılı yapıştır | var | |
 | Yeniden adlandır, çoğalt, sil | F2 satırda; çoğalt ve sil takılı olanlarla, "yalnız bunu sil" | var | |
-| Tümünü seç, seçimi kaldır, tersine çevir, alt nesneleri seç; ağaçta çoklu seçim | Ctrl+tık (sahne ve ağaç), ağaçta Shift+tık aralık, sahnede Shift+sürükle dikdörtgen, Ctrl+A; tutamaç, kopyala, kes, çoğalt, sil hepsine (tersine çevir, alt nesneleri seç sonra) | kısmi | 3 |
+| Tümünü seç, seçimi kaldır, tersine çevir, alt nesneleri seç; ağaçta çoklu seçim | Ctrl+tık (sahne ve ağaç), ağaçta Shift+tık aralık, sahnede Shift+sürükle dikdörtgen, Ctrl+A, Ctrl+I tersine çevir, sağ tık ▸ Alt nesneleri seç; tutamaç, kopyala, kes, çoğalt, sil hepsine | var | |
 | Boş nesne, boş alt nesne, boş üst nesne (grup) | Boş nesne (Ctrl+Alt+N), boş alt (Alt+Shift+N), boş üst (Ctrl+Shift+G); düzenleyicide grup, çalıştırmada yok (altındakiler onun takılı olduğu yere geçer) | var | |
 | Sağ tıkta Oluştur ▸ türler (gövde şekilleri, ışık, kamera, ses, sensör, kart …) | Oluştur ▸ boş nesneler, gövde şekilleri, Parça ▸ kategoriler (kütüphanenin her hazır parçası: sensör, kamera, motor …) ve palet sekmeleri; ışık ve ses türü sonra | kısmi | 3 |
 | Etkin / devre dışı (Alt+Shift+A) | adın solunda kutu, Alt+Shift+A, ağaç menüsü; kapalı nesne ve üstündekiler sahneden ve çalıştırmadan çıkar (fizik, devre, sensörler), ağaçta soluk | var | |

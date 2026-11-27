@@ -495,6 +495,8 @@ namespace RobotWin.Studio.Pages
                 menu.Items.Add(Item("Çıkar (extrude)", "E", () => _vp.StartModal(ModalKind.Extrude)));
                 menu.Items.Add(Item("İçe kaydır (inset)", "I", () => _vp.StartModal(ModalKind.Inset)));
                 menu.Items.Add(Item("Alt böl", null, _ed.Subdivide));
+                foreach (var (axisName, axis) in SpinAxes)   // [spin]
+                    menu.Items.Add(Item($"Döndürerek çoğalt · {axisName} ekseni…", null, () => SpinDialog(axisName, axis)));
                 menu.Items.Add(Item("Yumuşat (Catmull–Clark)", null, _ed.SmoothSubdivide));
                 menu.Items.Add(Item("Yüz oluştur", "F", _ed.Fill));
                 menu.Items.Add(new Separator());

@@ -730,8 +730,8 @@ namespace RobotWin.Studio.Pcb
         {
             var board = Board;
             if (board == null) return false;
-            var locked = _sel.OfType<BoardComponent>().Where(c => c.Locked).ToList();
-            if (locked.Count > 0) _sel.RemoveAll(o => o is BoardComponent c && c.Locked);
+            var locked = _sel.OfType<BoardComponent>().Where(Held).ToList();
+            if (locked.Count > 0) _sel.RemoveAll(o => o is BoardComponent c && Held(c));
             if (_sel.Count == 0 || _sel.All(o => o is OutlineSelection))
             {
                 if (locked.Count > 0) Say($"{string.Join(", ", locked.Select(c => c.RefDes))} kilitli (L ile açın)");
@@ -1387,7 +1387,7 @@ namespace RobotWin.Studio.Pcb
 
         public void RotateSelection(bool counterClockwise = false)
         {
-            var parts = _sel.OfType<BoardComponent>().Where(c => !c.Locked).ToList();
+            var parts = _sel.OfType<BoardComponent>().Where(c => !Held(c)).ToList();
             var texts = _sel.OfType<BoardText>().ToList();
             if (parts.Count == 0 && texts.Count == 0) return;
             TransformComponents(parts, () =>
@@ -1399,7 +1399,7 @@ namespace RobotWin.Studio.Pcb
 
         public void FlipSelection()
         {
-            var parts = _sel.OfType<BoardComponent>().Where(c => !c.Locked).ToList();
+            var parts = _sel.OfType<BoardComponent>().Where(c => !Held(c)).ToList();
             if (parts.Count == 0) return;
             TransformComponents(parts, () =>
             {
@@ -1657,13 +1657,20 @@ namespace RobotWin.Studio.Pcb
                 {
                     case BoardComponent c:
                         Add(new MenuItem { Header = $"{c.RefDes} · {c.Value}", IsEnabled = false });
-                        Add(Item("Döndür", "R", () => RotateSelection(), !c.Locked));
-                        Add(Item("Ters yöne döndür", "Shift+R", () => RotateSelection(true), !c.Locked));
-                        Add(Item(c.Side == CopperLayer.Top ? "Alt yüze çevir" : "Üst yüze çevir", "F", FlipSelection, !c.Locked));
+                        Add(Item("Döndür", "R", () => RotateSelection(), !Held(c)));
+                        Add(Item("Ters yöne döndür", "Shift+R", () => RotateSelection(true), !Held(c)));
+                        Add(Item(c.Side == CopperLayer.Top ? "Alt yüze çevir" : "Üst yüze çevir", "F", FlipSelection, !Held(c)));
                         Add(Item(c.Locked ? "Kilidi aç" : "Kilitle", "L", ToggleLock));
                         Add(null);
-                        Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, SnapX(x), SnapY(y)), !c.Locked));
-                        Add(Item("Sürükle (yollarla)", "G", () => BeginMove(MoveKind.Drag, false, SnapX(x), SnapY(y)), !c.Locked));
+                        Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, SnapX(x), SnapY(y)), !Held(c)));
+                        Add(Item("Sürükle (yollarla)", "G", () => BeginMove(MoveKind.Drag, false, SnapX(x), SnapY(y)), !Held(c)));
+                        bool local = LocalRatsnest.Contains(c.RefDes);   // [local-rats]
+                        Add(Item(local ? "Yerel ratsnest'i gizle" : "Yerel ratsnest'i göster", null, () =>
+                        {
+                            if (local) LocalRatsnest.Remove(c.RefDes);
+                            else LocalRatsnest.Add(c.RefDes);
+                            InvalidateVisual();
+                        }, !ShowRatsnest));
                         Add(null);
                         Add(Item("Özellikler…", "E", () => EditRequested?.Invoke(this, c)));
                         Add(Item("Footprint değiştir…", null, () => ChangeFootprintRequested?.Invoke(this, c)));
