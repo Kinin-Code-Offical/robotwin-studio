@@ -245,6 +245,33 @@ In either mode, with an ESP32 chosen on the Code page, the **Real board** menu d
 
 The detailed plan of the two modes and the emulator's stages: [The two ESP32 run modes](../../ESP32_MODES.md).
 
+### ESP32 compatibility
+
+Like the Arduino table: whether each feature works in the two modes, how it was tried, and its known limit. The fast mode builds the sketch for the PC with MSVC (Visual Studio C++ tools needed); the hardware-compatible mode builds it for the real chip with Espressif's toolchain (Arduino-ESP32 3.3.13) and runs it on our own Xtensa emulator. The classes in the "Test" column are in `CoreSim/tests/RobotTwin.CoreSim.Tests`; most hardware-mode rows run a real firmware (`RW_ESP32_…_ELF`) and report **skipped** without the toolchain (see [Testing](../../TESTING.md)). What the two modes give on the same template is compared with `--esp32-compare report.md`.
+
+| Feature | Fast mode | Hardware-compatible | How it was tried | Known limit |
+| --- | --- | --- | --- | --- |
+| GPIO, `attachInterrupt` | ✓ | ✓ (GPIO matrix, Schmitt input, IDF's GPIO ISR service) | `Esp32EmulatedBoardTests`: ten rising edges on GPIO4 counted exactly | |
+| `analogRead` (ADC) | ✓ (ideal line) | ✓ (Espressif's characterisation) | the dimmer reads a 10k/4.7k divider within 5 mV | the two modes give different raw codes for the same voltage (fast mode 1.0 V → 1241); the calibrated voltage is the same |
+| `ledc*`, `analogWrite`, `Servo` | ✓ | ✓ (LEDC registers, hardware fade) | the dimmer's 5 kHz PWM; servo pulses in the library's ticks | |
+| `dacWrite`, `touchRead` | ✓ | ✓ | 75 untouched, 13 with a finger (through IDF's software filter) | |
+| `Serial` (UART0–2) | ✓ | ✓ (FIFO, baud rate) | an echo firmware prints a long line from the FIFO; UART2 at 9600 baud | |
+| `Wire` (I²C) | ✓ | ✓ | a scan, repeated START, 40 bytes past the 32-byte FIFO, NACK from a missing module | |
+| `SPI` | ✓ | ✓ | a byte, a 16-bit word, a 40-byte buffer; 0xFF while not selected | |
+| RMT (NeoPixel) | ✓ | ✓ | `rgbLedWrite`, `rmtWrite`, Adafruit_NeoPixel bytes | |
+| PCNT (encoder) | ✓ | ✓ | a JGA25 encoder decoded ×4 edge for edge; the watch point at 100 | |
+| MCPWM | ✓ | ✓ | a 20 kHz complementary pair with 2 µs dead time (26 % / 66 %) | no capture unit |
+| FreeRTOS (tasks, queues, semaphores) | ✓ | ✓ (two cores, inter-core interrupts) | the dimmer and every hardware firmware | |
+| Watchdogs, panic | ✓ (task watchdog, `enableLoopWDT`; on simulated time, with IDF's messages) | ✓ (interrupt and task watchdogs) | an endless loop with interrupts off: interrupt watchdog, panic report, `SW_CPU_RESET`, the sketch starts again | no interrupt watchdog in the fast mode (interrupts cannot be switched off on the PC) |
+| Deep / light sleep | ✓ | ✓ | deep sleep twice for 200 ms with `RTC_DATA_ATTR` kept; light sleep 0.5 s, woken at once by GPIO4 | |
+| Preferences (NVS), LittleFS | ✓ | ✓ | a boot counter, a file written and read back | |
+| Wi-Fi station and softAP, UDP, TCP | ✓ (the world's virtual network) | ✓ (the firmware's own lwIP) | DHCP, UDP both ways, TCP client and server; a station joining the softAP | no Internet: the network is inside the world |
+| ESP-NOW, BLE, Bluepad32 | ✓ | — | `Esp32RadioTests`, `GamepadCarTests` | a sketch using them runs in the fast mode |
+| TLS, mDNS | — | — | | not yet |
+| Floating point (FPU) | ✓ | ✓ (single-precision FPU) | `XtensaCoreTests` | the emulator lacks the FPU divide / square-root sequences and MAC16 |
+| Breakpoints, stepping | — | — | | Arduino Uno / Nano only |
+| Upload to a real board | ✓ | ✓ | **Upload to the real board → COMx** | |
+
 ## Code of boards in the world
 
 Every board of the open world stands in the explorer's **BOARDS** section with its own folder. Write its code there and load it with **Upload to board and run**. Selecting the board in the world and pressing **Write the board's code** in the inspector opens the same folder. To load a code folder onto a board in the world, right-click the folder and pick the board under **Upload to board**. Details: [7. World](07-world.md).

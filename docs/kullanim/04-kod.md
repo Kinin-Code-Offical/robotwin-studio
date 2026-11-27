@@ -245,6 +245,33 @@ Hangi modda olursanız olun, Kod sayfasında ESP32 seçiliyken **Gerçek kart** 
 
 İki modun ayrıntılı planı ve emülatörün aşamaları: [ESP32'nin iki çalışma modu](../gelistirici/ESP32_MODLARI.md).
 
+### ESP32 uyumluluğu
+
+Arduino'daki tablo gibi: her özelliğin iki modda çalışıp çalışmadığı, neyle denendiği ve bilinen sınırı. Hızlı mod çizimi MSVC ile bilgisayar için derler (Visual Studio C++ araçları gerekir); donanım uyumlu mod Espressif'in araç zinciriyle (Arduino-ESP32 3.3.13) gerçek yonga için derler ve kendi Xtensa emülatörümüzde çalıştırır. "Test" sütunundaki sınıflar `CoreSim/tests/RobotTwin.CoreSim.Tests` içindedir; donanım uyumlu satırların çoğu gerçek bir yazılımla (`RW_ESP32_…_ELF`) koşar ve araç zinciri yoksa **atlandı** olarak raporlanır (bkz. [Testler](../gelistirici/TESTLER.md)). İki modun aynı şablonda verdiği sonuçlar `--esp32-compare rapor.md` ile karşılaştırılır.
+
+| Özellik | Hızlı mod | Donanım uyumlu | Nasıl denendi | Bilinen sınır |
+| --- | --- | --- | --- | --- |
+| GPIO, `attachInterrupt` | ✓ | ✓ (GPIO matrisi, Schmitt girişi, IDF'nin GPIO ISR hizmeti) | `Esp32EmulatedBoardTests`: GPIO4'teki on yükselen kenar tam sayılır | |
+| `analogRead` (ADC) | ✓ (ideal doğru) | ✓ (Espressif'in karakterizasyonu) | dimmer 10k/4,7k bölücüyü 5 mV içinde okur | iki mod aynı gerilimde farklı ham kod verir (hızlı mod 1,0 V → 1241); kalibre gerilim aynıdır |
+| `ledc*`, `analogWrite`, `Servo` | ✓ | ✓ (LEDC yazmaçları, donanım geçişi) | dimmer 5 kHz PWM; servo darbeleri kütüphanenin tikleriyle | |
+| `dacWrite`, `touchRead` | ✓ | ✓ | dokunmadan 75, parmakla 13 (IDF'nin yazılım süzgeciyle) | |
+| `Serial` (UART0–2) | ✓ | ✓ (FIFO, baud hızı) | yankı yazılımı FIFO'dan uzun satır basar; UART2 9600 baud | |
+| `Wire` (I²C) | ✓ | ✓ | tarama, yinelenen START, 32 baytlık FIFO'yu aşan 40 bayt, olmayan modülden NACK | |
+| `SPI` | ✓ | ✓ | bayt, 16 bitlik sözcük, 40 baytlık tampon; seçili değilken 0xFF | |
+| RMT (NeoPixel) | ✓ | ✓ | `rgbLedWrite`, `rmtWrite`, Adafruit_NeoPixel baytları | |
+| PCNT (enkoder) | ✓ | ✓ | JGA25 enkoderin ×4 dördün çözümü kenarı kenarına; 100'deki izleme noktası | |
+| MCPWM | ✓ | ✓ | 20 kHz tümleyen çift, 2 µs ölü zaman (%26 / %66) | yakalama (capture) birimi yok |
+| FreeRTOS (görev, kuyruk, semafor) | ✓ | ✓ (iki çekirdek, çekirdekler arası kesme) | dimmer ve bütün donanım yazılımları | |
+| Bekçi köpekleri, panik | ✓ (görev bekçisi, `enableLoopWDT`; simüle zamanda, IDF'nin iletileriyle) | ✓ (kesme ve görev bekçisi) | kesmeler kapalı sonsuz döngü: kesme bekçisi, panik raporu, `SW_CPU_RESET`, çizim yeniden başlar | hızlı modda kesme bekçisi yok (kesmeler bilgisayarda kapatılamaz) |
+| Derin / hafif uyku | ✓ | ✓ | iki kez 200 ms derin uyku, `RTC_DATA_ATTR` korunur; hafif uykuda 0,5 s, GPIO4 ile hemen uyanış | |
+| Preferences (NVS), LittleFS | ✓ | ✓ | açılış sayacı, dosya yazıp okuma | |
+| Wi-Fi istasyon ve softAP, UDP, TCP | ✓ (dünyanın sanal ağı) | ✓ (yazılımın kendi lwIP'si) | DHCP, iki yönde UDP, TCP istemci ve sunucu; softAP'ye katılan istasyon | İnternet yok: ağ dünyanın içindedir |
+| ESP-NOW, BLE, Bluepad32 | ✓ | — | `Esp32RadioTests`, `GamepadCarTests` | bunları kullanan çizim hızlı modda çalışır |
+| TLS, mDNS | — | — | | henüz yok |
+| Kayan nokta (FPU) | ✓ | ✓ (tek duyarlıklı FPU) | `XtensaCoreTests` | emülatörde FPU bölme / karekök dizileri ve MAC16 eksik |
+| Kesme noktası, adım adım | — | — | | yalnız Arduino Uno / Nano |
+| Gerçek karta yükleme | ✓ | ✓ | **Gerçek karta yükle → COMx** | |
+
 ## Dünyadaki kartların kodu
 
 Açık dünyadaki her kart gezginin **KARTLAR** bölümünde kendi klasörüyle durur. Kodunu orada yazıp **Karta yükle ve çalıştır** ile yükleyebilirsiniz. Dünyada kartı seçip denetçideki **Kartın kodunu yaz** düğmesine basmak da aynı klasörü açar. Bir kod klasörünü dünyadaki bir karta yüklemek için klasöre sağ tıklayıp **Karta yükle** altından kartı seçin. Ayrıntılar: [7. Dünya](07-dunya.md).

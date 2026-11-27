@@ -286,7 +286,7 @@ Kullanıcı geri bildirimi: ikonlar, düğmeler ve yazılar tam hizada değil; a
 ### D5. Doğrulama ve performans (P0/P1)
 
 - [ ] **Doğrulama raporu:** her referans test için kaynak, model, başlangıç koşulları, sonuç, mutlak ve bağıl hata, kabul sınırı, geçerlilik aralığı, sürüm; uygulama içinden ve belgelerde. Eksik testler: MOSFET anahtarlama, regülatör yük tepkisi, motor kalkış akımı, step motor adım kaybı, çekme çubuğu, kanal akışı, kanat profili, silindir.
-- [ ] **ESP32 uyumluluk matrisi:** AVR'deki gibi, her özellik için araç zinciri, kart, test düzeyi, bilinen sınırlar; Arduino çekirdek sürümleri ve üçüncü taraf kütüphaneler.
+- [~] **ESP32 uyumluluk matrisi:** AVR'deki gibi, her özellik için araç zinciri, kart, test düzeyi, bilinen sınırlar; Arduino çekirdek sürümleri ve üçüncü taraf kütüphaneler. Yapılan: Kod rehberinde "ESP32 uyumluluğu" tablosu (özellik × hızlı / donanım uyumlu × nasıl denendi × bilinen sınır, araç zincirleri ve testlerle). Kalan: üçüncü taraf kütüphanelerin listesi ve çekirdek sürümleri arası fark.
 - [ ] **Üretim güvenilirliği:** empedans ve katman yapısı hesabı, üreticiye özgü DFM kural setleri, bağımsız Gerber okuyucusuyla (gerbv) karşılaştırma.
 - [ ] **Büyük sahne ölçütleri:** 1000 parça, yüzlerce kablo, birden çok MCU; kare başına GPU/CPU/fizik/firmware/devre/kablo/bellek ve %95/%99/en kötü kare süresi; grafik kalitesi profilleri fizik doğruluğundan ayrı. Performans gerileme denetimi (`--perf-check`) var.
 
