@@ -458,6 +458,10 @@ namespace RobotTwin.CoreSim.Modeling
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsReference => Reference != null;
 
+        /// <summary>[history] The features after the base, applied in order (Modeling/ModelFeatures.cs); null when none.</summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public List<ModelFeature>? Features { get; set; }
+
         [JsonIgnore]
         public bool IsPrimitive => Primitive != null;
 
@@ -470,36 +474,22 @@ namespace RobotTwin.CoreSim.Modeling
         /// <summary>The object's geometry in its own coordinate frame (a shared, cached instance: do not modify).</summary>
         public PolyMesh LocalMesh()
         {
-            if (Primitive != null)
-            {
-                string key = Primitive.CacheKey();
-                if (_cache == null || _cacheKey != key)
-                {
-                    _cache = PrimitiveBuilder.Build(Primitive);
-                    _cacheKey = key;
-                }
-
-                return _cache;
-            }
-
-            if (Mesh != null)
-            {
-                if (_cache == null || _cacheKey != "mesh")
-                {
-                    _cache = Mesh.ToPolyMesh();
-                    _cacheKey = "mesh";
-                }
-
-                return _cache;
-            }
-
-            return new PolyMesh();
+            string? key = Primitive != null ? Primitive.CacheKey() : Mesh != null ? "mesh" : null;
+            if (key == null) return new PolyMesh();
+            if (Features is { Count: > 0 }) key += "|" + ModelFeatures.Stamp(Features);   // [history] the features rebuild with their base
+            if (_cache != null && _cacheKey == key) return _cache;
+            var mesh = Primitive != null ? PrimitiveBuilder.Build(Primitive) : Mesh!.ToPolyMesh();
+            if (Features is { Count: > 0 }) mesh = ModelFeatures.Apply(mesh, Features);
+            _cache = mesh;
+            _cacheKey = key;
+            return mesh;
         }
 
         /// <summary>Replaces the geometry with an editable mesh (drops the primitive parameters).</summary>
         public void SetMesh(PolyMesh mesh)
         {
             Primitive = null;
+            Features = null;   // [history] the mesh is the whole part now
             Mesh = MeshData.From(mesh);
             _cache = mesh.Clone();
             _cacheKey = "mesh";
@@ -518,6 +508,7 @@ namespace RobotTwin.CoreSim.Modeling
             c.Transform = Transform.Clone();
             c.Primitive = Primitive?.Clone();
             c.Reference = Reference?.Clone();
+            c.Features = Features?.Select(f => f.Clone()).ToList();
             c.Mesh = Mesh == null ? null : new MeshData { VertexCount = Mesh.VertexCount, FaceCount = Mesh.FaceCount, Positions = Mesh.Positions, Faces = Mesh.Faces };
             // the cache is immutable by convention, sharing it is safe
             return c;

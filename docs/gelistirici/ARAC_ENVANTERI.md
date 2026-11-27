@@ -167,7 +167,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Referans düzlem, eksen, nokta | Ekle ▸ Referans düzlem (üç nokta, uzaklık, iki düzlemin ortası, eksene dik), eksen (iki nokta, yuvarlak parça, iki düzlemin kesişimi), nokta (seçili nokta, parçaların ortası); katısız, çizgisinden seçilir; ayna kopyası ve dairesel dizi kullanır | var | |
 | Helis, sarma (wrap) | yok | yok | 3 |
 | Anında 3B (tutamaçla boyutlandırma) | tutamaçlar | var | |
-| Düzenlenebilir özellik geçmişi | parametrik parçalar | kısmi | 1 |
+| Düzenlenebilir özellik geçmişi | parametrik parçalar; Özellik geçmişi: fark, birleşim, kesişim ve delikler özellik olarak kalır (aracın ölçüleri ve yeri, deliğin ölçüsü, türü, derinliği sonradan değişir; bastır, sırala, ayır, sil); radyüs, pah, kabuk ağa uygular | var | |
 
 ### Değerlendir
 

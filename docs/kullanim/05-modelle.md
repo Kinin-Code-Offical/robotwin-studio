@@ -86,7 +86,19 @@ Delik açmak, cep oymak veya parçaları birleştirmek için:
    - **Birleşim:** araçları etkin nesneyle tek kapalı gövdede birleştirir.
    - **Kesişim:** yalnızca ortak hacmi bırakır.
 
-Araç nesneleri işlemden sonra kaldırılır; sonuç yine kapalı (su geçirmez) bir gövdedir.
+Araç nesneleri sahneden kalkar ama kaybolmaz: her biri etkin nesnenin **Özellik geçmişi**ne bir özellik olarak girer (SolidWorks'teki özellik ağacı gibi). Sonuç yine kapalı (su geçirmez) bir gövdedir.
+
+### Özellik geçmişi
+
+Fark, birleşim, kesişim ve delik sihirbazının delikleri parçayı ağa çevirmez. Parçanın tabanı (örneğin kutu ve ölçüleri) olduğu gibi kalır, işlemler denetçide **Özellik geçmişi** altında sırayla listelenir ve parça her değişiklikte bunlardan yeniden kurulur. Bu yüzden kutuyu uzatınca yuva yine boydan boya keser.
+
+- Her özelliğin kutusu onu **bastırır**: parçaya uygulanmaz, ama silinmez.
+- **↑ / ↓** sırasını değiştirir (önce göbek eklenip sonra delinirse delik göbeği de deler).
+- **Düzenle** özelliği açar: aracın kendi ölçüleri (silindirin çapı, boyu) ve parçaya göre **Konum X / Y / Z**; deliklerde **Ölçü**, **Tür** ve **Derinlik**.
+- **Ayır** aracı yeniden ayrı bir nesne yapar; **Sil** özelliği geçmişten çıkarır.
+- **Geçmişi ağa uygula** tabanı ve özellikleri tek bir düzenlenebilir ağa çevirir. Düzenleme kipi (Tab) ve yuvarla, pah gibi ağ işlemleri de bunu yapar.
+
+Her değişiklik geri alınabilir.
 
 ### Delik sihirbazı
 

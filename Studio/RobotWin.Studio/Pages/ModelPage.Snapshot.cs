@@ -370,6 +370,37 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "history":   // [history] a block with a shaft groove cut, a boss joined and a counterbored hole: three editable features
+                {
+                    var block = ModelOps.AddPrimitive(doc, PrimitiveKind.Box);
+                    block.Name = "Yatak gövdesi";
+                    block.Color = "#3B82C4";
+                    block.Primitive!.Set("x", 60);
+                    block.Primitive.Set("y", 40);
+                    block.Primitive.Set("z", 20);
+                    block.Transform.Position = new Vec3(0, 0, 10);
+                    var groove = ModelOps.AddPrimitive(doc, PrimitiveKind.Cylinder);
+                    groove.Name = "Mil yuvası";
+                    groove.Primitive!.Set("d", 14);
+                    groove.Primitive.Set("h", 50);
+                    groove.Transform.Rotation = new Vec3(90, 0, 0);
+                    groove.Transform.Position = new Vec3(-12, 0, 20);
+                    var boss = ModelOps.AddPrimitive(doc, PrimitiveKind.Cylinder);
+                    boss.Name = "Göbek";
+                    boss.Primitive!.Set("d", 18);
+                    boss.Primitive.Set("h", 12);
+                    boss.Transform.Position = new Vec3(16, 0, 25);
+                    ModelFeatures.AddBoolean(doc, block, new[] { groove }, BooleanOp.Difference);
+                    ModelFeatures.AddBoolean(doc, block, new[] { boss }, BooleanOp.Union);
+                    ModelFeatures.AddHole(doc, block, new Vec3(16, 0, 31), Vec3.UnitZ, new DrillSpec { Type = HoleType.Counterbore, Size = "M4" });
+                    _ed.Load(doc, null);
+                    _openFeature = (block.Id, 0);
+                    _ed.Select(block.Id);
+                    _vp.FrameAll();
+                    ScrollPropsTo("Özellik geçmişi");
+                    break;
+                }
+
                 case "refgeom":   // [refgeom] a bracket mirrored across a tilted reference plane; four pins round a reference axis
                 {
                     var bracket = ModelOps.AddPrimitive(doc, PrimitiveKind.Wedge, 28, 18);

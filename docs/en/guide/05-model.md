@@ -86,7 +86,19 @@ To drill holes, cut pockets or join parts:
    - **Union**: joins the tools with the active object into one closed body.
    - **Intersection**: keeps only the shared volume.
 
-The tool objects are removed afterwards; the result is again a closed (watertight) body.
+The tool objects leave the scene but are not lost: each becomes a feature in the active object's **Feature history** (like SolidWorks' feature tree). The result is again a closed (watertight) body.
+
+### Feature history
+
+Difference, union, intersection and the hole wizard's holes do not turn the part into a mesh. The part's base (a box and its sizes, say) stays as it is, the operations are listed in order under **Feature history** in the inspector, and the part is rebuilt from them on every change. So a longer box is still cut through by its groove.
+
+- Each feature's box **suppresses** it: it is left out of the part but kept.
+- **↑ / ↓** changes the order (a boss joined before a hole is drilled gets drilled too).
+- **Edit** opens a feature: the tool's own sizes (a cylinder's diameter and height) and its **Position X / Y / Z** on the part; for a hole, **Size**, **Type** and **Depth**.
+- **Separate** gives the tool back as an object of its own; **Delete** takes the feature out of the history.
+- **Apply history to mesh** turns the base and its features into one editable mesh. Edit mode (Tab) and mesh operations such as fillet and chamfer do the same.
+
+Every change can be undone.
 
 ### Hole wizard
 

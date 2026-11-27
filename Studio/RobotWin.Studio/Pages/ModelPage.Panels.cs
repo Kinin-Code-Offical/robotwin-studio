@@ -313,6 +313,7 @@ namespace RobotWin.Studio.Pages
             TransformSection(o);
             ShapeOpsSection(objs);
             if (o.Primitive != null) PrimitiveSection(o);
+            FeatureHistorySection(o);   // [history] Pages/ModelPage.History.cs
             MaterialSection(o);
             ShadingSection(o);
             StatsSection(o, objs);

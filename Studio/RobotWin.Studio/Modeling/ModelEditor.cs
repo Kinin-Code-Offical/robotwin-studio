@@ -731,7 +731,7 @@ namespace RobotWin.Studio.Modeling
             var sw = System.Diagnostics.Stopwatch.StartNew();
             Do($"{name}: '{active.Name}' ({tools.Count} araç)", () =>
             {
-                ModelOps.Boolean(Doc, active, tools, op);
+                ModelFeatures.AddBoolean(Doc, active, tools, op);   // [history] a feature: the tools keep their parameters
                 Selected.Clear();
                 Selected.Add(active.Id);
             }, ModelChange.All);
@@ -745,7 +745,7 @@ namespace RobotWin.Studio.Modeling
             string what = HoleWizard.Describe(spec);
             Do($"Delik: '{target.Name}' · {what}", () =>
             {
-                HoleWizard.Drill(Doc, target, point, normal, spec);
+                ModelFeatures.AddHole(Doc, target, point, normal, spec);   // [history] a feature: its size stays editable
                 Selected.Clear();
                 Selected.Add(target.Id);
             }, ModelChange.All);
