@@ -32,13 +32,15 @@ A splash screen appears while the app opens: the product's name and version, on 
 The home page has:
 
 - The **New world**, **New circuit / board** and **Open…** buttons.
+- **Circuit and robot examples**: ready circuits at beginner, intermediate and robot level (LED and button, Arduino Blink, LCD + OLED, ESP32 PWM, motor with a MOSFET, op-amp, 7805, RC filter, relay, NAND, line follower, obstacle avoider, micro quadcopter). Each example is a card: its picture is drawn from the example's own circuit, with its level and the areas it uses (Circuit, PCB, Code, Assembly, World) under it. Clicking a card first shows a short info screen: what it teaches, its parts and the tools it needs (for example whether its firmware comes prebuilt or needs the Arduino compiler); **Open** opens it.
 - **Worlds**: ready-made world templates (empty workshop, servo arm, two-wheel car, ultrasonic sensor, remote-controlled car, water rocket, solid-propellant motor…).
-- **Circuit and robot examples**: ready circuits at beginner, intermediate and robot level (LED and button, Arduino Blink, LCD + OLED, ESP32 PWM, motor with a MOSFET, op-amp, 7805, RC filter, relay, NAND, line follower, obstacle avoider, micro quadcopter).
 - On the right: **Recent**, **Automatic backups** and common **Shortcuts**.
 
 ![Home page](../../images/en/home.png)
 
-> Tip: clicking an example opens it in a new tab. Do not be afraid of breaking examples; the original stays unchanged unless you save over it.
+![Example info screen](../../images/en/example-info.png)
+
+> Tip: an example opens in a new tab. Do not be afraid of breaking examples; the original stays unchanged unless you save over it.
 
 ## Your first robot: an interactive guide
 

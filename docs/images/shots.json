@@ -1,7 +1,8 @@
 {
   "note": "How each guide picture is made: RobotWinStudio.exe --snapshot <file> <args>. tools/scripts/doc_images.py renders them in Turkish (docs/images/) and English (docs/images/en/, with --lang en). crop = [x0, y0, x1, y1] in the rendered picture's pixels; resize = [w, h] after the crop.",
   "shots": {
-    "home": ["--page", "home", "--size", "1600x960"],
+    "home": ["--page", "home", "--size", "1600x960", "--wait", "3"],
+    "example-info": ["--page", "home", "--fault", "example-info:esp32-dimmer", "--size", "1600x960", "--wait", "2"],
     "splash": ["--page", "splash"],
     "guide": ["--page", "home", "--fault", "guide-e2e:4", "--size", "1600x960", "--wait", "6"],
     "rail-groups": ["--page", "model", "--size", "1600x1000", "--wait", "3", "--nav-expanded"],

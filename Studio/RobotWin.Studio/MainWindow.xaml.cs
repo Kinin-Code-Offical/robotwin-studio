@@ -863,6 +863,16 @@ namespace RobotWin.Studio
         /// <summary>Used by --snapshot: puts the page in a representative state.</summary>
         public void PrepareSnapshot(string page, string? simulate, string? fault = null)
         {
+            if (page == "home" && fault == "examples")   // [examples] the example cards in view
+                Dispatcher.BeginInvoke(new Action(() => _home.ExampleList.BringIntoView(new Rect(0, 0, 10, 700))), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+
+            if (page == "home" && fault != null && fault.StartsWith("example-info", StringComparison.Ordinal))
+            {
+                // [examples] the info screen of an example (--fault example-info:line-follower)
+                string? id = fault.Contains(':') ? fault.Substring(fault.IndexOf(':') + 1) : null;
+                Dispatcher.BeginInvoke(new Action(() => _home.ShowExampleInfoForSnapshot(id)), System.Windows.Threading.DispatcherPriority.Loaded);
+            }
+
             if (fault is "dim-group" or "label-group")
             {
                 // [flyout] a tool group's list opened: the PCB's dimensions or the circuit's labels

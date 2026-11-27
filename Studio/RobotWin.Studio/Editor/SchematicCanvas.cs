@@ -167,7 +167,10 @@ namespace RobotWin.Studio.Editor
         }
 
         private static Workspace W => Workspace.Current;
-        private Schematic Doc => W.Schematic;
+        private Schematic Doc => Document ?? W.Schematic;
+
+        /// <summary>[examples] A circuit drawn instead of the open one (an example's picture on the start page).</summary>
+        public Schematic? Document { get; set; }
         private PartLibrary Lib => W.Library;
         private SimulationSession Sim => W.Simulation;
         private bool Simulating => Sim.IsActive;
@@ -443,22 +446,29 @@ namespace RobotWin.Studio.Editor
             return HitShape(ToScreen(g));   // [shapes] last: a frame drawn round a block leaves its parts and wires pickable
         }
 
+        /// <summary>
+        /// [examples] Labels keep one size on screen at any zoom; a picture drawn smaller than the export's own scale
+        /// (a start-page card) shrinks them with the drawing, or they would cover each other.
+        /// </summary>
+        private double LabelK => _exporting ? Math.Min(1, _scale / 20) : 1;
+
         private Rect LabelRect(NetLabel label)
         {
             var origin = ToScreen(label.Position);
+            double k = LabelK;
             if (label.IsDirective)
             {
                 // [directive] a stalk up from the wire, a diamond at its top and the class in braces beside it
-                var dt = Text("{" + label.NetClass + "}", 11, LabelColor, true);
-                double stalk = Math.Max(14, 1.2 * _scale);
-                return new Rect(origin.X - 6, origin.Y - stalk - dt.Height / 2 - 2, dt.Width + 22, stalk + dt.Height / 2 + 4);
+                var dt = Text("{" + label.NetClass + "}", 11 * k, LabelColor, true);
+                double stalk = Math.Max(14 * k, 1.2 * _scale);
+                return new Rect(origin.X - 6 * k, origin.Y - stalk - dt.Height / 2 - 2 * k, dt.Width + 22 * k, stalk + dt.Height / 2 + 4 * k);
             }
 
-            var ft = Text(label.Name, 11.5, LabelColor, true);
-            double w = ft.Width + 18;
+            var ft = Text(label.Name, 11.5 * k, LabelColor, true);
+            double w = ft.Width + 18 * k;
             return LabelFacesLeft(label)
-                ? new Rect(origin.X - w, origin.Y - ft.Height / 2 - 3, w, ft.Height + 6)
-                : new Rect(origin.X, origin.Y - ft.Height / 2 - 3, w, ft.Height + 6);
+                ? new Rect(origin.X - w, origin.Y - ft.Height / 2 - 3 * k, w, ft.Height + 6 * k)
+                : new Rect(origin.X, origin.Y - ft.Height / 2 - 3 * k, w, ft.Height + 6 * k);
         }
 
         /// <summary>A label on a pin that points left (into the part body on its right) is drawn leftwards.</summary>
@@ -480,24 +490,25 @@ namespace RobotWin.Studio.Editor
             bool selected = _selection.Contains(label);
             var color = selected ? Accent : LabelColor;
             var at = ToScreen(label.Position);
-            double stalk = Math.Max(14, 1.2 * _scale);
+            double k = LabelK;
+            double stalk = Math.Max(14 * k, 1.2 * _scale);
             var top = new Point(at.X, at.Y - stalk);
             var pen = MakePen(color, 1.2);
             dc.DrawLine(pen, at, top);
             var diamond = new StreamGeometry();
             using (var s = diamond.Open())
             {
-                s.BeginFigure(new Point(top.X, top.Y - 4), true, true);
-                s.LineTo(new Point(top.X + 4, top.Y), true, true);
-                s.LineTo(new Point(top.X, top.Y + 4), true, true);
-                s.LineTo(new Point(top.X - 4, top.Y), true, true);
+                s.BeginFigure(new Point(top.X, top.Y - 4 * k), true, true);
+                s.LineTo(new Point(top.X + 4 * k, top.Y), true, true);
+                s.LineTo(new Point(top.X, top.Y + 4 * k), true, true);
+                s.LineTo(new Point(top.X - 4 * k, top.Y), true, true);
             }
 
             diamond.Freeze();
             dc.DrawGeometry(SymbolRenderer.Brush(CanvasColor), pen, diamond);
-            var ft = Text("{" + label.NetClass + "}", 11, color, true);
-            dc.DrawText(ft, new Point(top.X + 8, top.Y - ft.Height / 2));
-            dc.DrawEllipse(SymbolRenderer.Brush(WireColor), null, at, 2.2, 2.2);
+            var ft = Text("{" + label.NetClass + "}", 11 * k, color, true);
+            dc.DrawText(ft, new Point(top.X + 8 * k, top.Y - ft.Height / 2));
+            dc.DrawEllipse(SymbolRenderer.Brush(WireColor), null, at, 2.2 * k, 2.2 * k);
         }
 
         // ================================================================ rendering
@@ -846,6 +857,7 @@ namespace RobotWin.Studio.Editor
             }
 
             var r = LabelRect(label);
+            double k = LabelK;
             bool left = LabelFacesLeft(label);
             bool selected = _selection.Contains(label);
             bool lit = !Simulating && _netHighlight != null && net != null && string.Equals(net, _netHighlight, StringComparison.OrdinalIgnoreCase);
@@ -856,18 +868,18 @@ namespace RobotWin.Studio.Editor
                 if (left)
                 {
                     s.BeginFigure(new Point(r.Right, r.Top + r.Height / 2), true, true);
-                    s.LineTo(new Point(r.Right - 8, r.Top), true, true);
+                    s.LineTo(new Point(r.Right - 8 * k, r.Top), true, true);
                     s.LineTo(new Point(r.Left, r.Top), true, true);
                     s.LineTo(new Point(r.Left, r.Bottom), true, true);
-                    s.LineTo(new Point(r.Right - 8, r.Bottom), true, true);
+                    s.LineTo(new Point(r.Right - 8 * k, r.Bottom), true, true);
                 }
                 else
                 {
                     s.BeginFigure(new Point(r.Left, r.Top + r.Height / 2), true, true);
-                    s.LineTo(new Point(r.Left + 8, r.Top), true, true);
+                    s.LineTo(new Point(r.Left + 8 * k, r.Top), true, true);
                     s.LineTo(new Point(r.Right, r.Top), true, true);
                     s.LineTo(new Point(r.Right, r.Bottom), true, true);
-                    s.LineTo(new Point(r.Left + 8, r.Bottom), true, true);
+                    s.LineTo(new Point(r.Left + 8 * k, r.Bottom), true, true);
                 }
             }
 
@@ -882,9 +894,9 @@ namespace RobotWin.Studio.Editor
             }
 
             dc.DrawGeometry(SymbolRenderer.Brush(label.Global ? PanelColor : CanvasColor), outline, g);
-            var ft = Text(label.Name, 11.5, color, false);
-            dc.DrawText(ft, new Point(left ? r.Left + 6 : r.Left + 12, r.Top + 3));
-            dc.DrawEllipse(SymbolRenderer.Brush(WireColor), null, ToScreen(label.Position), 2.2, 2.2);
+            var ft = Text(label.Name, 11.5 * k, color, false);
+            dc.DrawText(ft, new Point(left ? r.Left + 6 * k : r.Left + 12 * k, r.Top + 3 * k));
+            dc.DrawEllipse(SymbolRenderer.Brush(WireColor), null, ToScreen(label.Position), 2.2 * k, 2.2 * k);
 
             if (Simulating && net != null)
             {

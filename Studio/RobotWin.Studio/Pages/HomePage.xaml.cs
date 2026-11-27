@@ -30,19 +30,7 @@ namespace RobotWin.Studio.Pages
                 WorldList.Children.Add(Row(t.Title, t.Description, "Dünya", () => _shell.NewWorld(template.Build())));
             }
 
-            foreach (var ex in ExampleProjects.All)
-            {
-                var example = ex;
-                ExampleList.Children.Add(Row(ex.Title, ex.Description, ex.Level, () =>
-                {
-                    Workspace.Current.Load(example.Build(), null);
-                    Workspace.Current.Status = $"{example.Title} açıldı — F5 ile simüle edin";
-                    if (example.Page == "assembly") _shell.OpenProjectAssembly(ask: false);   // the example is the robot: nothing to ask
-                    else _shell.Navigate(example.Page);
-                    // [assembly] a robot example opens on its Montaj: the robot put together, ▶ runs it on its own code
-                    if (example.Page == "assembly") Workspace.Current.Status = $"{example.Title}: robot Montaj'da kuruldu — ▶ Dünyayı çalıştır ile kendi koduyla sürün";
-                }));
-            }
+            foreach (var ex in ExampleProjects.All) ExampleList.Children.Add(ExampleCard(ex));   // [examples] Pages/HomePage.Examples.cs
 
             foreach (var (keys, what) in new[]
             {

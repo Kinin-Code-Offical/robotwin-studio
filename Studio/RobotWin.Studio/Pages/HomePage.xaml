@@ -30,15 +30,15 @@
                 <WrapPanel x:Name="RecentList"/>
                 <TextBlock x:Name="RecentEmpty" Text="Henüz kaydedilmiş bir proje yok." Style="{StaticResource Text.Caption}"/>
 
-                <TextBlock Text="Dünyalar" Style="{StaticResource Text.Overline}" Margin="0,48,0,6"/>
+                <!-- [examples] the examples as cards first (Pages/HomePage.Examples.cs), the world templates under them -->
+                <TextBlock Text="Devre ve robot örnekleri" Style="{StaticResource Text.Overline}" Margin="0,40,0,6"/>
+                <WrapPanel x:Name="ExampleList" Margin="0,8,0,0"/>
+
+                <TextBlock Text="Dünyalar" Style="{StaticResource Text.Overline}" Margin="0,30,0,6"/>
                 <Border BorderBrush="{DynamicResource B.Border}" BorderThickness="0,1,0,0">
                     <StackPanel x:Name="WorldList"/>
                 </Border>
 
-                <TextBlock Text="Devre ve robot örnekleri" Style="{StaticResource Text.Overline}" Margin="0,36,0,6"/>
-                <Border BorderBrush="{DynamicResource B.Border}" BorderThickness="0,1,0,0">
-                    <StackPanel x:Name="ExampleList"/>
-                </Border>
             </StackPanel>
 
             <StackPanel Grid.Column="2" Margin="0,88,0,0">

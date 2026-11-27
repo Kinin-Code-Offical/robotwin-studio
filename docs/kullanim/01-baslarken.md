@@ -32,11 +32,13 @@ Uygulama açılırken bir açılış ekranı görünür: ürünün adı ve sür�
 Başlangıç sayfasında şunlar vardır:
 
 - **Yeni dünya**, **Yeni devre / kart** ve **Aç…** düğmeleri.
+- **Devre ve robot örnekleri:** Başlangıç, Orta ve Robot düzeyinde hazır devreler (LED ve buton, Arduino Blink, LCD + OLED, ESP32 PWM, MOSFET ile motor, op-amp, 7805, RC filtre, röle, NAND, çizgi izleyen robot, engelden kaçan robot, mikro quadcopter). Her örnek bir karttır: resmi örneğin kendi devresinden çizilir, altında düzeyi ve kullandığı alanlar (Devre, PCB, Kod, Montaj, Dünya) yazar. Karta tıklayınca önce kısa bir bilgi ekranı açılır: ne öğrettiği, parçaları ve gereken araçlar (örneğin yazılımı hazır derlenmiş mi, Arduino derleyicisi mi gerekiyor); **Aç** örneği açar.
 - **Dünyalar:** hazır dünya şablonları (boş atölye, servo kol, iki tekerlekli araba, ultrasonik sensör, kumandalı araba…).
-- **Devre ve robot örnekleri:** Başlangıç, Orta ve Robot düzeyinde hazır devreler (LED ve buton, Arduino Blink, LCD + OLED, ESP32 PWM, MOSFET ile motor, op-amp, 7805, RC filtre, röle, NAND, çizgi izleyen robot, engelden kaçan robot, mikro quadcopter).
 - Sağda **Son açılanlar**, **Otomatik yedekler** ve sık kullanılan **Kısayollar**.
 
 ![Başlangıç sayfası](../images/home.png)
+
+![Örnek bilgi ekranı](../images/example-info.png)
 
 > İpucu: Bir örneğe tıklamak onu yeni bir sekmede açar. Örnekleri bozmaktan korkmayın; kaydetmediğiniz sürece orijinal hali değişmez.
 

@@ -1093,6 +1093,24 @@ namespace RobotWin.Studio.Editor
             try
             {
                 using (var dc = visual.RenderOpen()) RenderScene(dc, new Rect(size));
+                // [examples] labels and texts reach past the parts' bounds: grow the sheet to what was really drawn
+                var drawn = visual.Drawing.Bounds;
+                if (!drawn.IsEmpty)
+                {
+                    double pad = Math.Max(4, _scale * 0.5);
+                    double left = Math.Min(size.Width * 0.5, Math.Max(0, -drawn.Left + pad));
+                    double top = Math.Min(size.Height * 0.5, Math.Max(0, -drawn.Top + pad));
+                    double right = Math.Min(size.Width * 0.5, Math.Max(0, drawn.Right - size.Width + pad));
+                    double bottom = Math.Min(size.Height * 0.5, Math.Max(0, drawn.Bottom - size.Height + pad));
+                    if (left > pad || top > pad || right > pad || bottom > pad)
+                    {
+                        _offset += new Vector(Math.Ceiling(left), Math.Ceiling(top));
+                        size = new Size(size.Width + Math.Ceiling(left) + Math.Ceiling(right), size.Height + Math.Ceiling(top) + Math.Ceiling(bottom));
+                        _labelRects.Clear();
+                        visual = new DrawingVisual();
+                        using (var dc = visual.RenderOpen()) RenderScene(dc, new Rect(size));
+                    }
+                }
             }
             finally
             {
