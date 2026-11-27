@@ -210,13 +210,19 @@ namespace RobotTwin.CoreSim.Design
         public IReadOnlyDictionary<string, string> Parameters { get; }
     }
 
-    /// <summary>The component catalog: generic parts plus real part numbers built on them.</summary>
+    /// <summary>
+    /// The component catalog: generic parts plus real part numbers built on them. One library (<see cref="Default"/>) is
+    /// shared by the whole app, and parts join it while it is in use (a project's own parts, the SDK's, a user library),
+    /// so it is copy-on-write: a change builds new collections under a lock and publishes them in one step, and readers
+    /// (lookups, the parts list, the presets) see one whole state without a lock and never "collection was modified".
+    /// </summary>
     public sealed class PartLibrary
     {
-        private readonly Dictionary<string, PartDefinition> _parts =
+        private readonly object _gate = new object();
+        private volatile Dictionary<string, PartDefinition> _parts =
             new Dictionary<string, PartDefinition>(StringComparer.OrdinalIgnoreCase);
-        private readonly List<PartPreset> _presets = new List<PartPreset>();
-        private readonly Dictionary<string, PartPreset> _presetById =
+        private volatile PartPreset[] _presets = Array.Empty<PartPreset>();
+        private volatile Dictionary<string, PartPreset> _presetById =
             new Dictionary<string, PartPreset>(StringComparer.OrdinalIgnoreCase);
 
         private static readonly Lazy<PartLibrary> DefaultLibrary = new Lazy<PartLibrary>(() =>
@@ -236,20 +242,31 @@ namespace RobotTwin.CoreSim.Design
 
         public void Add(PartDefinition part)
         {
-            if (_parts.ContainsKey(part.Id)) throw new InvalidOperationException($"'{part.Id}' parçası kütüphanede iki kez var.");
-            _parts[part.Id] = part;
+            lock (_gate)
+            {
+                if (_parts.ContainsKey(part.Id)) throw new InvalidOperationException($"'{part.Id}' parçası kütüphanede iki kez var.");
+                // the copy keeps the order the parts came in (a fresh dictionary enumerates as it was filled)
+                _parts = new Dictionary<string, PartDefinition>(_parts, StringComparer.OrdinalIgnoreCase) { [part.Id] = part };
+            }
         }
 
         public void AddPreset(PartPreset preset)
         {
-            if (!_parts.ContainsKey(preset.PartId))
+            lock (_gate)
             {
-                throw new InvalidOperationException($"'{preset.Id}' hazır ayarı bilinmeyen '{preset.PartId}' parçasına bağlı.");
-            }
+                if (!_parts.ContainsKey(preset.PartId))
+                {
+                    throw new InvalidOperationException($"'{preset.Id}' hazır ayarı bilinmeyen '{preset.PartId}' parçasına bağlı.");
+                }
 
-            if (_presetById.ContainsKey(preset.Id)) throw new InvalidOperationException($"'{preset.Id}' hazır ayarı iki kez var.");
-            _presets.Add(preset);
-            _presetById[preset.Id] = preset;
+                if (_presetById.ContainsKey(preset.Id)) throw new InvalidOperationException($"'{preset.Id}' hazır ayarı iki kez var.");
+                var list = new PartPreset[_presets.Length + 1];
+                _presets.CopyTo(list, 0);
+                list[list.Length - 1] = preset;
+                var byId = new Dictionary<string, PartPreset>(_presetById, StringComparer.OrdinalIgnoreCase) { [preset.Id] = preset };
+                _presetById = byId;
+                _presets = list;
+            }
         }
 
         public PartDefinition? Find(string id) => _parts.TryGetValue(id, out var part) ? part : null;
@@ -257,17 +274,28 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>[libs] Removes a preset (user library disabled/removed); returns false if unknown.</summary>
         public bool RemovePreset(string id)
         {
-            if (!_presetById.TryGetValue(id, out var preset)) return false;
-            _presetById.Remove(id);
-            _presets.Remove(preset);
-            return true;
+            lock (_gate)
+            {
+                if (!_presetById.TryGetValue(id, out var preset)) return false;
+                var byId = new Dictionary<string, PartPreset>(_presetById, StringComparer.OrdinalIgnoreCase);
+                byId.Remove(id);
+                _presets = _presets.Where(p => !ReferenceEquals(p, preset)).ToArray();
+                _presetById = byId;
+                return true;
+            }
         }
 
         /// <summary>[libs] Removes a part definition no preset uses any more; returns false if unknown or still used.</summary>
         public bool Remove(string partId)
         {
-            if (!_parts.ContainsKey(partId) || _presets.Any(p => string.Equals(p.PartId, partId, StringComparison.OrdinalIgnoreCase))) return false;
-            return _parts.Remove(partId);
+            lock (_gate)
+            {
+                if (!_parts.ContainsKey(partId) || _presets.Any(p => string.Equals(p.PartId, partId, StringComparison.OrdinalIgnoreCase))) return false;
+                var parts = new Dictionary<string, PartDefinition>(_parts, StringComparer.OrdinalIgnoreCase);
+                bool removed = parts.Remove(partId);
+                _parts = parts;
+                return removed;
+            }
         }
 
         public PartPreset? FindPreset(string id) => _presetById.TryGetValue(id, out var preset) ? preset : null;

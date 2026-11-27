@@ -273,12 +273,15 @@ namespace RobotTwin.CoreSim.Pcb
             lock (Gate)
             {
                 Cache[footprint.Id] = footprint;
-                UserIds.Add(footprint.Id);
+                // copy-on-write: readers (pickers, the importer) hold a whole set, never one being added to
+                _userIds = new HashSet<string>(_userIds, StringComparer.OrdinalIgnoreCase) { footprint.Id };
             }
         }
 
-        /// <summary>Footprints registered at run time.</summary>
-        public static HashSet<string> UserIds { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private static volatile HashSet<string> _userIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Footprints registered at run time (a snapshot: read it, do not change it).</summary>
+        public static HashSet<string> UserIds => _userIds;
 
         /// <summary>Built-in and registered footprint ids (built-in first), for pickers.</summary>
         public static IReadOnlyList<string> AllIds
