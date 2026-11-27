@@ -6,6 +6,8 @@ The examples are the **Circuit and robot examples** cards on the start page (a c
 
 If this is your first time, start with the **Your first robot** guide on the start page (5–10 minutes); this path carries on from it.
 
+Each level can be walked step by step inside the app too: **Help → Learning path**, "learning path" in the command palette, or **Start the guide** on the info screen of the level's first example. The card in the corner opens the example and says what to do; it moves on by itself on the steps it can see (the example open, the simulation running, the page shown), and on those it cannot (reading a value, an edit of your own) you go on with **Done, next**. The last card is the level's own task and leads to the next level.
+
 ## Level 1: Electronics basics
 
 **Start:** the *LED and Button* example.

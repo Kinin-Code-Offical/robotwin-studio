@@ -270,6 +270,11 @@ namespace RobotWin.Studio
         {
             const string go = "Git", file = "Dosya", view = "Görünüm", tab = "Sekmeler", sim = "Simülasyon";
             foreach (var c in WorkspaceCommands()) yield return c;   // [workspaces]
+            for (int level = 1; level <= LearningLevelNames.Length; level++)   // [learning]
+            {
+                int n = level;
+                yield return new PaletteCommand("Yardım", $"Öğrenme yolu · düzey {n}: {LearningLevelNames[n - 1]}", () => StartLearningGuide(n)) { Keywords = "learning path guide tutorial rehber öğren ders" };
+            }
             foreach (var kv in _pageNames)
             {
                 string page = kv.Key;
@@ -968,10 +973,12 @@ namespace RobotWin.Studio
             if (page == "code") _code.SnapshotBuildAndRun(fault);
             if (fault == "montaj-e2e" && App.SnapshotPath != null) RunMontajCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [assembly]
             if (fault == "guide") StartGuide();   // [guide] the card at its first step
+            if (fault != null && fault.StartsWith("learning:", StringComparison.Ordinal) && int.TryParse(fault.Substring(9), out int learnLevel)) StartLearningGuide(learnLevel);   // [learning]
             if (fault is "debug-e2e" or "debug-registers" or "debug-timeline" or "debug-timeline-scope" && App.SnapshotPath != null) RunDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"), fault.Substring("debug-".Length));   // [debug]
             if (fault == "tabs" && App.SnapshotPath != null) RunTabsCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [tabs]
             if (fault == "keys" && App.SnapshotPath != null) RunKeysCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [keys]
             if (fault == "debug-e2e-circuit" && App.SnapshotPath != null) RunCircuitDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));
+            if (fault == "learning-e2e" && App.SnapshotPath != null) RunLearningCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [learning]
             if (fault != null && fault.StartsWith("guide-e2e", StringComparison.Ordinal) && App.SnapshotPath != null)   // guide-e2e[:N] — N steps only
             {
                 RunGuideCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"), fault.Length > 10 && int.TryParse(fault.Substring(10), out int steps) ? steps : int.MaxValue);

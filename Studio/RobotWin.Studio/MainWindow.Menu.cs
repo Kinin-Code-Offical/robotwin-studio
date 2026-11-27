@@ -340,6 +340,15 @@ namespace RobotWin.Studio
         private void HelpMenu(MenuItem m)
         {
             m.Items.Add(Item("İlk robotun: etkileşimli rehber (5–10 dk)", null, StartGuide));   // [guide]
+            // [learning] the learning path's five levels, each a guide on the same card
+            var path = new MenuItem { Header = "Öğrenme yolu" };
+            for (int level = 1; level <= LearningLevelNames.Length; level++)
+            {
+                int n = level;
+                path.Items.Add(Item($"Düzey {n}: {LearningLevelNames[n - 1]}", null, () => StartLearningGuide(n)));
+            }
+
+            m.Items.Add(path);
             m.Items.Add(Item("_Yardım ve belgeler", "F1", () => ShowHelp(null)));
             m.Items.Add(Item("Çevrimiçi belgeler (web sitesi)", null, () => OpenUrl(Help.HelpLibrary.DocsSite)));
             m.Items.Add(Item("Klavye kısayolları", null, () => ShowHelp("shortcuts")));

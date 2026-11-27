@@ -129,6 +129,18 @@ namespace RobotWin.Studio.Pages
             var cancel = new Button { Content = Lang.T("Vazgeç"), Style = (Style)FindResource("Btn.Ghost"), Margin = new Thickness(0, 0, 8, 0) };
             var open = new Button { Content = Lang.T("Aç"), Style = (Style)FindResource("Btn.Primary"), Padding = new Thickness(18, 4, 18, 4) };
             buttons.Children.Add(cancel);
+            // [learning] the example that starts a level of the learning path: open it with its guide on the card
+            Button? guide = null;
+            if (MainWindow.LearningStarts.TryGetValue(ex.Id, out int level))
+            {
+                guide = new Button
+                {
+                    Content = Lang.T($"Rehberi başlat · düzey {level}"), Margin = new Thickness(0, 0, 8, 0), Padding = new Thickness(12, 4, 12, 4),
+                    ToolTip = Lang.T($"Öğrenme yolunun {level}. düzeyi ({MainWindow.LearningLevelNames[level - 1]}): örnek açılır, köşedeki kart adım adım ne yapacağınızı gösterir")
+                };
+                buttons.Children.Add(guide);
+            }
+
             buttons.Children.Add(open);
             DockPanel.SetDock(buttons, Dock.Bottom);
             root.Children.Add(buttons);
@@ -166,6 +178,13 @@ namespace RobotWin.Studio.Pages
                 window.Close();
                 OpenExample(ex);
             };
+            if (guide != null)
+                guide.Click += (_, _) =>
+                {
+                    window.Close();
+                    OpenExample(ex);
+                    _shell.StartLearningGuide(level);   // its first card sees the example open and moves on
+                };
             Lang.Translate(root);
             window.Show();
             if (Unattended.Active)

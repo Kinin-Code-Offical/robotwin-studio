@@ -6,6 +6,8 @@ Bu yol RobotWin Studio'yu baştan sona öğretir: önce devre, sonra kartın yaz
 
 İlk kez açıyorsanız başlangıç sayfasındaki **İlk robotunuz** rehberiyle başlayın (5–10 dakika); bu yol onun devamıdır.
 
+Her düzeyi uygulamanın içinde adım adım da yürüyebilirsiniz: **Yardım → Öğrenme yolu** ya da komut paletinde "öğrenme yolu", ya da düzeyin ilk örneğinin bilgi ekranında **Rehberi başlat**. Köşedeki kart örneği açar ve ne yapacağınızı söyler; gördüğü adımlarda (örnek açıldı, simülasyon çalışıyor, sayfa açık) kendiliğinden ilerler, göremediklerinde (bir değeri okumak, kendi düzenlemeniz) **Yaptım, sonraki** ile geçersiniz. Son kart düzeyin kendi görevidir ve sonraki düzeye götürür.
+
 ## Düzey 1: Elektronik temelleri
 
 **Başla:** *LED ve Buton* örneği.

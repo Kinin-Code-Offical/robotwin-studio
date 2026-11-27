@@ -1868,6 +1868,9 @@ namespace RobotWin.Studio.Pages
 
         private void OnStop(object sender, RoutedEventArgs e) => StopSimulation();
 
+        /// <summary>[learning] Stops the world as the stop button does (the learning path's check, between its steps).</summary>
+        internal void StopForCheck() => StopSimulation();
+
         private void OnSpeed(object sender, SelectionChangedEventArgs e)
         {
             if (SpeedBox?.SelectedItem is ComboBoxItem item) _session.Speed = double.Parse((string)item.Tag, CultureInfo.InvariantCulture);

@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The learning path in the app:** its five levels are guides on the corner card: each opens its example or template, moves on by itself where it can see the step done and with *Done, next* where it cannot, and ends with the level's own task and the way to the next level. Started from Help → Learning path, the command palette, or *Start the guide* on the info screen of a level's first example.
 - **Worlds and Montajes keep their own layout:** like a project, a world or a Montaj can save the layout on screen into its .rwworld file, and it comes back when the file opens.
 - **Library: mechanical model badge, maker, part number, source and licence:** a part's sheet says whether the world knows its body (its own size and mass, with a moving output such as a servo horn or a motor shaft, or a stand-in box) and, under the badges, its maker, part number, source and licence; the part creator edits them and the KiCad, Fritzing and SPICE importers fill them in.
 - **Scope and logic analyzer on one time axis:** the instant under the pointer in the oscilloscope is marked on the Code page's timeline and the other way round (a dashed accent line, an arrow at the edge when outside the window), and **Match the scope** brings the timeline to the seconds the scope shows.

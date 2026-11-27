@@ -32,7 +32,13 @@ namespace RobotWin.Studio
 
             /// <summary>Runs when the step is shown (puts the user where the step starts).</summary>
             public Action? Enter;
+
+            /// <summary>[learning] A step the guide cannot see done (reading a value, an edit of one's own): "Yaptım, sonraki".</summary>
+            public bool Manual;
         }
+
+        /// <summary>[learning] The card's heading: the guide's name ("İLK ROBOTUN", "ÖĞRENME YOLU · DÜZEY 2").</summary>
+        private string _guideName = "İLK ROBOTUN";
 
         private Border? _guideCard;
         private TextBlock _guideStepText = null!, _guideTitle = null!, _guideBody = null!;
@@ -63,13 +69,17 @@ namespace RobotWin.Studio
         }
 
         /// <summary>Starts (or restarts) the first-robot guide.</summary>
-        public void StartGuide()
+        public void StartGuide() => StartGuide("İLK ROBOTUN", BuildGuide());
+
+        /// <summary>[learning] Starts a guide on the card: the first robot's, or a level of the learning path.</summary>
+        private void StartGuide(string name, List<GuideStep> steps)
         {
+            _guideName = name;
             _guideWorld = null;
             _guideUploaded = false;
             _code.Uploaded -= OnGuideUpload;
             _code.Uploaded += OnGuideUpload;
-            _guide = BuildGuide();
+            _guide = steps;
             _guideIndex = 0;
             ShowGuideCard();
             ShowGuideStep();
@@ -252,12 +262,13 @@ namespace RobotWin.Studio
             if (_guideCard == null || _guideIndex >= _guide.Count) return;
             var step = _guide[_guideIndex];
             int last = _guide.Count - 1;
-            _guideStepText.Text = _guideIndex < last ? $"İLK ROBOTUN · ADIM {_guideIndex + 1}/{last}" : "İLK ROBOTUN";
-            _guideTitle.Text = step.Title;
-            _guideBody.Text = step.Text;
+            _guideStepText.Text = Lang.T(_guideIndex < last ? $"{_guideName} · ADIM {_guideIndex + 1}/{last}" : _guideName);
+            _guideTitle.Text = Lang.T(step.Title);
+            _guideBody.Text = Lang.T(step.Text);
             _guideDo.Visibility = step.Do != null ? Visibility.Visible : Visibility.Collapsed;
-            _guideDo.Content = step.DoText ?? "Benim yerime yap";
+            _guideDo.Content = Lang.T(step.DoText ?? "Benim yerime yap");
             _guideSkip.Visibility = _guideIndex < last ? Visibility.Visible : Visibility.Collapsed;   // the last card only closes
+            _guideSkip.Content = Lang.T(step.Manual ? "Yaptım, sonraki" : "Bu adımı atla");   // [learning] a step it cannot see
             _guideDots.Children.Clear();
             for (int i = 0; i < last; i++)
             {
