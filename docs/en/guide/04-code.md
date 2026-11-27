@@ -182,6 +182,8 @@ You can follow Arduino Uno and Nano code line by line. When the board reaches a 
    - a yellow arrow and band mark the line;
    - the bar above names the place, the function and the simulated time;
    - the **Variables** tab shows your code's global and `static` variables with their values at that moment;
+     - above them, the **Call stack**: the function it stopped in at the top, its callers below, each with its file and line. Functions the compiler put inside their caller (inlined) get a line of their own too (`loop()` and your helpers often live inside `main()`); a real call is unwound from the return address and the registers its caller left on the stack. Stopped in an interrupt handler, the top line names the interrupt (`TIMER0_OVF interrupt`) and the code it interrupted is below, at the instruction it resumes;
+     - a click on a line picks that frame: the editor goes to its line and the list starts with that function's parameters and locals and their values. The address column says where a value is (`r24`, `r16–r17`, `0x08F2` on the stack, or a "value" the compiler computes from others); one the compiler does not keep at that point reads "— (optimized out)";
    - the **Registers** tab shows the ATmega328P itself:
      - on the left, the core: PC, SP, SREG's flags (`I-----Z-`), the X/Y/Z pointers, R0–R31 and the cycle count;
      - on the right, the peripherals' registers by name, grouped (ports, timers, interrupts, ADC, USART, SPI, TWI, EEPROM): value, binary, address and the names of the bits that are set (`RXC0 UDRE0` in `UCSR0A`, say). A 16-bit pair (TCNT1, OCR1A, UBRR0, ADC, SP) is also given as one number;

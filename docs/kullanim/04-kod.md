@@ -182,6 +182,8 @@ Arduino Uno ve Nano kodunu satır satır izleyebilirsiniz. Kart bir kesme noktas
    - satırda sarı bir ok ve bant belirir;
    - üstteki çubukta yer, fonksiyon ve simüle edilmiş zaman yazar;
    - **Değişkenler** sekmesi kodunuzdaki global ve `static` değişkenleri o anki değerleriyle gösterir;
+     - üstünde **Çağrı yığını**: durulan işlev en üstte, onu çağıranlar altında, her biri dosyası ve satırıyla. Derleyicinin çağıranın içine gömdüğü (satır içi) işlevler de ayrı satırdır (`loop()` ve yardımcı işlevleriniz çoğu zaman `main()`'in içindedir); gerçek bir çağrı, çağıranın yığına bıraktığı dönüş adresinden ve sakladığı yazmaçlardan çözülür. Bir kesme işleyicisinde durunca en üstte kesmenin adı yazar (`TIMER0_OVF kesmesi`), altında kesmenin böldüğü kod, döneceği komutta;
+     - bir satıra tıklamak o çerçeveyi seçer: editör o satıra gider, listenin başında o işlevin parametreleri ve yerel değişkenleri değerleriyle durur. Adres sütunu değerin nerede olduğunu yazar (`r24`, `r16–r17`, yığında `0x08F2`, ya da derleyicinin başka değerlerden hesapladığı "değer"); derleyicinin o noktada tutmadığı bir değer "— (iyileştirildi)" yazılır;
    - **Yazmaçlar** sekmesi ATmega328P'nin kendisini gösterir:
      - solda çekirdek: PC, SP, SREG'in bayrakları (`I-----Z-`), X/Y/Z işaretçileri, R0–R31, çevrim sayısı;
      - sağda çevre birimlerinin yazmaçları adlarıyla, gruplarına göre (portlar, zamanlayıcılar, kesmeler, ADC, USART, SPI, TWI, EEPROM): değer, ikili hali, adres ve açık olan bitlerin adları (`UCSR0A`'da `RXC0 UDRE0` gibi). 16 bitlik çiftlerin (TCNT1, OCR1A, UBRR0, ADC, SP) değeri tek sayı olarak yazılır;

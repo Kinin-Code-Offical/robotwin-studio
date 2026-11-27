@@ -103,6 +103,72 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void TheCallStackShowsInlinedFunctionsAndTheirLocals()
+        {
+            // [stack] stopped inside pulse(): with link-time optimisation pulse() and loop() are inlined into main(), and
+            // pulse's parameters are in registers (pin, us) at that address
+            var info = Info();
+            var mcu = Mcu();
+            var dbg = new McuDebugger(mcu, info);
+            int line = LineOf("digitalWrite(pin, LOW);");   // (delayMicroseconds' line has no code of its own: it is all inlined)
+            dbg.SetBreakpoints(info.Breakpoint("sketch.ino", line).Addresses);
+            mcu.RunCycles(16_000_000);
+            Assert.True(mcu.Halted);
+            var stack = info.Stack(mcu.ProgramCounter, mcu.StackPointer, mcu.ReadData);
+            foreach (var f in stack)
+                _out.WriteLine($"{f.Function}{(f.Inlined ? " (inline)" : "")} {f.Place} pc=0x{f.Pc:X4}: " + string.Join(", ", f.Locals.Select(l => $"{l.Name}={l.Value} [{l.Where}]")));
+            Assert.Equal("pulse", stack[0].Function);
+            Assert.True(stack[0].Inlined);
+            Assert.Equal(line, stack[0].Place!.Value.Line);
+            Assert.Contains(stack, f => f.Function == "loop");
+            Assert.Equal("main", stack[^1].Function);
+            // the caller's line is where pulse() was called from
+            var loop = stack.First(f => f.Function == "loop");
+            Assert.Equal(LineOf("pulse(SERVO_A, angleToUs(angle));"), loop.Place!.Value.Line);
+            var pulse = stack[0];
+            Assert.Equal("9", pulse.Locals.Single(l => l.Name == "pin").Value);
+            Assert.Equal("544", pulse.Locals.Single(l => l.Name == "us").Value);   // angleToUs(0)
+
+            // inside a real call (digitalWrite is not inlined): the frame below is unwound from the stack with the
+            // call frame information, its return address leads back into main()
+            mcu.RunCycles(1);
+            dbg.SetBreakpoints(Array.Empty<int>());
+            var write = info.Functions.First(f => f.Name == "digitalWrite");
+            dbg.SetBreakpoints(new[] { (int)write.Low + 2 });
+            dbg.Resume();
+            mcu.RunCycles(16_000_000);
+            Assert.True(mcu.Halted);
+            stack = info.Stack(mcu.ProgramCounter, mcu.StackPointer, mcu.ReadData);
+            foreach (var f in stack)
+                _out.WriteLine($"{f.Function}{(f.Inlined ? " (inline)" : "")} {f.Place} pc=0x{f.Pc:X4}: " + string.Join(", ", f.Locals.Select(l => $"{l.Name}={l.Value} [{l.Where}]")));
+            Assert.Equal("digitalWrite", stack[0].Function);
+            Assert.False(stack[0].Inlined);
+            Assert.Equal("main", stack[^1].Function);
+            Assert.Contains(stack, f => f.Function == "pulse" && f.Place!.Value.InSketch);
+        }
+
+        [Fact]
+        public void AnInterruptHandlersStackLeadsBackToTheCodeItInterrupted()
+        {
+            // [stack] stopped in TIMER0_OVF's handler (millis' counter): the interrupt pushed the return address as a call
+            // does, so the frame below the handler is the code it interrupted, down to main()
+            var info = Info();
+            var mcu = Mcu();
+            var dbg = new McuDebugger(mcu, info);
+            var isr = info.Functions.First(f => f.Name == "__vector_16");
+            dbg.SetBreakpoints(new[] { (int)isr.Low });
+            mcu.RunCycles(16_000_000);
+            Assert.True(mcu.Halted);
+            var stack = info.Stack(mcu.ProgramCounter, mcu.StackPointer, mcu.ReadData);
+            foreach (var f in stack)
+                _out.WriteLine($"{f.Function}{(f.Inlined ? " (inline)" : "")} {f.Place} pc=0x{f.Pc:X4}");
+            Assert.Equal("__vector_16", stack[0].Function);
+            Assert.Equal("TIMER0_OVF", stack[0].Interrupt);
+            Assert.True(stack.Count >= 2);
+            Assert.Equal("main", stack[^1].Function);
+        }
+
+        [Fact]
         public void StepsGoLineByLineOverCallsAndInto()
         {
             var info = Info();

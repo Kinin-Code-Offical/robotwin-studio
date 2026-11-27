@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace RobotTwin.CoreSim.Firmware.Debug
@@ -52,6 +53,67 @@ namespace RobotTwin.CoreSim.Firmware.Debug
         public List<(string Name, long Value)> Enumerators { get; } = new List<(string, long)>();
 
         public bool IsChar => Kind == DebugTypeKind.Base && Size == 1 && (Encoding == 6 || Encoding == 8);
+    }
+
+    /// <summary>[stack] What a code scope is: a function, a function's code inlined into another, or a { block }.</summary>
+    public enum DebugScopeKind
+    {
+        Function,
+        Inlined,
+        Block
+    }
+
+    /// <summary>
+    /// [stack] A piece of code with its own locals (a function, an inlined call, a block): where its code is, what it
+    /// holds, and for an inlined call the line it was called from.
+    /// </summary>
+    public sealed class DebugScope
+    {
+        public DebugScopeKind Kind { get; internal set; }
+        public string Name { get; internal set; } = string.Empty;
+
+        /// <summary>The byte address ranges of its code (half-open).</summary>
+        public List<(uint Low, uint High)> Ranges { get; } = new List<(uint, uint)>();
+
+        public DebugScope? Parent { get; internal set; }
+        public List<DebugScope> Children { get; } = new List<DebugScope>();
+        public List<DebugLocal> Locals { get; } = new List<DebugLocal>();
+
+        /// <summary>An inlined call: the file and line of the call (in the scope around it).</summary>
+        public string CallFile { get; internal set; } = string.Empty;
+
+        public int CallLine { get; internal set; }
+
+        /// <summary>A function's frame base: an expression, or a location list's offset (−1: none).</summary>
+        public byte[]? FrameBase { get; internal set; }
+
+        public int FrameBaseList { get; internal set; } = -1;
+
+        /// <summary>Its compile unit's base address (location lists count from it).</summary>
+        public uint UnitBase { get; internal set; }
+
+        public bool Contains(uint address)
+        {
+            foreach (var (low, high) in Ranges)
+                if (address >= low && address < high) return true;
+            return false;
+        }
+    }
+
+    /// <summary>[stack] A parameter or local variable: its type and where its value is (an expression, or a location list by address).</summary>
+    public sealed class DebugLocal
+    {
+        public string Name { get; internal set; } = string.Empty;
+        public DebugType Type { get; internal set; } = new DebugType();
+        public bool IsParameter { get; internal set; }
+
+        /// <summary>A single location expression for its whole life; null when it has a list or none at all (optimized out).</summary>
+        public byte[]? Location { get; internal set; }
+
+        /// <summary>Offset of its location list in .debug_loc; −1 when it has none.</summary>
+        public int LocationList { get; internal set; } = -1;
+
+        public int Line { get; internal set; }
     }
 
     /// <summary>[debug] A variable with a fixed place in RAM: a global, or a function's static.</summary>
@@ -358,7 +420,7 @@ namespace RobotTwin.CoreSim.Firmware.Debug
             public int Offset { get; }
         }
 
-        private const int AtRanges = 0x55, TagInlined = 0x1d;
+        private const int AtRanges = 0x55, TagInlined = 0x1d, TagLexicalBlock = 0x0b, TagFormalParameter = 0x05, AtFrameBase = 0x40, AtCallFile = 0x58, AtCallLine = 0x59;
 
         private const int AtName = 0x03, AtLocation = 0x02, AtByteSize = 0x0b, AtStmtList = 0x10, AtLowPc = 0x11, AtHighPc = 0x12,
             AtConstValue = 0x1c, AtUpperBound = 0x2f, AtAbstractOrigin = 0x31, AtCount = 0x37, AtMemberLocation = 0x38,
@@ -374,7 +436,8 @@ namespace RobotTwin.CoreSim.Firmware.Debug
         /// code ranges. <paramref name="lineFiles"/> gives each unit's file table (from <see cref="ReadLines"/>).
         /// </summary>
         public static (List<DebugVariable> Variables, List<DebugFunction> Functions) ReadInfo(
-            byte[] info, byte[] abbrev, byte[] str, Dictionary<int, (List<string> Files, List<LineRow> Rows)> lineFiles, byte[]? ranges = null)
+            byte[] info, byte[] abbrev, byte[] str, Dictionary<int, (List<string> Files, List<LineRow> Rows)> lineFiles, byte[]? ranges = null,
+            List<DebugScope>? scopes = null)
         {
             var dies = new Dictionary<int, Die>();
             var unitFiles = new Dictionary<int, List<string>>();
@@ -508,7 +571,98 @@ namespace RobotTwin.CoreSim.Firmware.Debug
             }
 
             functions.Sort((x, y) => x.Low.CompareTo(y.Low));
+            if (scopes != null) ReadScopes(dies, unitFiles, unitBase, ranges, types, scopes);
             return (variables, functions);
+        }
+
+        /// <summary>
+        /// [stack] The code scopes (functions, inlined calls, blocks) with their code ranges, nested as in the source, and
+        /// the parameters and locals each holds with where their values are (a register, the stack, a value made from
+        /// others, or a list of those by address). Statics and globals are left out: they have a fixed place.
+        /// </summary>
+        private static void ReadScopes(Dictionary<int, Die> dies, Dictionary<int, List<string>> unitFiles, Dictionary<int, ulong> unitBase,
+            byte[]? rangeData, Dictionary<int, DebugType> types, List<DebugScope> scopes)
+        {
+            var byDie = new Dictionary<int, DebugScope>();
+            DebugScope? Owner(Die? d)
+            {
+                for (; d != null; d = d.Parent)
+                    if (byDie.TryGetValue(d.Offset, out var sc)) return sc;
+                return null;
+            }
+
+            foreach (var die in dies.Values.OrderBy(d => d.Offset))
+            {
+                if (die.Tag != TagSubprogram && die.Tag != TagInlined && die.Tag != TagLexicalBlock) continue;
+                var scope = new DebugScope
+                {
+                    Kind = die.Tag == TagSubprogram ? DebugScopeKind.Function : die.Tag == TagInlined ? DebugScopeKind.Inlined : DebugScopeKind.Block,
+                    Name = die.Tag == TagLexicalBlock ? string.Empty : NameOf(die, dies),
+                    UnitBase = unitBase.TryGetValue(die.Unit, out var ub) ? (uint)ub : 0,
+                };
+                if (die.At.TryGetValue(AtLowPc, out var lowObj) && die.At.TryGetValue(AtHighPc, out var highObj) && lowObj is ulong low)
+                {
+                    ulong high = highObj switch { ulong u => u, long l => (ulong)l, _ => 0 };
+                    if (die.HighIsOffset) high += low;
+                    if (high > low) scope.Ranges.Add(((uint)low, (uint)high));
+                }
+                else if (rangeData != null && die.At.TryGetValue(AtRanges, out var ro) && ro is ulong rangeOffset)
+                {
+                    foreach (var (rl, rh) in Ranges(rangeData, (int)rangeOffset, scope.UnitBase)) scope.Ranges.Add(((uint)rl, (uint)rh));
+                }
+
+                if (scope.Ranges.Count == 0) continue;   // an abstract instance (inline only) or a declaration: no code of its own
+                if (die.Tag == TagInlined)
+                {
+                    int fileIndex = (int)die.Num(AtCallFile, 0);
+                    scope.CallFile = unitFiles.TryGetValue(die.Unit, out var files) && fileIndex > 0 && fileIndex < files.Count ? files[fileIndex] : string.Empty;
+                    scope.CallLine = (int)die.Num(AtCallLine, 0);
+                }
+
+                if (die.Tag == TagSubprogram && die.At.TryGetValue(AtFrameBase, out var fb))
+                {
+                    if (fb is byte[] expr) scope.FrameBase = expr;
+                    else if (fb is ulong list) scope.FrameBaseList = (int)list;
+                }
+
+                var parent = Owner(die.Parent);
+                scope.Parent = parent;
+                if (parent != null) parent.Children.Add(scope);
+                else scopes.Add(scope);
+                byDie[die.Offset] = scope;
+            }
+
+            foreach (var die in dies.Values.OrderBy(d => d.Offset))
+            {
+                if (die.Tag != TagVariable && die.Tag != TagFormalParameter) continue;
+                var owner = Owner(die.Parent);
+                if (owner == null) continue;
+                byte[]? expr = null;
+                int list = -1;
+                if (die.At.TryGetValue(AtLocation, out var loc))
+                {
+                    if (loc is byte[] b)
+                    {
+                        if (b.Length > 0 && b[0] == 0x03) continue;   // DW_OP_addr: a static, shown with the globals
+                        expr = b;
+                    }
+                    else if (loc is ulong l) list = (int)l;
+                }
+
+                var decl = Origin(die, dies);
+                string name = decl.Str(AtName);
+                if (name.Length == 0) continue;
+                int typeRef = die.Ref(AtType) >= 0 ? die.Ref(AtType) : decl.Ref(AtType);
+                owner.Locals.Add(new DebugLocal
+                {
+                    Name = name,
+                    Type = TypeOf(typeRef, dies, types, 0),
+                    IsParameter = die.Tag == TagFormalParameter,
+                    Location = expr,
+                    LocationList = list,
+                    Line = (int)decl.Num(AtDeclLine, 0),
+                });
+            }
         }
 
         /// <summary>A .debug_ranges list: (begin, end) pairs from the unit's base address, (0, 0) at its end.</summary>

@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using RobotTwin.CoreSim.Firmware.Debug;
 using RobotTwin.CoreSim.Firmware;
 using RobotWin.Studio.Firmware;
+using RobotWin.Studio.Shell;
 
 namespace RobotWin.Studio.Pages
 {
@@ -159,10 +161,77 @@ namespace RobotWin.Studio.Pages
 
         private RobotTwin.CoreSim.Formats.FirmwareSource? FirmwareFor(string key) => _targets.FirstOrDefault(t => t.Key == key)?.Firmware;
 
+        /// <summary>[stack] The frame picked in the call stack (0: where the program stopped).</summary>
+        private int _frameIndex;
+
+        private (string Key, ulong Cycles, IReadOnlyList<RobotTwin.CoreSim.Firmware.Debug.DebugFrame> Frames)? _stack;
+
+        /// <summary>[stack] The stopped program's call stack (read once per stop).</summary>
+        private IReadOnlyList<RobotTwin.CoreSim.Firmware.Debug.DebugFrame> StackOf(DebugProgram p)
+        {
+            var mcu = p.Cosim.Mcu;
+            if (_stack is { } s && s.Key == p.Key && s.Cycles == mcu.Cycles) return s.Frames;
+            var frames = p.Info!.Stack(mcu.ProgramCounter, mcu.StackPointer, mcu.ReadData);
+            _stack = (p.Key, mcu.Cycles, frames);
+            _frameIndex = 0;
+            return frames;
+        }
+
+        /// <summary>
+        /// [stack] The call stack above the variables, innermost first: a function inlined into its caller is marked so;
+        /// a click picks the frame (its locals below, its line in the editor).
+        /// </summary>
+        private void ShowCallStack(DebugProgram? p)
+        {
+            CallStackList.Items.Clear();
+            if (p == null || p.Info == null || !p.IsHalted)
+            {
+                CallStackPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var frames = StackOf(p);
+            CallStackPanel.Visibility = frames.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            for (int i = 0; i < frames.Count; i++)
+            {
+                var f = frames[i];
+                int index = i;
+                string where = f.Place is { } pl ? (pl.InSketch ? pl.File : System.IO.Path.GetFileName(pl.File)) + ":" + pl.Line.ToString(CultureInfo.InvariantCulture) : "?";
+                var text = new TextBlock
+                {
+                    Text = (f.Interrupt.Length > 0 ? Lang.T($"{f.Interrupt} kesmesi") : f.Function + "()") + "  ·  " + where + (f.Inlined ? "  ·  " + Lang.T("satır içi") : string.Empty),
+                    FontFamily = (FontFamily)FindResource("F.Mono"),
+                    FontSize = Shell.TypeScale.Caption,
+                    FontWeight = i == _frameIndex ? FontWeights.SemiBold : FontWeights.Normal,
+                };
+                text.SetResourceReference(TextBlock.ForegroundProperty, i == _frameIndex ? "B.Text" : f.Place is { InSketch: true } ? "B.TextSecondary" : "B.TextMuted");
+                var row = new Button { Content = text, Style = (Style)FindResource("Btn.Ghost"), HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(6, 1, 6, 1), MinHeight = 20 };
+                row.ToolTip = Lang.T(f.Interrupt.Length > 0 ? "Kesme işleyicisi: altındaki satır, kesmenin böldüğü kod (döneceği komutta)"
+                    : f.Inlined ? "Bu işlevin kodu çağıranın içine gömülü (satır içi): yongada ayrı bir çağrısı yok" : "Bir çağrı: çağıranın kaydettiği dönüş adresinden ve yazmaçlardan çözüldü");
+                row.Click += (_, _) => PickFrame(p, index);
+                CallStackList.Items.Add(row);
+            }
+        }
+
+        private void PickFrame(DebugProgram p, int index)
+        {
+            _frameIndex = index;
+            var frames = StackOf(p);
+            if (index < frames.Count && frames[index].Place is { InSketch: true } place && _folder != null)
+            {
+                string editorFile = place.File == FirmwareDebugger.MainFile ? _folder.MainFile : place.File;
+                if (editorFile != _file && _folder.Files.Contains(editorFile)) Open(_folder, editorFile, rebuild: true);
+                Editor.RevealLine(place.Line);
+            }
+
+            ShowVariables();
+        }
+
         /// <summary>The Değişkenler tab: the program's globals and statics read from its RAM (changes since the last look in colour).</summary>
         private void ShowVariables()
         {
             var p = DebugKey is { } key ? FirmwareDebugger.ProgramFor(key) : null;
+            ShowCallStack(p);
             if (p == null)
             {
                 VariablesList.ItemsSource = null;
@@ -181,6 +250,31 @@ namespace RobotWin.Studio.Pages
             var changed = (Brush)FindResource("B.Warning");
             var rows = new List<DebugVariableRow>();
             _variablesSeen.At(p.Key, p.Cosim.Mcu.Cycles);
+            // [stack] the picked frame's parameters and locals first (where the compiler keeps them at this address)
+            int locals = 0;
+            if (p.IsHalted)
+            {
+                var frames = StackOf(p);
+                if (_frameIndex < frames.Count)
+                {
+                    var frame = frames[_frameIndex];
+                    var muted = (Brush)FindResource("B.TextMuted");
+                    foreach (var l in frame.Locals)
+                    {
+                        locals++;
+                        rows.Add(new DebugVariableRow
+                        {
+                            Name = l.Name,
+                            Value = l.Available ? l.Value : Lang.T("— (iyileştirildi)"),
+                            Type = l.TypeName,
+                            Address = Lang.T(l.Where),   // "değer": made from others
+                            Where = Lang.T(l.IsParameter ? "parametre" : "yerel") + " · " + frame.Function + "()",
+                            ValueBrush = l.Available ? normal : muted,
+                        });
+                    }
+                }
+            }
+
             foreach (var v in p.Info.Variables)
             {
                 string value = FirmwareDebugInfo.Format(v, p.Cosim.Mcu.ReadData);
@@ -197,6 +291,12 @@ namespace RobotWin.Studio.Pages
             }
 
             VariablesList.ItemsSource = rows;
+            if (locals > 0)
+            {
+                VariablesNote.Text = Lang.T("Önce seçili çerçevenin parametreleri ve yerelleri (yazmaçta, yığında ya da derleyicinin başkalarından hesapladığı değer), sonra global ve static değişkenler; \"iyileştirildi\": derleyici bu noktada değerini tutmuyor.");
+                return;
+            }
+
             VariablesNote.Text = rows.Count == 0
                 ? "Kodunuzda sabit adresli (global ya da static) değişken yok."
                 : (p.IsHalted ? "Değerler kartın durduğu andaki RAM'den okunuyor" : "Değerler çalışırken RAM'den okunuyor") + "; turuncu: son bakıştan beri değişen.";

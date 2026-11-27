@@ -32,7 +32,7 @@ namespace RobotTwin.CoreSim.Firmware.Debug
     /// line each address belongs to, where a breakpoint on a line goes, the functions, and the variables with a
     /// fixed place in RAM together with how to show their values.
     /// </summary>
-    public sealed class FirmwareDebugInfo
+    public sealed partial class FirmwareDebugInfo
     {
         private readonly List<(uint Start, uint End, SourcePlace Place, bool Statement)> _ranges = new List<(uint, uint, SourcePlace, bool)>();
         private readonly Dictionary<string, SortedDictionary<int, List<uint>>> _lineStarts = new Dictionary<string, SortedDictionary<int, List<uint>>>(StringComparer.OrdinalIgnoreCase);
@@ -131,7 +131,9 @@ namespace RobotTwin.CoreSim.Firmware.Debug
             info.StatementFileByWord = fileByWord;
 
             var (variables, functions) = DwarfReader.ReadInfo(elf.Section(".debug_info").ToArray(), elf.Section(".debug_abbrev").ToArray(), elf.Section(".debug_str").ToArray(), lines,
-                elf.Section(".debug_ranges").ToArray());
+                elf.Section(".debug_ranges").ToArray(), info._scopes);
+            info._loc = elf.Section(".debug_loc").ToArray();   // [stack] locals by address
+            info.ReadFrames(elf.Section(".debug_frame").ToArray());   // [stack] how to unwind
             info._functions.AddRange(functions);
             if (info._functions.Count == 0)
             {

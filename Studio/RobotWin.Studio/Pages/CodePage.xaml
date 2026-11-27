@@ -144,6 +144,10 @@
                     <TextBox x:Name="SerialView" IsReadOnly="True" FontFamily="{StaticResource F.Mono}" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" BorderThickness="0"/>
                 </DockPanel>
                 <DockPanel x:Name="VariablesPane" Visibility="Collapsed" Margin="10,6,10,6">
+                    <StackPanel x:Name="CallStackPanel" DockPanel.Dock="Top" Visibility="Collapsed" Margin="0,0,0,8">
+                        <TextBlock Text="Çağrı yığını" Style="{StaticResource Text.Caption}" Margin="0,0,0,2"/>
+                        <ItemsControl x:Name="CallStackList"/>
+                    </StackPanel>
                     <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="220"/>

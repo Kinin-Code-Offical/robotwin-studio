@@ -8654,6 +8654,15 @@
   "A deliği": "Hole A",
   "B deliği": "Hole B",
   "Aynala": "Mirror",
+  "Kesme işleyicisi: altındaki satır, kesmenin böldüğü kod (döneceği komutta)": "Interrupt handler: the line below is the code it interrupted (at the instruction it resumes)",
+  "Çağrı yığını": "Call stack",
+  "satır içi": "inlined",
+  "— (iyileştirildi)": "— (optimized out)",
+  "parametre": "parameter",
+  "yerel": "local",
+  "Bu işlevin kodu çağıranın içine gömülü (satır içi): yongada ayrı bir çağrısı yok": "This function's code is inside its caller (inlined): there is no call of its own on the chip",
+  "Bir çağrı: çağıranın kaydettiği dönüş adresinden ve yazmaçlardan çözüldü": "A call: unwound from the return address and the registers its caller saved",
+  "Önce seçili çerçevenin parametreleri ve yerelleri (yazmaçta, yığında ya da derleyicinin başkalarından hesapladığı değer), sonra global ve static değişkenler; \"iyileştirildi\": derleyici bu noktada değerini tutmuyor.": "First the picked frame's parameters and locals (in a register, on the stack or a value the compiler computes from others), then the global and static variables; \"optimized out\": the compiler does not keep its value at this point.",
   "İlk robotun": "Your first robot",
   "Yaptım, sonraki": "Done, next",
   "Elektronik temelleri": "Electronics basics",
@@ -9501,6 +9510,7 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+    "{…} kesmesi": "{0} interrupt",
     "ÖĞRENME YOLU · DÜZEY {…}": "LEARNING PATH · LEVEL {0}",
     "{…} · ADIM {…}/{…}": "{0} · STEP {1}/{2}",
     "Düzey {…}: {…}": "Level {0}: {1}",
