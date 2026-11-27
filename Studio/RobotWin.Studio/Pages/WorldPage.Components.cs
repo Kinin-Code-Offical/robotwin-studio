@@ -20,7 +20,10 @@ namespace RobotWin.Studio.Pages
     /// </summary>
     public partial class WorldPage
     {
-        private static readonly HashSet<string> FoldedCards = new HashSet<string>(StringComparer.Ordinal);
+        // [fold] which cards are folded, kept in the settings between sessions (Shell/FoldingStack.cs)
+        private static bool IsCardFolded(string title) => Shell.FoldingStack.IsFolded("world:" + title);
+
+        private static void FoldCard(string title, bool fold) => Shell.FoldingStack.SetFolded("world:" + title, fold);
         private static Vec3? _copiedPosition;
         private static (double Roll, double Pitch, double Yaw)? _copiedRotation;
         private WorldObject? _inspected;
@@ -54,7 +57,7 @@ namespace RobotWin.Studio.Pages
 
         private (Border Card, StackPanel Body) Card(string title, ComponentRemoval? removal = null)
         {
-            bool folded = FoldedCards.Contains(title);
+            bool folded = IsCardFolded(title);
             var body = new StackPanel { Margin = new Thickness(0, 4, 0, 8), Visibility = folded ? Visibility.Collapsed : Visibility.Visible };
             var chevron = new Theme.Icon { Data = Geometry.Parse(folded ? "M9,6 L15,12 L9,18" : "M6,9 L12,15 L18,9"), Size = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
             chevron.SetResourceReference(Theme.Icon.ForegroundProperty, "B.TextMuted");
@@ -107,8 +110,7 @@ namespace RobotWin.Studio.Pages
                 bool fold = body.Visibility == Visibility.Visible;
                 body.Visibility = fold ? Visibility.Collapsed : Visibility.Visible;
                 chevron.Data = Geometry.Parse(fold ? "M9,6 L15,12 L9,18" : "M6,9 L12,15 L18,9");
-                if (fold) FoldedCards.Add(title);
-                else FoldedCards.Remove(title);
+                FoldCard(title, fold);
             };
             more.Click += (_, _) =>
             {
@@ -184,8 +186,7 @@ namespace RobotWin.Studio.Pages
         {
             foreach (var t in Inspector.Children.OfType<Border>().Select(b => b.Tag as string).Where(t => t != null))
             {
-                if (fold) FoldedCards.Add(t!);
-                else FoldedCards.Remove(t!);
+                FoldCard(t!, fold);
             }
 
             BuildInspector();
@@ -242,8 +243,9 @@ namespace RobotWin.Studio.Pages
         {
             var (element, card) = NewComponent(before);
             if (element == null) return;
-            if (card != null && FoldedCards.Remove(card))
+            if (card != null && IsCardFolded(card))
             {
+                FoldCard(card, false);
                 BuildInspector();
                 (element, _) = NewComponent(before);
                 if (element == null) return;

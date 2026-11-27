@@ -1,6 +1,7 @@
 <UserControl x:Class="RobotWin.Studio.Pages.PcbPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="clr-namespace:RobotWin.Studio.Shell"
              xmlns:t="clr-namespace:RobotWin.Studio.Theme"
              xmlns:pcb="clr-namespace:RobotWin.Studio.Pcb"
              Background="{DynamicResource B.Base}">
@@ -181,17 +182,17 @@
                 <TabControl x:Name="Tabs">
                     <TabItem Header="Kart">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel x:Name="BoardPanel" Margin="16,6,16,16"/>
+                            <sh:FoldingStack x:Name="BoardPanel" FoldKey="pcb.board" Margin="16,6,16,16"/>
                         </ScrollViewer>
                     </TabItem>
                     <TabItem Header="Katmanlar">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel x:Name="LayersPanel" Margin="16,6,16,16"/>
+                            <sh:FoldingStack x:Name="LayersPanel" FoldKey="pcb.layers" Margin="16,6,16,16"/>
                         </ScrollViewer>
                     </TabItem>
                     <TabItem Header="Hatlar">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel x:Name="ClassesPanel" Margin="16,6,16,16"/>
+                            <sh:FoldingStack x:Name="ClassesPanel" FoldKey="pcb.classes" Margin="16,6,16,16"/>
                         </ScrollViewer>
                     </TabItem>
                     <TabItem x:Name="DrcTab" Header="DRC">

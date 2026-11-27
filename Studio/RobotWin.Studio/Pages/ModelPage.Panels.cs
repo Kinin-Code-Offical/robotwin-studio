@@ -212,7 +212,7 @@ namespace RobotWin.Studio.Pages
 
         private void Section(string title, string? sub = null)
         {
-            var g = new Grid { Margin = new Thickness(0, Props.Children.Count == 0 ? 2 : 16, 0, 8) };
+            var g = new Grid { Margin = new Thickness(0, Props.Children.Count == 0 ? 2 : 16, 0, 8), Tag = "fold:" + title };   // [fold] a section that folds
             g.Children.Add(new TextBlock { Text = title, FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = Res("B.Text") });
             if (sub != null) g.Children.Add(new TextBlock { Text = sub, FontSize = 12, Foreground = Res("B.TextMuted"), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center });
             Props.Children.Add(g);

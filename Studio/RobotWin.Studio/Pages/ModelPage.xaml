@@ -1,6 +1,7 @@
 <UserControl x:Class="RobotWin.Studio.Pages.ModelPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="clr-namespace:RobotWin.Studio.Shell"
              xmlns:t="clr-namespace:RobotWin.Studio.Theme"
              Background="{DynamicResource B.Base}">
     <UserControl.Resources>
@@ -189,7 +190,7 @@
                 </ScrollViewer>
             </DockPanel>
             <ScrollViewer x:Name="PropsPane" Grid.Column="4" VerticalScrollBarVisibility="Auto">
-                <StackPanel x:Name="Props" Margin="14,10,14,16"/>
+                <sh:FoldingStack x:Name="Props" FoldKey="model" Margin="14,10,14,16"/>
             </ScrollViewer>
             <ScrollViewer x:Name="LibraryPane" Grid.Column="0" VerticalScrollBarVisibility="Auto">
                 <StackPanel x:Name="Library" Margin="14,10,14,16"/>

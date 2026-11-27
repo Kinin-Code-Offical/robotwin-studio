@@ -26,6 +26,33 @@ namespace RobotWin.Studio
         /// <summary>Checks the active project or world: the window at once (<paramref name="quiet"/> false), or a notice when something is missing.</summary>
         public async void CheckProject(bool quiet) => await CheckProjectAsync(quiet);
 
+        /// <summary>[problems] The project check by itself (no notice): the Problems panel's Proje and Montaj areas stay current.</summary>
+        private DispatcherTimer? _autoCheck;
+
+        private void ScheduleAutoCheck(double seconds)
+        {
+            if (_autoCheck == null)
+            {
+                _autoCheck = new DispatcherTimer();
+                _autoCheck.Tick += async (_, _) =>
+                {
+                    _autoCheck.Stop();
+                    try
+                    {
+                        await CheckProjectAsync(quiet: true, notice: false);
+                    }
+                    catch (Exception ex) when (ex is InvalidOperationException || ex is System.IO.IOException || ex is UnauthorizedAccessException)
+                    {
+                        // the area stays "not checked"; the menu's check shows why
+                    }
+                };
+            }
+
+            _autoCheck.Interval = TimeSpan.FromSeconds(seconds);
+            _autoCheck.Stop();
+            _autoCheck.Start();
+        }
+
         // [problems] the project check's last result, for the Problems panel's Proje and Montaj areas
         private List<ProjectIssue>? _checkIssues;
         private OpenDocument? _checkedDoc;
@@ -50,7 +77,7 @@ namespace RobotWin.Studio
             return run;
         }
 
-        private async Task CheckProjectAsync(bool quiet)
+        private async Task CheckProjectAsync(bool quiet, bool notice = true)
         {
             var doc = W.ActiveDocument;
             string what;
@@ -94,6 +121,8 @@ namespace RobotWin.Studio
                 return;   // a quiet check that could not run says nothing; the menu's check shows why
             }
 
+            if (!notice) return;   // [problems] a check run by itself only feeds the Problems panel
+
             // [integrity] what this computer lacks, and apart from it what is out of step (a board or Montaj behind its project)
             var lacks = issues.Where(i => i.Area != ProjectCheck.ConsistencyArea).ToList();
             int missing = ProjectChecking.Blocking(lacks);
@@ -118,6 +147,7 @@ namespace RobotWin.Studio
             var r = new AreaReport { Check = () => CheckProject(quiet: true) };
             if (_checkIssues == null || !ReferenceEquals(_checkedDoc, doc))
             {
+                if (_autoCheck?.IsEnabled != true) ScheduleAutoCheck(1);   // it runs by itself in a moment
                 r.NotChecked = "Proje denetimi bu belge için henüz çalışmadı";
                 return r;
             }

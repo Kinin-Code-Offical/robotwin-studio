@@ -49,7 +49,11 @@ namespace RobotWin.Studio
             ProblemsHub.Changed += ScheduleProblems;
             W.DocumentChanged += (_, _) =>
             {
-                if (ReferenceEquals(_checkedDoc, W.ActiveDocument)) _checkStale = true;   // the check's result is from before this change
+                if (ReferenceEquals(_checkedDoc, W.ActiveDocument))
+                {
+                    _checkStale = true;   // the check's result is from before this change: checked again once editing settles
+                    ScheduleAutoCheck(4);
+                }
                 ScheduleProblems();
             };
             W.DocumentReplaced += (_, _) => ScheduleProblems();

@@ -164,6 +164,9 @@ namespace RobotWin.Studio.Shell
         /// <summary>[overlays] Every other page's overlay layout (its tool strips), keyed by the page ("schematic", "pcb", "model").</summary>
         public Dictionary<string, string> OverlayLayouts { get; set; } = new Dictionary<string, string>();
 
+        /// <summary>[fold] The inspector sections folded ("page:heading"; the World's cards as "world:title"), kept between sessions.</summary>
+        public List<string> FoldedSections { get; set; } = new List<string>();
+
         /// <summary>[crosshair] The PCB view's full-window crosshair; [polar] the cursor read as distance and angle from the origin.</summary>
         public bool PcbFullCrosshair { get; set; }
 

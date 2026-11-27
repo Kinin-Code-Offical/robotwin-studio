@@ -857,6 +857,13 @@ namespace RobotWin.Studio
         /// <summary>Used by --snapshot: puts the page in a representative state.</summary>
         public void PrepareSnapshot(string page, string? simulate, string? fault = null)
         {
+            if (fault == "fold-demo")
+            {
+                // [fold] some inspector sections folded, as a user left them (the snapshot's settings are its own)
+                AppSettings.Current.FoldedSections.AddRange(new[] { "schematic:Kısayollar", "schematic:Simülasyon: parça toleransı", "pcb.board:Kart", "model:Dönüşüm", "world:Fizik" });
+                Shell.FoldingStack.ApplyAll();
+            }
+
             if (page == "model") _model.PrepareSnapshot(fault);
             if (page == "library") Library.PrepareSnapshot(fault);
             if (page == "settings" && fault != null) ((Pages.SettingsPage)_pages["settings"]).PrepareSnapshot(fault);   // [settings] // [libs] part creator / manager / import previews
