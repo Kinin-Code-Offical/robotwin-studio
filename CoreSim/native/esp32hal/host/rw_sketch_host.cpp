@@ -108,11 +108,43 @@ void Post(Packet p)
     SetEvent(g_app);
 }
 
+// [perf] The app's next command (or its answer) usually comes within microseconds: poll the event for up to 50 us before
+// sleeping on it, since a sleep and a wake-up cost a thread switch each, thousands of times a simulated second.
+bool WaitHost()
+{
+    static LONGLONG spin = 0;
+    if (spin == 0)
+    {
+        LARGE_INTEGER f;
+        QueryPerformanceFrequency(&f);
+        SYSTEM_INFO si;
+        GetSystemInfo(&si);
+        spin = si.dwNumberOfProcessors > 1 ? f.QuadPart / 20000 : -1;
+    }
+
+    if (spin > 0)
+    {
+        LARGE_INTEGER t0, t;
+        QueryPerformanceCounter(&t0);
+        for (;;)
+        {
+            DWORD r = WaitForSingleObject(g_host, 0);
+            if (r == WAIT_OBJECT_0) return true;
+            if (r != WAIT_TIMEOUT) return false;
+            QueryPerformanceCounter(&t);
+            if (t.QuadPart - t0.QuadPart > spin) break;
+            YieldProcessor();
+        }
+    }
+
+    return WaitForSingleObject(g_host, INFINITE) == WAIT_OBJECT_0;
+}
+
 // One request to the app: it first takes the queue, then answers this packet.
 void Exchange(Packet& p)
 {
     Post(p);
-    if (WaitForSingleObject(g_host, INFINITE) != WAIT_OBJECT_0) ExitProcess(3);
+    if (!WaitHost()) ExitProcess(3);
     MemoryBarrier();
     p = *Down();
 }
@@ -306,7 +338,7 @@ int wmain(int argc, wchar_t** argv)
     static uint8_t rx[DataSize];
     for (;;)
     {
-        if (WaitForSingleObject(g_host, INFINITE) != WAIT_OBJECT_0) return 6;
+        if (!WaitHost()) return 6;
         MemoryBarrier();
         Packet c = *Down();
         Packet r = {};

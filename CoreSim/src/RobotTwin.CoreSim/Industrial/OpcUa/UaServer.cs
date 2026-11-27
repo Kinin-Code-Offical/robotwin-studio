@@ -216,13 +216,15 @@ namespace RobotTwin.CoreSim.Industrial.OpcUa
             while (_running)
             {
                 Thread.Sleep(5);
-                var now = DateTime.UtcNow;
                 List<Session> sessions;
                 lock (_gate) sessions = _sessions.Values.ToList();
                 foreach (var s in sessions)
                 {
                     lock (s)
                     {
+                        // the time read under the session's lock: an item created while this loop waited for it is sampled
+                        // now (its first value goes out with the first publish), not left for the next cycle behind a keep-alive
+                        var now = DateTime.UtcNow;
                         foreach (var sub in s.Subscriptions.Values)
                         {
                             foreach (var m in sub.Items.Values)

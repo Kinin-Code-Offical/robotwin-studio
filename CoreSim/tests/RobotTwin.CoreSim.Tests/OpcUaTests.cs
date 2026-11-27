@@ -490,10 +490,21 @@ Lamba := Hedef > 50;
                 return list;
             }
 
-            var first = Publish(out uint seq1);
+            // A publish answered before the item's first sample (a slow machine) is a keep-alive: no notifications, the
+            // sequence number not used up. A client publishes again, as this one does, a bounded number of times.
+            List<(uint Handle, double Value)> PublishData(out uint sequence)
+            {
+                for (int tries = 0; ; tries++)
+                {
+                    var got = Publish(out sequence);
+                    if (got.Count > 0 || tries >= 20) return got;
+                }
+            }
+
+            var first = PublishData(out uint seq1);
             Assert.Equal(new[] { (77u, 1.5) }, first);
             speed = 2.75;
-            var second = Publish(out uint seq2);
+            var second = PublishData(out uint seq2);
             _out.WriteLine($"notifications: {string.Join(", ", first.Concat(second))}; sequence {seq1} → {seq2}");
             Assert.Equal(new[] { (77u, 2.75) }, second);
             Assert.Equal(seq1 + 1, seq2);

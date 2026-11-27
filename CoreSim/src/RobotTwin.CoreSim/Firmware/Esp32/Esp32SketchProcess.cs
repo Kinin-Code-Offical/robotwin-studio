@@ -395,9 +395,35 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             Marshal.WriteInt32(_view, OffQueueUsed, 0);
         }
 
+        /// <summary>
+        /// [perf] How long the app polls the host's answer before sleeping on it: an exchange (a slice, an I²C byte, a radio
+        /// or LED request) is usually answered within microseconds, and a sleep and a wake-up cost a thread switch each, which
+        /// thousands of exchanges a simulated second turned into most of an ESP32 sketch's cost in its own process.
+        /// </summary>
+        private static readonly long SpinTicks = System.Diagnostics.Stopwatch.Frequency / 20_000;   // 50 µs
+
         private bool WaitUp(int timeoutMs)
         {
             if (_dead || _process == null) return false;
+            if (Environment.ProcessorCount > 1 && _upEvent != null)
+            {
+                long until = System.Diagnostics.Stopwatch.GetTimestamp() + SpinTicks;
+                int spins = 0;
+                do
+                {
+                    if (_upEvent.WaitOne(0))
+                    {
+                        Thread.MemoryBarrier();
+                        return true;
+                    }
+
+                    // never sleeps (SpinWait's own Sleep(1) would cost a millisecond): spins, and now and then gives the core away
+                    if ((++spins & 15) == 0) Thread.Yield();
+                    else Thread.SpinWait(20);
+                }
+                while (System.Diagnostics.Stopwatch.GetTimestamp() < until);
+            }
+
             int which = WaitHandle.WaitAny(_waits, timeoutMs);
             if (which == 0)
             {
