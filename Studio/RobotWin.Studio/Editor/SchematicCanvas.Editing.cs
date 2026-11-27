@@ -45,7 +45,10 @@ namespace RobotWin.Studio.Editor
         FieldsTable,
 
         /// <summary>[table] A table's cells and sizes (target: the table).</summary>
-        EditTable
+        EditTable,
+
+        /// <summary>[rule-area] A rule area's net class (target: the area).</summary>
+        EditRuleArea
     }
 
     public sealed class SchematicCommandEventArgs : EventArgs
@@ -186,6 +189,7 @@ namespace RobotWin.Studio.Editor
                 EditorTool.Bezier => "Bezier eğrisi · başlangıca, bitişe, sonra iki denetim noktasına tıklayın",
                 EditorTool.Image => "Resim · koymak istediğiniz yere tıklayın · Esc vazgeçer",
                 EditorTool.Table => "Tablo · sol üst köşesine tıklayın (3 × 3); sonra hücreler yazılır",
+                EditorTool.RuleArea => "Kural alanı · iki köşeye tıklayın; içindeki hatlar alanın net sınıfını alır",
                 EditorTool.Place => "Yerleştir · R döndür · X/Y aynala · Esc bitir",
                 _ => string.Empty
             };

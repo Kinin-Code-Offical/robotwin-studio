@@ -52,6 +52,9 @@ namespace RobotWin.Studio.Editor
         /// <summary>[table] A table placed by its top-left corner, then filled in.</summary>
         Table,
 
+        /// <summary>[rule-area] A rule area: two corners, then its net class.</summary>
+        RuleArea,
+
         /// <summary>[erase] KiCad's eraser: every click deletes what is under it (a wire, a part, a label, a note, a flag).</summary>
         Erase
     }
@@ -285,6 +288,9 @@ namespace RobotWin.Studio.Editor
         // ================================================================ coordinates
 
         private Point ToScreen(GridPoint g) => new Point(g.X * _scale + _offset.X, g.Y * _scale + _offset.Y);
+
+        /// <summary>A sheet point on the canvas (for an editor placed over it).</summary>
+        public Point ToScreenPoint(GridPoint g) => ToScreen(g);
         private Point ToScreen(double x, double y) => new Point(x * _scale + _offset.X, y * _scale + _offset.Y);
         private GridPoint ToGrid(Point p) => new GridPoint((p.X - _offset.X) / _scale, (p.Y - _offset.Y) / _scale);
         private static GridPoint Snap(GridPoint p) => new GridPoint(Math.Round(p.X), Math.Round(p.Y));

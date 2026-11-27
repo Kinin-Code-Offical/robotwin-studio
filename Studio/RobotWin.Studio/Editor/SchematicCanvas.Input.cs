@@ -146,6 +146,7 @@ namespace RobotWin.Studio.Editor
                 case EditorTool.Circle:
                 case EditorTool.Arc:
                 case EditorTool.Bezier:   // [bezier]
+                case EditorTool.RuleArea:   // [rule-area]
                     ShapeClick(e.ClickCount >= 2);
                     return;
                 case EditorTool.Image:   // [image]
@@ -189,6 +190,9 @@ namespace RobotWin.Studio.Editor
                         return;
                     case SchematicShape { Kind: SheetShapeKind.Table } dt:   // [table]
                         RequestCommand(SchematicCommand.EditTable, dt);
+                        return;
+                    case SchematicShape { Kind: SheetShapeKind.RuleArea } ra:   // [rule-area]
+                        RequestCommand(SchematicCommand.EditRuleArea, ra);
                         return;
                     case SchematicWire:
                         if (NetUnderCursor() is { } net) SelectConnection(net);

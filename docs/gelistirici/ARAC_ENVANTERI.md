@@ -123,7 +123,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Bağlantı noktası (junction) aracı | J aracı: kesişen telleri birleştirir, yeniden tıklayınca ayırır; T bağlantıları kendiliğinden | var | |
 | Etiket: yerel, global | var | var | |
 | Etiket: hiyerarşik, yönerge | Net sınıfı yönergesi (netclass flag): hattı adlandırmaz, değdiği hattın PCB net sınıfını verir (yoksa Default kopyası açılır); hiyerarşik etiket sonra | kısmi | 3 |
-| Kural alanı | yok | yok | 3 |
+| Kural alanı | Kural alanı: iki köşe, net sınıfı; içinde teli, pini ya da etiketi olan hatlar PCB'de o sınıfı alır, alandaki yönerge önce gelir | var | |
 | Hiyerarşik sayfa, sayfa pini | yok | yok | 3 |
 | Metin, metin kutusu | Metin (T), çerçeveli = metin kutusu | var | |
 | Tablo | Tablo: sol üst köşeden 3 × 3, ortak tablo düzenleyicisi (hücreler, satır / sütun ekle-çıkar, sütun genişliği, satır yüksekliği, yazı boyu, çizgi), dik kalır, kopyalanır; KiCad table gider ve gelir | var | |

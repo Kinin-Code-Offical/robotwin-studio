@@ -67,6 +67,8 @@ Labels with the same name are connected; the name `GND` means ground. As in KiCa
 
 **Net class directive** (KiCad's directive label, the netclass flag): right-click a wire and pick **Add a net class directive**; a stalk with a diamond on top and the class name in braces (first `{Power}`) stands on the wire. It names no net; the net it touches takes that net class when the PCB is brought up to date. Change the class with a double click, V or in Properties; a class the board does not have starts as a copy of Default, and its rules are set in the board's net classes. It moves, copies and groups like a label; ERC only warns when it touches no wire or pin. It goes to KiCad as the board's net class assignment.
 
+**Rule area** (KiCad 9's schematic rule area): pick **Rule area** in the **Çiz** menu and click two corners; a dashed frame comes with the class in braces at its top left (first `{Power}`). Every net with a wire, a pin or a label inside it takes that net class when the PCB is brought up to date; a net class directive inside the area comes first. Change the class with a double click, right-click ▸ **Edit the net class…** or in Properties; the area is picked, moved, copied and deleted like a drawing.
+
 | Key | Function |
 | --- | --- |
 | M / G | Move / drag (with G the wires stretch) |

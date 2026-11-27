@@ -236,6 +236,15 @@ namespace RobotWin.Studio.Pages
                 menu.Items.Add(item);
             }
 
+            // [rule-area] a rule area: two corners, then its net class
+            var areaItem = new MenuItem { Header = "Kural alanı", IsChecked = Canvas.Tool == EditorTool.RuleArea, Icon = new RobotWin.Studio.Theme.Icon { Data = (System.Windows.Media.Geometry)FindResource("I.DrawRect"), Size = 14 } };
+            areaItem.Click += (_, _) =>
+            {
+                Canvas.Tool = EditorTool.RuleArea;
+                Canvas.Focus();
+            };
+            menu.Items.Add(areaItem);
+
             // [table] a table: a click puts its top-left corner down
             var tableItem = new MenuItem { Header = "Tablo", IsChecked = Canvas.Tool == EditorTool.Table, Icon = new RobotWin.Studio.Theme.Icon { Data = (System.Windows.Media.Geometry)FindResource("I.Table"), Size = 14 } };
             tableItem.Click += (_, _) =>
@@ -673,6 +682,22 @@ namespace RobotWin.Studio.Pages
             if (selection.Count == 1 && selection.First() is SchematicPart part)
             {
                 BuildPartInspector(part);
+            }
+            else if (selection.Count == 1 && selection.First() is SchematicShape { Kind: SheetShapeKind.RuleArea } area)
+            {
+                // [rule-area] the class its nets take
+                Section("Kural alanı");
+                var box = new TextBox { Text = area.NetClass };
+                Commit(box, value =>
+                {
+                    if (string.IsNullOrWhiteSpace(value) || value == area.NetClass) return;
+                    W.BeginChange();
+                    area.NetClass = value.Trim();
+                    W.CommitChange($"Kural alanı: {value.Trim()}");
+                    Canvas.InvalidateVisual();
+                });
+                Inspector.Children.Add(box);
+                Inspector.Children.Add(Hint("İçindeki teller, pinler ve etiketlerin hatları PCB'de bu net sınıfını alır; alandaki bir net sınıfı yönergesi ondan önce gelir."));
             }
             else if (selection.Count == 1 && selection.First() is NetLabel { IsDirective: true } directive)
             {

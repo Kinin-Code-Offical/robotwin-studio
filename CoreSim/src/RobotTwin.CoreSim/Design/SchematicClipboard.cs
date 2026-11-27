@@ -70,7 +70,7 @@ namespace RobotTwin.CoreSim.Design
                     case NoConnectFlag nc: f.NoConnects.Add(new NoConnectFlag { Position = nc.Position, Group = nc.Group }); break;
                     case SchematicNote n: f.Notes.Add(new SchematicNote { Text = n.Text, Position = n.Position, Size = n.Size, Boxed = n.Boxed, Bold = n.Bold, Group = n.Group }); break;
                     case SchematicShape sh: f.Shapes.Add(new SchematicShape { Kind = sh.Kind, Points = new List<GridPoint>(sh.Points), Width = sh.Width, Filled = sh.Filled, Dashed = sh.Dashed, Group = sh.Group, ImageData = sh.ImageData,
-                        ColumnWidths = sh.ColumnWidths?.ToList(), RowHeights = sh.RowHeights?.ToList(), Cells = sh.Cells?.ToList(), TextSize = sh.TextSize }); break;   // [shapes]
+                        ColumnWidths = sh.ColumnWidths?.ToList(), RowHeights = sh.RowHeights?.ToList(), Cells = sh.Cells?.ToList(), TextSize = sh.TextSize, NetClass = sh.NetClass }); break;   // [shapes]
                 }
             }
 

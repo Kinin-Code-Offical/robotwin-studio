@@ -1062,7 +1062,7 @@ namespace RobotTwin.CoreSim.Pcb
 
             // [directive] KiCad's directive labels: the sheet says a net's class, the board follows (a class it does not
             // have yet starts as a copy of Default, to be set in the board's net classes)
-            foreach (var (net, cls) in schematic.NetClassDirectives(netlist))
+            foreach (var (net, cls) in schematic.NetClassDirectives(netlist, library))
             {
                 if (!liveNets.Contains(net)) continue;
                 if (board.FindClass(cls) == null)

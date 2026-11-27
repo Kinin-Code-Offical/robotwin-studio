@@ -107,6 +107,7 @@ namespace RobotWin.Studio.Pages
                 case SchematicCommand.Find: ShowFind(false); break;
                 case SchematicCommand.EditNote: EditNote(target); break;   // [notes]
                 case SchematicCommand.EditTable when target is SchematicShape table: EditSheetTable(table); break;   // [table]
+                case SchematicCommand.EditRuleArea when target is SchematicShape area: EditRuleArea(area); break;   // [rule-area]
                 case SchematicCommand.Replace: ShowFind(true); break;
                 case SchematicCommand.Help: ToggleHelp(); break;
                 case SchematicCommand.Erc: RunErc(keepOpen: false); break;
@@ -316,6 +317,23 @@ namespace RobotWin.Studio.Pages
             {
                 if (value.Length == 0) return;
                 SetParameter(part, key, value);
+            });
+        }
+
+        /// <summary>[rule-area] The area's net class typed in place, over its top-left corner.</summary>
+        private void EditRuleArea(SchematicShape area)
+        {
+            if (W.Simulation.IsActive || area.Points.Count < 2) return;
+            var corner = Canvas.ToScreenPoint(new GridPoint(Math.Min(area.Points[0].X, area.Points[1].X), Math.Min(area.Points[0].Y, area.Points[1].Y)));
+            var origin = Canvas.TranslatePoint(new Point(0, 0), _overlay);
+            var anchor = new Rect(corner.X + origin.X, corner.Y + origin.Y, 160, 22);
+            ShowInlineEditor(anchor, area.NetClass ?? "Power", "Kural alanı · içindeki hatlar PCB'de bu net sınıfını alır · Enter / Esc", value =>
+            {
+                if (value.Length == 0 || value == area.NetClass) return;
+                W.BeginChange();
+                area.NetClass = value;
+                W.CommitChange($"Kural alanı: {value}");
+                Canvas.InvalidateVisual();
             });
         }
 
@@ -1105,6 +1123,19 @@ namespace RobotWin.Studio.Pages
                             ?? sch.Parts.FirstOrDefault();
             switch (fault)
             {
+                case "rule-area":   // [rule-area] the motor's switch and supply inside a Power area, picked
+                {
+                    var q1 = sch.Parts.FirstOrDefault(x => x.RefDes == "Q1") ?? firstPart;
+                    var m1 = sch.Parts.FirstOrDefault(x => x.RefDes == "M1") ?? firstPart;
+                    if (q1 == null || m1 == null || SchematicEditing.Bounds(new object[] { q1, m1 }, W.Library) is not { } rb) return;
+                    var area = new SchematicShape { Kind = SheetShapeKind.RuleArea, NetClass = "Power", Dashed = true,
+                        Points = { new GridPoint(rb.MinX - 3, rb.MinY - 3), new GridPoint(rb.MaxX + 5, rb.MaxY + 3) } };
+                    sch.Shapes.Add(area);
+                    Canvas.SelectItems(new object[] { area });
+                    Canvas.InvalidateVisual();
+                    return;
+                }
+
                 case "directive":   // [directive] a Power class flag on the motor's supply net, picked
                 {
                     var nl = sch.BuildNetlist(W.Library);

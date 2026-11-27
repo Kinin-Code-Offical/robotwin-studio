@@ -153,6 +153,12 @@ namespace RobotWin.Studio.Editor
                     Item("Sil" + many, "Del", DeleteSelection);
                     break;
 
+                case SchematicShape { Kind: SheetShapeKind.RuleArea } area:   // [rule-area]
+                    Item("Net sınıfını düzenle…", "E", () => RequestCommand(SchematicCommand.EditRuleArea, area));
+                    Item("Taşı", "M", () => BeginKeyMove(false));
+                    Item("Sil" + many, "Del", DeleteSelection);
+                    break;
+
                 case SchematicShape { Kind: SheetShapeKind.Table } table:   // [table]
                     Item("Tabloyu düzenle…", "E", () => RequestCommand(SchematicCommand.EditTable, table));
                     Item("Taşı", "M", () => BeginKeyMove(false));

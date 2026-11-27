@@ -67,6 +67,8 @@ Aynı adı taşıyan etiketler birbirine bağlıdır; `GND` adı toprak demektir
 
 **Net sınıfı yönergesi** (KiCad'deki yönerge etiketi, netclass flag): bir tele sağ tıklayıp **Net sınıfı yönergesi ekle** seçilir; telin üstüne bir sap, ucunda bir baklava ve süslü parantez içinde sınıfın adı gelir (önce `{Power}`). Etiket hattı adlandırmaz; değdiği hat PCB güncellenince o net sınıfını alır. Sınıfın adı çift tıkla, V ile ya da Özellikler'den değişir; kartta o adda sınıf yoksa Default'un kopyası olarak açılır, kuralları kartın net sınıflarından ayarlanır. Taşınır, kopyalanır, gruplanır; ERC yalnız hiçbir tele ya da pine değmiyorsa uyarır. KiCad'e kartın net sınıfı ataması olarak gider.
 
+**Kural alanı** (KiCad 9'daki şema kural alanı): **Çiz** menüsünden **Kural alanı** seçilip iki köşeye tıklanır; kesik çizgili bir çerçeve ve sol üstünde süslü parantez içinde sınıf (önce `{Power}`) gelir. İçinde bir teli, pini ya da etiketi olan her hat PCB güncellenince o net sınıfını alır; alandaki bir net sınıfı yönergesi alandan önce gelir. Sınıf çift tıkla, sağ tık ▸ **Net sınıfını düzenle…** ya da Özellikler'den değişir; alan seçilir, taşınır, kopyalanır, silinir.
+
 | Tuş | İşlev |
 | --- | --- |
 | M / G | Taşı / sürükle (G'de kablolar uzar) |

@@ -8592,6 +8592,12 @@
   "Seçenekler": "Options",
   "Renkli (kapalıyken her şey siyah: toner transferi, film)": "In colour (off: everything black, for toner transfer and film)",
   "Aynala": "Mirror",
+  "Kural alanı": "Rule area",
+  "Kural alanı eklendi": "Rule area added",
+  "Kural alanı · iki köşeye tıklayın; içindeki hatlar alanın net sınıfını alır": "Rule area · click two corners; the nets inside take its net class",
+  "Kural alanı · içindeki hatlar PCB'de bu net sınıfını alır · Enter / Esc": "Rule area · the nets inside take this net class on the PCB · Enter / Esc",
+  "Net sınıfını düzenle…": "Edit the net class…",
+  "İçindeki teller, pinler ve etiketlerin hatları PCB'de bu net sınıfını alır; alandaki bir net sınıfı yönergesi ondan önce gelir.": "The nets of the wires, pins and labels inside take this net class on the PCB; a net class directive in the area comes first.",
   "Net sınıfı yönergesi ekle": "Add a net class directive",
   "Net sınıfı yönergesi eklendi": "Net class directive added",
   "Net sınıfı yönergesi": "Net class directive",
@@ -9065,6 +9071,7 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+  "Kural alanı: {…}": "Rule area: {0}",
   "Net sınıfı yönergesi: {…}": "Net class directive: {0}",
   "'{{…}}' net sınıfı yönergesi hiçbir kabloya veya pine değmiyor.": "'{{0}}' net class directive touches no wire or pin.",
   "{…} çizgi, {…} daire, {…} yay, {…} eğri; {…} kısıt. Kapalı döngüler profil olur: en büyüğü dış şekil, içindekiler delik.": "{0} lines, {1} circles, {2} arcs, {3} curves; {4} constraints. Closed loops become the profile: the largest the outline, the ones inside it holes.",

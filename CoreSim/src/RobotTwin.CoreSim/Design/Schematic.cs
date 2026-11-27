@@ -179,7 +179,10 @@ namespace RobotTwin.CoreSim.Design
         Image,
 
         /// <summary>[table] KiCad's table: ruled cells of text from its top-left corner; it stays upright.</summary>
-        Table
+        Table,
+
+        /// <summary>[rule-area] KiCad's rule area on the sheet: every net inside it takes its net class (<see cref="SchematicShape.NetClass"/>).</summary>
+        RuleArea
     }
 
     /// <summary>
@@ -210,6 +213,10 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>[image] The picture, base64 PNG (images only).</summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? ImageData { get; set; }
+
+        /// <summary>[rule-area] The net class a rule area gives the nets inside it.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? NetClass { get; set; }
 
         /// <summary>[table] The columns' widths and the rows' heights in grid steps (tables only).</summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -308,7 +315,7 @@ namespace RobotTwin.CoreSim.Design
             var pts = new List<GridPoint>();
             switch (Kind)
             {
-                case SheetShapeKind.Rectangle or SheetShapeKind.Image or SheetShapeKind.Table when Points.Count >= 2:
+                case SheetShapeKind.Rectangle or SheetShapeKind.Image or SheetShapeKind.Table or SheetShapeKind.RuleArea when Points.Count >= 2:
                     var (p, q) = (Points[0], Points[1]);
                     pts.AddRange(new[] { p, new GridPoint(q.X, p.Y), q, new GridPoint(p.X, q.Y), p });
                     break;
@@ -429,10 +436,33 @@ namespace RobotTwin.CoreSim.Design
         public List<SchematicWire> Wires { get; set; } = new List<SchematicWire>();
         public List<NetLabel> Labels { get; set; } = new List<NetLabel>();
 
-        /// <summary>[directive] The net classes the sheet's directive labels give: net → class (a later label on the same net wins).</summary>
-        public Dictionary<string, string> NetClassDirectives(Netlist netlist)
+        /// <summary>
+        /// [directive] [rule-area] The net classes the sheet gives: first its rule areas' (every net with a wire, a pin or a
+        /// label inside one), then its directive labels', which win (a later one on the same net over an earlier).
+        /// </summary>
+        public Dictionary<string, string> NetClassDirectives(Netlist netlist, PartLibrary? library = null)
         {
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var area in Shapes.Where(s => s.Kind == SheetShapeKind.RuleArea && s.Points.Count >= 2 && !string.IsNullOrWhiteSpace(s.NetClass)))
+            {
+                var r = GridRect.FromCorners(area.Points[0], area.Points[1]);
+                string cls = area.NetClass!.Trim();
+                for (int i = 0; i < Wires.Count && i < netlist.WireNets.Count; i++)
+                {
+                    var w = Wires[i].Points;
+                    bool inside = w.Any(r.Contains) || Enumerable.Range(0, Math.Max(0, w.Count - 1)).Any(k => r.IntersectsSegment(w[k], w[k + 1]));
+                    if (inside && netlist.WireNets[i] is { } wn) map[wn] = cls;
+                }
+
+                for (int i = 0; i < Labels.Count && i < netlist.LabelNets.Count; i++)
+                    if (!Labels[i].IsDirective && r.Contains(Labels[i].Position) && netlist.LabelNets[i] is { } ln)
+                        map[ln] = cls;
+                if (library != null)
+                    foreach (var (part, pin, pos) in PinPositions(library))
+                        if (r.Contains(pos) && netlist.NetOf(part.RefDes, pin.Name) is { } pn)
+                            map[pn.Name] = cls;
+            }
+
             for (int i = 0; i < Labels.Count && i < netlist.LabelNets.Count; i++)
                 if (Labels[i].IsDirective && netlist.LabelNets[i] is { } net)
                     map[net] = Labels[i].NetClass!.Trim();

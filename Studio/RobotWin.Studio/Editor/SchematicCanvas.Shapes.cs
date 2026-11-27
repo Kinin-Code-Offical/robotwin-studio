@@ -101,7 +101,7 @@ namespace RobotWin.Studio.Editor
             SelectItems(new object[] { image });
         }
 
-        private static bool IsShapeTool(EditorTool t) => t is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier;
+        private static bool IsShapeTool(EditorTool t) => t is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier or EditorTool.RuleArea;
 
         private static SheetShapeKind KindOf(EditorTool t) => t switch
         {
@@ -109,6 +109,7 @@ namespace RobotWin.Studio.Editor
             EditorTool.Circle => SheetShapeKind.Circle,
             EditorTool.Arc => SheetShapeKind.Arc,
             EditorTool.Bezier => SheetShapeKind.Bezier,
+            EditorTool.RuleArea => SheetShapeKind.RuleArea,
             _ => SheetShapeKind.Line
         };
 
@@ -133,7 +134,7 @@ namespace RobotWin.Studio.Editor
             }
 
             if (_shapeDraft.Count == 0 || !_shapeDraft[_shapeDraft.Count - 1].Equals(at)) _shapeDraft.Add(at);
-            int need = _tool switch { EditorTool.Rectangle => 2, EditorTool.Circle => 2, EditorTool.Arc => 3, EditorTool.Bezier => 4, _ => int.MaxValue };
+            int need = _tool switch { EditorTool.Rectangle or EditorTool.RuleArea => 2, EditorTool.Circle => 2, EditorTool.Arc => 3, EditorTool.Bezier => 4, _ => int.MaxValue };
             if (_shapeDraft.Count >= need) FinishShape();
             InvalidateVisual();
         }
@@ -149,12 +150,26 @@ namespace RobotWin.Studio.Editor
             bool real = shape.Kind switch
             {
                 SheetShapeKind.Line => pts.Count >= 2,
-                SheetShapeKind.Rectangle => pts.Count == 2 && pts[0].X != pts[1].X && pts[0].Y != pts[1].Y,
+                SheetShapeKind.Rectangle or SheetShapeKind.RuleArea => pts.Count == 2 && pts[0].X != pts[1].X && pts[0].Y != pts[1].Y,
                 SheetShapeKind.Circle => pts.Count == 2 && !pts[0].Equals(pts[1]),
                 SheetShapeKind.Bezier => pts.Count == 4 && !pts[0].Equals(pts[1]),
                 _ => pts.Count == 3 && shape.ArcCircle() != null
             };
             if (!real) return;
+            if (shape.Kind == SheetShapeKind.RuleArea)
+            {
+                // [rule-area] it starts as Power, its class then opened for typing
+                shape.NetClass = "Power";
+                shape.Dashed = true;
+                W.BeginChange();
+                Doc.Shapes.Add(shape);
+                W.CommitChange(Shell.Lang.T("Kural alanı eklendi"));
+                Tool = EditorTool.Select;
+                SelectItems(new object[] { shape });
+                RequestCommand(SchematicCommand.EditRuleArea, shape);
+                return;
+            }
+
             W.BeginChange();
             Doc.Shapes.Add(shape);
             W.CommitChange(Shell.Lang.T("Çizim eklendi"));
@@ -196,6 +211,18 @@ namespace RobotWin.Studio.Editor
             if (s.Kind == SheetShapeKind.Table)
             {
                 DrawTable(dc, s, color);
+                return;
+            }
+
+            if (s.Kind == SheetShapeKind.RuleArea && s.Points.Count >= 2)
+            {
+                // [rule-area] a dashed frame in the labels' colour, its class in braces inside its top-left corner
+                var ink = color == Accent ? Accent : LabelColor;
+                var frame = new Rect(ToScreen(s.Points[0]), ToScreen(s.Points[1]));
+                var areaPen = new Pen(SymbolRenderer.Brush(ink), 1.4) { DashStyle = DashStyles.Dash };
+                dc.DrawRectangle(SymbolRenderer.Brush(Color.FromArgb(0x14, ink.R, ink.G, ink.B)), areaPen, frame);
+                var ft = new FormattedText("{" + (s.NetClass ?? string.Empty) + "}", System.Globalization.CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, Typefaces.UiSemi, 11, SymbolRenderer.Brush(ink), Dpi);
+                dc.DrawText(ft, new Point(frame.Left + 5, frame.Top + 3));
                 return;
             }
 
