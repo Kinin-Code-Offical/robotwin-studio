@@ -941,6 +941,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             s.SliceStartOut = s.Out;   // edges are replayed relative to the level at the mode change
         }
 
+        /// <inheritdoc/>
+        public event Action<double, int, bool>? PinChanged;
+
         private void OnDigitalWrite(IntPtr user, int gpio, int level)
         {
             if (gpio < 0 || gpio >= _gpio.Length) return;
@@ -948,7 +951,11 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             bool v = level != 0;
             if (s.Out == v) return;
             s.Out = v;
-            if ((s.Mode & ModeOutputBit) != 0) Spi.PinChanged(gpio, v);   // CS edges frame SPI transfers
+            if ((s.Mode & ModeOutputBit) != 0)
+            {
+                Spi.PinChanged(gpio, v);   // CS edges frame SPI transfers
+                PinChanged?.Invoke(NativeNow(), gpio, v);   // [unified-timeline]
+            }
             if (s.Pin != null && (s.Mode & ModeOutputBit) != 0 && (s.Mode & ModeOpenDrain) == 0 && !s.Pwm && !s.Dac && Options.ExactOutputEdges)
             {
                 try

@@ -472,6 +472,11 @@ void loop() {
 
             using var rig = new Rig(compiled, _fx.Dll("blink"));
             var diode = compiled.Device<Led>("D1")!;
+            var pinEdges = new List<(double Time, bool Level)>();   // [unified-timeline] what the timeline records
+            rig.CoSim.PinChanged += (t, gpio, level) =>
+            {
+                if (gpio == 2) pinEdges.Add((t, level));
+            };
             var edges = new List<(double Time, bool On)>();
             bool on = false;
             double maxCurrent = 0;
@@ -498,6 +503,14 @@ void loop() {
             {
                 Assert.InRange(edges[i].Time - edges[i - 1].Time, 0.499, 0.502);
                 Assert.NotEqual(edges[i].On, edges[i - 1].On);
+            }
+
+            // the pin's reported edges are the LED's, at the same instants (the LED follows within a solver step)
+            Assert.Equal(edges.Count, pinEdges.Count(e => e.Time <= edges[^1].Time + 1e-3));
+            for (int i = 0; i < edges.Count; i++)
+            {
+                Assert.Equal(edges[i].On, pinEdges[i].Level);
+                Assert.InRange(edges[i].Time - pinEdges[i].Time, -1e-4, 1e-3);
             }
 
             string serial = rig.Serial.ToString();

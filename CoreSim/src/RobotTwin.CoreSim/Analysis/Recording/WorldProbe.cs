@@ -56,7 +56,11 @@ namespace RobotTwin.CoreSim.Analysis.Recording
             _runner.Sliced += OnSlice;
         }
 
-        public void Detach() => _runner.Sliced -= OnSlice;
+        public void Detach()
+        {
+            _runner.Sliced -= OnSlice;
+            foreach (var (board, handler) in _espTaps) board.PinChanged -= handler;
+        }
 
         private string NameOf(SceneBody b)
         {
@@ -286,10 +290,125 @@ namespace RobotTwin.CoreSim.Analysis.Recording
                 if (kv.Value.Length > 0) _result.Serial.Add(new SerialLine { Time = t, Board = kv.Key, Text = kv.Value });
             }
 
+            TapFirmware();   // [unified-timeline]
             foreach (var e in _runner.DrainEvents())
             {
                 if (_result.Events.Count < 20000) _result.Events.Add(new EventLine { Time = e.Time, Source = e.Source, Kind = e.Kind.ToString().ToLowerInvariant(), Message = e.Message });
             }
+        }
+
+        // ---------------------------------------------------------------- [unified-timeline] the boards' pins and interrupts
+
+        private sealed class FirmwareTap
+        {
+            public FirmwareTap(BoardInfo board, Firmware.FirmwareCoSimulation avr, Firmware.McuTrace trace, string name)
+            {
+                Board = board;
+                Avr = avr;
+                Trace = trace;
+                Name = name;
+            }
+
+            public BoardInfo Board { get; }
+            public Firmware.FirmwareCoSimulation Avr { get; }
+            public Firmware.McuTrace Trace { get; }
+            public string Name { get; }
+            public long Done;
+            public readonly LogicTrack?[] Pins = new LogicTrack?[Firmware.McuTrace.Pins];
+            public readonly bool[] Initial = new bool[Firmware.McuTrace.Pins];
+            public double Start;
+            public readonly Stack<(int Vector, double Start)> Open = new Stack<(int, double)>();
+        }
+
+        private readonly List<FirmwareTap> _taps = new List<FirmwareTap>();
+        private readonly List<(Firmware.Esp32.IEsp32Board Board, Action<double, int, bool> Handler)> _espTaps = new List<(Firmware.Esp32.IEsp32Board, Action<double, int, bool>)>();
+        private const int MaxEdgesPerPin = 200_000, MaxInterrupts = 400_000;
+
+        /// <summary>
+        /// Every running ATmega328P board's chip records its pin changes and interrupts (<see cref="Firmware.McuTrace"/>);
+        /// what it recorded since the last sample becomes the run's logic tracks and interrupt spans, timed on the board's
+        /// own clock as the run sees it. A board's trace starts the first time it is seen running.
+        /// </summary>
+        private void TapFirmware()
+        {
+            foreach (var b in _runner.Boards)
+            {
+                if (b.RefDes.Length > 0 && !_result.BoardNames.ContainsKey(b.RefDes)) _result.BoardNames[b.RefDes] = string.IsNullOrWhiteSpace(b.Name) ? b.RefDes : b.Name;
+                if (b.Esp32 is { } esp && !_espTaps.Any(x => ReferenceEquals(x.Board, esp))) TapEsp32(esp, string.IsNullOrWhiteSpace(b.Name) ? b.RefDes : b.Name);
+                if (b.Avr == null || !b.Running || _taps.Any(x => ReferenceEquals(x.Board, b))) continue;
+                var trace = b.Avr.Mcu.StartTrace(65536);
+                var tap = new FirmwareTap(b, b.Avr, trace, string.IsNullOrWhiteSpace(b.Name) ? b.RefDes : b.Name) { Done = trace.Total, Start = b.Avr.ProgramTime };
+                for (int p = 0; p < Firmware.McuTrace.Pins; p++) tap.Initial[p] = trace.LevelAtStart(p);
+                _taps.Add(tap);
+            }
+
+            foreach (var tap in _taps)
+            {
+                var trace = tap.Trace;
+                var mcu = tap.Avr.Mcu;
+                double now = tap.Avr.ProgramTime, hz = mcu.ClockHz;
+                long first = trace.Total - trace.Count;
+                long from = Math.Max(tap.Done, first);
+                for (long n = from; n < trace.Total; n++)
+                {
+                    var e = trace[(int)(n - first)];
+                    double t = now - ((double)mcu.Cycles - e.Cycle) / hz;
+                    switch (e.Kind)
+                    {
+                        case Firmware.TraceKind.Pin:
+                        {
+                            var track = tap.Pins[e.Index];
+                            if (track == null)
+                            {
+                                track = new LogicTrack { Board = tap.Name, Pin = e.Index < 14 ? "D" + e.Index : "A" + (e.Index - 14), Start = tap.Start, Initial = tap.Initial[e.Index] };
+                                tap.Pins[e.Index] = track;
+                                _result.Logic.Add(track);
+                            }
+
+                            if (track.Edges.Count < MaxEdgesPerPin) track.Edges.Add(t);
+                            else track.Truncated = true;
+                            break;
+                        }
+
+                        case Firmware.TraceKind.Enter:
+                            tap.Open.Push((e.Index, t));
+                            break;
+                        case Firmware.TraceKind.Return when tap.Open.Count > 0:
+                        {
+                            var (v, start) = tap.Open.Pop();
+                            if (_result.Interrupts.Count < MaxInterrupts)
+                                _result.Interrupts.Add(new InterruptSpan { Board = tap.Name, Vector = Firmware.AvrRegisters.VectorName(v), Start = start, End = t });
+                            break;
+                        }
+                    }
+                }
+
+                tap.Done = trace.Total;
+            }
+        }
+
+        /// <summary>
+        /// An ESP32 board (either mode) reports each pad the firmware drives as it changes; each report is an edge, so the
+        /// pad's level before its first report was the opposite. Interrupts are not traced on the ESP32.
+        /// </summary>
+        private void TapEsp32(Firmware.Esp32.IEsp32Board esp, string name)
+        {
+            var pins = new Dictionary<int, LogicTrack>();
+            void Handler(double t, int gpio, bool level)
+            {
+                if (!pins.TryGetValue(gpio, out var track))
+                {
+                    track = new LogicTrack { Board = name, Pin = "GPIO" + gpio, Start = 0, Initial = !level };
+                    pins[gpio] = track;
+                    _result.Logic.Add(track);
+                }
+
+                if (track.Edges.Count < MaxEdgesPerPin) track.Edges.Add(t);
+                else track.Truncated = true;
+            }
+
+            esp.PinChanged += Handler;
+            _espTaps.Add((esp, Handler));
         }
 
         /// <summary>Contacts and joint reactions on each stress part, in its body frame.</summary>

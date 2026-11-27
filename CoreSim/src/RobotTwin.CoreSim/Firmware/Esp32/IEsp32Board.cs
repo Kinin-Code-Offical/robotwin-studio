@@ -35,6 +35,12 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         /// <summary>Simulator notes: resets, crashes, what the engine cannot do yet.</summary>
         event Action<string>? Log;
 
+        /// <summary>
+        /// [unified-timeline] A pad the firmware drives changed level: (simulation time in s, GPIO, new level). Each call
+        /// is a change, so the level before it was the opposite.
+        /// </summary>
+        event Action<double, int, bool>? PinChanged;
+
         /// <summary>Runs the firmware for <paramref name="dt"/> seconds from <paramref name="now"/>; the caller then steps the circuit.</summary>
         void Advance(double dt, double now);
 

@@ -76,6 +76,7 @@ namespace RobotWin.Studio.Analysis
         private readonly ListBox _channels = new ListBox { SelectionMode = SelectionMode.Multiple };
         private readonly TextBox _filter = new TextBox { Margin = new Thickness(0, 0, 0, 6) };
         private readonly LinePlot _plot = new LinePlot();
+        private readonly UnifiedTimelineView _unified = new UnifiedTimelineView();   // [unified-timeline]
         private readonly List<BenchSeries> _bench = new List<BenchSeries>();
         private readonly ComboBox _benchPick = new ComboBox { MinWidth = 160, Margin = new Thickness(6, 0, 6, 0) };
         private readonly TextBlock _benchResult = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 4) };
@@ -449,6 +450,10 @@ namespace RobotWin.Studio.Analysis
 
         private void BuildTabs()
         {
+            // [unified-timeline] the whole record on one time axis, first: what happened, the boards' code, the circuit, the motion
+            _unified.TimeClicked += t => Seek(t - (_result is { } r && r.Channels.Count > 0 ? r.Channels.Time(0) : 0));
+            _tabs.Items.Add(new TabItem { Header = "Zaman çizelgesi", Content = new Border { Margin = new Thickness(6), Child = _unified } });
+
             var graphs = new DockPanel { Margin = new Thickness(6) };
             var chans = new DockPanel { Width = 280, Margin = new Thickness(0, 0, 6, 0) };
             DockPanel.SetDock(_filter, Dock.Top);
@@ -505,6 +510,7 @@ namespace RobotWin.Studio.Analysis
         private void Show(AnalysisResult r)
         {
             _result = r;
+            _unified.Load(r);
             _playback.Store = r.Channels;
             _playback.Liquids = r.Liquids;
             _playback.Cables = r.Cables;
@@ -751,6 +757,7 @@ namespace RobotWin.Studio.Analysis
             var legend = new StringBuilder($"t = {t:0.000} s · kare {i + 1}/{store.Count}\n");
             var hidden = new List<string>();
             double t0 = store.Time(0);
+            _unified.Cursor = t + t0;
 
             if (_mode.SelectedIndex == 0) StressOverlay(overlay, i, t + t0, hidden, legend);
             else if (_mode.SelectedIndex == 2) SpeedOverlay(overlay, i, legend);

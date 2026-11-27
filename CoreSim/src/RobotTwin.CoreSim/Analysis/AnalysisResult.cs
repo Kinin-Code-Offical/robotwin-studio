@@ -27,6 +27,54 @@ namespace RobotTwin.CoreSim.Analysis
         public string Message { get; set; } = string.Empty;
     }
 
+    /// <summary>
+    /// [unified-timeline] One pin of a board over the run, as its chip's own logic analyzer saw it: the level at
+    /// <see cref="Start"/> and every change after it (each edge flips the level).
+    /// </summary>
+    public sealed class LogicTrack
+    {
+        public string Board { get; set; } = string.Empty;
+
+        /// <summary>"D13", "A0".</summary>
+        public string Pin { get; set; } = string.Empty;
+
+        public double Start { get; set; }
+
+        public bool Initial { get; set; }
+
+        public List<double> Edges { get; } = new List<double>();
+
+        /// <summary>More edges than are kept (a fast PWM by software): the first ones are kept.</summary>
+        public bool Truncated { get; set; }
+
+        /// <summary>The level at <paramref name="t"/>.</summary>
+        public bool LevelAt(double t)
+        {
+            int lo = 0, hi = Edges.Count;
+            while (lo < hi)
+            {
+                int mid = (lo + hi) / 2;
+                if (Edges[mid] <= t) lo = mid + 1;
+                else hi = mid;
+            }
+
+            return Initial ^ ((lo & 1) == 1);
+        }
+    }
+
+    /// <summary>[unified-timeline] An interrupt handler's run on a board: from its entry to its RETI.</summary>
+    public sealed class InterruptSpan
+    {
+        public string Board { get; set; } = string.Empty;
+
+        /// <summary>The datasheet's name of the vector ("TIMER0_OVF").</summary>
+        public string Vector { get; set; } = string.Empty;
+
+        public double Start { get; set; }
+
+        public double End { get; set; }
+    }
+
     /// <summary>A rigid body of the run, for 3D playback (pose channels "body/{Id}/…").</summary>
     public sealed class BodyInfo
     {
@@ -424,6 +472,15 @@ namespace RobotTwin.CoreSim.Analysis
         public ChannelStore Channels { get; set; } = new ChannelStore();
         public List<SerialLine> Serial { get; } = new List<SerialLine>();
         public List<EventLine> Events { get; } = new List<EventLine>();
+
+        /// <summary>[unified-timeline] The programmable boards' pins that moved, edge by edge (ATmega328P boards).</summary>
+        public List<LogicTrack> Logic { get; } = new List<LogicTrack>();
+
+        /// <summary>[unified-timeline] Every interrupt the boards serviced, entry to RETI.</summary>
+        public List<InterruptSpan> Interrupts { get; } = new List<InterruptSpan>();
+
+        /// <summary>[unified-timeline] Each programmable board's name by the key its serial lines carry ("O8/U1" → "Arduino Uno U1").</summary>
+        public Dictionary<string, string> BoardNames { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         public List<BodyInfo> Bodies { get; } = new List<BodyInfo>();
         public Dictionary<string, List<LoadSample>> Loads { get; } = new Dictionary<string, List<LoadSample>>(StringComparer.OrdinalIgnoreCase);
         public List<StressResult> Stress { get; } = new List<StressResult>();
@@ -491,6 +548,18 @@ namespace RobotTwin.CoreSim.Analysis
                 Text(zip, "serial.json", serial.ToJsonString());
                 var events = new JsonArray(Events.Select(x => (JsonNode)new JsonObject { ["t"] = x.Time, ["src"] = x.Source, ["k"] = x.Kind, ["m"] = x.Message }).ToArray());
                 Text(zip, "events.json", events.ToJsonString());
+                if (BoardNames.Count > 0)
+                {
+                    var names = new JsonObject();
+                    foreach (var kv in BoardNames) names[kv.Key] = kv.Value;
+                    Text(zip, "boards.json", names.ToJsonString());
+                }
+
+                if (Logic.Count > 0 || Interrupts.Count > 0)
+                {
+                    using var s = zip.CreateEntry("logic.bin", CompressionLevel.Optimal).Open();
+                    WriteLogic(s);
+                }
                 var parts = new JsonObject();
                 foreach (var kv in DeviceParts) parts[kv.Key] = kv.Value;
                 Text(zip, "device_parts.json", parts.ToJsonString());
@@ -548,6 +617,49 @@ namespace RobotTwin.CoreSim.Analysis
 
             if (File.Exists(path)) File.Delete(path);
             File.Move(tmp, path);
+        }
+
+        /// <summary>[unified-timeline] The pins' edges and the interrupts' spans.</summary>
+        private void WriteLogic(Stream s)
+        {
+            using var w = new BinaryWriter(s, Encoding.UTF8, true);
+            w.Write(1);   // version
+            w.Write(Logic.Count);
+            foreach (var l in Logic)
+            {
+                w.Write(l.Board);
+                w.Write(l.Pin);
+                w.Write(l.Start);
+                w.Write(l.Initial);
+                w.Write(l.Truncated);
+                w.Write(l.Edges.Count);
+                foreach (double e in l.Edges) w.Write(e);
+            }
+
+            w.Write(Interrupts.Count);
+            foreach (var i in Interrupts)
+            {
+                w.Write(i.Board);
+                w.Write(i.Vector);
+                w.Write(i.Start);
+                w.Write(i.End);
+            }
+        }
+
+        private void ReadLogic(BinaryReader r)
+        {
+            if (r.ReadInt32() != 1) return;
+            int n = r.ReadInt32();
+            for (int k = 0; k < n; k++)
+            {
+                var l = new LogicTrack { Board = r.ReadString(), Pin = r.ReadString(), Start = r.ReadDouble(), Initial = r.ReadBoolean(), Truncated = r.ReadBoolean() };
+                int e = r.ReadInt32();
+                for (int j = 0; j < e; j++) l.Edges.Add(r.ReadDouble());
+                Logic.Add(l);
+            }
+
+            int m = r.ReadInt32();
+            for (int k = 0; k < m; k++) Interrupts.Add(new InterruptSpan { Board = r.ReadString(), Vector = r.ReadString(), Start = r.ReadDouble(), End = r.ReadDouble() });
         }
 
         private static void Text(ZipArchive zip, string name, string text)
@@ -611,6 +723,10 @@ namespace RobotTwin.CoreSim.Analysis
             if (JsonNode.Parse(ReadText(zip, "events.json") ?? "[]") is JsonArray events)
                 foreach (var x in events.OfType<JsonObject>())
                     r.Events.Add(new EventLine { Time = (double?)x["t"] ?? 0, Source = (string?)x["src"] ?? string.Empty, Kind = (string?)x["k"] ?? string.Empty, Message = (string?)x["m"] ?? string.Empty });
+            Binary(zip, "logic.bin", rd => r.ReadLogic(rd));
+            if (JsonNode.Parse(ReadText(zip, "boards.json") ?? "{}") is JsonObject bn)
+                foreach (var kv in bn)
+                    r.BoardNames[kv.Key] = (string?)kv.Value ?? kv.Key;
             if (JsonNode.Parse(ReadText(zip, "device_parts.json") ?? "{}") is JsonObject dp)
                 foreach (var kv in dp)
                     r.DeviceParts[kv.Key] = (string?)kv.Value ?? string.Empty;

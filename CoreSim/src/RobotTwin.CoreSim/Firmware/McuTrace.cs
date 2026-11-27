@@ -63,6 +63,9 @@ namespace RobotTwin.CoreSim.Firmware
 
         public int Count => _count;
 
+        /// <summary>[unified-timeline] Events ever recorded (kept and dropped): kept event i is number <c>Total − Count + i</c>.</summary>
+        public long Total { get; private set; }
+
         public int Capacity => _ring.Length;
 
         public TraceEvent this[int i] => _ring[(_start + i) % _ring.Length];
@@ -83,6 +86,7 @@ namespace RobotTwin.CoreSim.Firmware
 
             _ring[(_start + _count) % _ring.Length] = e;
             _count++;
+            Total++;
         }
 
         /// <summary>The level of <paramref name="pin"/> at <paramref name="cycle"/> (its level at the start for an earlier cycle).</summary>
