@@ -94,6 +94,7 @@ namespace RobotWin.Studio.Pages
                 var comp = board.Components.FirstOrDefault(x => CrossProbe.IsSelected(x.PartUid, x.RefDes));
                 if (comp != null) View3D.Highlight(comp.RefDes);   // [crossprobe] picked in the circuit or the Montaj: framed on the 3D board
                 if (comp == null || ReferenceEquals(Canvas.SelectedComponent, comp)) return;
+                if (!IsVisible) _revealCross = true;   // shown later: brought into view then
                 _crossSelecting = true;
                 try
                 {
@@ -675,7 +676,11 @@ namespace RobotWin.Studio.Pages
         /// Called when the page becomes visible: keep nets in sync with the schematic. [integrity] A change that would take
         /// laid-out work away (footprints removed or swapped, tracks and vias deleted) waits for the user's go-ahead.
         /// </summary>
-        public void OnShown() => BringUpToDate(false);
+        public void OnShown()
+        {
+            BringUpToDate(false);
+            RevealCrossSelection();   // [crossprobe] the part picked elsewhere, in view (after any fit)
+        }
 
         /// <summary>[integrity] The schematic's changes the board is waiting for, until the user updates it.</summary>
         private BoardChanges? _pending;
@@ -698,6 +703,8 @@ namespace RobotWin.Studio.Pages
 
             _pending = null;
             MarkSyncButton();
+            // [crossprobe] the view the user left stays: the board is fitted only when it is new here or has new parts
+            bool fresh = !ReferenceEquals(Canvas.Board, board);
             BoardDocument.Synchronize(W.Schematic, W.Library, board);
             var unplaced = board.Components.Where(c => c.X == 0 && c.Y == 0).ToList();
             if (unplaced.Count > 0 && unplaced.Count < board.Components.Count)
@@ -710,7 +717,7 @@ namespace RobotWin.Studio.Pages
             Canvas.Board = board;
             Canvas.Violations = _violations;
             UpdatePanel();
-            Dispatcher.BeginInvoke(new Action(Canvas.Fit), DispatcherPriority.Loaded);
+            if (fresh || before != board.Components.Count) Dispatcher.BeginInvoke(new Action(Canvas.Fit), DispatcherPriority.Loaded);
             if (before != board.Components.Count) W.Status = $"PCB güncellendi: {board.Components.Count} bileşen";
             if (changes.Destructive) ShowChanges(changes);
         }

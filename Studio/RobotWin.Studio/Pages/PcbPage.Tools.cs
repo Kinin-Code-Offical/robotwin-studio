@@ -24,6 +24,19 @@ namespace RobotWin.Studio.Pages
         /// <summary>[crossprobe] Selecting what another page selected (it is not announced back).</summary>
         private bool _crossSelecting;
 
+        /// <summary>[crossprobe] A part was picked on another page while this one was out of sight.</summary>
+        private bool _revealCross;
+
+        /// <summary>[crossprobe] Coming back to the board after a part was picked elsewhere: it is panned into view if it is off the screen.</summary>
+        private void RevealCrossSelection()
+        {
+            if (!_revealCross) return;
+            _revealCross = false;
+            if (W.Schematic.Board is not { } board) return;
+            var comp = board.Components.FirstOrDefault(x => CrossProbe.IsSelected(x.PartUid, x.RefDes));
+            if (comp != null) Dispatcher.BeginInvoke(new Action(() => Canvas.EnsureVisible(comp.X, comp.Y)), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
         /// <summary>[workspaces] The tool strips over the board.</summary>
         public OverlayHost? ToolOverlays => _overlays;
         private SceneOverlay? _toolsOverlay;

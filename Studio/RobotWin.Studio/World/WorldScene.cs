@@ -401,6 +401,21 @@ namespace RobotWin.Studio.World
             }
         }
 
+        /// <summary>
+        /// [crossprobe] The selected object brought into view when it is off the screen (or behind the eye): the view turns to
+        /// look at it from where it stands, at the same distance; an object in view leaves the camera alone.
+        /// </summary>
+        public void RevealSelected()
+        {
+            if (Selected == null || !_items.TryGetValue(Selected, out var it) || ActualWidth < 10) return;
+            var b = it.Visual.Transform.TransformBounds(it.Visual.Content.Bounds);
+            var c = new Point3D(b.X + b.SizeX / 2, b.Y + b.SizeY / 2, b.Z + b.SizeZ / 2);
+            var (s, _, visible) = Project(c);
+            if (visible && s.X >= 40 && s.Y >= 40 && s.X <= ActualWidth - 40 && s.Y <= ActualHeight - 40) return;
+            _target = c;
+            UpdateCamera();
+        }
+
         public void FrameSelected()
         {
             if (Selected == null || !_items.TryGetValue(Selected, out var it)) return;

@@ -87,7 +87,9 @@ namespace RobotWin.Studio.Pages
             };
             CrossProbe.PartSelected += (sender, _) =>
             {
-                if (!ReferenceEquals(sender, this)) FollowCrossSelection();
+                if (ReferenceEquals(sender, this)) return;
+                if (!IsVisible) _revealCross = true;   // shown later: brought into view then
+                FollowCrossSelection();
             };
             IsVisibleChanged += (_, _) =>
             {
@@ -143,6 +145,9 @@ namespace RobotWin.Studio.Pages
         /// <summary>[crossprobe] Selecting what another page selected (it is not announced back).</summary>
         private bool _crossSelecting;
 
+        /// <summary>[crossprobe] A part was picked on another page while this one was out of sight.</summary>
+        private bool _revealCross;
+
         /// <summary>[crossprobe] The designator a Montaj object stands for ("project id/RefDes" → RefDes).</summary>
         private static string? RefDesOf(WorldObject o) =>
             string.IsNullOrEmpty(o.ProjectRef) ? null : o.ProjectRef!.Substring(o.ProjectRef.LastIndexOf('/') + 1);
@@ -155,15 +160,25 @@ namespace RobotWin.Studio.Pages
         {
             if (Scene.World is not { } world || (CrossProbe.SelectedUid == null && CrossProbe.SelectedRefDes == null)) return;
             var o = world.Objects.FirstOrDefault(x => (x.PartUid != null || x.ProjectRef != null) && CrossProbe.IsSelected(x.PartUid, RefDesOf(x)));
-            if (o == null || string.Equals(Scene.Selected, o.Id, StringComparison.OrdinalIgnoreCase)) return;
-            _crossSelecting = true;
-            try
+            if (o == null) return;
+            if (!string.Equals(Scene.Selected, o.Id, StringComparison.OrdinalIgnoreCase))
             {
-                Scene.Select(o.Id);
+                _crossSelecting = true;
+                try
+                {
+                    Scene.Select(o.Id);
+                }
+                finally
+                {
+                    _crossSelecting = false;
+                }
             }
-            finally
+
+            // [crossprobe] back on this page after the part was picked elsewhere: into view if it is off the screen
+            if (IsVisible && _revealCross)
             {
-                _crossSelecting = false;
+                _revealCross = false;
+                Scene.RevealSelected();
             }
         }
 

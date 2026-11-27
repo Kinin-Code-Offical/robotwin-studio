@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using RobotWin.Studio.Shell;
@@ -19,6 +21,21 @@ namespace RobotWin.Studio.Pages
 
         /// <summary>[crossprobe] Selecting what another page selected (it is not announced back).</summary>
         private bool _crossSelecting;
+
+        /// <summary>[crossprobe] A part was picked on another page while this one was out of sight.</summary>
+        private bool _revealCross;
+
+        /// <summary>
+        /// [crossprobe] Coming back to the sheet after a part was picked on another page: the part is brought into view if it
+        /// is off the screen (the zoom stays), so the context follows from page to page; a view looked at is never moved.
+        /// </summary>
+        private void RevealCrossSelection()
+        {
+            if (!_revealCross) return;
+            _revealCross = false;
+            var part = W.Schematic.Parts.FirstOrDefault(x => CrossProbe.IsSelected(x.Uid, x.RefDes));
+            if (part != null) Dispatcher.BeginInvoke(new Action(() => Canvas.EnsureVisible(part.Position)), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
 
         /// <summary>[workspaces] The tool strips over the sheet.</summary>
         public OverlayHost? ToolOverlays => _overlays;

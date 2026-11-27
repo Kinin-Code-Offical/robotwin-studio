@@ -881,6 +881,20 @@ namespace RobotWin.Studio
                     if (W.Schematic.FindPart(fault.Substring("crossselect:".Length)) is { } part) _schematic.Canvas.SelectItems(new object[] { part });
                 }), System.Windows.Threading.DispatcherPriority.Background);
 
+            if (page == "pcb" && fault != null && fault.StartsWith("crossreveal:", StringComparison.Ordinal))
+            {
+                // [crossprobe] proximity: the board looked at far away, the part picked in the circuit meanwhile, back to the
+                // board: it is brought into view (--page pcb --fault crossreveal:Q1)
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    _pcb.Canvas.ZoomTo(-500, -500);
+                    Navigate("schematic");
+                    var part = W.Schematic.FindPart(fault.Substring("crossreveal:".Length));
+                    if (part != null) _schematic.Canvas.SelectItems(new object[] { part });
+                    Navigate("pcb");
+                }), System.Windows.Threading.DispatcherPriority.Normal);
+            }
+
             if (fault != null && fault.StartsWith("workspace:", StringComparison.Ordinal))   // [workspaces] --fault "workspace:Ölçüm"
                 Dispatcher.BeginInvoke(new Action(() => ApplyWorkspace(fault.Substring("workspace:".Length))), System.Windows.Threading.DispatcherPriority.Background);
 

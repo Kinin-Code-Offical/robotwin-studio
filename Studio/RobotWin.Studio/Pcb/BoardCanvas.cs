@@ -442,6 +442,16 @@ namespace RobotWin.Studio.Pcb
             InvalidateVisual();
         }
 
+        /// <summary>[crossprobe] Pans so a board point (mm) is in view when it is not (the zoom stays).</summary>
+        public void EnsureVisible(double x, double y)
+        {
+            if (ActualWidth < 10) return;
+            double sx = _offset.X + x * _scale, sy = _offset.Y + y * _scale;
+            if (sx >= 40 && sy >= 40 && sx <= ActualWidth - 40 && sy <= ActualHeight - 40) return;
+            _offset = new Vector(ActualWidth / 2 - x * _scale, ActualHeight / 2 - y * _scale);
+            InvalidateVisual();
+        }
+
         public void ZoomTo(double x, double y)
         {
             _scale = Math.Max(_scale, 14);

@@ -71,7 +71,9 @@ namespace RobotWin.Studio.Pages
             SizeChanged += (_, _) => ApplyLayout();
             IsVisibleChanged += (_, _) =>
             {
-                if (IsVisible) ListWorldBoards();
+                if (!IsVisible) return;
+                ListWorldBoards();
+                RevealCrossSelection();   // [crossprobe] the part picked elsewhere, in view
             };
 
             Canvas.SelectionChanged += (_, _) => BuildInspector();
@@ -90,6 +92,7 @@ namespace RobotWin.Studio.Pages
                 if (ReferenceEquals(sender, this)) return;
                 var part = W.Schematic.Parts.FirstOrDefault(x => CrossProbe.IsSelected(x.Uid, x.RefDes));
                 if (part == null || (Canvas.Selection.Count == 1 && ReferenceEquals(SelectedPart, part))) return;
+                if (!IsVisible) _revealCross = true;   // shown later: brought into view then, not now under someone's eyes
                 _crossSelecting = true;
                 try
                 {
