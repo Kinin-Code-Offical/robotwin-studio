@@ -247,10 +247,22 @@ namespace RobotWin.Studio.Editor
         /// <summary>A placed multimeter part was clicked during simulation.</summary>
         public event EventHandler<SchematicPart>? MeterPartClicked;
 
+        /// <summary>[path] The nets of the highlighted current path (they glow with its parts).</summary>
+        private readonly HashSet<string> _highlightNets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>[path] Highlights a current path: its parts as <see cref="HighlightParts"/> does, and the nets between them.</summary>
+        public void HighlightPath(IEnumerable<string> refDes, IEnumerable<string> nets)
+        {
+            HighlightParts(refDes);
+            foreach (var n in nets) _highlightNets.Add(n);
+            InvalidateVisual();
+        }
+
         /// <summary>Selects and briefly highlights parts (used by the fault diagnosis list).</summary>
         public void HighlightParts(IEnumerable<string> refDes)
         {
             _highlight.Clear();
+            _highlightNets.Clear();
             foreach (var r in refDes) _highlight.Add(r);
             _highlightUntil = W.Simulation.WallTime + 3.0;
             _selection.Clear();
@@ -548,6 +560,8 @@ namespace RobotWin.Studio.Editor
                 bool hovered = ReferenceEquals(_hover, wire) || (Simulating && net != null && _hover is SchematicWire hw &&
                                                                   Doc.Wires.IndexOf(hw) is int hi && hi >= 0 && hi < netlist.WireNets.Count && netlist.WireNets[hi] == net);
                 var geo = Polyline(wire.Points);
+                if (net != null && _highlightNets.Contains(net) && Sim.WallTime <= _highlightUntil)   // [path] the current path glows
+                    dc.DrawGeometry(null, MakePen(Color.FromArgb(0x70, 0xE8, 0xA3, 0x3D), 7), geo);
                 if (selected || hovered) dc.DrawGeometry(null, MakePen(Color.FromArgb(selected ? (byte)0x40 : (byte)0x22, Accent.R, Accent.G, Accent.B), 5), geo);
                 dc.DrawGeometry(null, MakePen(selected ? Accent : color, Math.Max(wire.Bus ? 3.2 : 1.3, _scale * (wire.Bus ? 0.3 : 0.1))), geo);
             }
@@ -1142,6 +1156,7 @@ namespace RobotWin.Studio.Editor
         {
             if (AppSettings.Current.SimLayerStress) DrawStressLayer(dc);   // [layers] Editor/SchematicCanvas.Layers.cs
             if (AppSettings.Current.SimLayerFaults) DrawFaultLayer(dc);
+            if (AppSettings.Current.SimLayerDigital) DrawDigitalLayer(dc, netlist);
 
             // Current flow dots along two-terminal parts.
             foreach (var part in AppSettings.Current.ShowCurrentFlow ? SheetParts : Enumerable.Empty<SchematicPart>())

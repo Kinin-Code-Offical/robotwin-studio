@@ -109,7 +109,7 @@ With a sheet open, a path bar appears at the top left: **◀ Back**, **▲ Up** 
    - Click buttons and switches.
    - Turn potentiometers with the mouse wheel.
    - Click a wire: the oscilloscope starts measuring there.
-   - The **Simulation layers** button on the top bar (the layers icon) switches what is drawn over the sheet one by one: **Voltage** (wires coloured by their net's voltage), **Current flow** (dots moving along two-pin parts), **Stress (power, temperature)** (a part using more than 60% of one of its ratings glows from amber to red, with which rating and how much) and **Fault points** (a damaged part ringed in red with the reason, findable when zoomed out). The choices are kept.
+   - The **Simulation layers** button on the top bar (the layers icon) switches what is drawn over the sheet one by one: **Voltage** (wires coloured by their net's voltage), **Current flow** (dots moving along two-pin parts), **Stress (power, temperature)** (a part using more than 60% of one of its ratings glows from amber to red, with which rating and how much), **Digital (logic level)** (1, 0 or ? on the nets of MCU pins and logic gates: 70% of the supply or more is 1, 30% or less is 0, in between undefined: a floating input, a weak pull or outputs fighting) and **Fault points** (a damaged part ringed in red with the reason, findable when zoomed out). The choices are kept.
    - Select a part: **Live values** appear at the top of the Properties panel: its pins' voltages, the current through it (a MOSFET's VGS, ID and power loss; a servo's target and actual angle and current) and every rating it is held to (voltage, current, power, temperature) with its value and limit; the bar under each shows how close it is (green comfortable, amber near, red over). It refreshes a few times a second.
 3. **F5** again pauses, **Shift+F5** stops. **Step 1 ms** advances one step.
 4. Speed: **0.01×**, **0.1×**, **Real time**, **5×**, **20×**.
@@ -121,6 +121,7 @@ The status bar shows simulation time. If the PC cannot keep up with real time it
 A circuit that would burn in real life burns here too: an LED without a resistor, a motor drawing too much current, an electrolytic capacitor fitted backwards… A burned part is marked and written to the **Events** tab.
 
 - In the **Fault finding** tab, **Why?** explains why the part burned.
+- While the simulation runs, a click on a problem in fault finding shows the part's **current path**: the parts in series with it (their current between a tenth and ten times its own) and the supply are marked and the wires between them glow amber; the path closes through the supply to ground. Side branches and idle parts are left out.
 - After fixing the circuit, renew the parts with **Repair damaged parts**.
 - To switch damage off entirely, turn off **Simulation → Part damage (burning out, fuses)**.
 

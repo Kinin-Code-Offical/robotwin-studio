@@ -38,6 +38,9 @@ namespace RobotWin.Studio.Shell
 
         public bool SimLayerFaults { get; set; } = true;
 
+        /// <summary>[layers] The logic level (1, 0, undefined) on the nets of MCU pins and logic gates.</summary>
+        public bool SimLayerDigital { get; set; } = true;
+
         /// <summary>Simulation speed at start (1 = real time).</summary>
         public double DefaultSpeed { get; set; } = 1.0;
 

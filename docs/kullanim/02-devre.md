@@ -109,7 +109,7 @@ Sayfa açıkken sol üstte bir yol çubuğu belirir: **◀ Geri**, **▲ Üst sa
    - Butonlara ve anahtarlara tıklayın.
    - Potansiyometreleri fare tekerleğiyle çevirin.
    - Bir kabloya tıklayın: osiloskop o noktayı ölçmeye başlar.
-   - Üst çubuktaki **Simülasyon katmanları** düğmesi (katman simgesi) şemanın üstündekileri tek tek açıp kapatır: **Gerilim** (teller hattın gerilimine göre renklenir), **Akım akışı** (iki bacaklı parçalarda akan noktalar), **Zorlanma (güç, sıcaklık)** (bir sınırının %60'ından fazlasını kullanan parçanın çevresi sarıdan kırmızıya parlar, yanında hangi sınır ve yüzdesi yazar) ve **Arıza noktaları** (hasar gören parça kırmızı halka ve nedeniyle işaretlenir, uzaklaşınca da bulunur). Seçimler saklanır.
+   - Üst çubuktaki **Simülasyon katmanları** düğmesi (katman simgesi) şemanın üstündekileri tek tek açıp kapatır: **Gerilim** (teller hattın gerilimine göre renklenir), **Akım akışı** (iki bacaklı parçalarda akan noktalar), **Zorlanma (güç, sıcaklık)** (bir sınırının %60'ından fazlasını kullanan parçanın çevresi sarıdan kırmızıya parlar, yanında hangi sınır ve yüzdesi yazar), **Dijital (mantık seviyesi)** (MCU pinlerinin ve mantık kapılarının hatlarında 1, 0 ya da ?: beslemenin %70'i ve üstü 1, %30'u ve altı 0, arası belirsiz: boşta kalan giriş, zayıf çekme ya da çakışan çıkışlar) ve **Arıza noktaları** (hasar gören parça kırmızı halka ve nedeniyle işaretlenir, uzaklaşınca da bulunur). Seçimler saklanır.
    - Bir parçayı seçin: Özellikler panelinin en üstünde **Canlı değerler** çıkar: pinlerinin gerilimi, içinden geçen akım (MOSFET'te VGS, ID ve güç kaybı; servoda hedef ve gerçek açı, akım) ve her sınırı (gerilim, akım, güç, sıcaklık) değeri ve sınırıyla; altındaki çubuk sınıra ne kadar yakın olduğunu gösterir (yeşil rahat, sarı yakın, kırmızı aşılmış). Saniyede birkaç kez yenilenir.
 3. **F5** tekrar basılınca duraklatır, **Shift+F5** durdurur. **1 ms ilerlet** düğmesi tek adım ilerletir.
 4. Hız seçimi: **0.01×**, **0.1×**, **Gerçek zaman**, **5×**, **20×**.
@@ -121,6 +121,7 @@ Durum çubuğunda simülasyon zamanı görünür. Bilgisayar gerçek zamana yeti
 Gerçek hayatta yanacak bir devre burada da yanar: dirençsiz LED, aşırı akım çeken bir motor, ters takılmış bir elektrolitik kondansatör… Yanan parça işaretlenir ve **Olaylar** sekmesine yazılır.
 
 - **Arıza tespiti** sekmesinde **Neden?** düğmesi parçanın neden yandığını açıklar.
+- Simülasyon sürerken arıza tespitindeki bir soruna tıklamak parçanın **akım yolunu** gösterir: onunla seri parçalar (akımı onunkinin onda biri ile on katı arasında olanlar) ve besleme işaretlenir, aralarındaki teller turuncu parlar; yol beslemeden geçip toprağa kapanır. Yan dallar ve boştaki parçalar yolda görünmez.
 - Devreyi düzelttikten sonra **Hasarlı parçaları onar** ile parçaları yenileyin.
 - Hasarı tamamen kapatmak için **Simülasyon → Parça hasarı (yanma, sigorta)** seçeneğini kapatın.
 

@@ -1277,6 +1277,10 @@ namespace RobotTwin.CoreSim.Analog.Devices
         }
 
         public LogicFunction Function { get; }
+
+        /// <summary>The input nodes (the circuit view marks their logic levels).</summary>
+        public System.Collections.Generic.IReadOnlyList<int> Inputs => _inputs;
+
         public int Output { get; }
         public int Supply { get; }
         public int Ground { get; }

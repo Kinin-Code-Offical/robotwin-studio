@@ -8592,6 +8592,8 @@
   "Seçenekler": "Options",
   "Renkli (kapalıyken her şey siyah: toner transferi, film)": "In colour (off: everything black, for toner transfer and film)",
   "Aynala": "Mirror",
+  "Dijital (mantık seviyesi)": "Digital (logic level)",
+  "MCU pinlerinin ve mantık kapılarının hatlarında 1, 0 ya da ? (beslemenin %30'u ile %70'i arası: boşta kalan giriş, zayıf çekme, çakışan çıkışlar)": "1, 0 or ? on the nets of MCU pins and logic gates (? between 30% and 70% of the supply: a floating input, a weak pull, outputs fighting)",
   "Simülasyon katmanları": "Simulation layers",
   "Simülasyon katmanları: gerilim renkleri, akım akışı, zorlanma (güç, sıcaklık), arıza noktaları": "Simulation layers: voltage colours, current flow, stress (power, temperature), fault points",
   "Teller hattın gerilimine göre renklenir (mavi düşük, kırmızı yüksek)": "Wires coloured by their net's voltage (blue low, red high)",

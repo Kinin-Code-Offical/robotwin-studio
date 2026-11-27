@@ -385,9 +385,10 @@ namespace RobotWin.Studio.Examples
             var b = new B("NAND Kapısı");
             var psu = b.Add("psu-5v", -14, 0);
             var s1 = b.Add("toggle-spst", -4, -6);
-            var s2 = b.Add("toggle-spst", -4, 4);
+            // [fix] SW2's line runs below R1's grounded end: at y = 4 R1's lower pin sat on it and tied input B to ground
+            var s2 = b.Add("toggle-spst", -4, 7);
             var r1 = b.Add("res-10000", 3, -1, 270);
-            var r2 = b.Add("res-10000", 6, 9, 270);
+            var r2 = b.Add("res-10000", 6, 12, 270);
             var u = b.Add("74hc00", 12, 0);
             var rl = b.Add("res-330", 20, 0);
             var led = b.Add("led5-blue", 26, 4, 270);

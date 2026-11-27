@@ -1440,7 +1440,15 @@ namespace RobotWin.Studio.Pages
             card.Child = grid;
             card.MouseLeftButtonUp += (_, _) =>
             {
-                if (d.Parts.Count > 0) Canvas.HighlightParts(d.Parts);
+                if (d.Parts.Count == 0) return;
+                if (W.Simulation.IsActive && W.Simulation.Compiled != null)
+                {
+                    // [path] while it runs: the way the part's current goes round, its parts and nets lit
+                    var (parts, nets) = CurrentPath.Trace(W.Schematic.BuildNetlist(W.Library), d.Parts[0], r => W.Simulation.MainDevice(r) is { } dev ? SimulationSession.DeviceCurrent(dev) : double.NaN, IsSupply);
+                    foreach (var p in d.Parts) parts.Add(p);
+                    Canvas.HighlightPath(parts, nets);
+                }
+                else Canvas.HighlightParts(d.Parts);
             };
             card.MouseEnter += (_, _) => card.Background = (Brush)FindResource("B.Hover");
             card.MouseLeave += (_, _) => card.Background = Brushes.Transparent;
@@ -1577,6 +1585,7 @@ namespace RobotWin.Studio.Pages
             switch (fault)
             {
                 case "layers":
+                case "path:D1":
                     // [layers] the LED's resistor much too small: the LED is driven far past its current and the resistor past its power
                     foreach (var p in sch.Parts.Where(p => p.PartId == "resistor")) p.Parameters["resistance"] = "120";
                     break;
@@ -1771,9 +1780,20 @@ namespace RobotWin.Studio.Pages
         }
 
         /// <summary>--snapshot: after the simulated time ran, put instruments and panels in their final state.</summary>
+        /// <summary>[path] A supply part: on every current loop it touches.</summary>
+        private bool IsSupply(string refDes) => W.Simulation.Compiled?.DevicesOf(refDes).Any(d => d is VoltageSource or Battery or CurrentSource or BenchSupply) == true;
+
         public void FinishSnapshot(string? fault)
         {
             var sim = W.Simulation;
+            if (fault != null && fault.StartsWith("path:", StringComparison.Ordinal))
+            {
+                // [path] --fault path:D1 (with the layers circuit): that part's current path lit, as a diagnosis click does
+                var (parts, nets) = CurrentPath.Trace(W.Schematic.BuildNetlist(W.Library), fault.Substring(5), r => sim.MainDevice(r) is { } dev ? SimulationSession.DeviceCurrent(dev) : double.NaN, IsSupply);
+                Canvas.HighlightPath(parts, nets);
+                return;
+            }
+
             if (fault != null && fault.StartsWith("live:", StringComparison.Ordinal))
             {
                 // [live] --fault live:Q1: that part selected while the circuit runs, its live values in the inspector

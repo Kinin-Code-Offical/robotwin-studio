@@ -42,6 +42,7 @@ namespace RobotWin.Studio.Pages
             Layer("Gerilim", "Teller hattın gerilimine göre renklenir (mavi düşük, kırmızı yüksek)", s.SimLayerVoltage, v => s.SimLayerVoltage = v);
             Layer("Akım akışı", "İki bacaklı parçaların üstünde akımın yönünde ve hızında akan noktalar", s.ShowCurrentFlow, v => s.ShowCurrentFlow = v);
             Layer("Zorlanma (güç, sıcaklık)", "Sınırının %60'ından fazlasını kullanan parçanın çevresi sarıdan kırmızıya parlar; hangi sınır ve yüzdesi yazar", s.SimLayerStress, v => s.SimLayerStress = v);
+            Layer("Dijital (mantık seviyesi)", "MCU pinlerinin ve mantık kapılarının hatlarında 1, 0 ya da ? (beslemenin %30'u ile %70'i arası: boşta kalan giriş, zayıf çekme, çakışan çıkışlar)", s.SimLayerDigital, v => s.SimLayerDigital = v);
             Layer("Arıza noktaları", "Hasar gören parça kırmızı halkayla ve nedeniyle işaretlenir; uzaktan da bulunur", s.SimLayerFaults, v => s.SimLayerFaults = v);
             var note = new TextBlock { Text = Lang.T("Yalnız simülasyon sürerken görünür."), Style = (Style)FindResource("Text.Caption"), Margin = new Thickness(0, 6, 0, 0) };
             list.Children.Add(note);
