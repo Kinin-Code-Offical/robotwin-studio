@@ -77,6 +77,10 @@ namespace RobotWin.Studio.Simulation
             };
             sim.InstrumentsChanged += (_, _) => InvalidateVisual();
             sim.Probes.CollectionChanged += (_, _) => InvalidateVisual();
+            // [timebase] the instant the logic analyzer's pointer is on, marked here
+            Action redraw = InvalidateVisual;
+            Loaded += (_, _) => TimeCursor.Changed += redraw;
+            Unloaded += (_, _) => TimeCursor.Changed -= redraw;
         }
 
         private static SimulationSession Sim => Workspace.Current.Simulation;
@@ -214,6 +218,7 @@ namespace RobotWin.Studio.Simulation
                 DrawMarkers(dc, plot, frame);
                 DrawCursors(dc, plot, frame);
                 if (frame != null) DrawDecode(dc, plot, frame);   // [decode]
+                if (frame != null) DrawSharedTime(dc, plot, frame);   // [timebase]
             }
 
             DrawScaleRow(dc, plot);
@@ -709,9 +714,40 @@ namespace RobotWin.Studio.Simulation
         /// <summary>[decode] The cursors moved by a pick (the panel shows its cursor mode).</summary>
         public event EventHandler? CursorsMoved;
 
+        /// <summary>
+        /// [timebase] The instant another instrument's pointer is on (the Code page's timeline, the same session's time),
+        /// as a dashed line across the plot; and this window remembered for "Osiloskopla eşle".
+        /// </summary>
+        private void DrawSharedTime(DrawingContext dc, Rect plot, ScopeFrame frame)
+        {
+            double span = 10.0 * frame.SecondsPerDiv;
+            TimeCursor.ScopeShows(Sim, frame.StartTime, frame.StartTime + span);
+            if (TimeCursor.For(Sim, this) is not { } t || span <= 0) return;
+            double x = plot.Left + (t - frame.StartTime) / span * plot.Width;
+            if (x < plot.Left || x > plot.Right) return;
+            var brush = TryFindResource("B.Accent") as Brush ?? Brushes.DodgerBlue;
+            var pen = new Pen(brush, 1.2) { DashStyle = DashStyles.Dash };
+            pen.Freeze();
+            dc.DrawLine(pen, new Point(x, plot.Top), new Point(x, plot.Bottom));
+            var read = Label("t = " + t.ToString("0.000000", CultureInfo.CurrentCulture) + " s", (brush as SolidColorBrush)?.Color ?? Colors.DodgerBlue, 10.5);
+            double rx = Math.Min(x + 4, plot.Right - read.Width - 2);
+            dc.DrawRectangle(SymbolRenderer.Brush(Back), null, new Rect(rx - 2, plot.Top + 2, read.Width + 4, read.Height));
+            dc.DrawText(read, new Point(rx, plot.Top + 2));
+        }
+
+        protected override void OnMouseLeave(MouseEventArgs e)
+        {
+            base.OnMouseLeave(e);
+            TimeCursor.Set(Sim, this, null);   // [timebase]
+        }
+
         protected override void OnMouseMove(MouseEventArgs e)
         {
             var p = e.GetPosition(this);
+            // [timebase] the instant under the pointer, for the logic analyzer to mark
+            TimeCursor.Set(Sim, this, !Scope.XY && Scope.Frame is { } f && _plot.Contains(p) && _plot.Width > 0
+                ? f.StartTime + (p.X - _plot.Left) / _plot.Width * 10.0 * f.SecondsPerDiv
+                : null);
             if (_dragCursor >= 0)
             {
                 MoveCursor(p);

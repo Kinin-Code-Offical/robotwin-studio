@@ -20,7 +20,36 @@ namespace RobotWin.Studio.Pages
             }
 
             var p = DebugKey is { } key ? FirmwareDebugger.ProgramFor(key) : null;
+            Timeline.Clock = p?.Owner;   // [timebase] the scope's cursor is shared on this session's time
             Timeline.Show(p?.Cosim.Mcu, p?.Time() ?? 0);
+        }
+
+        /// <summary>
+        /// --snapshot debug-timeline-scope: a scope window over the middle half of what the timeline shows and the scope's
+        /// pointer in its middle, as the scope sets them; then "Osiloskopla eşle".
+        /// </summary>
+        internal void LinkTimelineForSnapshot()
+        {
+            ShowTimeline();
+            if (Timeline.Clock is not { } clock) return;
+            double right = Timeline.RightEdge, w = Timeline.Window;
+            Shell.TimeCursor.ScopeShows(clock, right - w * 0.75, right - w * 0.25);
+            OnTimelineToScope(this, new System.Windows.RoutedEventArgs());
+            Shell.TimeCursor.Set(clock, new object(), right - w * 0.4);
+        }
+
+        /// <summary>[timebase] The timeline shows the scope's window (the same seconds, one time axis for both).</summary>
+        private void OnTimelineToScope(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (Shell.TimeCursor.ScopeSpan is not { } s || !ReferenceEquals(s.Clock, Timeline.Clock))
+            {
+                W.Status = Shell.Lang.T("Osiloskopta bu kartın simülasyonundan bir görüntü yok: devrede osiloskobu açıp çalıştırın");
+                return;
+            }
+
+            W.Status = Shell.Lang.T(Timeline.ShowSpan(s.Start, s.End)
+                ? "Zaman çizelgesi osiloskobun penceresini gösteriyor: iki aletin imleci birbirinde görünür"
+                : "Osiloskobun penceresi zaman çizelgesinin kaydında değil (kayıt daha yeni ya da daha eski)");
         }
 
         private void TimelineNoteUpdate()

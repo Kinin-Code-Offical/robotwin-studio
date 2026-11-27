@@ -192,6 +192,7 @@ You can follow Arduino Uno and Nano code line by line. When the board reaches a 
      - each pin that moves or drives is a trace, each interrupt serviced (`TIMER0_OVF`, `USART_UDRE`, `INT0`…) a row with a bar for each run of its handler;
      - the right column measures: a pin's last full period and its high time (`56.6 Hz · high 1.03 ms`), an interrupt's count and longest run (`19× · longest 5.9 µs`);
      - the wheel zooms around the pointer, dragging scrolls back, a double click returns to now; the pointer's time is read out at the top;
+     - one time axis with the scope: **Match the scope** brings the timeline to the seconds the circuit's oscilloscope shows; the instant you point at in one is marked in the other by a dashed accent line (on the timeline an arrow at the edge shows the way when it is outside the window);
      - PWM pins driven by a timer are not edges here (the hardware toggles them without the program): their row gives the frequency and duty they have now. While the TWI is on, A4/A5 are not traced bit by bit.
 4. Go on from there:
 

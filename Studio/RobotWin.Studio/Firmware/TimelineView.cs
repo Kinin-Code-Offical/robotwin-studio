@@ -31,6 +31,28 @@ namespace RobotWin.Studio.Firmware
         {
             ClipToBounds = true;
             Focusable = false;
+            // [timebase] the instant the scope's pointer is on, marked here
+            Action redraw = InvalidateVisual;
+            Loaded += (_, _) => Shell.TimeCursor.Changed += redraw;
+            Unloaded += (_, _) => Shell.TimeCursor.Changed -= redraw;
+        }
+
+        /// <summary>[timebase] The session whose time this is (the program's owner), shared with the scope's cursor.</summary>
+        public object? Clock { get; set; }
+
+        /// <summary>
+        /// [timebase] Shows the seconds from <paramref name="start"/> to <paramref name="end"/> (the scope's window: "Osiloskopla
+        /// eşle"), as far as the recording reaches; false when it is not in the recording at all.
+        /// </summary>
+        public bool ShowSpan(double start, double end)
+        {
+            if (_mcu == null || end <= start || end < Oldest || start > _nowTime) return false;
+            Window = Math.Max(20e-6, Math.Min(2.0, end - start));
+            _offset = _nowTime - end;
+            Clamp();
+            InvalidateVisual();
+            ViewChanged?.Invoke();
+            return true;
         }
 
         /// <summary>Seconds across the plot.</summary>
@@ -111,6 +133,8 @@ namespace RobotWin.Studio.Firmware
         {
             var p = e.GetPosition(this);
             _pointer = p.X >= PlotLeft && p.X <= PlotRight ? p.X : null;
+            // [timebase] the instant under the pointer, for the scope to mark
+            Shell.TimeCursor.Set(Clock, this, _pointer is { } at && _mcu != null ? RightEdge - Window + (at - PlotLeft) / (PlotRight - PlotLeft) * Window : null);
             if (_drag is { } start)
             {
                 _offset = _dragOffset + (p.X - start.X) / (PlotRight - PlotLeft) * Window;
@@ -123,6 +147,7 @@ namespace RobotWin.Studio.Firmware
 
         protected override void OnMouseLeave(MouseEventArgs e)
         {
+            Shell.TimeCursor.Set(Clock, this, null);   // [timebase]
             _pointer = null;
             InvalidateVisual();
         }
@@ -308,6 +333,35 @@ namespace RobotWin.Studio.Firmware
 
             dc.DrawLine(border, new Point(x0, AxisHeight), new Point(x0, Math.Max(y, AxisHeight)));
             dc.DrawLine(border, new Point(x1, AxisHeight), new Point(x1, Math.Max(y, AxisHeight)));
+
+            // [timebase] the scope's pointer: a dashed accent line, or an arrow at the edge it lies beyond
+            if (Shell.TimeCursor.For(Clock, this) is { } st)
+            {
+                double sx = x0 + (st - left) / Window * span;
+                if (sx >= x0 && sx <= x1)
+                {
+                    var linked = new Pen(accent, 1.2) { DashStyle = DashStyles.Dash };
+                    dc.DrawLine(linked, new Point(sx, AxisHeight - 2), new Point(sx, Math.Max(y, h)));
+                    var sread = T(Shell.Lang.T("osiloskop") + " t = " + st.ToString("0.000000", CultureInfo.CurrentCulture) + " s", accent, 11);
+                    double srx = Math.Min(sx + 4, w - sread.Width - 4);
+                    dc.DrawRectangle(Res("B.Surface", Brushes.Black), null, new Rect(srx - 2, AxisHeight + 2, sread.Width + 4, sread.Height));
+                    dc.DrawText(sread, new Point(srx, AxisHeight + 2));
+                }
+                else
+                {
+                    double ax = sx < x0 ? x0 + 2 : x1 - 2, dir = sx < x0 ? -1 : 1, ay = AxisHeight + 8;
+                    var head = new StreamGeometry();
+                    using (var g = head.Open())
+                    {
+                        g.BeginFigure(new Point(ax + dir * 6, ay), true, true);
+                        g.LineTo(new Point(ax, ay - 5), true, true);
+                        g.LineTo(new Point(ax, ay + 5), true, true);
+                    }
+
+                    head.Freeze();
+                    dc.DrawGeometry(accent, null, head);
+                }
+            }
 
             if (_pointer is { } px)
             {

@@ -238,7 +238,13 @@
                     </ScrollViewer>
                 </DockPanel>
                 <DockPanel x:Name="TimelinePane" Visibility="Collapsed" Margin="10,6,10,6">
-                    <TextBlock x:Name="TimelineNote" DockPanel.Dock="Top" Style="{StaticResource Text.Caption}" TextTrimming="CharacterEllipsis" Margin="0,0,0,4"/>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource Btn.Ghost}" Padding="8,0" MinHeight="22" Margin="8,0,0,0" Click="OnTimelineToScope"
+                                ToolTip="Zaman çizelgesi osiloskobun gösterdiği saniyeleri gösterir; birinde gezdiğiniz an öbüründe kesikli çizgiyle işaretlenir">
+                            <TextBlock Text="Osiloskopla eşle" Style="{StaticResource Text.Caption}" Foreground="{DynamicResource B.Text}"/>
+                        </Button>
+                        <TextBlock x:Name="TimelineNote" Style="{StaticResource Text.Caption}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                    </DockPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <fw:TimelineView x:Name="Timeline" MinHeight="120"/>
                     </ScrollViewer>

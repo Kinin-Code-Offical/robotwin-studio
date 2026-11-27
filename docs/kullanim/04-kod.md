@@ -192,6 +192,7 @@ Arduino Uno ve Nano kodunu satır satır izleyebilirsiniz. Kart bir kesme noktas
      - değişen ya da çıkış olan her pin bir iz, servis edilen her kesme (`TIMER0_OVF`, `USART_UDRE`, `INT0`…) bir satır: işleyicinin çalıştığı süre bir çubuk;
      - sağ sütun ölçer: pinin son tam periyodu ve yüksek kaldığı süre (`56.6 Hz · yüksek 1.03 ms`), kesmenin sayısı ve en uzun çalışması (`19× · en uzun 5.9 µs`);
      - tekerlek imlecin altındaki anı sabit tutarak yakınlaştırır, sürükleme geri kaydırır, çift tık şimdiye döner; imlecin zamanı üstte yazar;
+     - osiloskopla tek zaman ekseni: **Osiloskopla eşle** zaman çizelgesini devredeki osiloskobun gösterdiği saniyelere getirir; birinde gezdiğiniz an öbüründe kesikli vurgu çizgisiyle işaretlenir (zaman çizelgesinde pencerenin dışındaysa kenarda bir ok o yönü gösterir);
      - zamanlayıcının kendisinin sürdüğü PWM pinleri kenar olarak görünmez (donanım onları program yazmadan çevirir): satırları o anki frekans ve doluluğu yazar. TWI açıkken A4/A5 bayt bayt izlenmez.
 4. Buradan devam edin:
 

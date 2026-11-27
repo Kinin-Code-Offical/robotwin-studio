@@ -221,6 +221,11 @@ namespace RobotWin.Studio
 
             if (front == "registers") _code.ShowRegistersTab();
             if (front == "timeline") _code.ShowTimelineTab();
+            if (front == "timeline-scope")   // [timebase] the scope's window taken over, its pointer marked
+            {
+                _code.ShowTimelineTab();
+                _code.LinkTimelineForSnapshot();
+            }
             log.AppendLine(failures == 0 ? "TÜMÜ GEÇTİ" : failures + " HATA");
             File.WriteAllText(logPath, log.ToString());
         }
