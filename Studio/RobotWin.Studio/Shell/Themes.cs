@@ -355,6 +355,9 @@ namespace RobotWin.Studio.Shell
         public static Color CodeLine { get; private set; } = Color.FromRgb(0x17, 0x17, 0x1A);
         public static Color GutterBorder { get; private set; } = Color.FromRgb(0x24, 0x24, 0x28);
         public static Color GutterText { get; private set; } = Color.FromRgb(0x55, 0x55, 0x5C);
+
+        /// <summary>The colour half way between two (a level between two of the theme's text tokens).</summary>
+        private static Color Between(Color a, Color b) => Color.FromRgb((byte)((a.R + b.R + 1) / 2), (byte)((a.G + b.G + 1) / 2), (byte)((a.B + b.B + 1) / 2));
         public static Color GutterCurrent { get; private set; } = Color.FromRgb(0xC8, 0xC8, 0xCE);
 
         /// <summary>The PCB editor: around the board, the board, its edge, the silkscreen, ratsnest, drawings and the grid.</summary>
@@ -386,7 +389,7 @@ namespace RobotWin.Studio.Shell
                 Board = t["Surface"];
                 CodeLine = t["Surface"];
                 GutterBorder = t["Border"];
-                GutterText = Color.FromRgb(0x55, 0x55, 0x5C);
+                GutterText = Between(t["TextDisabled"], t["TextMuted"]);   // [theme] line numbers: quiet, yet over 3:1 on the editor
                 GutterCurrent = Color.FromRgb(0xC8, 0xC8, 0xCE);
                 PcbBack = t["Canvas"];
                 PcbSubstrate = Color.FromRgb(0x15, 0x16, 0x18);
@@ -412,7 +415,7 @@ namespace RobotWin.Studio.Shell
             Board = t["Surface"];
             CodeLine = t["Hover"];
             GutterBorder = t["Border"];
-            GutterText = t["TextDisabled"];
+            GutterText = Between(t["TextDisabled"], t["TextMuted"]);   // [theme] line numbers are not disabled text: between it and muted
             GutterCurrent = t["TextSecondary"];
             // A light PCB view: a pale board on the theme's canvas, the silkscreen as dark print; copper keeps its colours.
             PcbBack = t["Canvas"];

@@ -738,7 +738,8 @@ namespace RobotWin.Studio.Editor
         {
             double w = def.HalfWidth, h = def.HalfHeight;
             c.Dc.DrawRoundedRectangle(Brush(Color.FromRgb(0x14, 0x2C, 0x52)), c.Line, new Rect(-w, -h, 2 * w, 2 * h), 0.5, 0.5);
-            foreach (var pin in def.Pins) Text(c, pin.Name, -w + 0.35, pin.Y - 0.42, 0.7);
+            var silk = Brush(Color.FromRgb(0xE6, 0xE8, 0xEE));   // [theme] white print on the blue board, in every theme (as on the real module)
+            foreach (var pin in def.Pins) Text(c, pin.Name, -w + 0.35, pin.Y - 0.42, 0.7, silk);
             bool oled = def.SymbolVariant == "OLED";
             double left = -w + 2.6, right = w - 0.7;
             double sw = right - left;
@@ -771,7 +772,7 @@ namespace RobotWin.Studio.Editor
                 default:
                     if (!oled) c.Dc.DrawRectangle(Brush(Color.FromRgb(0x12, 0x20, 0x4A)), null, screen);
                     string model = parameters.TryGetValue("model", out var m) ? m : def.Name;
-                    Text(c, model, left + 0.4, -0.45, 0.8);
+                    Text(c, model, left + 0.4, -0.45, 0.8, silk);
                     break;
             }
         }
@@ -1051,15 +1052,19 @@ namespace RobotWin.Studio.Editor
             MonoText(c, line2, lcd.Left + 0.2, lcd.Top + 1.3, 1.0, amber, true, lcd.Width - 0.4);
             bool cc = visual.SupplyMode == "CC";
             bool off = visual.SupplyMode == "OFF";
+            // [theme] the lamps' names and ON/OFF are printed on the front panel, whose colour is the theme's: ink that reads on it
+            bool lightPanel = c.Fill is SolidColorBrush pf && (0.2126 * pf.Color.R + 0.7152 * pf.Color.G + 0.0722 * pf.Color.B) / 255.0 > 0.5;
+            var label = lightPanel ? Color.FromRgb(0x4A, 0x4A, 0x52) : Color.FromRgb(0xA0, 0xA0, 0xA8);
             void Lamp(string text, double x, bool lit, Color col)
             {
                 c.Dc.DrawEllipse(Brush(lit ? col : Color.FromRgb(0x2A, 0x2A, 0x2E)), null, new Point(x, 1.25), 0.22, 0.22);
-                MonoText(c, text, x + 0.3, 0.95, 0.55, Color.FromRgb(0xA0, 0xA0, 0xA8));
+                MonoText(c, text, x + 0.3, 0.95, 0.55, label);
             }
 
             Lamp("CV", -2.4, visual.HasState && !cc && !off, green);
             Lamp("CC", -0.6, visual.HasState && cc, Color.FromRgb(0xE5, 0x48, 0x4D));
-            MonoText(c, off ? "OFF" : "ON", 1.3, 0.95, 0.55, off ? Color.FromRgb(0x6C, 0x6C, 0x74) : green);
+            var onInk = lightPanel ? Color.FromRgb(0x1C, 0x7A, 0x43) : green;
+            MonoText(c, off ? "OFF" : "ON", 1.3, 0.95, 0.55, off ? (lightPanel ? Color.FromRgb(0x5A, 0x5A, 0x62) : Color.FromRgb(0x6C, 0x6C, 0x74)) : onInk);
             Text(c, "+", 0.4, -2.95, 0.9);
             Text(c, "−", 0.4, 2.15, 0.9);
         }
