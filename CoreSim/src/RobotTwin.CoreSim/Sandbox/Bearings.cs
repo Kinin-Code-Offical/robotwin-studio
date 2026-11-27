@@ -48,14 +48,14 @@ namespace RobotTwin.CoreSim.Sandbox
 
         /// <summary>The bearings that fit a hinge or a slider.</summary>
         public static IEnumerable<BearingSpec> For(WorldJointKind kind) =>
-            kind == WorldJointKind.Fixed ? Enumerable.Empty<BearingSpec>() : All.Where(b => b.Linear == (kind == WorldJointKind.Slider));
+            kind is not (WorldJointKind.Hinge or WorldJointKind.Slider) ? Enumerable.Empty<BearingSpec>() : All.Where(b => b.Linear == (kind == WorldJointKind.Slider));
 
         /// <summary>
         /// The friction a joint gets per newton of load: μ·bore/2 (m) for a hinge, μ for a slider; 0 without a bearing.
         /// </summary>
         public static double LoadFriction(WorldJoint j)
         {
-            if (Find(j.Bearing) is not { } b || j.Kind == WorldJointKind.Fixed || b.Linear != (j.Kind == WorldJointKind.Slider)) return 0;
+            if (Find(j.Bearing) is not { } b || !j.Axial || b.Linear != (j.Kind == WorldJointKind.Slider)) return 0;
             if (b.Linear) return b.Mu;
             double bore = j.BearingBore > 0 ? j.BearingBore : b.Bore;
             return b.Mu * bore / 2000;

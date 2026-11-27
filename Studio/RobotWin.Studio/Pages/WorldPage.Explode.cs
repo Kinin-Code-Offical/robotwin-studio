@@ -392,6 +392,16 @@ namespace RobotWin.Studio.Pages
             ShowTool(dlg);
         }
 
+        /// <summary>The first text block under <paramref name="root"/> whose text starts with <paramref name="start"/>.</summary>
+        private static TextBlock? FindText(DependencyObject root, string start)
+        {
+            if (root is TextBlock t && t.Text.StartsWith(start, StringComparison.Ordinal)) return t;
+            int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(root);
+            for (int i = 0; i < n; i++)
+                if (FindText(System.Windows.Media.VisualTreeHelper.GetChild(root, i), start) is { } found) return found;
+            return null;
+        }
+
         private static Button? FindButton(DependencyObject root, string text)
         {
             if (root is Button b && (b.Content as string) == text) return b;
@@ -462,6 +472,49 @@ namespace RobotWin.Studio.Pages
                 InspectorPane.ScrollToBottom();
             }
 
+            int sixAt = Array.IndexOf(args, "--six-axis");
+            if (sixAt >= 0 && sixAt + 1 < args.Length && World is { } sw)   // [d6] a character / configurable joint's card
+            {
+                // a shoulder: a fixed block with an arm hanging from it
+                var shoulder = new WorldObject
+                {
+                    Id = sw.NextId("O"), Name = "Omuz", Kind = WorldObjectKind.Body, Shape = "box", SizeX = 0.06, SizeY = 0.06, SizeZ = 0.06, MassKg = 0.5, IsStatic = true,
+                    Pose = new WorldPose { X = 0.35, Y = 0.25, Z = 0.4 }
+                };
+                sw.Objects.Add(shoulder);
+                var so = new WorldObject
+                {
+                    Id = sw.NextId("O"), Name = "Kol", Kind = WorldObjectKind.Body, Shape = "box", SizeX = 0.03, SizeY = 0.03, SizeZ = 0.22, MassKg = 0.3,
+                    Pose = new WorldPose { X = 0.35, Y = 0.25, Z = 0.26 }
+                };
+                sw.Objects.Add(so);
+                var sj = new WorldJoint { Id = sw.NextId("J"), ObjectA = so.Id, ObjectB = shoulder.Id, AnchorX = 0.35, AnchorY = 0.25, AnchorZ = 0.37, AxisZ = -1 };
+                sw.Joints.Add(sj);
+                Scene.Rebuild();
+                Scene.Select(so.Id);
+
+                if (args[sixAt + 1] == "character")
+                {
+                    sj.Kind = WorldJointKind.Character;
+                    (sj.Lower, sj.Upper, sj.SwingLimit1, sj.SwingLimit2) = (WorldPhysics.CharacterLowTwist, WorldPhysics.CharacterHighTwist, WorldPhysics.CharacterSwing, 25.0);
+                }
+                else
+                {
+                    sj.Kind = WorldJointKind.Configurable;
+                    (sj.MotionX, sj.MotionY, sj.MotionZ) = (AxisMotion.Limited, AxisMotion.Locked, AxisMotion.Locked);
+                    (sj.AngularMotionX, sj.AngularMotionY, sj.AngularMotionZ) = (AxisMotion.Limited, AxisMotion.Free, AxisMotion.Locked);
+                    (sj.LinearLimit, sj.Lower, sj.Upper) = (0.04, -45.0, 45.0);
+                    (sj.LinearDriveStiffness, sj.LinearDriveDamping, sj.TargetX) = (500.0, 20.0, 0.01);
+                }
+
+                Scene.FrameSelected();
+                BuildInspector();
+                InspectorPane.UpdateLayout();
+                InspectorPane.ScrollToBottom();
+                InspectorPane.UpdateLayout();
+                if (FindText(Inspector, "Mekanik bağlantılar") is { } caption) caption.BringIntoView();
+            }
+
             if (args.Contains("--pattern")) ShowPatternDialog();   // [pattern] the dialog open
             if (args.Contains("--overlays")) ShowOverlayMenu(OverlayButton);   // [overlays] the menu open
             if (args.Contains("--cam") && World is { } cw)   // [cam] a camshaft and its follower, coupled, the shaft picked
@@ -526,6 +579,13 @@ namespace RobotWin.Studio.Pages
                     st.WorldGridOriginYMm = gs.Pose.Y * 1000;
                 }
 
+                ApplyGridSettings();
+            }
+
+            int ga = Array.IndexOf(args, "--grid-angle");   // [grid] --grid-angle <deg>: a turned grid (not saved)
+            if (ga >= 0 && ga + 1 < args.Length && double.TryParse(args[ga + 1], NumberStyles.Float, CultureInfo.InvariantCulture, out double gridAngle))
+            {
+                AppSettings.Current.WorldGridAngleDeg = gridAngle;
                 ApplyGridSettings();
             }
 

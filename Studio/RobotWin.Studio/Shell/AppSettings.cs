@@ -117,6 +117,9 @@ namespace RobotWin.Studio.Shell
 
         public double WorldGridOriginYMm { get; set; }
 
+        /// <summary>[grid] The grid's turn about the vertical through its position (°), Unity's grid rotation: lines and snapping follow it.</summary>
+        public double WorldGridAngleDeg { get; set; }
+
         /// <summary>[grid] The plane the grid is shown on: "xy" (the floor), "xz" or "yz" (upright, through the grid's position).</summary>
         public string WorldGridPlane { get; set; } = "xy";
 

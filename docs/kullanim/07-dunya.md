@@ -380,12 +380,28 @@ Bir nesne seçiliyken **Bağla** (B) aracıyla başka bir nesneye tıklayın:
 | **… gövdesine sabitle (vida / yapıştırıcı)** | İki nesne tek parça gibi hareket eder |
 | **Menteşe ile bağla (serbest döner)** | Bir eksen etrafında serbest döner |
 | **Kızakla bağla (doğrusal kayar)** | Bir doğru boyunca kayar |
+| **Karakter eklemiyle bağla (omuz / kalça: sınırlı burulur ve salınır)** | Bağlantı noktası yerinde kalır; parça sınırlar içinde burulur ve salınır |
+| **Yapılandırılabilir eklemle bağla (her eksen kilitli / sınırlı / serbest)** | Altı eksenin her biri ayrı ayrı kilitli, sınırlı ya da serbest |
 
 En çok iki eklemle birbirine bağlı parçalar birbiriyle çarpışmaz. Bir nesneyi sürüklediğinizde ona takılı her şey de gelir. Bağlantıyı kaldırmak için denetçide **Bağlantıyı çöz**.
 
 ### Sınırlar ve kırılma
 
 Denetçide her bağlantının altında katlanmış bir **Kırılma** bölümü vardır (menteşe ve kızakta **Sınırlar ve kırılma**); Unity'deki eklem sınırları ve Break Force / Break Torque gibidir. **Hareket sınırlı** işaretlenince menteşe **Alt sınır** ile **Üst sınır** arasında döner (°), kızak o aralıkta kayar (mm). **Kırılma kuvveti** (N) ve **Kırılma torku** (N·m) aşılınca bağlantı kopar, olaylara yazılır ve parçalar serbest kalır; örneğin bir konsolun ucuna asılan yük köşebendi eğip koparır. 0 kopmaz demektir; vidalanmış ya da yapıştırılmış bir bağlantıda kuvvet verilmedikçe bağlantı türünün kendi dayanımı geçerlidir.
+
+### Karakter ve yapılandırılabilir eklem
+
+Unity'deki Character Joint ve Configurable Joint gibidir; ikisi de aynı altı eksenli eklemdir. Eklemin çerçevesinde X eklemin eksenidir, Y ikinci eksendir (salınım ekseni), Z ikisine diktir. **Karakter eklemi** omuz, kalça ya da bir kuklanın uzuvları içindir. Bağlantı noktası yerinde kalır, parça eksen çevresinde **Burulma alt sınırı** ile **Burulma üst sınırı** arasında döner (yeni eklemde −20° … 70°). Eksenden sapması **Salınım 1 sınırı** (Y çevresinde) ile **Salınım 2 sınırı**nın (Z çevresinde) çizdiği elips koninin içinde kalır (yeni eklemde 40°). 0° o salınımı kilitler.
+
+**Yapılandırılabilir eklemde** denetçideki ızgarada her eksenin **Doğrusal** (kayma) ve **Açısal** (dönme) hareketi ayrı seçilir: **Kilitli**, **Sınırlı** ya da **Serbest**. Unity'deki gibi yeni eklemde hepsi serbesttir. Altında yalnız sınırlı eksenlerin alanları çıkar:
+
+- Sınırlı kaymalar tek bir **Doğrusal sınır** (mm) paylaşır: üçü sınırlıysa bir küre, ikisi bir disk, biri bir doğru parçası.
+- Sınırlı burulmanın alt ve üst sınırı vardır.
+- Salınımların her birinin kendi sınırı vardır; ikisi de sınırlıysa elips koni olur.
+
+Katlanmış **Sürücüler** bölümü parçayı bir hedefe çeken yay ve sönümdür. **Kayma yayı** (N/mm) ve **Kayma sönümü** parçayı **Hedef konum**a (eklem çerçevesinde, mm) çeker. **Dönme yayı** (N·mm/°) ve **Dönme sönümü** de onu **Hedef burulma / salınım**a döndürür (Unity'deki Slerp Drive). Sürücüler kilitli eksenlerde çalışmaz. Yaylar örtük çözülür, bu yüzden sert yay da kararlı kalır.
+
+Örnek: 30° koniyle asılı bir kol 51°'ye kadar çıkacak bir itişte 30°'de durur. Bağlantı noktası 0,2 mm içinde kalır. 5 cm doğrusal sınırlı dikey bir kızak yerçekimiyle 5 cm iner ve orada durur.
 
 ### Vidalama, yapıştırma, bant, kelepçe, lehim
 
@@ -761,7 +777,7 @@ Araç çubuğundaki ızgara düğmesi Unity'deki **Grid and Snap** penceresini a
 - **Izgaraya yakala:** taşıma, döndürme ve boyut sürüklemeleri adımlara oturur. Kapalıyken her sürükleme serbesttir; açıkken Alt basılı tutmak o sürüklemeyi serbest bırakır.
 - **Izgarayı göster** ve **Saydamlık:** zemindeki çizgiler. İnce çizgiler taşıma adımında, kalın çizgiler her on adımda bir çizilir (çok küçük adımlarda çizgiler sıklaşmasın diye ikiye katlanır). **Düzlem**: XY yalnız zemindeki ızgaradır; XZ ya da YZ seçilince zemine ek olarak ızgaranın yerinden geçen dik, saydam bir ızgara da çizilir (Unity'deki ızgara düzlemi).
 - **Adımlar:** **Taşı** (seçili uzunluk biriminde; mm, cm, inç, mil yazılabilir), **Döndür** (derece; döndür tutamacı ve Ctrl+E bu kadar çevirir), **Boyut** (ölçek tutamacı; 0 ise taşıma adımı). **X, Y ve Z aynı adım** kapatılınca Y ve Z kendi taşıma adımlarını alır (Unity'deki bağlı adım); sürüklemeler ve tutamaç her eksende kendi adımına oturur, zemin çizgileri de buna göre çizilir.
-- **Izgaranın yeri** (Unity'deki Grid Position): ızgara çizgilerinin başladığı X ve Y (mm); yakalama da oradan sayılır. **Seçiliden al** onu seçili parçanın yerine taşır, **Dünyaya sıfırla** dünyanın başlangıç noktasına döndürür.
+- **Izgaranın yeri** (Unity'deki Grid Position): ızgara çizgilerinin başladığı X ve Y (mm); yakalama da oradan sayılır. **Dönüş °** ızgarayı o noktadan geçen dikey çevresinde döndürür: çizgiler, dik ızgara düzlemi ve X / Y yakalama onu izler, böylece açılı duran bir duvar ya da makine boyunca parçalar dizilir. Döndürülmüş ızgarada eksen okları parçayı kendi doğrultusunda tam adımlarla taşır. **Seçiliden al** ızgarayı seçili parçanın yerine ve dönüşüne taşır, **Dünyaya sıfırla** dünyanın başlangıç noktasına ve 0°'ye döndürür.
 - **Seçiliyi ızgaraya oturt** seçili parçayı, üstüne takılanlarla birlikte, X ve Y'de en yakın ızgara noktasına taşır. **Varsayılana dön** 5 mm, 15°, bağlı adım, dünyanın başlangıcındaki zemin ızgarasına döner.
 
 Ayarlar kaydedilir; her dünya ve montaj onlarla açılır.

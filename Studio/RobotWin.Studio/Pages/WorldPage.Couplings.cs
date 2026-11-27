@@ -17,7 +17,7 @@ namespace RobotWin.Studio.Pages
     {
         /// <summary>The joints that move this object: the shaft a gear on it turns on, the rail it slides along.</summary>
         private static List<WorldJoint> MovingJoints(WorldDocument world, WorldObject o) =>
-            world.Joints.Where(j => j.ObjectA == o.Id && j.Kind != WorldJointKind.Fixed).ToList();
+            world.Joints.Where(j => j.ObjectA == o.Id && j.Axial).ToList();
 
         private static string JointName(WorldDocument world, WorldJoint j) =>
             (world.Find(j.ObjectA)?.Name ?? j.RosName) + " (" + (j.Kind == WorldJointKind.Hinge ? "menteşe" : "kızak") + ")";
@@ -127,7 +127,7 @@ namespace RobotWin.Studio.Pages
             };
             foreach (var mine in own)
             {
-                foreach (var other in world.Joints.Where(x => x.Kind != WorldJointKind.Fixed && x.ObjectA != o.Id && !Coupled(world, mine, x)).Take(24))
+                foreach (var other in world.Joints.Where(x => x.Axial && x.ObjectA != o.Id && !Coupled(world, mine, x)).Take(24))
                 {
                     var partner = new MenuItem { Header = (own.Count > 1 ? JointName(world, mine) + " → " : string.Empty) + JointName(world, other) };
                     foreach (var kind in new[] { WorldCoupling.Gear, WorldCoupling.Belt, WorldCoupling.Screw, WorldCoupling.Cam })

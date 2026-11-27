@@ -664,6 +664,13 @@ namespace RobotWin.Studio.Pages
             var slider = new MenuItem { Header = "Kızakla bağla (doğrusal kayar)" };
             slider.Click += (_, _) => MakeJoint(source, targetId, WorldJointKind.Slider, string.Empty);
             menu.Items.Add(slider);
+            // [d6] Unity's character and configurable joints
+            var character = new MenuItem { Header = "Karakter eklemiyle bağla (omuz / kalça: sınırlı burulur ve salınır)" };
+            character.Click += (_, _) => MakeJoint(source, targetId, WorldJointKind.Character, string.Empty);
+            menu.Items.Add(character);
+            var configurable = new MenuItem { Header = "Yapılandırılabilir eklemle bağla (her eksen kilitli / sınırlı / serbest)" };
+            configurable.Click += (_, _) => MakeJoint(source, targetId, WorldJointKind.Configurable, string.Empty);
+            menu.Items.Add(configurable);
             menu.IsOpen = true;
         }
 
@@ -721,7 +728,7 @@ namespace RobotWin.Studio.Pages
             {
                 world.Joints.RemoveAll(j => j.ObjectA == childId && j.Kind == WorldJointKind.Fixed && kind == WorldJointKind.Fixed);
                 var pf = Scene.PortOf(parentId);
-                world.Joints.Add(new WorldJoint
+                var made = new WorldJoint
                 {
                     Id = world.NextId("J"),
                     Kind = kind,
@@ -734,7 +741,22 @@ namespace RobotWin.Studio.Pages
                     AxisX = pf?.Axis.X ?? 0,
                     AxisY = pf?.Axis.Y ?? 0,
                     AxisZ = pf?.Axis.Z ?? 1
-                });
+                };
+                if (kind == WorldJointKind.Character)
+                {
+                    // [d6] Unity's defaults: twist −20° … 70°, swings 40°
+                    made.Lower = WorldPhysics.CharacterLowTwist;
+                    made.Upper = WorldPhysics.CharacterHighTwist;
+                    made.SwingLimit1 = made.SwingLimit2 = WorldPhysics.CharacterSwing;
+                }
+                else if (kind == WorldJointKind.Configurable)
+                {
+                    // [d6] as Unity makes one: every axis free until set
+                    made.MotionX = made.MotionY = made.MotionZ = AxisMotion.Free;
+                    made.AngularMotionX = made.AngularMotionY = made.AngularMotionZ = AxisMotion.Free;
+                }
+
+                world.Joints.Add(made);
             });
             SetTool(WorldTool.Select);
             Scene.Select(childId);
@@ -1284,7 +1306,14 @@ namespace RobotWin.Studio.Pages
             foreach (var j in joints)
             {
                 var other = world.Find(j.ObjectA == o.Id ? j.ObjectB : j.ObjectA);
-                string kind = j.Kind switch { WorldJointKind.Hinge => "menteşe", WorldJointKind.Slider => "kızak", _ => "sabit" };
+                string kind = j.Kind switch
+                {
+                    WorldJointKind.Hinge => "menteşe",
+                    WorldJointKind.Slider => "kızak",
+                    WorldJointKind.Character => "karakter",
+                    WorldJointKind.Configurable => "yapılandırılabilir",
+                    _ => "sabit"
+                };
                 string port = j.ObjectA == o.Id && !string.IsNullOrEmpty(j.PortB) ? (Scene.PortOf(j.ObjectB!)?.Label ?? j.PortB) : string.Empty;
                 var grid = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
                 var joint = j;
@@ -1305,7 +1334,8 @@ namespace RobotWin.Studio.Pages
                 Inspector.Children.Add(grid);
                 if (j.Kind == WorldJointKind.Fixed && string.IsNullOrEmpty(j.PortB)) FasteningRow(j);   // [fasten] Pages/WorldPage.Surface.cs
                 if (j.Driven && j.ObjectA == o.Id) DriveRow(j);   // [drive] an imported robot's axis
-                if (j.Kind != WorldJointKind.Fixed && j.ObjectA == o.Id) CouplingRows(world, j, couplings);   // [couple] Pages/WorldPage.Couplings.cs
+                if (j.Axial && j.ObjectA == o.Id) CouplingRows(world, j, couplings);   // [couple] Pages/WorldPage.Couplings.cs
+                if (j.SixAxis && j.ObjectA == o.Id) SixAxisRows(j);   // [d6] Pages/WorldPage.SixAxis.cs
                 if (j.Sprung && j.ObjectA == o.Id) SpringRows(j);   // [spring] Pages/WorldPage.Couplings.cs
                 if (j.Bearing != null && j.ObjectA == o.Id) BearingRows(j);   // [bearing] Pages/WorldPage.Couplings.cs
                 if (j.ObjectA == o.Id && j.MimicOf == null) JointLimitRows(j);   // [break] limits, break force and torque (Pages/WorldPage.JointLimits.cs)

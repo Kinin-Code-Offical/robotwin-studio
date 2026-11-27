@@ -259,7 +259,17 @@ namespace RobotTwin.CoreSim.Sandbox
         Hinge,
 
         /// <summary>Slides along an axis (linear rail).</summary>
-        Slider
+        Slider,
+
+        /// <summary>
+        /// [d6] Unity's character joint: a ball joint whose turns are limited, a twist about the axis between
+        /// <see cref="WorldJoint.Lower"/> and <see cref="WorldJoint.Upper"/> and two swings within
+        /// <see cref="WorldJoint.SwingLimit1"/> / <see cref="WorldJoint.SwingLimit2"/> (a shoulder, a hip, a ragdoll's limbs).
+        /// </summary>
+        Character,
+
+        /// <summary>[d6] Unity's configurable joint: each slide and turn of the joint frame locked, limited or free, with drives.</summary>
+        Configurable
     }
 
     /// <summary>
@@ -390,7 +400,93 @@ namespace RobotTwin.CoreSim.Sandbox
         public double SpringDamping { get; set; }
 
         [System.Text.Json.Serialization.JsonIgnore]
-        public bool Sprung => Kind != WorldJointKind.Fixed && (SpringStiffness > 0 || SpringDamping > 0);
+        public bool Sprung => Axial && (SpringStiffness > 0 || SpringDamping > 0);
+
+        /// <summary>A hinge or a slider: one axis to turn about or run along (what motors, springs, bearings and gears act on).</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool Axial => Kind is WorldJointKind.Hinge or WorldJointKind.Slider;
+
+        /// <summary>[d6] A character or configurable joint: the joint frame's six axes, each locked, limited or free.</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool SixAxis => Kind is WorldJointKind.Character or WorldJointKind.Configurable;
+
+        /// <summary>
+        /// [d6] A configurable joint's slides along the joint frame's X (the axis), Y (the swing axis) and Z, and its turns
+        /// about them: locked, limited or free (Unity's X / Y / Z Motion and Angular X / Y / Z Motion).
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public AxisMotion MotionX { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public AxisMotion MotionY { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public AxisMotion MotionZ { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public AxisMotion AngularMotionX { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public AxisMotion AngularMotionY { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public AxisMotion AngularMotionZ { get; set; }
+
+        /// <summary>[d6] How far the limited slides let the part go from the anchor (m, Unity's Linear Limit).</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double LinearLimit { get; set; }
+
+        /// <summary>[d6] The swing limits about the joint frame's Y and Z (°, Unity's Swing 1 / 2 and Angular Y / Z Limit); 0 locks.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double SwingLimit1 { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double SwingLimit2 { get; set; }
+
+        /// <summary>[d6] The secondary axis (world, Unity's Swing Axis / Secondary Axis): the joint frame's Y; 0 = one across the axis.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double SwingAxisX { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double SwingAxisY { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double SwingAxisZ { get; set; }
+
+        /// <summary>[d6] The slides' position drive (Unity's X / Y / Z Drive): spring (N/m) and damper (N·s/m) toward the target (m, joint frame).</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double LinearDriveStiffness { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double LinearDriveDamping { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double TargetX { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double TargetY { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double TargetZ { get; set; }
+
+        /// <summary>
+        /// [d6] The turns' drive (Unity's slerp drive): spring (N·m/rad) and damper (N·m·s/rad) toward the target twist and
+        /// swings (°).
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double AngularDriveStiffness { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double AngularDriveDamping { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double TargetTwist { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double TargetSwing1 { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double TargetSwing2 { get; set; }
 
         /// <summary>
         /// [bearing] What the joint turns in or runs on (Sandbox/Bearings.cs): a ball bearing, a bushing, a linear bearing, a
@@ -407,7 +503,7 @@ namespace RobotTwin.CoreSim.Sandbox
         public const string DriveSpeedMode = "speed";
 
         [System.Text.Json.Serialization.JsonIgnore]
-        public bool Driven => Kind != WorldJointKind.Fixed && (Drive == DrivePosition || Drive == DriveSpeedMode);
+        public bool Driven => Axial && (Drive == DrivePosition || Drive == DriveSpeedMode);
     }
 
     /// <summary>

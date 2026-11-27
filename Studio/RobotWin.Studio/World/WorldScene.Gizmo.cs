@@ -683,7 +683,21 @@ namespace RobotWin.Studio.World
             }
 
             double nx = _gizmoPose.X + delta.X, ny = _gizmoPose.Y + delta.Y, nz = _gizmoPose.Z + delta.Z;
-            if (!free)
+            if (!free && GridTurned && _gizmoDrag is GizmoPart.X or GizmoPart.Y or GizmoPart.Z)
+            {
+                // [grid] a turned grid: an arrow moves its part in whole steps along itself
+                var dir = _gizmoDrag == GizmoPart.X ? ax : _gizmoDrag == GizmoPart.Y ? ay : az;
+                double horizontal = Math.Sqrt(dir.X * dir.X + dir.Y * dir.Y);
+                double along = SnapAlong(Vector3D.DotProduct(delta, dir), horizontal > 0.5 ? StepX : StepZ);
+                nx = _gizmoPose.X + dir.X * along;
+                ny = _gizmoPose.Y + dir.Y * along;
+                nz = _gizmoPose.Z + dir.Z * along;
+            }
+            else if (!free && GridTurned && Math.Abs(delta.Z) < 1e-12)
+            {
+                (nx, ny) = SnapXY(nx, ny);   // [grid] a turned grid: onto its own points
+            }
+            else if (!free)
             {
                 // the grid along the world's axes the move uses
                 if (Math.Abs(delta.X) > 1e-12 || _gizmoDrag != GizmoPart.Z) nx = SnapX(nx);   // [grid] each axis its own step

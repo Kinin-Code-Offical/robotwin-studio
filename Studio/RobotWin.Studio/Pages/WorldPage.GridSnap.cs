@@ -34,7 +34,9 @@ namespace RobotWin.Studio.Pages
             double gy = s.WorldGridLinked ? 0 : Math.Max(0, s.WorldGridYMm) / 1000.0, gz = s.WorldGridLinked ? 0 : Math.Max(0, s.WorldGridZMm) / 1000.0;
             var origin = new Point(s.WorldGridOriginXMm / 1000.0, s.WorldGridOriginYMm / 1000.0);
             string plane = s.WorldGridPlane is "xz" or "yz" ? s.WorldGridPlane : "xy";
-            redraw |= Math.Abs(Scene.GridY - gy) > 1e-12 || Math.Abs(Scene.GridZ - gz) > 1e-12 || Scene.GridOrigin != origin || Scene.GridPlane != plane;
+            redraw |= Math.Abs(Scene.GridY - gy) > 1e-12 || Math.Abs(Scene.GridZ - gz) > 1e-12 || Scene.GridOrigin != origin || Scene.GridPlane != plane ||
+                      Math.Abs(Scene.GridAngle - s.WorldGridAngleDeg) > 1e-9;
+            Scene.GridAngle = s.WorldGridAngleDeg;   // [grid] its turn
             Scene.GridY = gy;
             Scene.GridZ = gz;
             Scene.GridOrigin = origin;
@@ -185,17 +187,22 @@ namespace RobotWin.Studio.Pages
 
             var ox = Coord("X", s.WorldGridOriginXMm, v => s.WorldGridOriginXMm = v);
             var oy = Coord("Y", s.WorldGridOriginYMm, v => s.WorldGridOriginYMm = v);
+            var turn = Coord(Lang.T("Dönüş °"), s.WorldGridAngleDeg, v => s.WorldGridAngleDeg = Math.IEEERemainder(v, 360));   // [grid] Unity's grid rotation
+            turn.ToolTip = Lang.T("Izgaranın kendi yeri çevresinde dönüşü (°); çizgiler ve X / Y yakalama onu izler");
+            turn.Width = 56;
             root.Children.Add(place);
             var originButtons = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
             var fromSelected = new Button { Content = Lang.T("Seçiliden al"), Style = (Style)FindResource("Btn"), Margin = new Thickness(0, 0, 6, 0),
-                ToolTip = Lang.T("Izgaranın yerini seçili parçanın yerine taşır (Unity'deki etkin nesneden kopyala)"), IsEnabled = World?.Find(Scene.Selected) != null };
+                ToolTip = Lang.T("Izgaranın yerini ve dönüşünü seçili parçanınkine taşır (Unity'deki etkin nesneden kopyala)"), IsEnabled = World?.Find(Scene.Selected) != null };
             fromSelected.Click += (_, _) =>
             {
                 if (World?.Find(Scene.Selected) is not { } sel) return;
                 s.WorldGridOriginXMm = Math.Round(sel.Pose.X * 1000, 3);
                 s.WorldGridOriginYMm = Math.Round(sel.Pose.Y * 1000, 3);
+                s.WorldGridAngleDeg = Math.Round(Math.IEEERemainder(sel.Pose.Yaw, 360), 3);   // [grid] and its turn
                 ox.Text = s.WorldGridOriginXMm.ToString("0.###", CultureInfo.CurrentCulture);
                 oy.Text = s.WorldGridOriginYMm.ToString("0.###", CultureInfo.CurrentCulture);
+                turn.Text = s.WorldGridAngleDeg.ToString("0.###", CultureInfo.CurrentCulture);
                 Save();
             };
             var toWorld = new Button { Content = Lang.T("Dünyaya sıfırla"), Style = (Style)FindResource("Btn.Ghost"), ToolTip = Lang.T("Izgara dünyanın başlangıç noktasından başlar") };
@@ -203,8 +210,10 @@ namespace RobotWin.Studio.Pages
             {
                 s.WorldGridOriginXMm = 0;
                 s.WorldGridOriginYMm = 0;
+                s.WorldGridAngleDeg = 0;   // [grid]
                 ox.Text = "0";
                 oy.Text = "0";
+                turn.Text = "0";
                 Save();
             };
             originButtons.Children.Add(fromSelected);
@@ -229,6 +238,7 @@ namespace RobotWin.Studio.Pages
                 s.WorldGridZMm = 5;
                 s.WorldGridOriginXMm = 0;
                 s.WorldGridOriginYMm = 0;
+                s.WorldGridAngleDeg = 0;
                 s.WorldGridPlane = "xy";
                 Save();
                 popup.IsOpen = false;

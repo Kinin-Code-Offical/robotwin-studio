@@ -93,7 +93,7 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Couples joint <paramref name="b"/>'s speed to <paramref name="ratio"/> × joint <paramref name="a"/>'s, from where they are now.</summary>
         public SceneCoupling AddCoupling(SceneJoint a, SceneJoint b, double ratio, string? id = null)
         {
-            if (a.Kind == JointKind.Fixed || b.Kind == JointKind.Fixed) throw new ArgumentException("Sabit bir eklem bağlanamaz: dişli, kayış ve vida menteşe ya da kızak ister.");
+            if (a.Kind is not (JointKind.Hinge or JointKind.Slider) || b.Kind is not (JointKind.Hinge or JointKind.Slider)) throw new ArgumentException("Sabit bir eklem bağlanamaz: dişli, kayış ve vida menteşe ya da kızak ister.");
             var c = new SceneCoupling(id ?? "coupling" + Couplings.Count, a, b, ratio);
             Couplings.Add(c);
             return c;

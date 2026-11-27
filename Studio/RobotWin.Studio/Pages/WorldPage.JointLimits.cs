@@ -16,8 +16,8 @@ namespace RobotWin.Studio.Pages
 
         private void JointLimitRows(WorldJoint j)
         {
-            bool moving = j.Kind != WorldJointKind.Fixed, hinge = j.Kind == WorldJointKind.Hinge;
-            bool used = j.Lower.HasValue || j.Upper.HasValue || j.BreakForce > 0 || j.BreakTorque > 0;
+            bool moving = j.Axial, hinge = j.Kind == WorldJointKind.Hinge;   // [d6] a six-axis joint shows its limits in its own card
+            bool used = (moving && (j.Lower.HasValue || j.Upper.HasValue)) || j.BreakForce > 0 || j.BreakTorque > 0;
             bool open = used || _limitsOpen.Contains(j.Id);
             var head = new Button
             {

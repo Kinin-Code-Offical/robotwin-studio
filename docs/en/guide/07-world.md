@@ -380,12 +380,28 @@ With an object selected, click another object with the **Attach** (B) tool:
 | **Fix to the body of … (screw / glue)** | The two objects move as one |
 | **Attach with hinge (rotates freely)** | Turns freely about one axis |
 | **Attach with slider (slides linearly)** | Slides along a line |
+| **Attach with a character joint (shoulder / hip: twists and swings within limits)** | The anchor stays put; the part twists and swings within its limits |
+| **Attach with a configurable joint (each axis locked / limited / free)** | Each of the six axes locked, limited or free on its own |
 
 Parts joined by at most two joints do not collide with each other. Dragging an object brings everything attached to it. Remove a joint with **Detach** in the inspector.
 
 ### Limits and breaking
 
 In the inspector every joint has a folded **Break** section under it (**Limits and break** on a hinge or slider), like Unity's joint limits and Break Force / Break Torque. With **Limited travel** ticked a hinge turns between its **Lower limit** and **Upper limit** (°) and a slider slides within them (mm). Past the **Break force** (N) or the **Break torque** (N·m) the joint breaks, the event is logged and the parts come free; a load hung on the end of a cantilever bends its bracket off, for instance. 0 means it never breaks; on a screwed or glued joint the fastening's own strength stands while no force is given.
+
+### Character and configurable joints
+
+These are like Unity's Character Joint and Configurable Joint; both are the same six-axis joint. In the joint's frame, X is the joint's axis, Y its secondary (swing) axis and Z the axis across both. A **character joint** is for a shoulder, a hip or a puppet's limbs. The anchor stays put while the part turns about the axis between its **Twist lower limit** and **Twist upper limit** (−20° … 70° on a new joint). Its lean off the axis stays inside the elliptic cone of **Swing 1 limit** (about Y) and **Swing 2 limit** (about Z), 40° on a new joint. 0° locks that swing.
+
+On a **configurable joint** the inspector's grid sets each axis's **Linear** (slide) and **Angular** (turn) motion on its own: **Locked**, **Limited** or **Free**. As in Unity, a new one has them all free. Only the limited axes' fields appear below it:
+
+- The limited slides share one **Linear limit** (mm): a sphere when all three are limited, a disc for two, a segment for one.
+- A limited twist has its lower and upper limit.
+- Each swing has its own limit; with both limited they form an elliptic cone.
+
+The folded **Drives** section is a spring and damper that pull the part toward a target. **Slide spring** (N/mm) and **Slide damping** pull it to the **Target position** (joint frame, mm). **Turn spring** (N·mm/°) and **Turn damping** turn it to the **Target twist / swing** (Unity's Slerp Drive). Drives do not act on locked axes. The springs are solved implicitly, so even a stiff one stays stable.
+
+For example, an arm hanging in a 30° cone stops at 30° after a push that would have swung it to 51°. Its anchor stays within 0.2 mm. A vertical slide with a 5 cm linear limit drops 5 cm under gravity and stays there.
 
 ### Screwing, gluing, tape, zip ties, solder
 
@@ -762,7 +778,7 @@ The grid button in the toolbar opens the counterpart of Unity's **Grid and Snap*
 - **Snap to grid**: move, rotate and size drags snap to the steps. Off, every drag is free; on, holding Alt frees that drag.
 - **Show grid** and **Opacity**: the lines on the floor. Thin lines are drawn at the move step, thick ones every ten steps (with very small steps the lines double so they do not crowd). **Plane**: XY is the floor's grid only; with XZ or YZ an upright, see-through grid through the grid's position is drawn as well (Unity's grid plane).
 - **Steps**: **Move** (in the chosen length unit; mm, cm, in, mil can be typed), **Rotate** (degrees; the rotate handle and Ctrl+E turn by it), **Size** (the scale handle; 0 uses the move step). Turn **Same step for X, Y and Z** off and Y and Z take their own move steps (Unity's linked step); drags and the handle snap to each axis' own step, and the floor lines follow.
-- **Grid position** (Unity's Grid Position): where the grid's lines start in X and Y (mm); snapping counts from there too. **From selected** moves it to the selected part's place, **Reset to world** back to the world's origin.
+- **Grid position** (Unity's Grid Position): where the grid's lines start in X and Y (mm); snapping counts from there too. **Turn °** turns the grid about the vertical through that point: its lines, the upright grid plane and the X / Y snapping follow it, so parts line up along a wall or a machine standing at an angle. On a turned grid the axis arrows move a part in whole steps along themselves. **From selected** moves the grid to the selected part's place and turn, **Reset to world** back to the world's origin and 0°.
 - **Align selected to grid** moves the selected part, with what is mounted on it, to the nearest grid point in X and Y. **Reset to defaults** goes back to 5 mm, 15°, linked steps and the floor grid at the world's origin.
 
 The settings are saved; every world and assembly opens with them.

@@ -393,13 +393,21 @@ namespace RobotTwin.CoreSim.Sandbox
             var anchor = j.AnchorX == 0 && j.AnchorY == 0 && j.AnchorZ == 0 ? child.Body.Position : new Vec3(j.AnchorX, j.AnchorY, j.AnchorZ);
             var axis = new Vec3(j.AxisX, j.AxisY, j.AxisZ);
             if (axis.Length < 1e-9) axis = Vec3.UnitZ;
-            var kind = j.Kind switch { WorldJointKind.Hinge => JointKind.Hinge, WorldJointKind.Slider => JointKind.Slider, _ => JointKind.Fixed };
+            var kind = j.Kind switch
+            {
+                WorldJointKind.Hinge => JointKind.Hinge,
+                WorldJointKind.Slider => JointKind.Slider,
+                WorldJointKind.Character or WorldJointKind.Configurable => JointKind.Configurable,   // [d6]
+                _ => JointKind.Fixed
+            };
             kind = CasterKind(kind, child, parent); // [phys] a ball held in a socket rolls freely
             // Parent first so Angle measures the child.
             var joint = parent != null ? Scene.AddJoint(kind, parent, child.Body, anchor, axis.Normalized(), j.Id) : Scene.AddJoint(kind, child.Body, null, anchor, axis.Normalized(), j.Id);
-            if (j.Lower.HasValue) joint.Lower = kind == JointKind.Hinge ? j.Lower.Value * Math.PI / 180 : j.Lower.Value;
-            if (j.Upper.HasValue) joint.Upper = kind == JointKind.Hinge ? j.Upper.Value * Math.PI / 180 : j.Upper.Value;
-            if (j.Friction > 0 && kind != JointKind.Fixed) joint.Friction = j.Friction;   // [phys] bushing / bearing friction
+            bool turns = kind is JointKind.Hinge or JointKind.Configurable;   // [d6] a twist is kept in degrees like a hinge's angle
+            if (j.Lower.HasValue) joint.Lower = turns ? j.Lower.Value * Math.PI / 180 : j.Lower.Value;
+            if (j.Upper.HasValue) joint.Upper = turns ? j.Upper.Value * Math.PI / 180 : j.Upper.Value;
+            if (kind == JointKind.Configurable) SixAxis(j, joint);   // [d6] Sandbox/WorldPhysics.Configurable.cs
+            if (j.Friction > 0 && kind is (JointKind.Hinge or JointKind.Slider)) joint.Friction = j.Friction;   // [phys] bushing / bearing friction
             AddSpring(j, joint);   // [spring] torsion / coil spring and damper (Sandbox/WorldPhysics.Springs.cs)
             if (kind is JointKind.Hinge or JointKind.Slider) joint.LoadFriction = Bearings.LoadFriction(j);   // [bearing] Sandbox/Bearings.cs
             if (j.BreakForce > 0) joint.BreakForce = j.BreakForce;

@@ -30,6 +30,26 @@ namespace RobotWin.Studio.World
         /// <summary>[grid] The plane the grid shows on besides the floor: "xy" (the floor only), "xz" or "yz" (upright, through the grid's position).</summary>
         public string GridPlane { get; set; } = "xy";
 
+        /// <summary>
+        /// [grid] The grid's turn about the vertical through its position (°): its lines, its upright plane and the X / Y
+        /// snapping follow it, so parts line up along a wall or a machine set at an angle.
+        /// </summary>
+        public double GridAngle { get; set; }
+
+        private bool GridTurned => Math.Abs(Math.IEEERemainder(GridAngle, 360)) > 1e-9;
+
+        /// <summary>[grid] A place in X and Y onto the grid: in the grid's own turned frame, each axis its own step.</summary>
+        private (double X, double Y) SnapXY(double x, double y)
+        {
+            if (!GridTurned) return (SnapX(x), SnapY(y));
+            if (!SnapOn || System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftAlt)) return (x, y);
+            return GridFrame.Nearest(x, y, GridOrigin.X, GridOrigin.Y, GridAngle, StepX, StepY);
+        }
+
+        /// <summary>[grid] A move along one direction in whole steps from where it started (a turned grid's arrows).</summary>
+        private double SnapAlong(double distance, double step) =>
+            step > 0 && SnapOn && !System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftAlt) ? Math.Round(distance / step) * step : distance;
+
         private double StepX => Grid;
         private double StepY => GridY > 0 ? GridY : Grid;
         private double StepZ => GridZ > 0 ? GridZ : Grid;
@@ -46,8 +66,8 @@ namespace RobotWin.Studio.World
         /// <summary>[grid] The nearest grid point in X and Y to a place (what "align to grid" puts a part on).</summary>
         public Point NearestGridPoint(double x, double y)
         {
-            double Round(double v, double step, double o) => step > 0 ? o + Math.Round((v - o) / step) * step : v;
-            return new Point(Round(x, StepX, GridOrigin.X), Round(y, StepY, GridOrigin.Y));
+            var (nx, ny) = GridFrame.Nearest(x, y, GridOrigin.X, GridOrigin.Y, GridAngle, StepX, StepY);   // [grid] in the grid's turned frame
+            return new Point(nx, ny);
         }
 
         private static double Wrap(double v, double period) => period <= 0 ? 0 : ((v % period) + period) % period;
@@ -98,12 +118,15 @@ namespace RobotWin.Studio.World
         {
             // the floor's texture runs u = x + w/2, v = w − d/2 − y: the tiles start where the grid's position puts a major line
             double tx = DrawnStep(StepX) * 10, ty = DrawnStep(StepY) * 10;
+            double cu = GridOrigin.X + w / 2, cv = w - d / 2 - GridOrigin.Y;
             var brush = new ImageBrush(GridTile(_gridShown ? _gridOpacity : 0))
             {
                 TileMode = TileMode.Tile,
                 ViewportUnits = BrushMappingMode.Absolute,
-                Viewport = new Rect(Wrap(GridOrigin.X + w / 2, tx), Wrap(w - d / 2 - GridOrigin.Y, ty), tx, ty)
+                Viewport = new Rect(Wrap(cu, tx), Wrap(cv, ty), tx, ty)
             };
+            // [grid] turned about the grid's position; the texture's v runs against y, so the turn is the other way
+            if (GridTurned) brush.Transform = new RotateTransform(-GridAngle, cu, cv);
             return brush;
         }
 
@@ -133,7 +156,10 @@ namespace RobotWin.Studio.World
                 Viewport = new Rect(Wrap(origin - start, ta), Wrap(h, tz), ta, tz)
             };
             var material = new System.Windows.Media.Media3D.DiffuseMaterial(brush);
-            return new GeometryModel3D(quad, material) { BackMaterial = material };
+            var model = new GeometryModel3D(quad, material) { BackMaterial = material };
+            if (GridTurned)   // [grid] the upright plane turns with the grid about the vertical through its position
+                model.Transform = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 0, 1), GridAngle), new Point3D(GridOrigin.X, GridOrigin.Y, 0));
+            return model;
         }
 
         private static BitmapSource GridTile(double opacity, bool clear = false)

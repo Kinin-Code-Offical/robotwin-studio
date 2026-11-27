@@ -69,7 +69,8 @@ namespace RobotTwin.CoreSim.Sandbox
         public string? PulleyB { get; set; }
 
         /// <summary>A hinge and a slider (a rack, a belt-driven carriage, a lead screw) rather than two shafts.</summary>
-        public static bool Linear(WorldJointKind a, WorldJointKind b) => a != b && a != WorldJointKind.Fixed && b != WorldJointKind.Fixed;
+        public static bool Linear(WorldJointKind a, WorldJointKind b) =>
+            a != b && a is (WorldJointKind.Hinge or WorldJointKind.Slider) && b is (WorldJointKind.Hinge or WorldJointKind.Slider);
 
         /// <summary>Whether this kind can join joints of these kinds: gears and belts two hinges or a hinge and a slider, a screw only the latter.</summary>
         public static bool Fits(string kind, WorldJointKind a, WorldJointKind b) =>

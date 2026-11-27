@@ -16,7 +16,13 @@ namespace RobotTwin.CoreSim.Mechanics
         Slider,
 
         /// <summary>Spherical joint: anchors coincide, rotation is free.</summary>
-        Ball
+        Ball,
+
+        /// <summary>
+        /// [d6] Unity's configurable joint (PhysX's D6): each of the six axes of the joint frame locked, limited or free, with
+        /// position drives (Mechanics/PhysicsScene.Configurable.cs). A character joint is one with the slides locked.
+        /// </summary>
+        Configurable
     }
 
     public enum JointDrive
@@ -244,7 +250,7 @@ namespace RobotTwin.CoreSim.Mechanics
     /// the child B; with no B the world is the parent and A the child, so <see cref="Angle"/>
     /// always measures the moving part relative to what it hangs on.
     /// </summary>
-    public sealed class SceneJoint
+    public sealed partial class SceneJoint
     {
         internal int ParentSlot = -1, ChildSlot = -1;
         internal SceneBody? ParentBody;
@@ -253,7 +259,7 @@ namespace RobotTwin.CoreSim.Mechanics
         internal Vec3 AxisP, AxisC;
         internal Quat Rest;             // qP⁻¹·qC at creation
         internal double PrevWrapped;
-        internal readonly double[] Impulse = new double[12];
+        internal readonly double[] Impulse = new double[26];   // [d6] the configurable joint's rows past slot 11
         internal Vec3 PointImpulse;
         internal double ForceFilter, TorqueFilter, StepDriveImpulse, SubDrive;
         internal Vec3 StepForceImpulse, StepTorqueImpulse, SubForce, SubTorque;
@@ -274,6 +280,7 @@ namespace RobotTwin.CoreSim.Mechanics
             AxisP = qP.InverseRotate(axis);
             AxisC = ChildBody.Orientation.InverseRotate(axis);
             Rest = qP.Conjugate * ChildBody.Orientation;
+            InitFrame(axis, axis.AnyPerpendicular());   // [d6] the joint frame: X the axis, Y a secondary axis
         }
 
         public string Id { get; set; }
@@ -1984,8 +1991,8 @@ namespace RobotTwin.CoreSim.Mechanics
                     stC = ref _state[c];
                 }
 
-                // Point constraint.
-                if (j.Kind != JointKind.Slider)
+                // Point constraint (a configurable joint's only while its three slides are locked).
+                if (j.Kind != JointKind.Slider && (j.Kind != JointKind.Configurable || D6PointLocked(j)))
                 {
                     if (_pointCount == _points.Length) Array.Resize(ref _points, _points.Length * 2);
                     ref var pr = ref _points[_pointCount++];
@@ -2007,7 +2014,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
                     pr.Mass = K.Inverse();
                 }
-                else
+                else if (j.Kind == JointKind.Slider)
                 {
                     var b1 = axis.AnyPerpendicular();
                     var b2 = axis.Cross(b1);
@@ -2034,6 +2041,12 @@ namespace RobotTwin.CoreSim.Mechanics
                     var err = axis.Cross(aC);
                     AddAngular(ji, RolePerp0, p, c, b1, err.Dot(b1));
                     AddAngular(ji, RolePerp1, p, c, b2, err.Dot(b2));
+                }
+
+                if (j.Kind == JointKind.Configurable)
+                {
+                    PrepareConfigurable(j, ji, p, c, qP, qC, rP, rC, d, h);   // [d6] Mechanics/PhysicsScene.Configurable.cs
+                    continue;
                 }
 
                 if (j.Kind != JointKind.Hinge && j.Kind != JointKind.Slider) continue;
@@ -2217,7 +2230,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = 0; i < _rowCount; i++)
             {
                 ref var r = ref _rows[i];
-                int rowPass = r.Type == RowType.Equality ? 2 : r.Slot == RoleDrive ? 1 : 0;
+                int rowPass = r.Type == RowType.Equality ? 2 : IsDriveSlot(r.Slot) ? 1 : 0;   // [d6] a configurable joint's drives too
                 if (rowPass != pass) continue;
                 var j = Joints[r.Joint];
                 ref var sc = ref _state[r.C];

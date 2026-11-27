@@ -33,7 +33,7 @@ namespace RobotTwin.CoreSim.Ros
         {
             _ros = ros;
             _physics = physics;
-            _joints = world.Joints.Where(j => j.Kind != WorldJointKind.Fixed).Select(j => (j, j.Kind == WorldJointKind.Hinge)).ToList();
+            _joints = world.Joints.Where(j => j.Axial).Select(j => (j, j.Kind == WorldJointKind.Hinge)).ToList();
             _byName = new Dictionary<string, (WorldJoint, bool)>(StringComparer.Ordinal);
             foreach (var x in _joints) _byName[x.Joint.RosName] = x;
             _lastPositions = new double[_joints.Count];

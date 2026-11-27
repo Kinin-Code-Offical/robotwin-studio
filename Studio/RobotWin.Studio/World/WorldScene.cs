@@ -446,7 +446,11 @@ namespace RobotWin.Studio.World
         }
 
         /// <summary>Point on the ground in front of the camera where new objects appear.</summary>
-        public Point3D DropPoint() => new Point3D(SnapX(_target.X), SnapY(_target.Y), GroundZAt(SnapX(_target.X), SnapY(_target.Y))); // [terrain] on the terrain
+        public Point3D DropPoint()
+        {
+            var (x, y) = SnapXY(_target.X, _target.Y);   // [grid] the grid's own points, turned or not
+            return new Point3D(x, y, GroundZAt(x, y)); // [terrain] on the terrain
+        }
 
         public Point3D WorldAnchor(WorldObject o, string pin)
         {
@@ -1459,8 +1463,7 @@ namespace RobotWin.Studio.World
                 }
                 else if (OnPlane(p, _dragPlaneZ) is { } q)
                 {
-                    nx = SnapX(q.X + _dragOffset.X);   // [grid] each axis its own step, from the grid's position
-                    ny = SnapY(q.Y + _dragOffset.Y);
+                    (nx, ny) = SnapXY(q.X + _dragOffset.X, q.Y + _dragOffset.Y);   // [grid] each axis its own step, from the grid's position, in its turn
                 }
 
                 if (!onCorner) SnapDrag(o, p, ref nx, ref ny, ref nz); // [terrain] follow the terrain surface
