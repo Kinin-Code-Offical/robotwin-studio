@@ -14,12 +14,14 @@ namespace RobotWin.Studio.World
     /// <summary>
     /// [technical] The joints and centre of mass of the selection, drawn over the view (always in sight, as SolidWorks
     /// draws its centre-of-mass symbol and mates: never hidden inside the part or behind the handle's arrows): each joint's
-    /// anchor as an amber dot with the axis it turns about or slides along, the centre of mass as the drawing symbol (a
+    /// anchor as an amber dot with the axis it turns about or slides along and, dashed, how far it may go (a hinge's
+    /// angle range as an arc round the axis, a slider's travel along it); the centre of mass as the drawing symbol (a
     /// circle with two dark quarters).
     /// </summary>
     internal sealed class TechMarks : FrameworkElement
     {
         public readonly System.Collections.Generic.List<(Point Anchor, Point? A, Point? B)> Joints = new System.Collections.Generic.List<(Point, Point?, Point?)>();
+        public readonly System.Collections.Generic.List<Point[]> Limits = new System.Collections.Generic.List<Point[]>();
         public Point? Com;
 
         private static readonly Brush Amber = Frozen(new SolidColorBrush(Color.FromRgb(0xF2, 0xB8, 0x3B)));
@@ -27,6 +29,7 @@ namespace RobotWin.Studio.World
         private static readonly Brush Dark = Frozen(new SolidColorBrush(Color.FromRgb(0x18, 0x18, 0x1B)));
         private static readonly Pen AxisPen = Frozen(new Pen(Amber, 2) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round });
         private static readonly Pen Outline = Frozen(new Pen(Dark, 1.2));
+        private static readonly Pen LimitPen = Frozen(new Pen(Amber, 1.5) { DashStyle = new DashStyle(new double[] { 3, 2 }, 0), StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round });
 
         private static T Frozen<T>(T f) where T : Freezable
         {
@@ -38,6 +41,23 @@ namespace RobotWin.Studio.World
 
         protected override void OnRender(DrawingContext dc)
         {
+            foreach (var line in Limits)
+            {
+                if (line.Length < 2) continue;
+                var g = new StreamGeometry();
+                using (var s = g.Open())
+                {
+                    s.BeginFigure(line[0], false, false);
+                    for (int i = 1; i < line.Length; i++) s.LineTo(line[i], true, true);
+                }
+
+                g.Freeze();
+                dc.DrawGeometry(null, LimitPen, g);
+                // its two ends: where it stops
+                dc.DrawEllipse(Amber, null, line[0], 2.5, 2.5);
+                dc.DrawEllipse(Amber, null, line[^1], 2.5, 2.5);
+            }
+
             foreach (var (anchor, a, b) in Joints)
             {
                 if (a is { } pa && b is { } pb) dc.DrawLine(AxisPen, pa, pb);
@@ -91,6 +111,7 @@ namespace RobotWin.Studio.World
         private Point3D? _techAt;   // where the label stands (world): the top of the selection
         private Point3D? _techCom;
         private readonly System.Collections.Generic.List<(Point3D Anchor, Point3D? A, Point3D? B)> _techJoints = new System.Collections.Generic.List<(Point3D, Point3D?, Point3D?)>();
+        private readonly System.Collections.Generic.List<Point3D[]> _techLimits = new System.Collections.Generic.List<Point3D[]>();
 
         private bool _showTechnical = true;
 
@@ -132,6 +153,7 @@ namespace RobotWin.Studio.World
             _techAt = null;
             _techCom = null;
             _techJoints.Clear();
+            _techLimits.Clear();
             if (!_showTechnical || World == null || Selected == null || !_items.TryGetValue(Selected, out var it) || it.Model.Bounds.IsEmpty)
             {
                 PlaceTechLabel();
@@ -154,6 +176,7 @@ namespace RobotWin.Studio.World
                     axis.Normalize();
                     double half = Math.Max(0.01, Math.Min(0.25, size * 0.6));
                     _techJoints.Add((anchor, anchor - axis * half, anchor + axis * half));
+                    if (LimitOf(j, size) is { } limit) _techLimits.Add(limit);
                 }
                 else _techJoints.Add((anchor, null, null));
             }
@@ -172,6 +195,56 @@ namespace RobotWin.Studio.World
             _techAt = new Point3D(bounds.X + bounds.SizeX / 2, bounds.Y + bounds.SizeY / 2, bounds.Z + bounds.SizeZ);
             PlaceTechLabel();
         }
+
+        /// <summary>
+        /// [technical] How far a joint may go, as a line in the world: a hinge's range (°) as an arc round its axis, from the
+        /// side its other object lies on (its angle as placed is 0); a slider's travel (m) along its axis. Null when free.
+        /// </summary>
+        private Point3D[]? LimitOf(WorldJoint j, double size)
+        {
+            if (j.Lower is not { } lo || j.Upper is not { } hi || hi <= lo) return null;
+            // worked out where the objects were placed, then carried with the first object (the arc does not turn with the part it limits)
+            var anchor = new Point3D(j.AnchorX, j.AnchorY, j.AnchorZ);
+            var axis = new Vector3D(j.AxisX, j.AxisY, j.AxisZ);
+            if (axis.Length < 1e-9) return null;
+            axis.Normalize();
+            if (!_items.TryGetValue(j.ObjectA, out var first)) return null;
+            if (j.AnchorX == 0 && j.AnchorY == 0 && j.AnchorZ == 0) anchor = new Point3D(first.Placed.OffsetX, first.Placed.OffsetY, first.Placed.OffsetZ);
+            var moved = first.Placed;
+            if (!moved.HasInverse) return null;
+            moved.Invert();
+            moved *= first.Current;
+            if (j.Kind == WorldJointKind.Slider)
+                return new[] { moved.Transform(anchor + axis * lo), moved.Transform(anchor + axis * hi) };
+            if (j.Kind != WorldJointKind.Hinge) return null;
+
+            // the arc's zero: towards the selected object's middle, square to the axis (the part it limits, as placed); a
+            // part centred on the axis (a bearing, a hub) looks towards the other one; any square direction as a last resort
+            Vector3D Towards(string? id)
+            {
+                if (id == null || !_items.TryGetValue(id, out var o) || o.Model.Bounds.IsEmpty) return new Vector3D();
+                var d = Middle(new MatrixTransform3D(o.Placed).TransformBounds(o.Model.Bounds)) - anchor;
+                return d - axis * Vector3D.DotProduct(d, axis);
+            }
+
+            var zero = Towards(Selected);
+            if (zero.Length < 1e-3) zero = Towards(string.Equals(j.ObjectA, Selected, StringComparison.OrdinalIgnoreCase) ? j.ObjectB : j.ObjectA);
+            if (zero.Length < 1e-9) zero = Vector3D.CrossProduct(axis, Math.Abs(axis.Z) < 0.9 ? new Vector3D(0, 0, 1) : new Vector3D(1, 0, 0));
+            zero.Normalize();
+            var side = Vector3D.CrossProduct(axis, zero);
+            double radius = Math.Max(0.01, Math.Min(0.15, size * 0.5));
+            int n = Math.Max(6, (int)Math.Ceiling((hi - lo) / 6));
+            var pts = new Point3D[n + 1];
+            for (int i = 0; i <= n; i++)
+            {
+                double a = (lo + (hi - lo) * i / n) * Math.PI / 180;
+                pts[i] = moved.Transform(anchor + (zero * Math.Cos(a) + side * Math.Sin(a)) * radius);
+            }
+
+            return pts;
+        }
+
+        private static Point3D Middle(Rect3D b) => new Point3D(b.X + b.SizeX / 2, b.Y + b.SizeY / 2, b.Z + b.SizeZ / 2);
 
         /// <summary>
         /// A joint's anchor and axis now: kept in world coordinates of the placed objects, carried with its first object as
@@ -210,10 +283,16 @@ namespace RobotWin.Studio.World
         private void PlaceTechLabel()
         {
             Point? On(Point3D? p) => p is { } w && Project(w) is var (s, _, visible) && visible ? s : null;
-            bool hadMarks = _techMarks.Com != null || _techMarks.Joints.Count > 0;
+            bool hadMarks = _techMarks.Com != null || _techMarks.Joints.Count > 0 || _techMarks.Limits.Count > 0;
             _techMarks.Joints.Clear();
             foreach (var (anchor, a, b) in _techJoints)
                 if (On(anchor) is { } pa) _techMarks.Joints.Add((pa, On(a), On(b)));
+            _techMarks.Limits.Clear();
+            foreach (var line in _techLimits)
+            {
+                var screen = line.Select(p => On(p)).ToList();
+                if (screen.All(p => p != null)) _techMarks.Limits.Add(screen.Select(p => p!.Value).ToArray());
+            }
             _techMarks.Com = On(_techCom);
             if (hadMarks || _techMarks.Com != null || _techMarks.Joints.Count > 0) _techMarks.InvalidateVisual();
 
@@ -234,7 +313,9 @@ namespace RobotWin.Studio.World
             _techLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             var d = _techLabel.DesiredSize;
             double x = Math.Max(4, Math.Min(ActualWidth - d.Width - 4, s.X - d.Width / 2));
-            double y = Math.Max(4, Math.Min(ActualHeight - d.Height - 4, s.Y - d.Height - 14));
+            double y = s.Y - d.Height - 14;
+            if (y < 56) y = s.Y + 14;   // under the top's tool strips it would hide: below the point instead
+            y = Math.Max(4, Math.Min(ActualHeight - d.Height - 4, y));
             _techLabelAt.X = Math.Round(x);
             _techLabelAt.Y = Math.Round(y);
         }

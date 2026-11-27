@@ -731,6 +731,14 @@ namespace RobotWin.Studio.Pages
                 Scene.Follow = true;
             }
 
+            // [technical] the docs picture of the technical highlight: the object on the first hinge selected; a hinge
+            // without limits gets ±45° in this run only (nothing is saved) so its range shows
+            if (_snapshotModes.Contains("tech") && World?.Joints.FirstOrDefault(j => j.Kind == WorldJointKind.Hinge) is { } hinge)
+            {
+                if (hinge.Lower == null || hinge.Upper == null) (hinge.Lower, hinge.Upper) = (-45, 45);
+                Scene.Select(hinge.ObjectA);
+            }
+
             DockSnapshot();   // [dock]
         }
     }
