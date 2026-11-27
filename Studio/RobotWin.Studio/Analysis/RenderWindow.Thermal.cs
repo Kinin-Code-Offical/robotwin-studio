@@ -104,6 +104,7 @@ namespace RobotWin.Studio.Analysis
                 if (double.IsFinite(th.PeakTemperature)) high = Math.Max(high, th.PeakTemperature);
 
             _scene.SetThermalCamera(SurfaceTemperature, low, high);
+            _colorBar.Show("Sıcaklık", low, high, RobotWin.Studio.World.WorldScene.Iron, v => v.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + " °C");   // [colour-scale]
             string hottest = string.Empty;
             double hot = double.MinValue;
             foreach (var o in _world.Objects)

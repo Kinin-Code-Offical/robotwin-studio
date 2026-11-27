@@ -593,6 +593,9 @@ namespace RobotTwin.CoreSim.Modeling
         /// <summary>[param] Named values and formulas the dimensions can use (Modeling/ModelParameters.cs); null when none.</summary>
         public List<ModelParameter>? Parameters { get; set; }
 
+        /// <summary>[part-study] The static studies set up on the part's objects (Analysis/Studies/PartStudy.cs); null when none.</summary>
+        public List<Analysis.Studies.PartStudy>? Studies { get; set; }
+
         [JsonIgnore]
         public byte[]? Preview { get; set; }
 

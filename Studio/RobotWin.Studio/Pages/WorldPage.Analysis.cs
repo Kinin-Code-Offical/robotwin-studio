@@ -135,12 +135,23 @@ namespace RobotWin.Studio.Pages
             double seek = at >= 0 && at + 1 < args.Length && double.TryParse(args[at + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double sv) ? sv : secs / 2;
             int mi = Array.IndexOf(args, "--render-mode");
             int mode = mi >= 0 && mi + 1 < args.Length && int.TryParse(args[mi + 1], out int mv) ? mv : 0;
+            // [colour-scale] --render-scale <0|1|2>[:low:high[:unit]], e.g. 2:0:50:MPa (a fixed range)
+            int sci = Array.IndexOf(args, "--render-scale");
+            void Scale()
+            {
+                if (sci < 0 || sci + 1 >= args.Length) return;
+                var p = args[sci + 1].Split(':');
+                double N(int k) => k < p.Length && double.TryParse(p[k], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double x) ? x : 0;
+                w.SetColourScale((int)N(0), N(1), N(2), p.Length > 3 ? p[3] : null);
+            }
+
             int fi = Array.IndexOf(args, "--analysis-file");
             if (fi >= 0 && fi + 1 < args.Length)
             {
                 // A saved render, replayed without computing it again.
                 w.ShowSaved(RobotTwin.CoreSim.Analysis.AnalysisResult.Load(args[fi + 1]));
                 w.SetColourMode(mode);
+                Scale();
                 w.SeekTo(seek);
                 return;
             }
@@ -149,6 +160,7 @@ namespace RobotWin.Studio.Pages
             w.RenderNow().ContinueWith(_ =>
             {
                 w.SetColourMode(mode);
+                Scale();
                 w.SeekTo(seek);
                 if (si >= 0 && si + 1 < args.Length) w.SaveResult(args[si + 1]);   // keep the result to replay or inspect
             }, System.Threading.Tasks.TaskScheduler.FromCurrentSynchronizationContext());

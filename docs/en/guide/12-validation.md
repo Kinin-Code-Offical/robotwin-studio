@@ -7,7 +7,7 @@ Every solver in RobotWin Studio is checked against problems with a known answer:
 - **Deviation:** the difference between the simulation and the reference.
 - **Tolerance:** the largest error the test accepts.
 
-To run the tests yourself: `dotnet test RobotWinStudio.sln`. Each test prints what it measured.
+To run the tests yourself: `dotnet test RobotWinStudio.sln`. Each test prints what it measured. In the app this chapter opens from the command palette (**Validation report**) and from the reliability section of a part's static analysis.
 
 ## 1. Mechanics (rigid bodies, joints, welds)
 
@@ -67,11 +67,15 @@ Every other block of the stack is 2 mm off centre, so no interface is symmetric.
 | Measurement | Theory | Simulation | Deviation | Tolerance |
 | --- | --- | --- | --- | --- |
 | Cantilever tip deflection (Timoshenko) | 0.20156 mm | 0.19993 mm | −0.81 % | −3 / +2 % |
+| Tensile bar (steel, 100 × 10 × 10 mm, 1 kN): stress across the middle, F/A | 10.000 MPa | 10.000 MPa | ≈0 % | ±2 % |
+| Same, the end's stretch F·L/(E·A) | 5.0000 µm | 4.9979 µm | −0.04 % | −3 / +1 % |
 | Cantilever root stress | 60.00 MPa | 60.06 MPa | +0.11 % | ±5 % |
 | Cantilever σxx at L/4 | 45.00 MPa | 45.06 MPa | +0.13 % | ±5 % |
 | Beam element tip deflection and root stress | 0.2000 mm / 60 MPa | same | 0 % | ±0.01 % / ±0.1 % |
 | Plate with a hole, stress concentration Kt (Peterson, finite width) | 3.133 | 2.946 | −6.0 % | ±8 % |
 | Freely accelerating bar (inertia relief), mid stress | 250.00 kPa | 250.00 kPa | ≈0 % | ±10 % |
+| The part editor's static analysis: cantilever tip deflection (fixture and force picked on faces, 2.5 mm elements; the analysis's reference solution) | 0.2015 mm | 0.1995 mm | −1.0 % | ±5 % |
+| The same study, cantilever under a uniform pressure (10 kPa, aluminium) | 21.74 µm | 21.84 µm | +0.5 % | −10 / +20 % |
 
 ## 3. Heat
 
@@ -177,6 +181,13 @@ Numerical methods usually run 5–10 % ahead of the dam-break experiment, whose 
 | Motor current rise on a 10 % slope | 0.059 A | 0.055 A | −7 % | ±25 % |
 | Current rise while pushing a box | 0.052 A | 0.054 A | +4 % | ±35 % |
 | Encoder edge count | 1940 | 1940 | 0 % | ±10 % |
+| DC motor's inrush current, peak (6 V, 2 Ω, 1 mH, k 0.01; the winding and rotor equations solved with a fine step) | 2.7906 A | 2.7914 A | +0.03 % | ±2 % |
+| Same, time to the peak | 1.90 ms | 1.90 ms | ≈0 | ±0.2 ms |
+| MOSFET turn-on, gate-charge circuit (R_g 10 Ω, C_gs 1.3 nF, C_gd 0.2 nF, 10 A clamped): gate to threshold R_g·C_iss·ln(V/(V − V_th)) | 5.350 ns | 5.350 ns | ≈0 % | ±3 % |
+| Same, Miller plateau C_gd·ΔV_ds·R_g/(V − V_p) | 8.625 ns | 8.714 ns | +1.0 % | ±7 % |
+| Same, gate charge to 10 V | 19.965 nC | 19.965 nC | ≈0 % | ±2 % |
+| Stepper, pull-out torque of a sudden load (energy method: 0.7245·K·I) | 0.1206 N·m | 0.1211 N·m | +0.4 % | −6 / +8 % |
+| Same, a load raised slowly (K·I ± detent) | 0.144–0.188 N·m | 0.1854 N·m | in range | range |
 | GPS median horizontal error (datasheet CEP) | 2.5 m | 2.64 m | +6 % | 1.2–4.5 m |
 | Wheel mesh radius (mean / worst) | — | 0.07 % / 1.47 % | — | worst ≤ 3 % |
 

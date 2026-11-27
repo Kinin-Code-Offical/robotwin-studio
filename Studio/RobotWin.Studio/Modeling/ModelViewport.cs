@@ -298,6 +298,12 @@ namespace RobotWin.Studio.Modeling
 
         public Color[] AnalysisColors { get; set; } = Array.Empty<Color>();
 
+        /// <summary>
+        /// [part-study] An object drawn as a study's result (Pages/ModelPage.Study.cs): the model it returns (the part's frame,
+        /// mm) in place of the object's own surface; null for the object: drawn as it is.
+        /// </summary>
+        public Func<ModelObject, Model3D?>? ResultModel { get; set; }
+
         /// <summary>[section] The colour of the cut faces: flat, apart from every body colour.</summary>
         internal static readonly Color CapColor = Color.FromRgb(0xE2, 0x6D, 0x5A);
 
@@ -365,6 +371,7 @@ namespace RobotWin.Studio.Modeling
                 return g;
             }
 
+            if (ResultModel?.Invoke(o) is { } result) return result;   // [part-study] the result's colours on the (deformed) part
             var color = ModelGeometry.ParseColor(o.Color, Color.FromRgb(0xB9, 0xBF, 0xC9));
             var caps = e.Caps;
             var mat = ModelGeometry.Solid(color, xray);

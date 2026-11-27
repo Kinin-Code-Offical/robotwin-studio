@@ -53,9 +53,11 @@ namespace RobotWin.Studio.Modeling
             // ---- view / mode labels (top left, after the tool strip)
             double x0 = 64;
             dc.DrawText(Text(_vp.ViewName, 12.5, TextBrush, true), new Point(x0, 12));
+            // each piece translated on its own: the line as a whole (with the object's name) is never a key
+            string L(string s) => RobotWin.Studio.Shell.Lang.T(s);
             string mode = ed.Mode == EditorMode.Edit
-                ? $"Düzenleme modu · {(ed.Element == ElementMode.Vertex ? "Nokta" : ed.Element == ElementMode.Edge ? "Kenar" : "Yüz")}" + (_vp.Proportional ? " · orantılı" : string.Empty)
-                : "Nesne modu";
+                ? L("Düzenleme modu") + " · " + L(ed.Element == ElementMode.Vertex ? "Nokta" : ed.Element == ElementMode.Edge ? "Kenar" : "Yüz") + (_vp.Proportional ? " · " + L("orantılı") : string.Empty)
+                : L("Nesne modu");
             string obj = ed.Active?.Name ?? "—";
             dc.DrawText(Text($"({mode})  {obj}", 11.5, MutedBrush), new Point(x0, 30));
             string unit = $"Izgara {FormatLen(_vp.GridStep)} · birim mm";

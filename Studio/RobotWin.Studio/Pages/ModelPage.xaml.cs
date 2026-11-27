@@ -104,6 +104,7 @@ namespace RobotWin.Studio.Pages
             }
 
             UpdateHint();
+            if ((change & ModelChange.Geometry) != 0) StudyGeometryChanged();   // [part-study] Pages/ModelPage.Study.cs
         }
 
         private void UpdateHint()
@@ -115,10 +116,10 @@ namespace RobotWin.Studio.Pages
             }
 
             string sel = _ed.Mode == EditorMode.Edit && _ed.EditMesh != null
-                ? $"Nokta {_ed.SelectedVertexSet().Count}/{_ed.EditMesh.Vertices.Count} · Yüz {_ed.SelectedFaceList().Count}/{_ed.EditMesh.Faces.Count}"
-                : $"Nesne {_ed.Selected.Count}/{_ed.Doc.Objects.Count}";
+                ? Lang.T($"Nokta {_ed.SelectedVertexSet().Count}/{_ed.EditMesh.Vertices.Count} · Yüz {_ed.SelectedFaceList().Count}/{_ed.EditMesh.Faces.Count}")
+                : Lang.T($"Nesne {_ed.Selected.Count}/{_ed.Doc.Objects.Count}");
             string file = _ed.FilePath != null ? Path.GetFileName(_ed.FilePath) : _ed.Doc.Title;
-            HintText.Text = $"{sel}   ·   Üçgen {tris:N0}   ·   {file}{(_ed.IsDirty ? " •" : string.Empty)}";
+            HintText.Text = $"{sel}   ·   {Lang.T($"Üçgen {tris:N0}")}   ·   {file}{(_ed.IsDirty ? " •" : string.Empty)}";
         }
 
         // ================================================================ keyboard

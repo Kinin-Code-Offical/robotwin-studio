@@ -123,6 +123,85 @@ namespace RobotWin.Studio.Analysis
         }
     }
 
+    /// <summary>
+    /// [colour-scale] The scale of a coloured result: a vertical bar from low (bottom) to high (top) in its
+    /// palette, with the range labelled in the unit chosen for it. Drawn on the 3D view's dark overlay.
+    /// </summary>
+    public sealed class ColorBar : FrameworkElement
+    {
+        private string _title = string.Empty;
+        private double _low, _high = 1;
+        private Func<double, Color> _palette = LinePlot.Heat;
+        private Func<double, string> _label = v => v.ToString("0.###", CultureInfo.InvariantCulture);
+        private string _note = string.Empty;
+        private bool _wanted;
+
+        /// <summary>A frame's overlays start: the bar stays as it is until <see cref="End"/> unless a scale is shown again.</summary>
+        public void Begin() => _wanted = false;
+
+        /// <summary>A frame's overlays are done: no scale shown since <see cref="Begin"/> hides the bar (layout changes only then).</summary>
+        public void End()
+        {
+            if (!_wanted && Visibility != Visibility.Collapsed) Visibility = Visibility.Collapsed;
+        }
+
+        /// <summary>Shows a scale: <paramref name="palette"/> takes 0..1, <paramref name="label"/> formats a value of the range.</summary>
+        public void Show(string title, double low, double high, Func<double, Color> palette, Func<double, string> label, string note = "")
+        {
+            bool resize = (_note.Length > 0) != (note.Length > 0);
+            _wanted = true;
+            _title = title;
+            _low = low;
+            _high = high;
+            _palette = palette;
+            _label = label;
+            _note = note;
+            if (Visibility != Visibility.Visible) Visibility = Visibility.Visible;
+            if (resize) InvalidateMeasure();
+            InvalidateVisual();
+        }
+
+        public void Hide() => Visibility = Visibility.Collapsed;
+
+        public string Title => _title;
+
+        public double Low => _low;
+
+        public double High => _high;
+
+        protected override Size MeasureOverride(Size availableSize) => new Size(150, _note.Length > 0 ? 222 : 206);
+
+        protected override void OnRender(DrawingContext dc)
+        {
+            double dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+            var face = new Typeface("Segoe UI");
+            FormattedText T(string s, double size, double max = 140)
+            {
+                var ft = new FormattedText(RobotWin.Studio.Shell.Lang.T(s), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, Brushes.White, dpi) { MaxTextWidth = max, MaxLineCount = 2, Trimming = TextTrimming.CharacterEllipsis };
+                return ft;
+            }
+
+            var title = T(_title, 11);
+            dc.DrawText(title, new Point(0, 0));
+            double top = title.Height + 6, height = 160, x = 2;
+            const int steps = 80;
+            for (int i = 0; i < steps; i++)
+                dc.DrawRectangle(new SolidColorBrush(_palette(1 - (i + 0.5) / steps)), null, new Rect(x, top + i * height / steps, 14, height / steps + 0.6));
+            dc.DrawRectangle(null, new Pen(new SolidColorBrush(Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF)), 1), new Rect(x, top, 14, height));
+            const int ticks = 5;
+            for (int k = 0; k < ticks; k++)
+            {
+                double f = k / (double)(ticks - 1);
+                double y = top + height * (1 - f);
+                dc.DrawLine(new Pen(Brushes.White, 1), new Point(x + 14, y), new Point(x + 18, y));
+                var label = T(_label(_low + (_high - _low) * f), 10, 120);
+                dc.DrawText(label, new Point(x + 22, y - label.Height / 2));
+            }
+
+            if (_note.Length > 0) dc.DrawText(T(_note, 10), new Point(0, top + height + 6));
+        }
+    }
+
     /// <summary>2D flow field (vorticity or speed) as an image, solid cells dark.</summary>
     public static class FlowImage
     {

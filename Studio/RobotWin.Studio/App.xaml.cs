@@ -371,7 +371,9 @@ namespace RobotWin.Studio
             window.Navigate(page);
             // [workspaces] --workspace name: that workspace applied for the picture (nothing of the user's is saved)
             if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--workspace").Skip(1).FirstOrDefault() is { } workspace) window.ApplyWorkspace(workspace);
-            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+            // Above the render loop's priority: an off-screen window has no display to pace its frames, so a 3D view there
+            // draws as fast as it can and a Background timer would wait behind it for seconds at a time.
+            var timer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = TimeSpan.FromMilliseconds(400) };
             int phase = 0;
             timer.Tick += (_, _) =>
             {
@@ -386,13 +388,14 @@ namespace RobotWin.Studio
                     {
                         window.ShowPerfForSnapshot();
                         var started = System.Diagnostics.Stopwatch.StartNew();
-                        File.WriteAllText(memoryPath, "seconds\tmanaged MB\tworking set MB\n");
-                        var sampler = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+                        File.WriteAllText(memoryPath, "seconds\tmanaged MB\tworking set MB\tframe\n");
+                        var sampler = new DispatcherTimer(DispatcherPriority.Normal) { Interval = TimeSpan.FromSeconds(2) };
                         sampler.Tick += (_, _) =>
                         {
                             long managed = GC.GetTotalMemory(true);
-                            File.AppendAllText(memoryPath, string.Format(CultureInfo.InvariantCulture, "{0:0}\t{1:0.0}\t{2:0}\n",
-                                started.Elapsed.TotalSeconds, managed / 1048576.0, Environment.WorkingSet / 1048576.0));
+                            // with the frame's costliest sections: a view that slows down over time shows where
+                            File.AppendAllText(memoryPath, string.Format(CultureInfo.InvariantCulture, "{0:0}\t{1:0.0}\t{2:0}\t{3}\n",
+                                started.Elapsed.TotalSeconds, managed / 1048576.0, Environment.WorkingSet / 1048576.0, Shell.Perf.Report()));
                         };
                         sampler.Start();
                     }
@@ -417,6 +420,9 @@ namespace RobotWin.Studio
                 enc.Frames.Add(BitmapFrame.Create(shot));
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
                 using (var fs = File.Create(path)) enc.Save(fs);
+                // [perf] --perf-report file (with --perf): the frame and its costliest sections at the moment of the picture
+                if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--perf-report").Skip(1).FirstOrDefault() is { } perfPath)
+                    File.AppendAllText(perfPath, page + (fault != null ? ":" + fault : string.Empty) + " | " + Shell.Perf.Report() + Environment.NewLine);
                 // [home] --save-as file: the open document saved as the app saves it (its preview drawn from the design or world)
                 if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--save-as").Skip(1).FirstOrDefault() is { } saveAs)
                     Workspace.Current.Save(Path.GetFullPath(saveAs));

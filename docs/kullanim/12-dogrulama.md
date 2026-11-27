@@ -7,7 +7,7 @@ RobotWin Studio'daki her çözücü, sonucu bilinen problemlerle sınanır: anal
 - **Sapma:** simülasyonun referanstan farkı.
 - **Kabul sınırı:** testin izin verdiği en büyük hata.
 
-Testleri kendiniz çalıştırmak için: `dotnet test RobotWinStudio.sln`. Her test ölçtüğü değeri çıktısına yazar.
+Testleri kendiniz çalıştırmak için: `dotnet test RobotWinStudio.sln`. Her test ölçtüğü değeri çıktısına yazar. Uygulamada bu bölüm komut paletinden (**Doğrulama raporu**) ve parçanın statik analizindeki güvenilirlik bölümünden açılır.
 
 ## 1. Mekanik (katı cisim, eklemler, kaynaklar)
 
@@ -67,11 +67,15 @@ Yığında bloklar ikide bir 2 mm kaydırılmıştır, hiçbir arayüz simetrik 
 | Ölçüm | Teori | Simülasyon | Sapma | Kabul sınırı |
 | --- | --- | --- | --- | --- |
 | Konsol uç sehimi (Timoshenko) | 0,20156 mm | 0,19993 mm | −0,81 % | −3 / +2 % |
+| Çekme çubuğu (çelik, 100 × 10 × 10 mm, 1 kN): orta kesitte gerilme F/A | 10,000 MPa | 10,000 MPa | ≈0 % | ±2 % |
+| Aynı, uç uzaması F·L/(E·A) | 5,0000 µm | 4,9979 µm | −0,04 % | −3 / +1 % |
 | Konsol kök gerilmesi | 60,00 MPa | 60,06 MPa | +0,11 % | ±5 % |
 | Konsolda σxx (L/4) | 45,00 MPa | 45,06 MPa | +0,13 % | ±5 % |
 | Kiriş elemanı uç sehimi ve kök gerilmesi | 0,2000 mm / 60 MPa | aynı | 0 % | ±0,01 % / ±0,1 % |
 | Delikli plaka gerilme yığılması Kt (Peterson, sonlu genişlik) | 3,133 | 2,946 | −6,0 % | ±8 % |
 | Serbest ivmelenen çubuk (atalet dengesi), orta gerilme | 250,00 kPa | 250,00 kPa | ≈0 % | ±10 % |
+| Parça düzenleyicinin statik analizi: konsol uç sehimi (yüz seçimiyle sabitleme ve kuvvet, 2,5 mm eleman; analizin referans çözümü) | 0,2015 mm | 0,1995 mm | −1,0 % | ±5 % |
+| Aynı çalışmada düzgün basınçlı konsol (10 kPa, alüminyum) | 21,74 µm | 21,84 µm | +0,5 % | −10 / +20 % |
 
 ## 3. Isı
 
@@ -177,6 +181,13 @@ Baraj yıkılması deneyinde kapak bir anda kalkmadığı için sayısal yöntem
 | %10 eğimde motor akımı artışı | 0,059 A | 0,055 A | −7 % | ±25 % |
 | Kutu iterken akım artışı | 0,052 A | 0,054 A | +4 % | ±35 % |
 | Enkoder kenar sayısı | 1940 | 1940 | 0 % | ±10 % |
+| DC motorun kalkış akımı, tepe (6 V, 2 Ω, 1 mH, k 0,01; sargı ve rotor denklemlerinin ince adımlı çözümü) | 2,7906 A | 2,7914 A | +0,03 % | ±2 % |
+| Aynı, tepeye varış | 1,90 ms | 1,90 ms | ≈0 | ±0,2 ms |
+| MOSFET açılışı, kapı yükü devresi (R_g 10 Ω, C_gs 1,3 nF, C_gd 0,2 nF, 10 A kenetli): kapının eşiğe varışı R_g·C_iss·ln(V/(V − V_th)) | 5,350 ns | 5,350 ns | ≈0 % | ±3 % |
+| Aynı, Miller platosu C_gd·ΔV_ds·R_g/(V − V_p) | 8,625 ns | 8,714 ns | +1,0 % | ±7 % |
+| Aynı, 10 V'a kadar kapı yükü | 19,965 nC | 19,965 nC | ≈0 % | ±2 % |
+| Step motor, ani yükte adım kaçırma torku (enerji yöntemi: 0,7245·K·I) | 0,1206 N·m | 0,1211 N·m | +0,4 % | −6 / +8 % |
+| Aynı, yavaş artan yükte (K·I ± detent) | 0,144–0,188 N·m | 0,1854 N·m | aralıkta | aralık |
 | GPS medyan yatay hatası (datasheet CEP) | 2,5 m | 2,64 m | +6 % | 1,2–4,5 m |
 | Tekerlek ağının yarıçapı (ortalama / en kötü) | — | %0,07 / %1,47 | — | en kötü ≤ %3 |
 

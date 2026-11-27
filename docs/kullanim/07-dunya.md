@@ -871,7 +871,7 @@ Gerçek zamanlı çalıştırma ekrana yetişmek zorundadır. **Render** ise bir
 **Oynatma**
 
 - **Oynat / duraklat:** Boşluk tuşu. **Kare kare ilerleme:** ← →. **Başa / sona:** Home / End. Hız ×0,05 ile ×2 arasında seçilir (ağır çekim).
-- **Renk:** gerilme (von Mises, deforme şekil büyütülmüş) ya da hız okları. **Ölçek:** render'ın en yüksek değeri ya da her malzemenin akma sınırı.
+- **Renk:** gerilme (von Mises, deforme şekil büyütülmüş), hız okları, sıcaklık ya da elektrik. Görünümün sağ üstündeki **renk çubuğu** ölçeği aralığıyla gösterir (gerilme, sıcaklık, kablo akımı). Gerilmede altında **Ölçek** seçilir: render'ın en yüksek değeri, her malzemenin akma sınırı (çubuk o zaman akmaya oran olarak okunur) ya da **sabit aralık** (alt ve üst uç elle yazılır; dışındaki değerler uç renklerde kalır, böylece iki render aynı ölçekte karşılaştırılır). **Birim** gerilmeyi MPa, kPa ya da Pa olarak yazar; otomatikte önek değere göre seçilir.
 - **Kuvvetler:** temas kuvvetleri turuncu, eklem kuvvetleri camgöbeği ok. **Hava:** o anki duman (rüzgâr tünelinde akım çizgileri ve aerodinamik kuvvet, mor ok).
 - **Kablolar** render'da simülasyondaki iplerin kendisi olarak çizilir: sarkar, gerilir ve çekilen fiş yuvasından çıkar. Render sahnesi yalnızca izlenir; içindeki parçalar ve kablolar taşınamaz.
 - Kanal aramasında yazarken Boşluk ve ok tuşları metne gider; oynatma kısayolları ancak kutunun dışındayken çalışır.

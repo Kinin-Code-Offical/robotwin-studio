@@ -22,7 +22,9 @@ namespace RobotWin.Studio.Pages
             _dock.Add(new DockItem("library", "Kütüphane", LibraryPane, DockPlace.Left));
             _dock.Add(new DockItem("outliner", "Parçalar", OutlinerPane, DockPlace.Right));
             _dock.Add(new DockItem("properties", "Özellikler", PropsPane, DockPlace.Right));
+            _dock.Add(new DockItem("study", "Statik analiz", StudyPane(), DockPlace.Left));   // [part-study]
             _dock.Start();
+            _dock.SetVisible("study", false);   // opened by its toolbar button
         }
 
         private void ToggleSidePane()

@@ -108,6 +108,7 @@ namespace RobotWin.Studio
         {
             const string help = "Yardım";
             yield return new PaletteCommand(help, "Yardım ve belgeler", () => ShowHelp(null), "F1");
+            yield return new PaletteCommand(help, "Doğrulama raporu", () => ShowHelp("12-dogrulama.md"));   // [validation] every solver against theory
             yield return new PaletteCommand(help, "Klavye kısayolları", () => ShowHelp("shortcuts"));
             yield return new PaletteCommand(help, "Haberler", () => ShowHelp("news"));
             yield return new PaletteCommand(help, "Güncellemeleri denetle", CheckForUpdates);

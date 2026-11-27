@@ -42,6 +42,18 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
+            if (demo.StartsWith("study", StringComparison.Ordinal))
+            {
+                // [part-study] "study[:disp|:sf][:compare]": a steel bar held at one end and pushed at the other, solved
+                // (":compare": beside the aluminium one in two views)
+                _ed.Load(ModelEditor.NewDocument(), null);
+                bool compare = demo.EndsWith(":compare", StringComparison.Ordinal);
+                string kind = compare ? demo.Substring(0, demo.Length - ":compare".Length) : demo;
+                StudyForSnapshot(kind.EndsWith(":disp", StringComparison.Ordinal) ? "disp" : kind.EndsWith(":sf", StringComparison.Ordinal) ? "sf" : "mises", compare);
+                _vp.FrameAll();
+                return;
+            }
+
             if (demo is "params" or "params-part")
             {
                 // [param] A plate driven by named values: its width, height, hole place and thickness follow them.

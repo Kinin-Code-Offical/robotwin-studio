@@ -471,6 +471,18 @@ namespace RobotWin.Studio.Modeling
             Changed?.Invoke(ModelChange.Selection | ModelChange.Mode);
         }
 
+        /// <summary>[part-study] Selects these faces of the edited object (face select mode), to show where a fixture or a load is.</summary>
+        public void SelectFaces(IEnumerable<int> faces)
+        {
+            if (EditMesh == null) return;
+            if (Element != ElementMode.Face) SetElementMode(ElementMode.Face);
+            SelFaces.Clear();
+            SelVerts.Clear();
+            foreach (int f in faces)
+                if (f >= 0 && f < EditMesh.Faces.Count) SelFaces.Add(f);
+            Changed?.Invoke(ModelChange.Selection);
+        }
+
         /// <summary>Vertices affected by the element selection.</summary>
         public HashSet<int> SelectedVertexSet()
         {

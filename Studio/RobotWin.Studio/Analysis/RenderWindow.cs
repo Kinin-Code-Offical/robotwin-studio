@@ -65,7 +65,18 @@ namespace RobotWin.Studio.Analysis
         private readonly Slider _timeline = new Slider { Minimum = 0, Maximum = 1, IsMoveToPointEnabled = true, VerticalAlignment = VerticalAlignment.Center };
         private readonly TextBlock _time = new TextBlock { Width = 150, VerticalAlignment = VerticalAlignment.Center, FontFamily = new FontFamily("Consolas") };
         private readonly ComboBox _mode = new ComboBox { Width = 210 };
-        private readonly ComboBox _scale = new ComboBox { Width = 220 };
+        private readonly ComboBox _scale = new ComboBox { Width = 190, ToolTip = "Renk ölçeğinin aralığı: render'ın en yükseği, malzemenin akma sınırı ya da elle verilen sabit aralık (renderlar aynı ölçekte karşılaştırılır)" };
+
+        // [colour-scale] the scale of the coloured result, on the view's top right
+        private readonly ColorBar _colorBar = new ColorBar { Visibility = Visibility.Collapsed };
+        private readonly ComboBox _unit = new ComboBox { Width = 120, ToolTip = "Gerilmenin birimi: renk ölçeği, açıklama ve sabit aralık" };
+        private readonly TextBox _scaleLow = new TextBox { Width = 60, Text = "0", ToolTip = "Ölçeğin alt ucu (mavi)" };
+        private readonly TextBox _scaleHigh = new TextBox { Width = 60, Text = "100", ToolTip = "Ölçeğin üst ucu (kırmızı)" };
+        private readonly TextBlock _scaleUnit = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0), Foreground = Brushes.White };
+        private readonly StackPanel _fixedRange = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0), Visibility = Visibility.Collapsed };
+        private readonly StackPanel _scaleControls = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+        private readonly Border _scalePanel = new Border { Padding = new Thickness(10), Margin = new Thickness(8), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Visibility = Visibility.Collapsed };
+        private bool _rangeTyped;
         private readonly CheckBox _forces = new CheckBox { Content = "Kuvvetler", IsChecked = true, VerticalAlignment = VerticalAlignment.Center };
         private readonly CheckBox _air = new CheckBox { Content = "Hava", IsChecked = false, VerticalAlignment = VerticalAlignment.Center };
         private readonly CheckBox _follow = new CheckBox { Content = "Kamera takip", IsChecked = true, VerticalAlignment = VerticalAlignment.Center };
@@ -147,6 +158,7 @@ namespace RobotWin.Studio.Analysis
             var view = new Grid();
             view.Children.Add(_scene);
             view.Children.Add(new Border { Background = new SolidColorBrush(Color.FromArgb(0xA0, 0x10, 0x10, 0x14)), Child = _legend, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(8), IsHitTestVisible = false });
+            view.Children.Add(BuildScalePanel());
             AttachThermalHover(view);   // [thermal] Analysis/RenderWindow.Thermal.cs
             center.Children.Add(view);
             var bar = BuildTimeline();
@@ -368,17 +380,12 @@ namespace RobotWin.Studio.Analysis
             var rightSide = new StackPanel { Orientation = Orientation.Horizontal };
             foreach (var m in new[] { "Renk: gerilme (von Mises)", "Renk: yok", "Renk: hız oku", "Renk: sıcaklık", "Renk: elektrik (akım, güç)" }) _mode.Items.Add(m);
             _mode.SelectedIndex = 0;
-            foreach (var m in new[] { "Ölçek: render'ın en yükseği", "Ölçek: malzemenin akma sınırı" }) _scale.Items.Add(m);
-            _scale.SelectedIndex = 0;
             _mode.SelectionChanged += (_, _) => Seek(_t);
-            _scale.SelectionChanged += (_, _) => Seek(_t);
             _forces.Checked += (_, _) => Seek(_t);
             _forces.Unchecked += (_, _) => Seek(_t);
             _air.Checked += (_, _) => Seek(_t);
             _air.Unchecked += (_, _) => Seek(_t);
             rightSide.Children.Add(_mode);
-            rightSide.Children.Add(new Border { Width = 6 });
-            rightSide.Children.Add(_scale);
             rightSide.Children.Add(new Border { Width = 10 });
             rightSide.Children.Add(_forces);
             rightSide.Children.Add(new Border { Width = 10 });
@@ -413,6 +420,106 @@ namespace RobotWin.Studio.Analysis
                 e.Handled = true;
             };
             return bar;
+        }
+
+        /// <summary>
+        /// [colour-scale] The colour bar with the range in its unit, and for stress the scale's choices under it:
+        /// the render's highest value, the material's yield stress, or a fixed range typed in the chosen unit.
+        /// </summary>
+        private FrameworkElement BuildScalePanel()
+        {
+            foreach (var m in new[] { "Ölçek: render'ın en yükseği", "Ölçek: malzemenin akma sınırı", "Ölçek: sabit aralık" }) _scale.Items.Add(m);
+            _scale.SelectedIndex = 0;
+            foreach (var (label, factor) in new[] { ("Otomatik birim", 0.0), ("MPa", 1e6), ("kPa", 1e3), ("Pa", 1.0) }) _unit.Items.Add(new ComboBoxItem { Content = label, Tag = factor });
+            _unit.SelectedIndex = 0;
+            _scale.SelectionChanged += (_, _) =>
+            {
+                if (_scale.SelectedIndex == 2 && !_rangeTyped)
+                {
+                    // The fixed range starts from what the render shows now, in the unit chosen.
+                    var (f, _) = StressUnit();
+                    _scaleLow.Text = "0";
+                    _scaleHigh.Text = Fmt(_stressMax / f);
+                }
+
+                Seek(_t);
+            };
+            _unit.SelectionChanged += (_, _) => Seek(_t);
+            foreach (var box in new[] { _scaleLow, _scaleHigh })
+            {
+                box.TextChanged += (_, _) =>
+                {
+                    if (!box.IsKeyboardFocusWithin) return;
+                    _rangeTyped = true;
+                    Seek(_t);
+                };
+            }
+
+            _fixedRange.Children.Add(_scaleLow);
+            _fixedRange.Children.Add(new TextBlock { Text = "–", Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 6, 0) });
+            _fixedRange.Children.Add(_scaleHigh);
+            _fixedRange.Children.Add(_scaleUnit);
+            _scaleControls.Children.Add(_scale);
+            _unit.Margin = new Thickness(0, 6, 0, 0);
+            _unit.HorizontalAlignment = HorizontalAlignment.Left;
+            _scaleControls.Children.Add(_unit);
+            _scaleControls.Children.Add(_fixedRange);
+            var stack = new StackPanel();
+            stack.Children.Add(_colorBar);
+            stack.Children.Add(_scaleControls);
+            _scalePanel.Background = new SolidColorBrush(Color.FromArgb(0xC0, 0x10, 0x10, 0x14));
+            _scalePanel.Child = stack;
+            return _scalePanel;
+        }
+
+        /// <summary>The stress unit chosen: its size in Pa and its name (automatic: MPa for typed values, SI prefix for labels).</summary>
+        private (double Factor, string Unit) StressUnit() => _unit.SelectedItem is ComboBoxItem { Tag: double f } && f > 0 ? (f, (string)((ComboBoxItem)_unit.SelectedItem).Content) : (1e6, "MPa");
+
+        private bool AutoUnit => _unit.SelectedIndex <= 0;
+
+        private string StressText(double pa)
+        {
+            if (AutoUnit) return SiValue.Format(pa, "Pa");
+            var (f, u) = StressUnit();
+            return Fmt(pa / f) + " " + u;
+        }
+
+        private static string Fmt(double v)
+        {
+            double a = Math.Abs(v);
+            string format = a >= 100 ? "0" : a >= 10 ? "0.#" : a >= 1 ? "0.##" : "0.###";
+            return v.ToString(format, CultureInfo.InvariantCulture);
+        }
+
+        private static bool TryNumber(TextBox box, out double v) => double.TryParse(box.Text.Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out v) && double.IsFinite(v);
+
+        /// <summary>The stress range the colours span (Pa): the fixed one when it is valid, else 0 to the render's highest.</summary>
+        private (double Low, double High, bool Fixed) StressRange()
+        {
+            if (_scale.SelectedIndex == 2 && TryNumber(_scaleLow, out double lo) && TryNumber(_scaleHigh, out double hi) && hi > lo)
+            {
+                var (f, _) = StressUnit();
+                return (lo * f, hi * f, true);
+            }
+
+            return (0, _stressMax, false);
+        }
+
+        /// <summary>Sets the stress colour scale (0 render's highest, 1 yield, 2 fixed <paramref name="low"/>–<paramref name="high"/> in <paramref name="unit"/>).</summary>
+        public void SetColourScale(int scale, double low = 0, double high = 0, string? unit = null)
+        {
+            if (unit != null)
+                for (int i = 0; i < _unit.Items.Count; i++)
+                    if (_unit.Items[i] is ComboBoxItem { Content: string u } && string.Equals(u, unit, StringComparison.OrdinalIgnoreCase)) _unit.SelectedIndex = i;
+            if (scale == 2 && high > low)
+            {
+                _rangeTyped = true;
+                _scaleLow.Text = Fmt(low);
+                _scaleHigh.Text = Fmt(high);
+            }
+
+            _scale.SelectedIndex = Math.Max(0, Math.Min(_scale.Items.Count - 1, scale));
+            Seek(_t);
         }
 
         private void TogglePlay()
@@ -758,6 +865,7 @@ namespace RobotWin.Studio.Analysis
             var hidden = new List<string>();
             double t0 = store.Time(0);
             _unified.Cursor = t + t0;
+            _colorBar.Begin();
 
             if (_mode.SelectedIndex == 0) StressOverlay(overlay, i, t + t0, hidden, legend);
             else if (_mode.SelectedIndex == 2) SpeedOverlay(overlay, i, legend);
@@ -784,6 +892,11 @@ namespace RobotWin.Studio.Analysis
                 _framed = true;
             }
             _legend.Text = legend.ToString().TrimEnd();
+            _colorBar.End();
+            _scalePanel.Visibility = _colorBar.Visibility;
+            _scaleControls.Visibility = _mode.SelectedIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
+            _fixedRange.Visibility = _scale.SelectedIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
+            _scaleUnit.Text = StressUnit().Unit;
 
             _plot.Cursor = t;
             _plot.Refresh();
@@ -804,6 +917,7 @@ namespace RobotWin.Studio.Analysis
         {
             if (_result == null || _result.Stress.Count == 0) return;
             bool yield = _scale.SelectedIndex == 1;
+            var (low, high, fixedRange) = StressRange();
             string worst = string.Empty;
             double worstRatio = -1;
             foreach (var st in _result.Stress)
@@ -814,7 +928,8 @@ namespace RobotWin.Studio.Analysis
                 var pose = AnalysisRun.RecordedPose(_result.Channels, st.ObjectId, i);
                 if (pose == null) continue;
                 var (pos, q, _) = pose.Value;
-                double vmax = yield ? Math.Max(1, st.Yield) : _stressMax;
+                double vlo = yield ? 0 : low, vhi = yield ? Math.Max(1, st.Yield) : high;
+                double span = Math.Max(1e-9, vhi - vlo);
                 double maxDisp = st.Frames.Max(x => x.MaxDisplacement);
                 double size = 0;
                 for (int n = 0; n < st.NodeCount; n++) size = Math.Max(size, st.Node(n).Length);
@@ -829,11 +944,11 @@ namespace RobotWin.Studio.Analysis
                         p += new Vec3(f.Displacement[3 * n], f.Displacement[3 * n + 1], f.Displacement[3 * n + 2]) * exaggerate;
                     var w = centre + qb.Rotate(p);
                     mesh.Positions.Add(new Point3D(w.X, w.Y, w.Z));
-                    mesh.TextureCoordinates.Add(new Point(Math.Max(0.002, Math.Min(0.998, f.VonMises[n] / vmax)), 0.5));
+                    mesh.TextureCoordinates.Add(new Point(Math.Max(0.002, Math.Min(0.998, (f.VonMises[n] - vlo) / span)), 0.5));
                 }
 
                 int stride = st.Order == 2 ? 6 : 3;
-                if (st.Method == "beam") BeamMesh(mesh, st, f, centre, q, exaggerate, vmax);
+                if (st.Method == "beam") BeamMesh(mesh, st, f, centre, q, exaggerate, vlo, span);
                 else if (st.Surface.Length < stride) continue;
                 else for (int k = 0; k + stride <= st.Surface.Length; k += stride)
                 {
@@ -858,16 +973,18 @@ namespace RobotWin.Studio.Analysis
                 if (ratio > worstRatio)
                 {
                     worstRatio = ratio;
-                    worst = $"{st.Name}: σ = {SiValue.Format(f.MaxVonMises, "Pa")} (akmanın %{ratio * 100:0.#}'i)";
+                    worst = $"{st.Name}: σ = {StressText(f.MaxVonMises)} (akmanın %{ratio * 100:0.#}'i)";
                 }
             }
 
-            legend.AppendLine("Renk: von Mises gerilmesi, mavi 0 → kırmızı " + (yield ? "akma sınırı" : SiValue.Format(_stressMax, "Pa")) + "; deformasyon büyütülmüş");
+            legend.AppendLine("Renk: von Mises gerilmesi (sağdaki ölçek); deformasyon büyütülmüş");
+            if (yield) _colorBar.Show("von Mises / akma sınırı", 0, 1, LinePlot.Heat, v => v.ToString("0.##", CultureInfo.InvariantCulture));
+            else _colorBar.Show("von Mises gerilmesi", low, high, LinePlot.Heat, StressText, fixedRange ? "Sabit aralık: dışındaki değerler uç renklerde" : string.Empty);
             if (worst.Length > 0) legend.AppendLine("En zorlanan: " + worst);
         }
 
         /// <summary>A beam drawn with its real cross-section along the deformed axis, coloured per node.</summary>
-        private static void BeamMesh(MeshGeometry3D mesh, StressResult st, StressFrame f, Vec3 centre, Quat q, double exaggerate, double vmax)
+        private static void BeamMesh(MeshGeometry3D mesh, StressResult st, StressFrame f, Vec3 centre, Quat q, double exaggerate, double vlo, double span)
         {
             mesh.Positions.Clear();
             mesh.TextureCoordinates.Clear();
@@ -883,7 +1000,7 @@ namespace RobotWin.Studio.Analysis
             {
                 var p = st.Node(i);
                 if (f.Displacement.Length >= 3 * n) p += new Vec3(f.Displacement[3 * i], f.Displacement[3 * i + 1], f.Displacement[3 * i + 2]) * exaggerate;
-                double u = Math.Max(0.002, Math.Min(0.998, f.VonMises.Length > i ? f.VonMises[i] / Math.Max(1e-9, vmax) : 0));
+                double u = Math.Max(0.002, Math.Min(0.998, f.VonMises.Length > i ? (f.VonMises[i] - vlo) / span : 0));
                 foreach (var c in corners)
                 {
                     var w = centre + q.Rotate(p + c);
@@ -925,6 +1042,7 @@ namespace RobotWin.Studio.Analysis
             var top = now.OrderByDescending(kv => kv.Value).Take(3)
                 .Select(kv => (_world.Cables.FirstOrDefault(x => x.Id == kv.Key) is { } cb ? CableName(cb) : kv.Key) + " " + SiValue.Format(kv.Value, "A"));
             legend.AppendLine($"Kablolar akımla renkli: koyu mavi akım yok, kırmızı {SiValue.Format(peak, "A")}; en yüklü: " + string.Join(", ", top));
+            if (now.Count > 0) _colorBar.Show("Kablo akımı", 0, peak, x => LinePlot.Heat(0.08 + 0.92 * x), v => SiValue.Format(v, "A"));
             return c => now.TryGetValue(c.Id, out double a) ? LinePlot.Heat(0.08 + 0.92 * Math.Min(1, a / peak)) : (Color?)null;
         }
 

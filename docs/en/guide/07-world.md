@@ -872,7 +872,7 @@ Real-time running has to keep up with the screen. A **render** recomputes a reco
 **Playback**
 
 - **Play / pause:** Space. **Frame by frame:** ← →. **Start / end:** Home / End. Speed from ×0.05 to ×2 (slow motion).
-- **Colour:** stress (von Mises, deformed shape exaggerated) or velocity arrows. **Scale:** the render's maximum, or each material's yield strength.
+- **Colour:** stress (von Mises, deformed shape exaggerated), velocity arrows, temperature or electrical. The **colour bar** on the view's top right shows the scale with its range (stress, temperature, cable current). For stress the **Scale** is picked under it: the render's maximum, each material's yield strength (the bar then reads as a fraction of yield) or a **fixed range** (the low and high ends typed in; values outside it keep the end colours, so two renders compare on the same scale). **Unit** writes the stress in MPa, kPa or Pa; on automatic the prefix follows the value.
 - **Forces:** contact forces as orange arrows, joint forces as cyan arrows. **Air:** the smoke at that instant (in the wind tunnel: streamlines and the aerodynamic force, purple arrow).
 - **Cables** are drawn in the render as the simulated ropes themselves: they sag, tighten, and a pulled plug comes out of its pin. The render scene is for watching only; its parts and cables cannot be moved.
 - While you type in the channel search, Space and the arrow keys go to the text; the playback shortcuts work outside the box.

@@ -154,6 +154,65 @@ namespace RobotTwin.CoreSim.Tests
             Assert.True(Math.Abs(slips.Motor.Angle) > 1.0, "beyond its holding torque the load turns it");
         }
 
+        /// <summary>
+        /// [validation] Where a held stepper starts losing steps. The windings pull the rotor back with K·I·sin(N·θ) (N rotor
+        /// teeth, θ its lag) and the magnets' detent adds or takes up to its own peak. A load raised slowly is held until
+        /// it passes the curve's peak: K·I ± T_detent. A load put on all at once is lost earlier, because the rotor
+        /// overshoots its new rest: with no damping it just reaches the unstable point when the work of the load equals
+        /// the spring's, K·I·(1 − cos x) = T·x at x = π − asin(T / K·I), which gives T = 0.7245·K·I.
+        /// </summary>
+        [Fact]
+        public void ItLosesStepsAtThePullOutTorqueTheoryGives()
+        {
+            double kI = 0.40 / (Math.Sqrt(2) * 1.7) * 1.0, detent = 0.022;
+
+            // a load put on at once: the threshold by bisection
+            bool Slips(double load)
+            {
+                var r = Build(0);
+                Run(r, 0.1);
+                double rest = r.Motor.FullSteps;
+                r.Motor.LoadTorque = load;
+                Run(r, 0.3);
+                return Math.Abs(r.Motor.FullSteps - rest) > 2;   // a held motor lags a fraction of a step; a slipping one runs away
+            }
+
+            double holds = 0.10, slips = 0.30;
+            Assert.False(Slips(holds));
+            Assert.True(Slips(slips));
+            for (int k = 0; k < 7; k++)
+            {
+                double mid = (holds + slips) / 2;
+                if (Slips(mid)) slips = mid;
+                else holds = mid;
+            }
+
+            double sudden = (holds + slips) / 2;
+            double tau = 0.5;   // 1 + √(1 − τ²) = τ·(π − asin τ), by bisection
+            for (double lo = 0.5, hi = 1.0, k = 0; k < 60; k++)
+            {
+                tau = (lo + hi) / 2;
+                if (1 + Math.Sqrt(1 - tau * tau) > tau * (Math.PI - Math.Asin(tau))) lo = tau;
+                else hi = tau;
+            }
+
+            // a load raised slowly (0.1 N·m a second): where the rotor runs away
+            var ramp = Build(0);
+            Run(ramp, 0.1);
+            double start = ramp.Motor.FullSteps, slowPullOut = double.NaN;
+            while (ramp.Sim.Time < 2.2 && double.IsNaN(slowPullOut))
+            {
+                ramp.Motor.LoadTorque = 0.1 * (ramp.Sim.Time - 0.1);
+                Run(ramp, 0.002);
+                if (Math.Abs(ramp.Motor.FullSteps - start) > 1) slowPullOut = ramp.Motor.LoadTorque;
+            }
+
+            _out.WriteLine($"sudden load: pull-out {sudden:0.0000} N·m (holds {holds:0.0000}, slips {slips:0.0000}); energy method {tau:0.0000}·K·I = {tau * kI:0.0000} N·m ({(sudden / (tau * kI) - 1) * 100:0.0} %)");
+            _out.WriteLine($"slow load: pull-out {slowPullOut:0.0000} N·m; K·I {kI:0.0000} N·m ± detent {detent:0.000} → {kI - detent:0.000}–{kI + detent:0.000}");
+            Assert.InRange(sudden / (tau * kI), 0.94, 1.08);   // friction and damping only raise it
+            Assert.InRange(slowPullOut, kI - detent, kI + detent);
+        }
+
         [Fact]
         public void StartedTooFastItStallsInsteadOfFollowing()
         {

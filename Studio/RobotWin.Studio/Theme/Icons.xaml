@@ -116,6 +116,7 @@
     <Geometry x:Key="I.Edges">M4,4 H20 V20 H4 Z M4,12 H20 M12,4 V20 M4,4 L20,20</Geometry>
     <Geometry x:Key="I.Section">M5,10 L12,6 L19,10 V14 M5,10 V14 M12,14 V10 M5,10 L12,14 L19,10 M2,15 H22 M5,18 H19</Geometry>
     <Geometry x:Key="I.Analysis">M12,3 A9,9 0 1 1 11.99,3 M4,9 C9,11 15,11 20,9 M3.5,14 C9,16.5 15,16.5 20.5,14</Geometry>
+    <Geometry x:Key="I.Stress">M4,5 V19 M4,10 H17 V14 H4 M19,4 V9 M17,7 L19,9 L21,7</Geometry>
     <Geometry x:Key="I.Build">M13,4 L20,11 L17.5,13.5 L10.5,6.5 Z M12,9 L4,17 L7,20 L15,12</Geometry>
     <Geometry x:Key="I.StepInto">M12,3 V14 M7.5,9.5 L12,14 L16.5,9.5 M12,17.5 A1.8,1.8 0 1 1 11.99,17.5</Geometry>
     <Geometry x:Key="I.StepOut">M12,15 V4 M7.5,8.5 L12,4 L16.5,8.5 M12,17.5 A1.8,1.8 0 1 1 11.99,17.5</Geometry>
