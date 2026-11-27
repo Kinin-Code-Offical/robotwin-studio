@@ -920,6 +920,7 @@ The handles on the selected part work as in Unity; pick them with the four toolb
 - **All in one (Y):** the three together.
 - **Vertex snapping (V):** hold V while dragging a part freely or by the move handle's middle: the part's corner nearest the cursor is held, and when the cursor comes near another part's corner the two corners meet exactly (a part's corners are those of its shape's box in its own axes), so boxes, boards and parts line up edge to edge.
 - **Surface snapping (Ctrl+Shift):** hold Ctrl+Shift while dragging a part freely or by the move handle's middle: the part's base lands on the surface under the cursor (another part's, the terrain's or the floor's), leaving the part itself and what is mounted on it out.
+- **Turn towards a surface (Ctrl+Shift+click, with the rotate handle):** with the rotate handle on (E), Ctrl+Shift+click any surface: the selected part turns so its own +X, the way a camera or a distance sensor looks, points at that spot, without rolling over; what is mounted on it turns along.
 - **Pivot / Centre:** the handles sit on the part's pivot or in the middle of its shape. **Local / World:** their axes are the part's own or the world's (scale is always local).
 
 Moving snaps to the grid and rotating to 15° steps; with **Alt** held it is free. Everything mounted on the part (a servo horn, a sensor, cables) comes with it, and the hinges between them keep their place and axis.

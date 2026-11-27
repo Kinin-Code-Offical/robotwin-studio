@@ -919,6 +919,7 @@ Seçili parçanın üstündeki tutamaçlar Unity'dekiler gibidir; araç çubuğu
 - **Hepsi bir arada (Y):** üçü birlikte.
 - **Köşe yakalama (V):** parçayı serbestçe ya da taşı tutamacının ortasından sürüklerken V basılı tutun: parçanın imlece en yakın köşesi tutulur ve imleç başka bir parçanın köşesine yaklaşınca iki köşe tam üst üste gelir (köşeler parçanın kendi eksenlerindeki şekil kutusunun köşeleridir); kutular, kartlar ve parçalar kenar kenara dizilir.
 - **Yüzeye oturtma (Ctrl+Shift):** parçayı serbestçe sürüklerken ya da taşı tutamacının ortasından sürüklerken Ctrl+Shift basılı tutun: parçanın tabanı imlecin altındaki yüzeye (başka bir parçanın, arazinin ya da zeminin) oturur; parçanın kendisi ve üstüne takılanlar hesaba katılmaz.
+- **Bakışla döndürme (Ctrl+Shift+tık, döndürme tutamacıyla):** döndürme tutamacı açıkken (E) Ctrl+Shift basılı bir yüzeye tıklayın. Seçili parça, kendi +X ekseni (kamera ve mesafe sensörü bu yöne bakar) o noktaya bakacak biçimde döner, yan yatmaz. Üstüne takılanlar onunla birlikte döner.
 - **Pivot / Merkez:** tutamaç parçanın pivotunda ya da şeklinin ortasında durur. **Yerel / Dünya:** eksenleri parçanınkiler ya da dünyanınkiler (ölçek her zaman yereldir).
 
 Taşıma ızgaraya, döndürme 15° adımlarla yapışır; **Alt** basılıyken serbesttir. Parçaya takılı olan her şey (servo kolu, sensör, kablolar) onunla birlikte gider; aradaki menteşelerin yeri ve ekseni de döner.

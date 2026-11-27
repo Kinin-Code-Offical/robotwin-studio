@@ -8592,6 +8592,12 @@
   "Seçenekler": "Options",
   "Renkli (kapalıyken her şey siyah: toner transferi, film)": "In colour (off: everything black, for toner transfer and film)",
   "Aynala": "Mirror",
+  "Çerçeve (yazı kutusu)": "Frame (text box)",
+  "Kutu genişliği (mm, 0: sığdır)": "Box width (mm, 0: fit)",
+  "Serigrafi yazısı tek çizgili yazı tipiyle Gerber'e ve KiCad'e aynen aktarılır (Türkçe harfler temel harflerine çevrilir). Birden çok satır, kutu genişliği ya da çerçeve onu KiCad'deki yazı kutusu yapar: satırlar soldan, genişliğe göre kayarak dizilir.": "Silkscreen text goes to Gerber and KiCad as drawn, in a single-stroke font (Turkish letters become their base letters). Several lines, a box width or a frame make it KiCad's text box: the lines run from the left, wrapping to the width.",
+  "Bakışla döndür": "Turn towards",
+  "Sensör": "Sensor",
+  "Hedef kutu": "Target box",
   "Çizginin, dairenin ya da yayın tıklanan parçasını kesiştiği öğeler arasında siler; hiçbir şey kesmiyorsa tamamını": "Deletes the clicked piece of a line, circle or arc between the entities that cross it; all of it when nothing does",
   "Budamak için bir çizgiye, daireye ya da yaya tıklayın.": "Click a line, a circle or an arc to trim.",
   "Bir daireyi budamak için onu iki yerden kesen öğeler gerekir.": "To trim a circle, it has to be crossed in two places.",
@@ -8926,6 +8932,7 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+  "{…} yüzeydeki noktaya çevrildi": "{0} turned towards the point on the surface",
   "orantılı {…} mm (tekerlek)": "proportional {0} mm (wheel)",
   "Orantılı düzenleme açık: seçimin {…} mm çevresi de yumuşakça gelir (taşırken tekerlek yarıçapı değiştirir)": "Proportional editing on: {0} mm round the selection comes along softly (the wheel changes the radius while moving)",
   "Düzenleme modu · {…} · orantılı": "Edit mode · {0} · proportional",

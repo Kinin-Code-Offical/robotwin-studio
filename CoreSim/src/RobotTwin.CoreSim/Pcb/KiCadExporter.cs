@@ -511,6 +511,19 @@ namespace RobotTwin.CoreSim.Pcb
             {
                 var t = board.Texts[i];
                 var effects = new SNode("effects", new SNode("font", new SNode("size", N(t.Size), N(t.Size)), new SNode("thickness", N(t.Thickness))));
+                if (t.IsBox)
+                {
+                    // [textbox] KiCad 7+'s text box: its corners (as drawn before turning), the angle, the frame
+                    var (w, h) = Silk.TextBoxSize(t);
+                    var box = new SNode("gr_text_box", Q(t.Text), new SNode("start", N(t.X - w / 2), N(t.Y - h / 2)), new SNode("end", N(t.X + w / 2), N(t.Y + h / 2)));
+                    if (t.Rotation != 0) box.Add(new SNode("angle", N(-t.Rotation)));
+                    box.Add(new SNode("layer", Q(GraphicLayerName(t.Layer))), Uid("text:" + i.ToString(CultureInfo.InvariantCulture)));
+                    effects.Add(new SNode("justify", t.Mirrored ? "left top mirror" : "left top"));
+                    box.Add(effects, new SNode("border", t.Border ? "yes" : "no"), new SNode("stroke", new SNode("width", N(t.Thickness)), new SNode("type", "solid")));
+                    yield return box;
+                    continue;
+                }
+
                 if (t.Mirrored) effects.Add(new SNode("justify", "mirror"));
                 yield return new SNode("gr_text", Q(t.Text), new SNode("at", N(t.X), N(t.Y), N(-t.Rotation)),
                     new SNode("layer", Q(GraphicLayerName(t.Layer))), Uid("text:" + i.ToString(CultureInfo.InvariantCulture)), effects);

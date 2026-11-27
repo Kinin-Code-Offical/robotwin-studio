@@ -548,8 +548,86 @@ namespace RobotTwin.CoreSim.Pcb
         public static List<Segment2> TextStrokes(BoardText t)
         {
             var list = new List<Segment2>();
+            if (t.IsBox)
+            {
+                TextBoxStrokes(t, list);
+                return list;
+            }
+
             StrokeFont.DrawCentered((x1, y1, x2, y2, _) => list.Add(new Segment2(x1, y1, x2, y2)), t.Text, t.X, t.Y, t.Size, t.Thickness, t.Rotation, t.Mirrored);
             return list;
+        }
+
+        /// <summary>[textbox] The margin inside a text box's frame (mm).</summary>
+        public static double BoxMargin(BoardText t) => t.Size * 0.5;
+
+        /// <summary>[textbox] A text box's lines: one per "\n", and with a width, words wrapped so each line fits inside the margins.</summary>
+        public static List<string> TextBoxLines(BoardText t)
+        {
+            var lines = new List<string>();
+            double room = t.BoxWidth > 0 ? t.BoxWidth - 2 * BoxMargin(t) : double.MaxValue;
+            foreach (var raw in t.Text.Replace("\r", string.Empty).Split('\n'))
+            {
+                if (t.BoxWidth <= 0 || StrokeFont.Measure(raw, t.Size) <= room)
+                {
+                    lines.Add(raw);
+                    continue;
+                }
+
+                var line = string.Empty;
+                foreach (var word in raw.Split(' '))
+                {
+                    string next = line.Length == 0 ? word : line + " " + word;
+                    if (line.Length > 0 && StrokeFont.Measure(next, t.Size) > room)
+                    {
+                        lines.Add(line);
+                        line = word;
+                    }
+                    else line = next;
+                }
+
+                lines.Add(line);
+            }
+
+            return lines;
+        }
+
+        /// <summary>[textbox] A text box's size (mm): its width (given, or the longest line's) and the lines' height, margins included.</summary>
+        public static (double Width, double Height) TextBoxSize(BoardText t)
+        {
+            var lines = TextBoxLines(t);
+            double m = BoxMargin(t), pitch = t.Size * 1.6;
+            double w = t.BoxWidth > 0 ? t.BoxWidth : lines.Select(l => StrokeFont.Measure(l, t.Size)).DefaultIfEmpty(0).Max() + 2 * m;
+            double h = (lines.Count - 1) * pitch + t.Size + 2 * m;
+            return (w, h);
+        }
+
+        /// <summary>
+        /// [textbox] KiCad's text box: the lines left-aligned from the top inside the margin, the box centred on the text's
+        /// place and turned with it, a frame round it when it has one.
+        /// </summary>
+        private static void TextBoxStrokes(BoardText t, List<Segment2> list)
+        {
+            var lines = TextBoxLines(t);
+            var (w, h) = TextBoxSize(t);
+            double m = BoxMargin(t), pitch = t.Size * 1.6;
+            double a = t.Rotation * Math.PI / 180, ca = Math.Cos(a), sa = Math.Sin(a);
+            (double X, double Y) At(double lx, double ly)
+            {
+                if (t.Mirrored) lx = -lx;
+                return (t.X + lx * ca - ly * sa, t.Y + lx * sa + ly * ca);
+            }
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                double lw = StrokeFont.Measure(lines[i], t.Size);
+                var (cx, cy) = At(-w / 2 + m + lw / 2, -h / 2 + m + t.Size / 2 + i * pitch);
+                StrokeFont.DrawCentered((x1, y1, x2, y2, _) => list.Add(new Segment2(x1, y1, x2, y2)), lines[i], cx, cy, t.Size, t.Thickness, t.Rotation, t.Mirrored);
+            }
+
+            if (!t.Border) return;
+            var c = new[] { At(-w / 2, -h / 2), At(w / 2, -h / 2), At(w / 2, h / 2), At(-w / 2, h / 2) };
+            for (int i = 0; i < 4; i++) list.Add(new Segment2(c[i].X, c[i].Y, c[(i + 1) % 4].X, c[(i + 1) % 4].Y));
         }
 
         public static List<Segment2> DimensionStrokes(BoardDimension d, bool mil = false)

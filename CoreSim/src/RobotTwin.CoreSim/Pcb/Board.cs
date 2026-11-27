@@ -385,6 +385,18 @@ namespace RobotTwin.CoreSim.Pcb
         public double X { get; set; }
         public double Y { get; set; }
         public double Size { get; set; } = 1.5;
+
+        /// <summary>[textbox] KiCad's text box: the box's width (mm) the lines wrap to; 0 for plain text (a line per "\n").</summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+        public double BoxWidth { get; set; }
+
+        /// <summary>[textbox] A frame drawn round the text (the box), in the text's line thickness.</summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+        public bool Border { get; set; }
+
+        /// <summary>[textbox] Whether it is laid out as a text box (lines, a width or a frame) rather than one centred line.</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsBox => BoxWidth > 0 || Border || Text.Contains('\n');
         public double Thickness { get; set; } = 0.15;
         public GraphicLayer Layer { get; set; } = GraphicLayer.SilkTop;
 

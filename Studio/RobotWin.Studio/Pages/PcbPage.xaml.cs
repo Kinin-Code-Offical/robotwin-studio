@@ -827,6 +827,12 @@ namespace RobotWin.Studio.Pages
                     Canvas.Refresh();
                     break;
 
+                case "textbox":   // [textbox] a framed note wrapped to 22 mm and a two-line label beside the parts
+                    board.Texts.Add(new BoardText { Text = "MOTOR SURUCU KARTI - 6..12 V GIRIS, EN COK 2 A", X = 14, Y = 26, Size = 1.0, BoxWidth = 22, Border = true });
+                    board.Texts.Add(new BoardText { Text = "REV B\nLOT 2026-11", X = 38, Y = 26.5, Size = 0.9 });
+                    Canvas.Refresh();
+                    break;
+
                 case "local-rats":   // [local-rats] the board unrouted, its ratsnest off: only Q1's lines, KiCad's local ratsnest
                     board.Tracks.Clear();
                     board.Vias.Clear();

@@ -1003,7 +1003,7 @@ namespace RobotWin.Studio.Pcb
                 {
                     case Track t: Clipboard.Add(new Track { Net = t.Net, Layer = t.Layer, X1 = t.X1, Y1 = t.Y1, X2 = t.X2, Y2 = t.Y2, Width = t.Width }); break;
                     case Via v: Clipboard.Add(new Via { Net = v.Net, X = v.X, Y = v.Y, Diameter = v.Diameter, Drill = v.Drill, StartLayer = v.StartLayer, EndLayer = v.EndLayer }); break;
-                    case BoardText x: Clipboard.Add(new BoardText { Text = x.Text, X = x.X, Y = x.Y, Size = x.Size, Thickness = x.Thickness, Layer = x.Layer, Rotation = x.Rotation }); break;
+                    case BoardText x: Clipboard.Add(new BoardText { Text = x.Text, X = x.X, Y = x.Y, Size = x.Size, Thickness = x.Thickness, Layer = x.Layer, Rotation = x.Rotation, BoxWidth = x.BoxWidth, Border = x.Border }); break;
                     case MountingHole h: Clipboard.Add(new MountingHole { X = h.X, Y = h.Y, Drill = h.Drill, PadDiameter = h.PadDiameter, Net = h.Net }); break;
                     case BoardDimension d: Clipboard.Add(new BoardDimension { X1 = d.X1, Y1 = d.Y1, X2 = d.X2, Y2 = d.Y2, Offset = d.Offset, TextSize = d.TextSize, Layer = d.Layer, Kind = d.Kind, Vertical = d.Vertical, Text = d.Text }); break;
                     case Zone z when !z.IsWholeBoard: Clipboard.Add(z.CloneSettings()); break;
@@ -1046,7 +1046,7 @@ namespace RobotWin.Studio.Pcb
 
                     case BoardText x:
                     {
-                        var c = new BoardText { Text = x.Text, X = x.X, Y = x.Y, Size = x.Size, Thickness = x.Thickness, Layer = x.Layer, Rotation = x.Rotation };
+                        var c = new BoardText { Text = x.Text, X = x.X, Y = x.Y, Size = x.Size, Thickness = x.Thickness, Layer = x.Layer, Rotation = x.Rotation, BoxWidth = x.BoxWidth, Border = x.Border };   // [textbox] the box comes along
                         board.Texts.Add(c);
                         pasted.Add(c);
                         break;

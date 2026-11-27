@@ -82,7 +82,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Çizgi, yay, dikdörtgen, daire, çokgen | Çizim grubu | var | |
 | Bezier, resim | yok | yok | 3 |
 | Yazı | Yazı | var | |
-| Yazı kutusu, tablo | yok | yok | 3 |
+| Yazı kutusu, tablo | Yazı kutusu: çok satır, genişliğe göre kaydırma, çerçeve; Gerber ve KiCad gr_text_box; tablo sonra | kısmi | 3 |
 | Ölçü (hizalı) | Ölçü çizgisi | var | |
 | Ölçü (dik, yarıçap, kılavuz, merkez) | Ölçü aracında Tür: hizalı, dik (yatay/dikey), yarıçap, kılavuz (not), merkez işareti; yazı geçersiz kılma | var | |
 | Silici (tıklananı sil) | Del; sol şeritte Silici aracı (her tıklama altındakini siler) | var | |
@@ -236,7 +236,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Izgara ve yakalama penceresi: ızgarayı göster, en yakın ızgara, ızgara düzlemi X/Y/Z, saydamlık, ızgara boyu, adım (bağlı X/Y/Z), ızgaranın konumu ve dönüşü, etkin nesneden kopyala, dünyaya sıfırla | Izgara ve yakalama: yakala aç / kapa, ızgarayı göster, saydamlık, taşıma · döndürme · boyut adımları, seçiliyi ızgaraya oturt, varsayılana dön (ızgara düzlemi, eksen başına adım, ızgaranın konumu sonra) | kısmi | 3 |
 | Köşe yakalama (V): köşeden köşeye, köşeden yüzeye, pivotu köşeye | V ile serbest sürüklemede ve taşı tutamacının ortasında köşeden köşeye (şekil kutusunun 8 köşesi); köşeden yüzeye ve pivotu köşeye sonra | kısmi | 3 |
 | Yüzeye yakalama (Ctrl+Shift) | Ctrl+Shift ile serbest sürüklemede ve taşı tutamacının ortasında: parçanın tabanı imlecin altındaki parça, arazi ya da zemin yüzeyine (kendisi ve takılıları atlanır) | var | |
-| Bakışla döndürme (bir yüzeye çevir) | yok | yok | 3 |
+| Bakışla döndürme (bir yüzeye çevir) | döndürme tutamacıyla Ctrl+Shift+tık: parçanın +X ekseni tıklanan yüzey noktasına döner, yan yatmaz; takılılar birlikte | var | |
 | Kaplama menüsü: araçlar, araç seçenekleri, ızgara ve yakalama, çizim kipleri, görünüm seçenekleri, arama, yön, kameralar | Kaplamalar (` ve sahne çubuğu): ipucu satırı, tutamaç, sensör kaplamaları, ızgara, hepsini gizle (saklanır); kaplamaların taşınması sonra | kısmi | 3 |
 
 ### Sahne ağacı (Hierarchy)

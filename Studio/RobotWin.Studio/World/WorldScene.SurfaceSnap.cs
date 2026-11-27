@@ -48,6 +48,33 @@ namespace RobotWin.Studio.World
             return true;
         }
 
+        /// <summary>
+        /// [look-at] Unity's rotate tool with Ctrl+Shift: a click on any surface turns the selected part (and what is
+        /// mounted on it) so its own +X, the way a camera or a distance sensor looks, points at that spot, kept level
+        /// (CoreSim Sandbox/WorldConstraints.Aim). True when it turned.
+        /// </summary>
+        public bool TurnSelectedToward(Point p)
+        {
+            if (World?.Find(Selected) is not { } o || SurfaceUnder(p, o) is not { } at) return false;
+            var toward = new RobotTwin.CoreSim.Mechanics.Vec3(at.X, at.Y, at.Z) - o.Pose.Position;
+            if (toward.Length < 1e-6) return false;
+            var q = WorldConstraints.Aim(o.Pose.Orientation, new RobotTwin.CoreSim.Mechanics.Vec3(1, 0, 0), toward.Normalized());
+            BeginEdit?.Invoke();
+            World.RotateAssembly(o, (q * o.Pose.Orientation.Conjugate).Normalized(), o.Pose.Position);
+            EditCommitted?.Invoke($"{o.Name} yüzeydeki noktaya çevrildi");
+            return true;
+        }
+
+        /// <summary>[look-at] The snapshot's look-at: the selection turned, as a Ctrl+Shift click would, to the middle of a part's top.</summary>
+        public bool TurnSelectedTowardPart(string targetId)
+        {
+            if (!_items.TryGetValue(targetId, out var target) || target.Visual.Content == null) return false;
+            var b = target.Visual.Content.Bounds;
+            var top = target.Visual.Transform.Transform(new Point3D(b.X + b.SizeX / 2, b.Y + b.SizeY / 2, b.Z + b.SizeZ));
+            var (screen, _, visible) = Project(top);
+            return visible && TurnSelectedToward(screen);
+        }
+
         /// <summary>The first object the camera's ray meets, leaving out some (the dragged part and its riders).</summary>
         private Point3D? RayHitExcept(Point p, ISet<string> skip)
         {

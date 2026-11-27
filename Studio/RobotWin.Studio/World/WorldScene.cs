@@ -1316,6 +1316,7 @@ namespace RobotWin.Studio.World
             Focus();
             var p = e.GetPosition(this);
             if (PointPickDown(e, p)) return;   // [kin] a target point for an arm (World/WorldScene.Kinematics.cs)
+            if (!ReadOnly && e.ChangedButton == MouseButton.Left && ShowsRotate && SurfaceSnapHeld && TurnSelectedToward(p)) return;   // [look-at] Unity's rotate towards a surface
             if (!ReadOnly && EditorMouseDown(e, p)) return; // [terrain] terrain brush, prop placement, gizmo
             if (e.ChangedButton != MouseButton.Left)
             {

@@ -1954,6 +1954,32 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
+            if (template == "look-at")
+            {
+                // [look-at] a distance sensor's +X turned, as a Ctrl+Shift click with the rotate handle would, to a box's top
+                var w = new WorldDocument { Title = "Bakışla döndür" };
+                var floor = w.AddBody("box", 0.6, 0.4, 0.01, new WorldPose { Z = -0.005 });
+                floor.Name = "Zemin";
+                floor.IsStatic = true;
+                floor.Color = "#8A8F98";
+                var sensor = w.AddBody("box", 0.06, 0.025, 0.02, new WorldPose { X = -0.18, Y = -0.08, Z = 0.12 });
+                sensor.Name = "Sensör";
+                sensor.IsStatic = true;
+                sensor.Color = "#2A2D34";
+                var box = w.AddBody("box", 0.06, 0.06, 0.06, new WorldPose { X = 0.15, Y = 0.1, Z = 0.03 });
+                box.Name = "Hedef kutu";
+                box.Color = "#E87A2C";
+                _main.NewWorld(w);
+                OnShown();
+                Scene.FrameAll();
+                Scene.Select(sensor.Id);
+                PickGizmo(RobotWin.Studio.World.GizmoMode.Rotate);
+                Scene.UpdateLayout();
+                Scene.TurnSelectedTowardPart(box.Id);
+                BuildInspector();
+                return;
+            }
+
             if (template == "constraints")
             {
                 ConstraintSnapshot();   // [constraints]

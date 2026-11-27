@@ -258,15 +258,20 @@ namespace RobotWin.Studio.Pcb
             double size = text.Size, thickness = text.Thickness;
             int rotation = text.Rotation;
             var layer = text.Layer;
+            double boxWidth = text.BoxWidth;
             var panel = new StackPanel();
             panel.Children.Add(new TextBlock { Text = isNew ? "Yazı ekle" : "Yazı", Style = S("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 10) });
-            var box = new TextBox { Text = value };
+            // [textbox] several lines (Enter), as KiCad's text box
+            var box = new TextBox { Text = value, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 52, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
             panel.Children.Add(Row("Metin", box, 200));
+            var border = new CheckBox { Content = "Çerçeve (yazı kutusu)", IsChecked = text.Border, Margin = new Thickness(0, 4, 0, 4) };
+            panel.Children.Add(border);
+            panel.Children.Add(Row("Kutu genişliği (mm, 0: sığdır)", Number(boxWidth, v => boxWidth = v, 0, 500)));
             panel.Children.Add(Row("Katman", Combo(new[] { GraphicLayer.SilkTop, GraphicLayer.SilkBottom, GraphicLayer.FabTop, GraphicLayer.FabBottom, GraphicLayer.Drawings }, layer, v => layer = v, GraphicLayerName), 200));
             panel.Children.Add(Row("Yükseklik (mm)", Number(size, v => size = v, 0.3, 50)));
             panel.Children.Add(Row("Çizgi kalınlığı (mm)", Number(thickness, v => thickness = v, 0.05, 5)));
             panel.Children.Add(Row("Açı", Combo(new[] { 0, 90, 180, 270 }, rotation, v => rotation = v, v => v + "°")));
-            panel.Children.Add(Caption("Serigrafi yazısı tek çizgili yazı tipiyle Gerber'e ve KiCad'e aynen aktarılır (Türkçe harfler temel harflerine çevrilir).", 6));
+            panel.Children.Add(Caption("Serigrafi yazısı tek çizgili yazı tipiyle Gerber'e ve KiCad'e aynen aktarılır (Türkçe harfler temel harflerine çevrilir). Birden çok satır, kutu genişliği ya da çerçeve onu KiCad'deki yazı kutusu yapar: satırlar soldan, genişliğe göre kayarak dizilir.", 6));
             Window? dlg = null;
             dlg = MakeDialog(owner, "Yazı", 440, panel, out var ok, isNew ? "Ekle" : "Uygula", isNew ? null : "Sil", () =>
             {
@@ -287,7 +292,9 @@ namespace RobotWin.Studio.Pcb
             if (dlg.ShowDialog() != true) return false;
             delete = del;
             if (del) return true;
-            text.Text = box.Text.Trim();
+            text.Text = box.Text.Trim().Replace("\r\n", "\n");
+            text.Border = border.IsChecked == true;   // [textbox]
+            text.BoxWidth = Math.Max(0, boxWidth);
             text.Layer = layer;
             text.Size = size;
             text.Thickness = thickness;

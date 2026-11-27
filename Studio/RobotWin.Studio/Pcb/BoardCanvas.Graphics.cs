@@ -293,8 +293,11 @@ namespace RobotWin.Studio.Pcb
                         Add(v.X - v.Diameter, v.Y - v.Diameter, v.X + v.Diameter, v.Y + v.Diameter);
                         break;
                     case BoardText t:
-                        Add(t.X - t.Size, t.Y - t.Size, t.X + t.Size, t.Y + t.Size);
+                    {
+                        var tb = Bounds(RobotTwin.CoreSim.Pcb.Silk.TextStrokes(t));   // [textbox] the text as drawn, a box's lines and frame too
+                        Add(tb.MinX, tb.MinY, tb.MaxX, tb.MaxY);
                         break;
+                    }
                     case MountingHole h:
                         Add(h.X - h.Drill, h.Y - h.Drill, h.X + h.Drill, h.Y + h.Drill);
                         break;
