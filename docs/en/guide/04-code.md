@@ -272,7 +272,7 @@ Like the Arduino table: whether each feature works in the two modes, how it was 
 | ESP-NOW, BLE | ✓ | — | `Esp32RadioTests` | a sketch using them runs in the fast mode |
 | Bluepad32 (PS4 / PS5 / Xbox gamepad) | ✓ | built for the real board (Bluepad32 core); runs in the fast mode on the emulator | `GamepadCarTests`; the *ps5-car* and *ps5-plane* templates' sketches built with Bluepad32 4.1.0 (718 / 749 KB) | not tried on a real board (none at hand) |
 | TLS, mDNS | — | — | | not yet |
-| Floating point (FPU) | ✓ | ✓ (single-precision FPU) | `XtensaCoreTests` | the emulator lacks the FPU divide / square-root sequences and MAC16 |
+| Floating point (FPU) | ✓ | ✓ (single-precision FPU; division, square root, 1/x and 1/√x too) | `XtensaCoreTests`; in a real-chip build `a / b`, `sqrtf`, `sinf`, `cosf`, `powf`, `atan2f`, `expf`, `logf`, `double` division, `printf("%f")`, `String(float)` | the emulator lacks MAC16 (esp-dsp's hand-written routines) |
 | Breakpoints, stepping | — | — | | Arduino Uno / Nano only |
 | Upload to a real board | ✓ | ✓ | **Upload to the real board → COMx** | |
 

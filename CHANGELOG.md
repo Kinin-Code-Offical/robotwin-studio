@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Float division on the emulated ESP32:** in the hardware-compatible mode a sketch that divided two `float`s, or took `sqrtf`, stopped on an unknown instruction and the chip restarted. The emulator now runs the FPU's divide and square-root steps libgcc uses (`__divsf3`, `__ieee754_sqrtf`, `__recipsf2`, `__rsqrtsf2`) and gives the correctly rounded result, bit for bit what the chip prints.
 - **Light themes:** the code debugger's variable and register rows, the shell fit's status lines, the circuit check list's dots and the record button take the theme's colours (white text was unreadable on a light theme).
 - **The learning path in the app:** its five levels are guides on the corner card: each opens its example or template, moves on by itself where it can see the step done and with *Done, next* where it cannot, and ends with the level's own task and the way to the next level. Started from Help → Learning path, the command palette, or *Start the guide* on the info screen of a level's first example.
 - **Worlds and Montajes keep their own layout:** like a project, a world or a Montaj can save the layout on screen into its .rwworld file, and it comes back when the file opens.

@@ -272,7 +272,7 @@ Arduino'daki tablo gibi: her özelliğin iki modda çalışıp çalışmadığı
 | ESP-NOW, BLE | ✓ | — | `Esp32RadioTests` | bunları kullanan çizim hızlı modda çalışır |
 | Bluepad32 (PS4 / PS5 / Xbox kumandası) | ✓ | gerçek kart için derlenir (Bluepad32 çekirdeği); emülatörde hızlı modda çalışır | `GamepadCarTests`; *ps5-car* ve *ps5-plane* şablonlarının çizimleri Bluepad32 4.1.0 ile derlendi (718 / 749 KB) | gerçek kartta denenmedi (elde kart yok) |
 | TLS, mDNS | — | — | | henüz yok |
-| Kayan nokta (FPU) | ✓ | ✓ (tek duyarlıklı FPU) | `XtensaCoreTests` | emülatörde FPU bölme / karekök dizileri ve MAC16 eksik |
+| Kayan nokta (FPU) | ✓ | ✓ (tek duyarlıklı FPU; bölme, karekök, 1/x ve 1/√x de) | `XtensaCoreTests`; gerçek yonga derlemesiyle `a / b`, `sqrtf`, `sinf`, `cosf`, `powf`, `atan2f`, `expf`, `logf`, `double` bölme, `printf("%f")`, `String(float)` | emülatörde MAC16 (esp-dsp'nin el yazısı rutinleri) eksik |
 | Kesme noktası, adım adım | — | — | | yalnız Arduino Uno / Nano |
 | Gerçek karta yükleme | ✓ | ✓ | **Gerçek karta yükle → COMx** | |
 

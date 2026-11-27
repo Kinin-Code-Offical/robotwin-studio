@@ -22,6 +22,9 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         private static uint Bits(float value) => (uint)BitConverter.SingleToInt32Bits(value);
 
+        /// <summary>CONST.S: +0, +1, +2, +0.5 (the higher immediates are reserved and wrap, as QEMU's model does).</summary>
+        private static readonly float[] Constants = { 0f, 1f, 2f, 0.5f };
+
         /// <summary>A float scaled by 2^scale to a 32-bit integer, saturating as the FPU does (NaN gives the largest).</summary>
         private static int ToInt(double value)
         {
@@ -64,6 +67,12 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 case 2: F[r] = F[s] * F[t]; return 1;                                      // MUL.S
                 case 4: F[r] = Fma(F[s], F[t], F[r]); return 1;         // MADD.S
                 case 5: F[r] = Fma(-F[s], F[t], F[r]); return 1;        // MSUB.S
+                // [fpu-div] The divide / square-root option's steps (MADDN.S, DIVN.S and the helpers below) exist only for
+                // libgcc's __divsf3, __ieee754_sqrtf, __recipsf2 and __rsqrtsf2. As Espressif's own QEMU models them, the
+                // result is made exactly (MKDADJ.S divides, MKSADJ.S takes the root, ADDEXPM.S hands it over) and the
+                // Newton steps leave it as it is: the routines return the correctly rounded IEEE result, as the chip does.
+                case 6: return 1;                                        // MADDN.S
+                case 7: return 1;                                        // DIVN.S
                 case 8:
                 case 9:
                 case 0xA:
@@ -98,6 +107,16 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                         case 4: if (WindowCheck(Frames(r))) return 1; SetA(r, Bits(F[s])); return 1;    // RFR
                         case 5: if (WindowCheck(Frames(s))) return 1; F[r] = FromBits(A(s)); return 1;  // WFR
                         case 6: F[r] = FromBits(Bits(F[s]) ^ 0x80000000); return 1;                     // NEG.S
+                        case 3: F[r] = Constants[s & 3]; return 1;                                         // CONST.S fr, imm
+                        case 7: return 1;                                                                  // DIV0.S
+                        case 8: F[r] = 1f / F[s]; return 1;                                                // RECIP0.S
+                        case 9: return 1;                                                                  // SQRT0.S
+                        case 0xA: F[r] = 1f / (float)Math.Sqrt(F[s]); return 1;                            // RSQRT0.S
+                        case 0xB: return 1;                                                                // NEXP01.S
+                        case 0xC: F[r] = (float)Math.Sqrt(F[s]); return 1;                                 // MKSADJ.S
+                        case 0xD: F[r] = F[s] / F[r]; return 1;                                            // MKDADJ.S
+                        case 0xE: return 1;                                                                // ADDEXP.S
+                        case 0xF: F[r] = F[s]; return 1;                                                   // ADDEXPM.S
                     }
 
                     break;

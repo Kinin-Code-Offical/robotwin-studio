@@ -451,5 +451,111 @@ fib:
             Assert.Equal(1u, c.A(7));
             Assert.Equal(unchecked((uint)-8), c.A(9));
         }
+
+        // [fpu-div] libgcc's own routines for the ESP32 (objdump of its libgcc.a), instruction for instruction.
+        private const string DivSf3 = @"
+    div0.s f3, f2
+    nexp01.s f4, f2
+    const.s f5, 1
+    maddn.s f5, f4, f3
+    mov.s f6, f3
+    mov.s f7, f2
+    nexp01.s f2, f1
+    maddn.s f6, f5, f6
+    const.s f5, 1
+    const.s f0, 0
+    neg.s f8, f2
+    maddn.s f5, f4, f6
+    maddn.s f0, f8, f3
+    mkdadj.s f7, f1
+    maddn.s f6, f5, f6
+    maddn.s f8, f4, f0
+    const.s f3, 1
+    maddn.s f3, f4, f6
+    maddn.s f0, f8, f6
+    neg.s f2, f2
+    maddn.s f6, f3, f6
+    maddn.s f2, f4, f0
+    addexpm.s f0, f7
+    addexp.s f6, f7
+    divn.s f0, f2, f6
+";
+
+        private const string SqrtSf2 = @"
+    sqrt0.s f2, f1
+    const.s f3, 0
+    maddn.s f3, f2, f2
+    nexp01.s f4, f1
+    const.s f0, 3
+    addexp.s f4, f0
+    maddn.s f0, f3, f4
+    nexp01.s f3, f1
+    neg.s f5, f3
+    maddn.s f2, f0, f2
+    const.s f0, 0
+    const.s f6, 0
+    const.s f7, 0
+    maddn.s f0, f5, f2
+    maddn.s f6, f2, f4
+    const.s f4, 3
+    maddn.s f7, f4, f2
+    maddn.s f3, f0, f0
+    maddn.s f4, f6, f2
+    neg.s f2, f7
+    maddn.s f0, f3, f2
+    maddn.s f7, f4, f7
+    mksadj.s f2, f1
+    nexp01.s f1, f1
+    maddn.s f1, f0, f0
+    neg.s f3, f7
+    addexpm.s f0, f2
+    addexp.s f3, f2
+    divn.s f0, f1, f3
+";
+
+        [XtensaAsmFact]
+        public void FloatDivisionAndSquareRootRunLibgccsOwnSequences()
+        {
+            // a / b with a = -7, b = 3 (float.s from integers), then sqrt(2) and 1/x, 1/sqrt(x) for x = 3
+            var (c, _) = XtensaAsm.Run(@"
+    movi a2, 1
+    wsr.cpenable a2
+    rsync
+    movi a3, -7
+    float.s f1, a3, 0
+    movi a4, 3
+    float.s f2, a4, 0
+" + DivSf3 + @"
+    mov.s f9, f0
+    movi a5, 2
+    float.s f1, a5, 0
+" + SqrtSf2 + @"
+    mov.s f10, f0
+    movi a6, 3
+    float.s f1, a6, 0
+    recip0.s f0, f1
+    const.s f2, 1
+    msub.s f2, f1, f0
+    maddn.s f0, f0, f2
+    const.s f2, 1
+    msub.s f2, f1, f0
+    maddn.s f0, f0, f2
+    mov.s f11, f0
+    rsqrt0.s f0, f1
+    mul.s f2, f1, f0
+    const.s f3, 3
+    mul.s f4, f3, f0
+    const.s f5, 1
+    msub.s f5, f2, f0
+    maddn.s f0, f4, f5
+    mov.s f12, f0
+    const.s f13, 3
+");
+            Assert.Equal(-7f / 3f, c.F[9]);                 // bit for bit: the correctly rounded quotient
+            Assert.Equal((float)Math.Sqrt(2), c.F[10]);
+            Assert.Equal(1f / 3f, c.F[11]);
+            Assert.Equal(1f / (float)Math.Sqrt(3), c.F[12]);
+            Assert.Equal(0.5f, c.F[13]);                    // CONST.S 3 is one half
+        }
     }
 }

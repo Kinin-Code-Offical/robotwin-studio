@@ -79,6 +79,86 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Contains("MERHABA ROBOT", serial.ToString());
         }
 
+        /// <summary>A [Fact] skipped unless RW_ESP32_FLOAT_ELF names the float sketch's real-chip ELF (a / b, sqrtf, 1 / b printed as bits).</summary>
+        public sealed class FloatElfFactAttribute : FactAttribute
+        {
+            public FloatElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_FLOAT_ELF"))) Skip = "RW_ESP32_FLOAT_ELF verilmedi.";
+            }
+        }
+
+        [FloatElfFact]
+        public void FloatDivisionAndSquareRootGiveTheChipsBits()
+        {
+            // [fpu-div] the compiled sketch divides through libgcc's __divsf3 and takes sqrtf through __ieee754_sqrtf,
+            // which use the FPU's divide / square-root steps; the results must be the correctly rounded IEEE ones
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_FLOAT_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var sch = new Schematic { Title = "ESP32 float" };
+            var board = sch.AddPart(Lib, Esp32Parts.DevKitCId, new GridPoint(0, 0));
+            Label(sch, board, "GND2", "GND");
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            var sim = new AnalogSimulator(compiled.Circuit);
+            sim.Initialize(InitialState.OperatingPoint);
+            using var esp = new Esp32EmulatedBoard(File.ReadAllBytes(elf), File.Exists(merged) ? File.ReadAllBytes(merged) : null, compiled, "U1");
+            var serial = new StringBuilder();
+            esp.SerialOutput += t => serial.Append(t);
+            esp.Log += t => _out.WriteLine("günlük: " + t);
+            for (int i = 0; i < 6000; i++)
+            {
+                esp.Advance(100e-6, sim.Time);
+                sim.Step(100e-6);
+            }
+
+            string text = serial.ToString();
+            _out.WriteLine(text);
+            Assert.Contains("float hazir", text);
+            Assert.Contains("q=" + BitConverter.SingleToInt32Bits(-7f / 3f).ToString("x8"), text);
+            Assert.Contains("r=" + BitConverter.SingleToInt32Bits((float)Math.Sqrt(2)).ToString("x8"), text);
+            Assert.Contains("s=" + BitConverter.SingleToInt32Bits(1f / 3f).ToString("x8"), text);
+        }
+
+        /// <summary>A [Fact] skipped unless RW_ESP32_MATH_ELF names the maths sketch's real-chip ELF (sinf, cosf, powf, atan2f, expf, logf, double division, printf %f, String(float)).</summary>
+        public sealed class MathElfFactAttribute : FactAttribute
+        {
+            public MathElfFactAttribute()
+            {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RW_ESP32_MATH_ELF"))) Skip = "RW_ESP32_MATH_ELF verilmedi.";
+            }
+        }
+
+        [MathElfFact]
+        public void EverydayMathsRunsAsOnTheChip()
+        {
+            // [fpu-div] what sketches do with numbers, through the real libraries: every routine and instruction they reach
+            string elf = Environment.GetEnvironmentVariable("RW_ESP32_MATH_ELF")!;
+            string merged = Path.ChangeExtension(elf, ".merged.bin");
+            var sch = new Schematic { Title = "ESP32 maths" };
+            var board = sch.AddPart(Lib, Esp32Parts.DevKitCId, new GridPoint(0, 0));
+            Label(sch, board, "GND2", "GND");
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            var sim = new AnalogSimulator(compiled.Circuit);
+            sim.Initialize(InitialState.OperatingPoint);
+            using var esp = new Esp32EmulatedBoard(File.ReadAllBytes(elf), File.Exists(merged) ? File.ReadAllBytes(merged) : null, compiled, "U1");
+            var serial = new StringBuilder();
+            esp.SerialOutput += t => serial.Append(t);
+            esp.Log += t => _out.WriteLine("günlük: " + t);
+            for (int i = 0; i < 6000; i++)
+            {
+                esp.Advance(100e-6, sim.Time);
+                sim.Step(100e-6);
+            }
+
+            string text = serial.ToString();
+            _out.WriteLine(text);
+            Assert.Contains("mix hazir", text);
+            // the expected values from double maths, to the six places printed (float results agree to that)
+            Assert.Contains("s=0.948985 c=0.731689 p=2.183660 t=1.030377 e=2.117000 l=0.223144", text);
+            Assert.Contains("q=3.333333333333 r=3.162277660168", text);
+            Assert.Contains("0.9375", text);   // String(1.25 * 0.75, 4)
+        }
+
         /// <summary>A [Fact] skipped unless RW_ESP32_I2C_ELF names the I2C sketch's real-chip ELF (scan, register write/read, a long write).</summary>
         public sealed class I2cElfFactAttribute : FactAttribute
         {
