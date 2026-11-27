@@ -96,6 +96,46 @@ namespace RobotTwin.CoreSim.Pcb
 
         public static DrcRuleInfo? Find(string rule) => Rules.FirstOrDefault(r => string.Equals(r.Rule, rule, StringComparison.Ordinal));
 
+        // [drc-nav] what a marker means for the board, in the order to deal with it (D3's DRC issue navigator)
+        public const string Critical = "Kritik";
+        public const string Unconnected = "Bağlanmamış";
+        public const string Fabrication = "Üretim";
+        public const string Length = "Uzunluk";
+        public const string MechanicalFit = "Mekanik";
+        public const string Other = "Diğer";
+
+        /// <summary>The navigator's categories, the most urgent first.</summary>
+        public static IReadOnlyList<string> Categories { get; } = new[] { Critical, Unconnected, Fabrication, Length, MechanicalFit, Other };
+
+        /// <summary>
+        /// [drc-nav] A rule's category: Kritik (the board would not work: shorts, clearances, current, layers, rule areas),
+        /// Bağlanmamış (open nets, dangling ends, lone vias), Üretim (what the fab or the assembly line minds: sizes, rings,
+        /// edges, DFM/DFT, silkscreen, pours), Uzunluk (length and pair matching), Mekanik (bodies, the enclosure).
+        /// </summary>
+        public static string CategoryOf(string rule)
+        {
+            switch (rule)
+            {
+                case "Bağlanmamış":
+                case "Boşta yol ucu":
+                case "Bağlantısız via":
+                    return Unconnected;
+                case "Serigrafi pedde":
+                case "Dolgu güncel değil":
+                case "Dolgu yapılmamış":
+                    return Fabrication;
+            }
+
+            return Find(rule)?.Group switch
+            {
+                Electrical => Critical,
+                Manufacturing or Dfm => Fabrication,
+                SignalIntegrity => Length,
+                Mechanical => MechanicalFit,
+                _ => rule.StartsWith("DFM", StringComparison.Ordinal) || rule.StartsWith("DFT", StringComparison.Ordinal) ? Fabrication : Other
+            };
+        }
+
         public static IEnumerable<string> Groups => Rules.Select(r => r.Group).Distinct();
     }
 

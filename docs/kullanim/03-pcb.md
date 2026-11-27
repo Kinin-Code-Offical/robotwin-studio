@@ -101,7 +101,7 @@ Araç şeridi kartın sol kenarında durur (≡ tutamağından başka bir kenara
 - Güncel olmayan dolgular
 - Yol akım kapasitesi
 
-Hatalar listede görünür; birine tıklayınca kartta o yer gösterilir. **F8** sonraki, **Shift+F8** önceki işarete gider (listenin üstündeki oklar da).
+Hatalar listede, ele alınma sırasına göre türlerinin başlığı altında görünür: **Kritik** (kısa devre, aralıklar, akım, katman, yasak bölge: kart çalışmaz), **Bağlanmamış** (açık hatlar, boşta yol uçları, bağlantısız vialar), **Üretim** (genişlik, delik, halka, kenar, DFM/DFT, serigrafi, dolgu), **Uzunluk** (uzunluk ve fark çifti eşleme), **Mekanik** (gövde çakışması, kutu); her başlıkta kaç işaret olduğu yazar, kabul edilmiş istisnalar en sonda. Birine tıklayınca kartta o yer gösterilir. **F8** sonraki, **Shift+F8** önceki işarete gider (listenin üstündeki oklar da).
 
 Listenin üstündeki **Hatalar**, **Uyarılar** ve **İstisnalar** düğmeleri sayılarıyla birlikte o türü gösterir ya da gizler. Bir satıra sağ tıklayınca:
 

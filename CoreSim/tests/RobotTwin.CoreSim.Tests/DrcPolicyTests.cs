@@ -131,5 +131,23 @@ namespace RobotTwin.CoreSim.Tests
             Assert.All(all.Select(v => v.Rule).Distinct(), rule => Assert.NotNull(DrcRuleCatalog.Find(rule)));
             Assert.Equal(DrcRuleCatalog.Rules.Count, DrcRuleCatalog.Rules.Select(r => r.Rule).Distinct().Count());
         }
+
+        [Fact]
+        public void EveryRuleFallsInANavigatorCategory()
+        {
+            // [drc-nav] the categories, the most urgent first, and no catalogued rule left as "other"
+            Assert.Equal(DrcRuleCatalog.Critical, DrcRuleCatalog.CategoryOf("Kısa devre"));
+            Assert.Equal(DrcRuleCatalog.Critical, DrcRuleCatalog.CategoryOf("Yol-yol aralığı"));
+            Assert.Equal(DrcRuleCatalog.Unconnected, DrcRuleCatalog.CategoryOf("Bağlanmamış"));
+            Assert.Equal(DrcRuleCatalog.Unconnected, DrcRuleCatalog.CategoryOf("Boşta yol ucu"));
+            Assert.Equal(DrcRuleCatalog.Fabrication, DrcRuleCatalog.CategoryOf("Halka genişliği"));
+            Assert.Equal(DrcRuleCatalog.Fabrication, DrcRuleCatalog.CategoryOf("DFM · Asit tuzağı"));
+            Assert.Equal(DrcRuleCatalog.Fabrication, DrcRuleCatalog.CategoryOf("Serigrafi pedde"));
+            Assert.Equal(DrcRuleCatalog.Length, DrcRuleCatalog.CategoryOf("Uzunluk eşleme"));
+            Assert.Equal(DrcRuleCatalog.MechanicalFit, DrcRuleCatalog.CategoryOf("Gövde çakışması"));
+            Assert.Equal(DrcRuleCatalog.Other, DrcRuleCatalog.CategoryOf("bilinmeyen kural"));
+            foreach (var rule in DrcRuleCatalog.Rules) Assert.NotEqual(DrcRuleCatalog.Other, DrcRuleCatalog.CategoryOf(rule.Rule));
+            Assert.Equal(0, DrcRuleCatalog.Categories.ToList().IndexOf(DrcRuleCatalog.Critical));
+        }
     }
 }

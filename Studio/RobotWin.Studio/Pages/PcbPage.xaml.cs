@@ -51,6 +51,11 @@ namespace RobotWin.Studio.Pages
 
             public string Rule => Exclusion == null ? Violation.Rule : Shell.Lang.T("İstisna") + " · " + Violation.Rule;
             public string Message => Exclusion is { Comment.Length: > 0 } e ? Violation.Message + " — " + e.Comment : Violation.Message;
+
+            /// <summary>[drc-nav] Its group in the list: the rule's category (accepted ones together at the end).</summary>
+            public string Category => Exclusion != null ? Shell.Lang.T("İstisnalar") : Shell.Lang.T(DrcRuleCatalog.CategoryOf(Violation.Rule));
+
+            public int CategoryOrder => Exclusion != null ? 99 : Math.Max(0, DrcRuleCatalog.Categories.ToList().IndexOf(DrcRuleCatalog.CategoryOf(Violation.Rule)));
             public Brush Tag { get; }
         }
 
@@ -2484,6 +2489,8 @@ namespace RobotWin.Studio.Pages
                 DrcSummary.Text += Shell.Lang.T($"\nTest kapsamı %{dfm.Coverage * 100:0} ({dfm.TestableNets}/{dfm.Nets} hat)");
 
             DrcList.ItemsSource = DrcItems();
+            DrcList.Items.GroupDescriptions.Clear();   // [drc-nav] under their category's header, the most urgent first
+            DrcList.Items.GroupDescriptions.Add(new System.Windows.Data.PropertyGroupDescription(nameof(DrcItem.Category)));
             if (DrcRulesScroll.Visibility == Visibility.Visible) FillDrcRules();
             UpdateEnclosurePanel(board);   // [enclosure]
         }

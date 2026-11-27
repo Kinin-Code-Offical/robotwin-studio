@@ -227,10 +227,23 @@
                             <ScrollViewer x:Name="DrcRulesScroll" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                                 <StackPanel x:Name="DrcRulesPanel" Margin="0,0,6,8"/>
                             </ScrollViewer>
-                            <ListBox x:Name="DrcList" SelectionChanged="OnDrcPick" ContextMenuOpening="OnDrcMenu" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox x:Name="DrcList" SelectionChanged="OnDrcPick" ContextMenuOpening="OnDrcMenu" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     VirtualizingPanel.IsVirtualizingWhenGrouping="True">
                                 <ListBox.ContextMenu>
                                     <ContextMenu/>
                                 </ListBox.ContextMenu>
+                                <!-- [drc-nav] the markers under their category (Kritik, Bağlanmamış, Üretim, Uzunluk, Mekanik), with how many -->
+                                <ListBox.GroupStyle>
+                                    <GroupStyle>
+                                        <GroupStyle.HeaderTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Margin="2,10,0,4" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource B.TextSecondary}">
+                                                    <Run Text="{Binding Name, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding ItemCount, Mode=OneWay}"/>
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </GroupStyle.HeaderTemplate>
+                                    </GroupStyle>
+                                </ListBox.GroupStyle>
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Margin="0,2">

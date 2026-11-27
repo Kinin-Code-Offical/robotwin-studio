@@ -101,7 +101,7 @@ The tool strip stands on the board's left edge (its ≡ handle moves it to anoth
 - Out-of-date pours
 - Track current capacity
 
-Errors appear in a list; clicking one shows the spot on the board. **F8** goes to the next marker, **Shift+F8** to the previous one (so do the arrows above the list).
+Errors appear in a list under their kind's heading, in the order to deal with them: **Critical** (shorts, clearances, current, layers, rule areas: the board will not work), **Unconnected** (open nets, dangling track ends, lone vias), **Fabrication** (width, drill, ring, edge, DFM/DFT, silkscreen, pours), **Length** (length and pair matching), **Mechanical** (body overlaps, the enclosure); each heading says how many markers it holds, accepted exclusions come last. Clicking one shows the spot on the board. **F8** goes to the next marker, **Shift+F8** to the previous one (so do the arrows above the list).
 
 The **Errors**, **Warnings** and **Exclusions** buttons above the list show or hide that kind, with their counts. Right-clicking a row offers:
 

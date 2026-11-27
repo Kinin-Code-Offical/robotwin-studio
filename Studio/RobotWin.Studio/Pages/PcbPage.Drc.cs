@@ -94,7 +94,7 @@ namespace RobotWin.Studio.Pages
         /// <summary>The rows of the list: the shown markers by severity and rule, then the exclusions when asked for.</summary>
         private List<DrcItem> DrcItems()
         {
-            var items = _violations.OrderByDescending(v => v.Severity).ThenBy(v => v.Rule, StringComparer.Ordinal).Select(v => new DrcItem(v)).ToList();
+            var items = _violations.Select(v => new DrcItem(v)).OrderBy(i => i.CategoryOrder).ThenByDescending(i => i.Violation.Severity).ThenBy(i => i.Violation.Rule, StringComparer.Ordinal).ToList();
             if (ShowExcluded.IsChecked == true)
                 items.AddRange(_drc.Excluded.OrderBy(x => x.Violation.Rule, StringComparer.Ordinal).Select(x => new DrcItem(x.Violation, x.Exclusion)));
             return items;
