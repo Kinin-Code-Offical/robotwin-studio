@@ -317,6 +317,31 @@ namespace RobotTwin.CoreSim.Instruments
         /// </summary>
         public ScopeFrame? Reference { get; set; }
 
+        /// <summary>
+        /// [mask] A bench scope's mask test round the reference: a band of ±this many vertical divisions about each kept
+        /// trace (at the live channel's own V/div); 0 is off. A live sample outside the band is a violation.
+        /// </summary>
+        public double MaskDivisions { get; set; }
+
+        /// <summary>
+        /// [mask] How many samples of a live trace leave the band of ±<paramref name="divisions"/> about the kept one on the
+        /// same channel (in the live trace's divisions); -1 when they cannot be compared sample by sample.
+        /// </summary>
+        public static int MaskViolations(ScopeFrame reference, ScopeFrame live, ScopeTrace liveTrace, double divisions)
+        {
+            var kept = reference.Traces.FirstOrDefault(t => t.Channel != null && t.Channel == liveTrace.Channel);
+            if (kept == null || reference.Length != live.Length || Math.Abs(reference.SampleInterval - live.SampleInterval) > 1e-12 * Math.Max(1, live.SampleInterval)) return -1;
+            double tol = Math.Abs(divisions) * liveTrace.Scale;
+            int n = Math.Min(kept.Values.Length, liveTrace.Values.Length), bad = 0;
+            for (int i = 0; i < n; i++)
+            {
+                double d = liveTrace.Values[i] - kept.Values[i];
+                if (!double.IsNaN(d) && Math.Abs(d) > tol) bad++;
+            }
+
+            return bad;
+        }
+
         /// <summary>[ref] Keeps the screen now as the reference; false when nothing is shown yet.</summary>
         public bool KeepReference()
         {

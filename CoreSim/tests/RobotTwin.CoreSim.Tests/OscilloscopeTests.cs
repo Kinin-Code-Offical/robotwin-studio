@@ -96,6 +96,25 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void AMaskRoundTheReferenceCountsTheSamplesOutsideIt()
+        {
+            // [mask] at 0.5 V/div: the same sine stays inside ±0.2 div (0.1 V); a sine of 0.8 its amplitude leaves it near its peaks
+            var scope = Scope(Sampled(Sine, 0.03, 4e-6, 14e-6), 200e-6, 0.5);
+            scope.Acquire(0.02);
+            scope.KeepReference();
+            var kept = scope.Reference!;
+            var same = Scope(Sampled(Sine, 0.03, 4e-6, 14e-6, seed: 5), 200e-6, 0.5).Acquire(0.02)!;
+            same.Traces[0].Channel = kept.Traces[0].Channel;
+            Assert.Equal(0, Oscilloscope.MaskViolations(kept, same, same.Traces[0], 0.2));
+            var lower = Scope(Sampled(t => 0.8 * Sine(t), 0.03, 4e-6, 14e-6), 200e-6, 0.5).Acquire(0.02)!;
+            lower.Traces[0].Channel = kept.Traces[0].Channel;
+            int bad = Oscilloscope.MaskViolations(kept, lower, lower.Traces[0], 0.2);
+            // |0.2·sin| > 0.1 where |sin| > 0.5: two thirds of the samples
+            Assert.InRange(bad / (double)lower.Length, 0.6, 0.72);
+            Assert.Equal(-1, Oscilloscope.MaskViolations(kept, Scope(Sampled(Sine, 0.03, 4e-6, 14e-6), 1e-3, 0.5).Acquire(0.02)!, lower.Traces[0], 0.2));
+        }
+
+        [Fact]
         public void FallingSlopeAndLevelMoveTheTriggerPoint()
         {
             var src = Sampled(Sine, 0.03, 4e-6, 14e-6);

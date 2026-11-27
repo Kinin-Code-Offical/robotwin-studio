@@ -8635,6 +8635,8 @@
   "Seçim süzgeci: hepsi seçilebilir": "Selection filter: everything can be picked",
   "Ekrandaki dalgayı referans olarak sakla: sonraki koşular üstüne çizilir, sapması (RMS) durum satırında. Bir daha basınca kaldırır.": "Keep the waveform on screen as the reference: later runs are drawn over it, their deviation (RMS) in the status line. Press again to drop it.",
   "Saklanacak bir ekran yok: önce bir dalga yakalayın": "No screen to keep: capture a waveform first",
+  "Maske (div)": "Mask (div)",
+  "MASKE: GEÇTİ": "MASK: PASS",
   "Aynala": "Mirror",
   "Elektriksel model": "Electrical model",
   "Firmware": "Firmware",
@@ -9364,6 +9366,7 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+  "MASKE: KALDI ({…})": "MASK: FAIL ({0})",
   "Hedef kolun erişim alanında ama bir eksenin sınırı engel: {…} oraya ancak {…} ile gider, aralığı {…}…{…}. Ulaşabildiği en yakın nokta hedeften {…} mm uzakta.": "The target is within the arm's span but an axis' limit is in the way: {0} gets there only at {1}, its range is {2}…{3}. The closest point it can reach is {4} mm from the target.",
   "Hedef erişim dışında: ilk eksenden {…} mm uzakta, kol en çok {…} mm uzanır. Ulaşabildiği en yakın nokta hedeften {…} mm uzakta.": "The target is out of reach: {0} mm from the first axis, the arm stretches at most {1} mm. The closest point it can reach is {2} mm from the target.",
   "Hedef ilk eksene çok yakın: {…} mm; kol {…} mm'den içeri katlanamaz. Ulaşabildiği en yakın nokta hedeften {…} mm uzakta.": "The target is too close to the first axis: {0} mm; the arm cannot fold in nearer than {1} mm. The closest point it can reach is {2} mm from the target.",

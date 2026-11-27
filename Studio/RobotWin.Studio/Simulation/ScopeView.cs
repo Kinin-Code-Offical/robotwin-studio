@@ -107,6 +107,36 @@ namespace RobotWin.Studio.Simulation
 
         public static Color ColorOf(int channel) => channel >= 0 && channel < ChannelColors.Length ? ChannelColors[channel] : MathColor;
 
+        /// <summary>[mask] The band of ±<paramref name="divisions"/> about a kept trace, as a flat translucent fill.</summary>
+        private static void DrawMaskBand(DrawingContext dc, Rect plot, ScopeFrame frame, ScopeTrace trace, double divisions, Color color)
+        {
+            var v = trace.Values;
+            if (v.Length < 2) return;
+            double divH = plot.Height / 8.0;
+            int step = Math.Max(1, v.Length / Math.Max(1, (int)plot.Width));
+            var g = new StreamGeometry();
+            using (var s = g.Open())
+            {
+                bool started = false;
+                for (int i = 0; i < v.Length; i += step)
+                {
+                    var p = new Point(plot.Left + frame.DivX(i) * plot.Width / 10.0, plot.Top + plot.Height / 2 - (trace.DivOf(v[i]) + divisions) * divH);
+                    if (!started)
+                    {
+                        s.BeginFigure(p, true, true);
+                        started = true;
+                    }
+                    else s.LineTo(p, false, false);
+                }
+
+                for (int i = (v.Length - 1) / step * step; i >= 0; i -= step)
+                    s.LineTo(new Point(plot.Left + frame.DivX(i) * plot.Width / 10.0, plot.Top + plot.Height / 2 - (trace.DivOf(v[i]) - divisions) * divH), false, false);
+            }
+
+            g.Freeze();
+            dc.DrawGeometry(SymbolRenderer.Brush(Color.FromArgb(0x26, color.R, color.G, color.B)), null, g);
+        }
+
         /// <summary>[ref] A channel's colour for its kept trace: the same hue, a third as strong.</summary>
         private static Color Faint(Color c) => Color.FromArgb(0x58, c.R, c.G, c.B);
 
@@ -160,6 +190,10 @@ namespace RobotWin.Studio.Simulation
                     // [ref] the kept screen under the live one, in its channels' colours, faint
                     if (Scope.Reference is { } kept)
                     {
+                        // [mask] the band a live trace must stay in, round each kept one
+                        if (Scope.MaskDivisions > 0)
+                            foreach (var t in kept.Traces)
+                                DrawMaskBand(dc, plot, kept, t, Scope.MaskDivisions, ColorOf(t.Channel?.Index ?? 0));
                         if (kept.Math != null) DrawTrace(dc, plot, kept, kept.Math, Faint(MathColor));
                         foreach (var t in kept.Traces) DrawTrace(dc, plot, kept, t, Faint(ColorOf(t.Channel?.Index ?? 0)));
                     }
@@ -265,6 +299,12 @@ namespace RobotWin.Studio.Simulation
                 var dev = frame.Traces.Select(t => (t, d: Oscilloscope.ReferenceDeviation(kept, frame, t))).Where(x => !double.IsNaN(x.d))
                     .Select(x => $"CH{(x.t.Channel?.Index ?? 0) + 1} Δ{SiValue.Format(x.d, x.t.Unit)}");
                 status += "   REF " + string.Join(" ", dev);
+                // [mask] pass while every live sample stays in the band, fail with how many left it
+                if (Scope.MaskDivisions > 0)
+                {
+                    int bad = frame.Traces.Sum(t => Math.Max(0, Oscilloscope.MaskViolations(kept, frame, t, Scope.MaskDivisions)));
+                    status += bad == 0 ? "   " + Shell.Lang.T("MASKE: GEÇTİ") : "   " + Shell.Lang.T($"MASKE: KALDI ({bad})");
+                }
             }
             else if (Scope.Reference != null) status += "   REF";
 

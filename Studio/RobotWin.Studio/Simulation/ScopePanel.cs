@@ -56,6 +56,14 @@ namespace RobotWin.Studio.Simulation
                 _view.InvalidateVisual();
             }, tip: "Ekrandaki dalgayı referans olarak sakla: sonraki koşular üstüne çizilir, sapması (RMS) durum satırında. Bir daha basınca kaldırır."));
             _root.Children.Add(top);
+            // [mask] a pass / fail band round the reference, in divisions of each channel's own V/div
+            var masks = new[] { 0.0, 0.1, 0.25, 0.5 };
+            Chips("Maske (div)", new[] { "Yok", "±0,1", "±0,25", "±0,5" }, () => Math.Max(0, Array.IndexOf(masks, Scope.MaskDivisions)), i =>
+            {
+                Scope.MaskDivisions = masks[i];
+                if (Scope.MaskDivisions > 0 && Scope.Reference == null) Scope.KeepReference();   // a mask needs a reference: the screen now
+                _view.InvalidateVisual();
+            });
 
             // ---- horizontal
             Section("Yatay");

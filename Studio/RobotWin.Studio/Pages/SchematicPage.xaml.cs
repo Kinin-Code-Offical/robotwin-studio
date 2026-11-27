@@ -1848,6 +1848,7 @@ namespace RobotWin.Studio.Pages
                     {
                         // [ref] [decode] the screen kept as the reference, a little more run over it, a byte picked
                         sim.Scope.KeepReference();
+                        sim.Scope.MaskDivisions = 0.25;   // [mask] the band round it
                         for (int i = 0; i < 5; i++) sim.StepOnce(1e-3);
                         sim.Scope.Acquire(sim.Time);
                         _scopePanel.PickDecodedForSnapshot(2);
