@@ -41,6 +41,12 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         /// </summary>
         event Action<double, int, bool>? PinChanged;
 
+        /// <summary>
+        /// [unified-timeline] An interrupt handler ran: (start, end in simulation seconds, what it served, core 0 PRO / 1 APP).
+        /// Only the hardware-compatible mode runs the chip's cores and sees them; the fast mode never raises it.
+        /// </summary>
+        event Action<double, double, string, int>? InterruptHandled;
+
         /// <summary>Runs the firmware for <paramref name="dt"/> seconds from <paramref name="now"/>; the caller then steps the circuit.</summary>
         void Advance(double dt, double now);
 

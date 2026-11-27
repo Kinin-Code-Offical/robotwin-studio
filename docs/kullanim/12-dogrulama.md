@@ -90,6 +90,15 @@ Yığında bloklar ikide bir 2 mm kaydırılmıştır, hiçbir arayüz simetrik 
 | --- | --- | --- | --- | --- |
 | Dikdörtgen kanat C_L (AR 6, 4°), taşıyıcı çizgi | 0,318 | 0,319 | +0,3 % | ±7 % |
 | İndüklenmiş sürükleme (6°) | 0,0121 | 0,0139 | +15 % | −20 / +40 % |
+| NACA 0012 kesiti, Re 3,6·10⁵ (Sheldahl ve Klimas 1981, SAND80-2114, Tablo 2): C_l 2° / 4° / 6° / 8° | 0,220 / 0,440 / 0,660 / 0,854 | 0,220 / 0,440 / 0,660 / 0,880 | 0 / 0 / 0 / +3 % | ±0,03 |
+| Aynı, C_d 0° / 4° / 8° | 0,0079 / 0,0098 / 0,0153 | 0,0080 / 0,0095 / 0,0142 | +1 / −3 / −7 % | ±15 % |
+| Aynı tablo, C_l,max Re 8·10⁴ / 1,6·10⁵ / 3,6·10⁵ / 7·10⁵ / 10⁶ / 2·10⁶ | 0,723 / 0,853 / 0,981 / 1,075 / 1,121 / 1,217 | 0,748 / 0,855 / 0,979 / 1,081 / 1,135 / 1,242 | +3,6 / +0,3 / −0,2 / +0,6 / +1,3 / +2,1 % | ±6 % |
+| Aynı, stall açısı | 7 / 9 / 10 / 11 / 12 / 13° | 6,9 / 7,8 / 8,9 / 9,9 / 10,4 / 11,3° | −0,1 … −1,7° | −2 / +1° |
+| Derin stall 45° / 60° / 90° (Re 3,6·10⁵): C_l | 1,085 / 0,875 / 0,070 | 1,080 / 0,901 / 0,000 | −0,005 / +0,026 / −0,07 | ±0,1 |
+| Aynı, C_d | 1,075 / 1,470 / 1,800 | 0,982 / 1,491 / 2,010 | −9 / +1 / +12 % | ±15 % |
+
+Stall'ın hemen ardından tablo kaldırmanın keskin düştüğünü gösterir (Re 3,6·10⁵'te 12°'de 0,48, 14°'de 0,29, sonra 30°'ye doğru düz levhanın 0,9'una yükselir); model bu aralıkta kaldırmayı 0,9 civarında tutar. Yani düşük hızda stall'a giren bir model uçak, modelde gerçekte olduğundan daha az kaldırma kaybeder. Bilinen bir sınırdır; test bu satırları yazar ama denetlemez.
+
 | Dört çubuk bağlantısı, 45° kol → yüzey | 20,7° | 20,69° | −0,05 % | ±0,5° |
 | Model roket Cd (OpenRocket sınıfı) | 0,5–0,7 | 0,64 | aralıkta | 0,4–0,8 |
 

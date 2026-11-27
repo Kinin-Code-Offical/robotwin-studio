@@ -944,6 +944,13 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         /// <inheritdoc/>
         public event Action<double, int, bool>? PinChanged;
 
+        /// <summary>The fast mode runs no chip core: no interrupts to report.</summary>
+        public event Action<double, double, string, int>? InterruptHandled
+        {
+            add { }
+            remove { }
+        }
+
         private void OnDigitalWrite(IntPtr user, int gpio, int level)
         {
             if (gpio < 0 || gpio >= _gpio.Length) return;

@@ -384,6 +384,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                             case 0:   // RFE
                             case 1:   // RFUE
                                 SetExcm(false);
+                                TraceReturn(1);   // [unified-timeline]
                                 Branch(Epc[1]);
                                 return TakenBranch;
                             case 2:   // RFDE
@@ -407,6 +408,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                     else if (t == 1 && s >= 1 && s <= 7)
                     {
                         // RFI level
+                        TraceReturn(s);   // [unified-timeline]
                         Ps = Eps[s];
                         Branch(Epc[s]);
                         return TakenBranch;

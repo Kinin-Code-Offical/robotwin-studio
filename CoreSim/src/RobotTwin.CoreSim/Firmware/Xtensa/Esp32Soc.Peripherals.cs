@@ -100,6 +100,48 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// <summary>The CPU interrupt the matrix routes peripheral source <paramref name="source"/> to on core <paramref name="cpu"/> (-1: none).</summary>
         public int InterruptRoute(int cpu, int source) => cpu is 0 or 1 && source >= 0 && source < 69 ? _interruptMap[cpu, source] : -1;
 
+        /// <summary>The 69 peripheral interrupt sources (ESP-IDF's ETS_*_INTR_SOURCE, soc/esp32 periph_defs.h).</summary>
+        private static readonly string[] SourceNames =
+        {
+            "WIFI_MAC", "WIFI_NMI", "WIFI_BB", "BT_MAC", "BT_BB", "BT_BB_NMI", "RWBT", "RWBLE", "RWBT_NMI", "RWBLE_NMI",
+            "SLC0", "SLC1", "UHCI0", "UHCI1", "TG0_T0", "TG0_T1", "TG0_WDT", "TG0_LACT", "TG1_T0", "TG1_T1",
+            "TG1_WDT", "TG1_LACT", "GPIO", "GPIO_NMI", "FROM_CPU0", "FROM_CPU1", "FROM_CPU2", "FROM_CPU3", "SPI0", "SPI1",
+            "SPI2", "SPI3", "I2S0", "I2S1", "UART0", "UART1", "UART2", "SDIO_HOST", "ETH_MAC", "PWM0",
+            "PWM1", "PWM2", "PWM3", "LEDC", "EFUSE", "TWAI", "RTC_CORE", "RMT", "PCNT", "I2C_EXT0",
+            "I2C_EXT1", "RSA", "SPI1_DMA", "SPI2_DMA", "SPI3_DMA", "WDT", "TIMER1", "TIMER2", "TG0_T0_EDGE", "TG0_T1_EDGE",
+            "TG0_WDT_EDGE", "TG0_LACT_EDGE", "TG1_T0_EDGE", "TG1_T1_EDGE", "TG1_WDT_EDGE", "TG1_LACT_EDGE", "MMU_IA", "MPU_IA", "CACHE_IA",
+        };
+
+        /// <summary>
+        /// [unified-timeline] What CPU interrupt <paramref name="line"/> on core <paramref name="cpu"/> is: the core's own
+        /// (CCOMPARE0 the RTOS tick, CCOMPARE1/2, the software interrupts, profiling), else the peripheral sources the
+        /// matrix routes to it, those holding their line up first ("TG0_T0", "GPIO", "UART0" …).
+        /// </summary>
+        public string InterruptName(int cpu, int line)
+        {
+            switch (line)
+            {
+                case 6: return "CCOMPARE0";
+                case 15: return "CCOMPARE1";
+                case 16: return "CCOMPARE2";
+                case 7: return "SOFT0";
+                case 29: return "SOFT1";
+                case 11: return "PROFILING";
+            }
+
+            if (cpu is not (0 or 1)) return "INT" + line;
+            var held = new System.Collections.Generic.List<string>();
+            var routed = new System.Collections.Generic.List<string>();
+            for (int s = 0; s < 69; s++)
+            {
+                if (_interruptMap[cpu, s] != line) continue;
+                (_sourceLevel[s] ? held : routed).Add(SourceNames[s]);
+            }
+
+            var names = held.Count > 0 ? held : routed;
+            return names.Count == 0 ? "INT" + line : names.Count <= 3 ? string.Join("+", names) : string.Join("+", names.GetRange(0, 3)) + "…";
+        }
+
         /// <summary>Whether peripheral source <paramref name="source"/> holds its line up.</summary>
         public bool PeripheralLevel(int source) => source >= 0 && source < 69 && _sourceLevel[source];
 

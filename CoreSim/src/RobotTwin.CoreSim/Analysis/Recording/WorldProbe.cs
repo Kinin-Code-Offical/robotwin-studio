@@ -59,7 +59,11 @@ namespace RobotTwin.CoreSim.Analysis.Recording
         public void Detach()
         {
             _runner.Sliced -= OnSlice;
-            foreach (var (board, handler) in _espTaps) board.PinChanged -= handler;
+            foreach (var (board, handler, irq) in _espTaps)
+            {
+                board.PinChanged -= handler;
+                board.InterruptHandled -= irq;
+            }
         }
 
         private string NameOf(SceneBody b)
@@ -321,7 +325,8 @@ namespace RobotTwin.CoreSim.Analysis.Recording
         }
 
         private readonly List<FirmwareTap> _taps = new List<FirmwareTap>();
-        private readonly List<(Firmware.Esp32.IEsp32Board Board, Action<double, int, bool> Handler)> _espTaps = new List<(Firmware.Esp32.IEsp32Board, Action<double, int, bool>)>();
+        private readonly List<(Firmware.Esp32.IEsp32Board Board, Action<double, int, bool> Handler, Action<double, double, string, int> Irq)> _espTaps =
+            new List<(Firmware.Esp32.IEsp32Board, Action<double, int, bool>, Action<double, double, string, int>)>();
         private const int MaxEdgesPerPin = 200_000, MaxInterrupts = 400_000;
 
         /// <summary>
@@ -389,7 +394,8 @@ namespace RobotTwin.CoreSim.Analysis.Recording
 
         /// <summary>
         /// An ESP32 board (either mode) reports each pad the firmware drives as it changes; each report is an edge, so the
-        /// pad's level before its first report was the opposite. Interrupts are not traced on the ESP32.
+        /// pad's level before its first report was the opposite. In the hardware-compatible mode it reports each interrupt
+        /// handler too (entry to return, on either core: the APP core's marked), as the ATmega328P's chip does.
         /// </summary>
         private void TapEsp32(Firmware.Esp32.IEsp32Board esp, string name)
         {
@@ -407,8 +413,15 @@ namespace RobotTwin.CoreSim.Analysis.Recording
                 else track.Truncated = true;
             }
 
+            void Irq(double start, double end, string what, int core)
+            {
+                if (_result.Interrupts.Count < MaxInterrupts)
+                    _result.Interrupts.Add(new InterruptSpan { Board = name, Vector = core == 1 ? what + " (APP)" : what, Start = start, End = end });
+            }
+
             esp.PinChanged += Handler;
-            _espTaps.Add((esp, Handler));
+            esp.InterruptHandled += Irq;
+            _espTaps.Add((esp, Handler, Irq));
         }
 
         /// <summary>Contacts and joint reactions on each stress part, in its body frame.</summary>

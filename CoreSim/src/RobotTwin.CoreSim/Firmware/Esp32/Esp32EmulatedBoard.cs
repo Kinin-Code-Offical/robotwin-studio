@@ -104,6 +104,9 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         /// <inheritdoc/>
         public event Action<double, int, bool>? PinChanged;
 
+        /// <inheritdoc/>
+        public event Action<double, double, string, int>? InterruptHandled;
+
         /// <summary>Text per UART (0 Serial, 1 Serial1, 2 Serial2) during the last slice.</summary>
         public event Action<int, string>? SerialPortOutput;
 
@@ -270,6 +273,24 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 Spi.PinChanged(gpio, level);   // CS pins frame SPI devices
                 PinChanged?.Invoke(_bootTime + soc.Seconds, gpio, level);   // [unified-timeline]
             };
+
+            // [unified-timeline] each core's interrupts, entry to return, named by what the matrix routes to them
+            for (int cpu = 0; cpu < 2; cpu++)
+            {
+                int core = cpu;
+                var open = new System.Collections.Generic.Stack<(double Start, string Name)>();
+                (core == 0 ? soc.Pro : soc.App).InterruptTrace = (number, level, enter) =>
+                {
+                    if (InterruptHandled == null) return;
+                    double now = _bootTime + soc.Seconds;
+                    if (enter) open.Push((now, soc.InterruptName(core, number)));
+                    else if (open.Count > 0)
+                    {
+                        var (start, what) = open.Pop();
+                        InterruptHandled(start, now, what, core);
+                    }
+                };
+            }
             if (Options.BootMessages)
                 Emit("ets Jun  8 2016 00:22:57\r\n\r\nrst:" + RomResetText(romResetReason) + ",boot:0x13 (SPI_FAST_FLASH_BOOT)\r\n");
             _soc = soc;

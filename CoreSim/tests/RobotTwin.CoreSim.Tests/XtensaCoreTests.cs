@@ -189,12 +189,13 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         /// <summary>Runs an assembled program to its BREAK (or the cycle limit); the core is returned for checks.</summary>
-        public static (XtensaCore Core, TestBus Bus) Run(string body, long cycles = 5_000_000)
+        public static (XtensaCore Core, TestBus Bus) Run(string body, long cycles = 5_000_000, Action<XtensaCore>? setup = null)
         {
             var bus = new TestBus();
             Assemble(body).CopyTo(bus.Code, 0);
             var core = new XtensaCore(bus);
             core.Reset(TestBus.CodeBase + 0x400);
+            setup?.Invoke(core);
             core.Run(cycles);
             Assert.True(core.AtBreak, $"BREAK'a varmadı: pc 0x{core.Pc:X8}, son istisna {core.LastException}, tanınmayan {core.IllegalInstructions}");
             return (core, bus);
@@ -398,6 +399,50 @@ fib:
     rsr.misc0 a2
 ");
             Assert.Equal(5u, c.A(2));
+        }
+
+        /// <summary>
+        /// [unified-timeline] The core reports each interrupt it takes and its return: the same five timer interrupts as
+        /// above, each entered (interrupt 15, level 3) and left by its handler's RFI 3, one after the other, in order.
+        /// </summary>
+        [XtensaAsmFact]
+        public void EachInterruptsEntryAndReturnAreTraced()
+        {
+            var log = new System.Collections.Generic.List<(int Number, int Level, bool Enter, ulong Cycle)>();
+            var (c, _) = XtensaAsm.Run(@"
+    j .Lgo
+    .literal_position
+    .literal .Lint15, 0x8000
+    .align 4
+.Lgo:
+    movi a2, 0
+    wsr.misc0 a2
+    rsr.ccount a2
+    addmi a2, a2, 768
+    wsr.ccompare1 a2
+    l32r a2, .Lint15
+    wsr.intenable a2
+    movi a3, 5
+.Lwait:
+    waiti 0
+    addi a3, a3, -1
+    bnez a3, .Lwait
+    movi a2, 0
+    wsr.intenable a2
+    rsr.misc0 a2
+", setup: core =>
+            {
+                core.InterruptTrace = (n, level, enter) => log.Add((n, level, enter, core.Ccount));
+            });
+            Assert.Equal(5u, c.A(2));
+            Assert.Equal(10, log.Count);
+            for (int i = 0; i < log.Count; i++)
+            {
+                Assert.Equal(15, log[i].Number);
+                Assert.Equal(3, log[i].Level);
+                Assert.Equal(i % 2 == 0, log[i].Enter);   // entered, returned, entered …
+                if (i > 0) Assert.True(log[i].Cycle >= log[i - 1].Cycle);
+            }
         }
 
         [XtensaAsmFact]

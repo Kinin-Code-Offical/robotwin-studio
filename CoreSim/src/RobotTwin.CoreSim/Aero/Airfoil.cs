@@ -83,6 +83,13 @@ namespace RobotTwin.CoreSim.Aero
         /// <summary>Reynolds number at which <see cref="Cd0"/> and <see cref="ClMax"/> apply.</summary>
         public double ReferenceReynolds { get; init; } = 3e5;
 
+        /// <summary>
+        /// [aero] How C_l,max grows with the Reynolds number: its change per e-fold of Re (C_l,max(Re) = C_l,max + s·ln(Re /
+        /// Re_ref)), as published section data show it over 10⁴…10⁷. 0 keeps the simple rule: a stall penalty of up to
+        /// 25 % below the reference and none above.
+        /// </summary>
+        public double ClMaxReynoldsSlope { get; init; }
+
         public double ThicknessRatio { get; init; } = 0.12;
 
         /// <summary>Aspect ratio used for the post-stall C_D,max (set by the wing; 2-D sections use a large value).</summary>
@@ -95,7 +102,7 @@ namespace RobotTwin.CoreSim.Aero
         public ParametricAirfoil WithAspectRatio(double ar) => new ParametricAirfoil
         {
             Name = Name, LiftSlope = LiftSlope, ZeroLiftAngle = ZeroLiftAngle, ClMax = ClMax, ClMin = ClMin, Cd0 = Cd0, ClMinDrag = ClMinDrag,
-            DragFactor = DragFactor, Cm0 = Cm0, ReferenceReynolds = ReferenceReynolds, ThicknessRatio = ThicknessRatio, AspectRatio = ar
+            DragFactor = DragFactor, Cm0 = Cm0, ReferenceReynolds = ReferenceReynolds, ClMaxReynoldsSlope = ClMaxReynoldsSlope, ThicknessRatio = ThicknessRatio, AspectRatio = ar
         };
 
         public SectionCoefficients Evaluate(double alpha, double flapEffect, double reynolds)
@@ -107,8 +114,11 @@ namespace RobotTwin.CoreSim.Aero
             double reFactor = Math.Pow(ReferenceReynolds / re, 0.2);
             reFactor = Math.Max(0.6, Math.Min(2.5, reFactor));
             double cd0 = Cd0 * reFactor;
-            // Low-Re stall penalty (up to −25 % below 1e5, none above the reference).
-            double lowRe = re >= ReferenceReynolds ? 1.0 : Math.Max(0.75, 1.0 - 0.25 * Math.Log10(ReferenceReynolds / re));
+            // C_l,max with the Reynolds number: the section's own law when it has one, else a low-Re penalty only
+            // (up to −25 % below the reference, none above).
+            double lowRe = ClMaxReynoldsSlope > 0
+                ? Math.Max(0.4, Math.Min(1.8, 1.0 + ClMaxReynoldsSlope / Math.Max(0.1, ClMax) * Math.Log(re / ReferenceReynolds)))
+                : re >= ReferenceReynolds ? 1.0 : Math.Max(0.75, 1.0 - 0.25 * Math.Log10(ReferenceReynolds / re));
             double clMax = ClMax * lowRe + (flapEffect > 0 ? 0.6 * LiftSlope * flapEffect : 0);
             double clMin = ClMin * lowRe + (flapEffect < 0 ? 0.6 * LiftSlope * flapEffect : 0);
             double aEff = a + flapEffect;
@@ -186,13 +196,14 @@ namespace RobotTwin.CoreSim.Aero
         // ================================================================ presets
 
         /// <summary>
-        /// NACA 0012, symmetric 12 %: a₀ ≈ 0.105/deg, C_l,max ≈ 1.2 at Re ≈ 3·10⁵ (≈1.5 at 6·10⁶),
-        /// C_d0 ≈ 0.008 (Abbott &amp; von Doenhoff 1959, "Theory of Wing Sections", App. IV; Sheldahl &amp; Klimas 1981, SAND80-2114).
+        /// NACA 0012, symmetric 12 %, from Sheldahl &amp; Klimas 1981 (SAND80-2114, Table 2): a₀ ≈ 0.11/deg, C_l,max 0.98 at
+        /// Re = 3.6·10⁵ growing ≈ 0.153 per e-fold of Re (0.72 at 8·10⁴ … 1.22 at 2·10⁶), C_d0 ≈ 0.008 (Abbott &amp; von
+        /// Doenhoff 1959, "Theory of Wing Sections", App. IV, alike). Checked against that table in AirfoilValidationTests.
         /// </summary>
         public static ParametricAirfoil Naca0012 => new ParametricAirfoil
         {
-            Name = "NACA 0012", LiftSlope = 0.105 * 180 / Math.PI, ZeroLiftAngle = 0, ClMax = 1.2, ClMin = -1.2, Cd0 = 0.0085, ClMinDrag = 0,
-            DragFactor = 0.008, Cm0 = 0, ReferenceReynolds = 3e5, ThicknessRatio = 0.12
+            Name = "NACA 0012", LiftSlope = 0.11 * 180 / Math.PI, ZeroLiftAngle = 0, ClMax = 0.98, ClMin = -0.98, Cd0 = 0.0080, ClMinDrag = 0,
+            DragFactor = 0.008, Cm0 = 0, ReferenceReynolds = 3.6e5, ClMaxReynoldsSlope = 0.153, ThicknessRatio = 0.12
         };
 
         /// <summary>

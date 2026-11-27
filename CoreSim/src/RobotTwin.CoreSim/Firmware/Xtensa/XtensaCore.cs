@@ -139,6 +139,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             IntEnable = Interrupt = 0;
             Waiting = AtBreak = false;
             CpEnable = 0;
+            _inService.Clear();
         }
 
         // ================================================================ registers
@@ -210,6 +211,30 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         /// </summary>
         public uint ExternalLevels { get; set; }
 
+        /// <summary>
+        /// [unified-timeline] When set: each interrupt the core takes (CPU interrupt, level, true) and its return (the same,
+        /// false). A level-1 interrupt returns with the RFE that leaves its dispatcher (an RTOS may return to another task:
+        /// the address does not tell), a level-n one with RFI n; window exceptions (RFWO/RFWU) inside a handler do not end it.
+        /// </summary>
+        public Action<int, int, bool>? InterruptTrace { get; set; }
+
+        private readonly System.Collections.Generic.Stack<(int Number, int Level)> _inService = new System.Collections.Generic.Stack<(int, int)>();
+
+        private void TraceEnter(int number, int level)
+        {
+            if (InterruptTrace == null) return;
+            if (_inService.Count < 32) _inService.Push((number, level));
+            InterruptTrace(number, level, true);
+        }
+
+        /// <summary>A return from level <paramref name="level"/> (RFE: 1): ends the interrupt in service at that level, if any.</summary>
+        internal void TraceReturn(int level)
+        {
+            if (InterruptTrace == null || _inService.Count == 0 || _inService.Peek().Level != level) return;
+            var (number, _) = _inService.Pop();
+            InterruptTrace(number, level, false);
+        }
+
         /// <summary>Takes the highest pending, enabled interrupt the current level allows; true when one was taken.</summary>
         private bool TakeInterrupt()
         {
@@ -237,9 +262,11 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 Epc[1] = Pc;
                 Pc = Vecbase + (UserMode ? UserExceptionVector : KernelExceptionVector);
                 SetExcm(true);
+                TraceEnter(best, 1);
                 return true;
             }
 
+            TraceEnter(best, bestLevel);
             Epc[bestLevel] = Pc;
             Eps[bestLevel] = Ps;
             SetIntLevel(bestLevel);
