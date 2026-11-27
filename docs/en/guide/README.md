@@ -25,6 +25,7 @@ This guide walks through the app step by step. Read it in order or jump straight
 | [11. What's new](11-whats-new.md) | What each release brought, changed and fixed |
 | [12. Validation](12-validation.md) | How far each solver is from theory and benchmark problems, with tolerances |
 | [13. Experiments](13-experiments.md) | Parameter sweeps, seeded repeats, means and 95 % confidence intervals, headless runs and reports |
+| [14. Learning path](14-learning-path.md) | Five levels (electronics, embedded, mechanics and PCB, robotics, industry), hands-on tasks on the examples with expected results |
 
 ## What can I do in five minutes?
 

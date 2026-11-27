@@ -92,6 +92,16 @@ namespace RobotTwin.CoreSim.Robotics
 
         /// <summary>Why it failed (or how the target was taken), in Turkish; empty when it simply got there.</summary>
         public string Message { get; internal set; } = string.Empty;
+
+        /// <summary>
+        /// [kin] Why the target was missed: "sınır" (inside the arm's span, but an axis would have to go past its limit —
+        /// <see cref="LimitAxis"/>), "uzak" (beyond the farthest the arm stretches), "yakın" (nearer the first axis than the
+        /// arm can fold), or empty when it got there or the reason is not one of these.
+        /// </summary>
+        public string Cause { get; internal set; } = string.Empty;
+
+        /// <summary>The axis whose limit stood in the way (index into <see cref="WorldArm.Axes"/>), or -1.</summary>
+        public int LimitAxis { get; internal set; } = -1;
     }
 
     /// <summary>[kin] Where a world arm's tip can get: sampled over the servos' travel.</summary>
@@ -597,7 +607,7 @@ namespace RobotTwin.CoreSim.Robotics
             string where = Math.Abs(Math.Abs(plane.PlaneNormal.Z) - 1) < 1e-6 ? $"z = {result.Reached.Z * 1000:0.#} mm düzleminde" : "tek bir düzlemde";
             if (!result.Success)
             {
-                result.Message = $"Hedef erişim dışında ya da bir eksenin sınırının ötesinde. Ulaşabildiği en yakın nokta hedeften {miss * 1000:0.#} mm uzakta.";
+                WhyNot(result, model, map, goal, aim, current, miss);
                 if (result.OffPlane > 1e-3) result.Message += $" Eksenleri paralel olduğundan uç {where} gezer; hedef bu düzlemin {result.OffPlane * 1000:0.#} mm dışındaydı.";
             }
             else if (result.OffPlane > 1e-3)
@@ -606,6 +616,88 @@ namespace RobotTwin.CoreSim.Robotics
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// [kin] Why a target was missed, said plainly (the roadmap's "kolun hedefe neden ulaşamadığı"): solved again with every
+        /// turning axis free all round, a target it then reaches lies inside the arm's span and an axis' limit is in the way
+        /// (which one, the angle it would need and its range); otherwise the target is beyond the farthest the arm stretches,
+        /// or nearer its first axis than it can fold, measured as the reach is.
+        /// </summary>
+        private void WhyNot(WorldArmSolution result, ArmModel model, int[] map, Transform3 goal, Vec3 aim, IReadOnlyList<double> current, double miss)
+        {
+            string nearest = $" Ulaşabildiği en yakın nokta hedeften {miss * 1000:0.#} mm uzakta.";
+            var free = new ArmModel { Id = model.Id, Name = model.Name, Ik = model.Ik, PositionOnly = model.PositionOnly, ServoDriven = model.ServoDriven, Flange = model.Flange };
+            foreach (var j in model.Joints)
+            {
+                free.Joints.Add(new ArmJointSpec
+                {
+                    Name = j.Name, Type = j.Type, Axis = j.Axis, Point = j.Point, MaxSpeed = j.MaxSpeed, MaxTorque = j.MaxTorque,
+                    Min = j.Type == ArmJointType.Prismatic ? j.Min : -Math.PI, Max = j.Type == ArmJointType.Prismatic ? j.Max : Math.PI
+                });
+                free.Links.Add(new ArmLinkSpec { Name = j.Name });
+            }
+
+            var rng = new Random(11);
+            var seeds = new List<double[]> { map.Select(i => current[i]).ToArray(), new double[free.Dof] };
+            for (int s = 0; s < 8; s++) seeds.Add(free.Joints.Select(j => j.Min + (j.Max - j.Min) * rng.NextDouble()).ToArray());
+            IkResult? reached = null;
+            foreach (var seed in seeds)
+            {
+                var r = ArmKinematics.SolveDls(free, goal, seed, Transform3.Identity, 300);
+                if (r.Success)
+                {
+                    reached = r;
+                    break;
+                }
+            }
+
+            if (reached != null)
+            {
+                // the axis farthest past its range
+                int worst = -1;
+                double over = 0;
+                for (int k = 0; k < model.Joints.Count; k++)
+                {
+                    var j = model.Joints[k];
+                    double q = reached.Joints[k];
+                    if (j.Type != ArmJointType.Prismatic) q = Math.IEEERemainder(q, 2 * Math.PI);
+                    double past = q < j.Min ? j.Min - q : q > j.Max ? q - j.Max : 0;
+                    if (past > over)
+                    {
+                        over = past;
+                        worst = k;
+                    }
+                }
+
+                if (worst >= 0)
+                {
+                    var axis = Axes[map[worst]];
+                    var spec = model.Joints[worst];
+                    double need = spec.Type == ArmJointType.Prismatic ? reached.Joints[worst] : Math.IEEERemainder(reached.Joints[worst], 2 * Math.PI);
+                    result.Cause = "sınır";
+                    result.LimitAxis = map[worst];
+                    result.Message = $"Hedef kolun erişim alanında ama bir eksenin sınırı engel: {axis.Name} oraya ancak {axis.Display(need):0.#}{axis.Unit} ile gider, aralığı {axis.Display(spec.Min):0.#}…{axis.Display(spec.Max):0.#}{axis.Unit}." + nearest;
+                    return;
+                }
+            }
+
+            // beyond or inside the span, measured from the first axis as the reach is
+            var span = Reach(current, 768);
+            var first = model.Joints[0];
+            var d = aim - first.Point;
+            double radius = (d - first.Axis * d.Dot(first.Axis)).Length;
+            if (radius > span.Farthest)
+            {
+                result.Cause = "uzak";
+                result.Message = $"Hedef erişim dışında: ilk eksenden {radius * 1000:0} mm uzakta, kol en çok {span.Farthest * 1000:0} mm uzanır." + nearest;
+            }
+            else if (radius < span.Nearest)
+            {
+                result.Cause = "yakın";
+                result.Message = $"Hedef ilk eksene çok yakın: {radius * 1000:0} mm; kol {span.Nearest * 1000:0} mm'den içeri katlanamaz." + nearest;
+            }
+            else result.Message = "Hedef erişim dışında ya da bir eksenin sınırının ötesinde." + nearest;
         }
 
         /// <summary>The servo axes alone, with the free axes fixed at their values in <paramref name="q"/> (their motion moved into the later axes).</summary>

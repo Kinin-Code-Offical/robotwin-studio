@@ -71,6 +71,31 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void AKeptReferenceComparesRunsSampleBySample()
+        {
+            // [ref] the same signal again strays by next to nothing; half its amplitude by the RMS of the difference
+            var scope = Scope(Sampled(Sine, 0.03, 4e-6, 14e-6), 200e-6, 0.5);
+            Assert.False(scope.KeepReference());   // nothing on screen yet
+            scope.Acquire(0.02);
+            Assert.True(scope.KeepReference());
+            var kept = scope.Reference!;
+
+            var same = Scope(Sampled(Sine, 0.03, 4e-6, 14e-6, seed: 3), 200e-6, 0.5).Acquire(0.02)!;
+            same.Traces[0].Channel = kept.Traces[0].Channel;
+            Assert.InRange(Oscilloscope.ReferenceDeviation(kept, same, same.Traces[0]), 0, 0.03);
+
+            var half = Scope(Sampled(t => 0.5 * Sine(t), 0.03, 4e-6, 14e-6), 200e-6, 0.5).Acquire(0.02)!;
+            half.Traces[0].Channel = kept.Traces[0].Channel;
+            // the difference is 0.5·sin: its RMS 0.5/√2
+            Assert.InRange(Oscilloscope.ReferenceDeviation(kept, half, half.Traces[0]), 0.33, 0.38);
+
+            // another time base cannot be compared sample by sample
+            var slow = Scope(Sampled(Sine, 0.03, 4e-6, 14e-6), 500e-6, 0.5).Acquire(0.02)!;
+            slow.Traces[0].Channel = kept.Traces[0].Channel;
+            Assert.True(double.IsNaN(Oscilloscope.ReferenceDeviation(kept, slow, slow.Traces[0])));
+        }
+
+        [Fact]
         public void FallingSlopeAndLevelMoveTheTriggerPoint()
         {
             var src = Sampled(Sine, 0.03, 4e-6, 14e-6);

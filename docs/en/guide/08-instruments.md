@@ -22,15 +22,19 @@ The **Oscilloscope** tab is a 4-channel digital oscilloscope.
 | Channel | Volts/div, position, coupling (DC / AC / GND), probe 1× / 10×, 20 MHz bandwidth limit, invert, current probe |
 | Trigger | Mode (**Auto**, **Normal**, **Single**), source (1–4), slope (rising / falling), level, holdoff |
 | Maths | **A−B**, **A+B**, **A×B** (a voltage times a current is the power, W), **∫A** (a current's charge, C; a power's energy, J), **dA/dt** (slew rate, V/s); A and B are any two channels. The scale fits the result by itself, and the measurements work on the math channel too (the **mean** of V×I is the average power). |
-| Buttons | **RUN / STOP**, **SINGLE**, **AUTOSET**, cursors |
+| Buttons | **RUN / STOP**, **SINGLE**, **AUTOSET**, **REF**, cursors |
 
 With **Probe loading** on, the probe connects to the circuit as 1 MΩ ∥ 110 pF (1×) or 10 MΩ ∥ 12 pF (10×); in high-impedance circuits you see how the measurement disturbs the circuit.
 
 Automatic measurements: maximum, minimum, peak-to-peak, amplitude, mean, RMS, period, frequency, duty cycle, rise and fall time.
 
+**REF (reference):** keeps the screen as a bench scope's REF memory does. The kept screen is drawn under the next runs, faint, in its channels' colours, and it stays when the simulation is stopped and started again: change a resistor and see the new waveform over the old one. When the time/div and the record length are the same, the status line gives each channel's deviation from the reference as an RMS (`REF CH1 Δ120 mV`). Pressing **REF** again drops the reference.
+
 ### Serial protocol decoder
 
 The oscilloscope panel's **Decoder** section reads the probed wires as UART, I²C or SPI and draws a decode lane along the bottom of the screen (bytes as boxes, START/STOP and ACK as marks, errors red). **UART**: channel A is the line; **Baud** and **Parity** (none, even, odd); the start bit, the data bits (least significant first), the parity and the stop bit are read at the middle of each bit, a low stop bit is a framing error and a parity that does not hold a parity error. **I²C**: A is SCL, B SDA; START (repeated START too), the 7-bit address and R/W, ACK/NACK after every byte, the data, STOP. **SPI**: A is SCK, B the data (MOSI or MISO), an optional CS (selected while low); **Mode** 0–3 sets the clock's idle level and the edge the data is read on. The logic threshold is half way between the record's lowest and highest level; a slow edge, a glitch or a wrong baud rate shows as it would. The Arduino Uno's `Serial` drives its TX pin (D1) bit by bit: probe D1 and turn on the UART decoder to read what the sketch prints off the line's voltage. Its receiver reads the RX pin (D0) too: wire one board's TX to another's RX and the second receives what the first prints, off the wire (below).
+
+Clicking a byte in the decode strip puts the time cursors at its start and end (its duration in the cursor readout), highlights its wire in the circuit and reads it in the status line with its time ("UART 0x41 · 2.08 ms · 1.04 ms · N5"); the picked byte is outlined in the strip.
 
 ### Receiving on a serial line
 

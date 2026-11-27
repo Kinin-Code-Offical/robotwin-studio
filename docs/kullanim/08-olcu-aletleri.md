@@ -22,15 +22,19 @@ RobotWin Studio'daki ölçü aletleri gerçek cihazlar gibi davranır: osiloskob
 | Kanal | Volt/div, konum, kuplaj (DC / AC / GND), prob 1× / 10×, 20 MHz bant sınırı, ters çevir, akım probu |
 | Tetik | Mod (**Auto**, **Normal**, **Tek**), kaynak (1–4), eğim (yükselen / düşen), seviye, bekleme süresi |
 | Matematik | **A−B**, **A+B**, **A×B** (bir gerilimle bir akımın çarpımı güçtür, W), **∫A** (akımdan yük, C; güçten enerji, J), **dA/dt** (yükselme hızı, V/s); A ve B herhangi iki kanal. Ölçek sonuca göre kendiliğinden ayarlanır, ölçümler matematik kanalında da çalışır (V×I'nın **ortalaması** ortalama güçtür). |
-| Düğmeler | **RUN / STOP**, **TEK**, **AUTOSET**, imleçler |
+| Düğmeler | **RUN / STOP**, **TEK**, **AUTOSET**, **REF**, imleçler |
 
 **Prob yüklemesi** açıkken prob devreye 1 MΩ ∥ 110 pF (1×) veya 10 MΩ ∥ 12 pF (10×) olarak bağlanır; yüksek empedanslı devrelerde ölçümün devreyi nasıl etkilediğini görürsünüz.
 
 Otomatik ölçümler: tepe, dip, tepeden tepeye, genlik, ortalama, RMS, periyot, frekans, görev oranı, yükselme ve düşme süresi.
 
+**REF (referans):** gerçek osiloskopların REF belleği gibi ekrandaki dalgayı saklar. Saklanan ekran sonraki koşuların altına kendi kanal renklerinde soluk olarak çizilir ve simülasyonu durdurup yeniden başlatınca da kalır: bir direnci değiştirip yeni dalgayı eskisinin üstünde görürsünüz. Zaman/div ve kayıt uzunluğu aynıysa durum satırı her kanalın referanstan sapmasını RMS olarak yazar (`REF CH1 Δ120 mV`). **REF**'e bir daha basmak referansı kaldırır.
+
 ### Seri protokol çözücü
 
 Osiloskop panelinin **Çözücü** bölümü probladığınız kabloları UART, I²C ya da SPI olarak okur ve ekranın altına bir çözüm şeridi çizer (baytlar kutu, START/STOP ve ACK işaret, hatalar kırmızı). **UART**: A kanalı hat; **Baud** ve **Eşlik** (yok, çift, tek); başlangıç biti, veri bitleri (önce düşük bit), eşlik ve bitiş biti bitlerin ortasından okunur, bitiş biti düşükse çerçeve hatası, eşlik tutmazsa eşlik hatası. **I²C**: A SCL, B SDA; START (tekrarlı START dahil), 7 bitlik adres ve R/W, her bayttan sonra ACK/NACK, veri, STOP. **SPI**: A SCK, B veri (MOSI ya da MISO), isteğe bağlı CS (düşükken seçili); **Mod** 0–3 saatin boştaki seviyesini ve verinin okunduğu kenarı belirler. Mantık eşiği kaydın en düşük ve en yüksek seviyesinin ortasıdır; yavaş bir kenar, bir parazit ya da yanlış baud hızı gerçekteki gibi görünür. Arduino Uno'nun `Serial`'ı TX pinini (D1) bit bit sürer: D1'e prob bağlayıp UART çözücüyü açınca çizimin yazdıkları hattın geriliminden okunur. Alıcısı da RX pininden (D0) okur: bir kartın TX'ini ötekinin RX'ine bağlayın, ikinci kart birincinin yazdıklarını kablodan alır (aşağıda).
+
+Çözüm şeridindeki bir bayta tıklayınca zaman imleçleri o baytın başına ve sonuna gider (süresi imleç okumasında), kablosu devrede vurgulanır ve durum satırı baytı zamanıyla birlikte yazar ("UART 0x41 · 2,08 ms · 1,04 ms · N5"); seçili bayt şeritte çerçevelenir.
 
 ### Seri hattan alma
 

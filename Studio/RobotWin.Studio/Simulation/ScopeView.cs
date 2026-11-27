@@ -48,6 +48,10 @@ namespace RobotWin.Studio.Simulation
         private Rect _plot;
         private int _dragCursor = -1;
 
+        /// <summary>[decode] The decode lane on screen (for clicks), and the field picked in it.</summary>
+        private Rect _decodeLane = Rect.Empty;
+        private (double Start, double End)? _pickedField;
+
         public ScopeView()
         {
             ClipToBounds = true;
@@ -103,6 +107,9 @@ namespace RobotWin.Studio.Simulation
 
         public static Color ColorOf(int channel) => channel >= 0 && channel < ChannelColors.Length ? ChannelColors[channel] : MathColor;
 
+        /// <summary>[ref] A channel's colour for its kept trace: the same hue, a third as strong.</summary>
+        private static Color Faint(Color c) => Color.FromArgb(0x58, c.R, c.G, c.B);
+
         public void ForceAcquire()
         {
             Scope.ResetTriggerScan();
@@ -150,6 +157,13 @@ namespace RobotWin.Studio.Simulation
                 if (Scope.XY) DrawXY(dc, plot, frame);
                 else
                 {
+                    // [ref] the kept screen under the live one, in its channels' colours, faint
+                    if (Scope.Reference is { } kept)
+                    {
+                        if (kept.Math != null) DrawTrace(dc, plot, kept, kept.Math, Faint(MathColor));
+                        foreach (var t in kept.Traces) DrawTrace(dc, plot, kept, t, Faint(ColorOf(t.Channel?.Index ?? 0)));
+                    }
+
                     if (frame.Math != null) DrawTrace(dc, plot, frame, frame.Math, MathColor);
                     for (int i = frame.Traces.Count - 1; i >= 0; i--)
                     {
@@ -245,6 +259,15 @@ namespace RobotWin.Studio.Simulation
             dc.DrawText(hText, new Point(_plot.Right - hText.Width, 4 + (16 - hText.Height) / 2));
             double room = _plot.Right - hText.Width - 12 - (badge.Right + 10);
             string points = Shell.Lang.T($"{(frame?.Length ?? Scope.RecordLength) / 1000.0:0.#}k nokta".Replace(',', '.'));   // [lang] before it joins the line
+            // [ref] a kept screen says so, with how far each live trace strays from it (RMS) when they line up
+            if (Scope.Reference is { } kept && frame != null)
+            {
+                var dev = frame.Traces.Select(t => (t, d: Oscilloscope.ReferenceDeviation(kept, frame, t))).Where(x => !double.IsNaN(x.d))
+                    .Select(x => $"CH{(x.t.Channel?.Index ?? 0) + 1} Δ{SiValue.Format(x.d, x.t.Unit)}");
+                status += "   REF " + string.Join(" ", dev);
+            }
+            else if (Scope.Reference != null) status += "   REF";
+
             foreach (string candidate in new[]
             {
                 $"{status}   {SiValue.Format(fs, "Sa/s", 3)}   {points}   BW {SiValue.Format(Scope.Bandwidth, "Hz")}",
@@ -438,9 +461,11 @@ namespace RobotWin.Studio.Simulation
         /// <summary>[decode] The serial decoder's lane along the bottom of the screen: bytes as boxes, START/STOP and ACK as marks, errors red.</summary>
         private void DrawDecode(DrawingContext dc, Rect plot, ScopeFrame frame)
         {
+            _decodeLane = Rect.Empty;
             if (Scope.DecodeProtocol.Length == 0) return;
             var fields = Scope.Decode(frame);
             double laneH = 18, y = plot.Bottom - laneH - 3;
+            _decodeLane = new Rect(plot.Left, y - 2, plot.Width, laneH + 4);
             dc.DrawRectangle(SymbolRenderer.Brush(Color.FromArgb(0xC8, 0x0A, 0x0B, 0x0C)), null, new Rect(plot.Left, y - 2, plot.Width, laneH + 4));
             double X(double t) => plot.Left + (t - frame.StartTime) / (10.0 * frame.SecondsPerDiv) * plot.Width;
             var label = new FormattedText(Scope.DecodeProtocol, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, Typefaces.Mono, 10, SymbolRenderer.Brush(Muted), Dpi);
@@ -461,7 +486,8 @@ namespace RobotWin.Studio.Simulation
                 }
 
                 var box = new Rect(Math.Max(plot.Left, x0), y, Math.Max(2, Math.Min(plot.Right, x1) - Math.Max(plot.Left, x0)), laneH);
-                dc.DrawRoundedRectangle(SymbolRenderer.Brush(Color.FromArgb(0x55, color.R, color.G, color.B)), Pen(color, 1), box, 3, 3);
+                bool picked = _pickedField is { } pf && Math.Abs(pf.Start - f.Start) < 1e-12 && Math.Abs(pf.End - f.End) < 1e-12;
+                dc.DrawRoundedRectangle(SymbolRenderer.Brush(Color.FromArgb(picked ? (byte)0x99 : (byte)0x55, color.R, color.G, color.B)), Pen(picked ? CursorColor : color, picked ? 1.6 : 1), box, 3, 3);
                 var text = new FormattedText(f.Text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, Typefaces.Mono, 10, SymbolRenderer.Brush(Text), Dpi);
                 if (text.Width + 4 <= box.Width) dc.DrawText(text, new Point(box.Left + (box.Width - text.Width) / 2, y + (laneH - text.Height) / 2));
             }
@@ -585,6 +611,12 @@ namespace RobotWin.Studio.Simulation
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
             Focus();
+            if (e.ChangedButton == MouseButton.Left && PickDecoded(e.GetPosition(this)))
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (CursorMode == ScopeCursorMode.Off || e.ChangedButton != MouseButton.Left) return;
             var p = e.GetPosition(this);
             _dragCursor = NearestCursor(p);
@@ -595,6 +627,47 @@ namespace RobotWin.Studio.Simulation
                 e.Handled = true;
             }
         }
+
+        /// <summary>
+        /// [decode] A click on a decoded byte: the time cursors go to its start and end (its duration in the readout), its
+        /// wire is highlighted in the circuit, and the status line reads it with its time.
+        /// </summary>
+        private bool PickDecoded(Point p)
+        {
+            if (_decodeLane.IsEmpty || !_decodeLane.Contains(p) || Scope.Frame is not { } frame) return false;
+            double t = frame.StartTime + (p.X - _plot.Left) / _plot.Width * 10.0 * frame.SecondsPerDiv;
+            var field = Scope.Decode(frame).Where(f => f.End > f.Start).OrderBy(f => t < f.Start ? f.Start - t : t > f.End ? t - f.End : 0).FirstOrDefault();
+            if (field == null) return false;
+            double slack = 4.0 / _plot.Width * 10.0 * frame.SecondsPerDiv;
+            if (t < field.Start - slack || t > field.End + slack) return false;
+            _pickedField = (field.Start, field.End);
+            CursorMode = ScopeCursorMode.Time;
+            Cursors[0] = Math.Max(0, Math.Min(10, (field.Start - frame.StartTime) / frame.SecondsPerDiv));
+            Cursors[1] = Math.Max(0, Math.Min(10, (field.End - frame.StartTime) / frame.SecondsPerDiv));
+            int ch = Math.Max(0, Math.Min(Scope.Channels.Count - 1, Scope.DecodeA));
+            string? wire = Scope.Channels[ch].Source is ProbeChannel probe && probe.Kind == ProbeKind.Voltage ? probe.Name : null;
+            if (wire != null) Shell.CrossProbe.HighlightNet(this, wire);
+            Workspace.Current.Status = $"{Scope.DecodeProtocol} {field.Text} · {SiValue.Format(field.Start, "s")} · {SiValue.Format(field.End - field.Start, "s")}" + (wire != null ? " · " + wire : string.Empty);
+            CursorsMoved?.Invoke(this, EventArgs.Empty);
+            InvalidateVisual();
+            return true;
+        }
+
+        /// <summary>The n-th decoded byte on screen picked (a snapshot); laid out first so the lane is where a click would find it.</summary>
+        public void PickDecodedForSnapshot(int n)
+        {
+            UpdateLayout();
+            var dv = new DrawingVisual();
+            using (var dc = dv.RenderOpen()) OnRender(dc);
+            if (Scope.Frame is not { } frame || _decodeLane.IsEmpty) return;
+            var field = Scope.Decode(frame).Where(f => f.End > f.Start).Skip(n).FirstOrDefault();
+            if (field == null) return;
+            double x = _plot.Left + ((field.Start + field.End) / 2 - frame.StartTime) / (10.0 * frame.SecondsPerDiv) * _plot.Width;
+            PickDecoded(new Point(x, _decodeLane.Top + _decodeLane.Height / 2));
+        }
+
+        /// <summary>[decode] The cursors moved by a pick (the panel shows its cursor mode).</summary>
+        public event EventHandler? CursorsMoved;
 
         protected override void OnMouseMove(MouseEventArgs e)
         {

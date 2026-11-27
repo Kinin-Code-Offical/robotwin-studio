@@ -120,6 +120,25 @@ namespace RobotTwin.CoreSim.Tests
             Assert.False(inner.Success);
             Assert.Contains("eksenin sınırı", inner.Message);   // a servo's, or a motorised joint's
             Assert.DoesNotContain("düzlem", inner.Message);
+            // [kin] and which one: the elbow, past its ±90°
+            Assert.Equal("sınır", inner.Cause);
+            Assert.Equal(1, inner.LimitAxis);
+            Assert.Contains(arm.Axes[1].Name, inner.Message);
+        }
+
+        [Fact]
+        public void ATargetBeyondTheArmsSpanSaysHowFarItStretches()
+        {
+            var (w, g) = ServoArm();
+            var arm = WorldArm.Build(w, g, Named(w, "Kol 2").Id)!;
+            var p1 = arm.Axes[0].Spec.Point;
+            var on = arm.Tip(new double[2]);
+            var far = arm.Solve(new Vec3(p1.X + 0.5, p1.Y, on.Z), new double[2]);
+            _out.WriteLine(far.Message);
+            Assert.False(far.Success);
+            Assert.Equal("uzak", far.Cause);
+            Assert.Contains("uzanır", far.Message);
+            Assert.Equal(-1, far.LimitAxis);
         }
 
         [Fact]

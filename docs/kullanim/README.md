@@ -23,6 +23,7 @@ Bu kılavuz uygulamayı adım adım anlatır. Sırayla okuyabilir ya da doğruda
 | [11. Yenilikler](11-yenilikler.md) | Her sürümde neler geldi, neler değişti ve düzeltildi |
 | [12. Doğrulama](12-dogrulama.md) | Her çözücünün teoriden ve kıyaslama problemlerinden sapması, hata payları |
 | [13. Deneyler](13-deneyler.md) | Parametre taraması, tohumlu tekrarlar, ortalama ve %95 güven aralığı, başsız çalıştırma ve rapor |
+| [14. Öğrenme yolu](14-ogrenme-yolu.md) | Beş düzey (elektronik, gömülü, mekanik ve PCB, robotik, endüstri), örneklerle uygulamalı görevler ve beklenen sonuçlar |
 
 ## Beş dakikada ne yapabilirim?
 

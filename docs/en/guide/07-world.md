@@ -545,7 +545,7 @@ Select a part of an arm you built with servos (for example **Arm 2** in the serv
    - While it runs, **Drive servos** gives the servos these angles. This is like a servo tester on the signal wire: it replaces the firmware's pulses, and the servo turns with its own speed, torque and supply. **Hand back to firmware** gives the command back to the firmware.
    - **Copy angles** puts the angles on the clipboard as constants for your code, with the pin each servo is wired to (for example `const int SHOULDER_SERVO = 75;   // 74.9° · D9`).
 
-If a target cannot be reached, the nearest point and the reason are shown. The reason is either that the target is out of reach or that it is past a servo's limit.
+If a target cannot be reached, the nearest point and the reason are shown, in detail: when the target lies within the arm's span but an axis' limit is in the way, which axis, the angle it would need and its range ("the elbow servo gets there only at 205°, its range is 0…180°"); when it is out of reach, how far it is from the first axis and the farthest the arm stretches; when it is too close to the first axis, how far in the arm can fold. For this the solver solves the target once more as if the axes had no limits.
 
 If all the servo axes are parallel (as on the servo-arm template), the tip moves in one plane. The target is then brought onto that plane. If it moves by more than 1 mm, this is noted too.
 

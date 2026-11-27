@@ -15,6 +15,9 @@ namespace RobotWin.Studio.Simulation
     public sealed class ScopePanel : ScrollViewer
     {
         private readonly ScopeView _view;
+
+        /// <summary>--snapshot --fault decode-pick: the n-th decoded byte on screen picked as a click would.</summary>
+        public void PickDecodedForSnapshot(int n) => _view.PickDecodedForSnapshot(n);
         private readonly StackPanel _root = new StackPanel { Margin = new Thickness(12, 8, 10, 10) };
         private readonly List<Action> _refresh = new List<Action>();
         private readonly Button _run;
@@ -45,6 +48,13 @@ namespace RobotWin.Studio.Simulation
                 Scope.Autoset(Sim.InstrumentTime);
                 _view.ForceAcquire();
             }, tip: "V/div, zaman/div ve tetik seviyesini sinyale göre ayarla"));
+            // [ref] a bench scope's REF: keep the screen, lay the next runs over it; again to drop it
+            top.Children.Add(Btn("REF", () =>
+            {
+                if (Scope.Reference != null) Scope.Reference = null;
+                else if (!Scope.KeepReference()) Workspace.Current.Status = "Saklanacak bir ekran yok: önce bir dalga yakalayın";
+                _view.InvalidateVisual();
+            }, tip: "Ekrandaki dalgayı referans olarak sakla: sonraki koşular üstüne çizilir, sapması (RMS) durum satırında. Bir daha basınca kaldırır."));
             _root.Children.Add(top);
 
             // ---- horizontal

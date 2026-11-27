@@ -80,6 +80,11 @@ namespace RobotWin.Studio.Pages
             {
                 if (!_crossSelecting && Canvas.Selection.Count == 1 && SelectedPart is { } p) CrossProbe.SelectPart(this, p.Uid, p.RefDes);
             };
+            // [decode] a wire picked elsewhere (a decoded byte on the scope) is highlighted on the sheet
+            CrossProbe.NetHighlighted += (sender, net) =>
+            {
+                if (!ReferenceEquals(sender, Canvas) && net != null) Canvas.HighlightedNet = net;
+            };
             CrossProbe.PartSelected += (sender, _) =>
             {
                 if (ReferenceEquals(sender, this)) return;
@@ -1670,6 +1675,7 @@ namespace RobotWin.Studio.Pages
                 }
 
                 case "decode":
+                case "decode-pick":
                 {
                     // [decode] A 4800 Hz square wave reads, at 9600 baud 8N1, as an endless run of 'U' (0x55).
                     var gen = sch.AddPart(W.Library, "siggen-square", new GridPoint(-30, 22));
@@ -1732,6 +1738,7 @@ namespace RobotWin.Studio.Pages
             switch (fault)
             {
                 case "decode":
+                case "decode-pick":
                     sim.ClearProbes();
                     sim.AddVoltageProbe("TX", 0);
                     sim.Scope.DecodeProtocol = "UART";
@@ -1832,10 +1839,20 @@ namespace RobotWin.Studio.Pages
             switch (fault)
             {
                 case "decode":
+                case "decode-pick":
                     sim.Scope.Autoset(sim.Time);
                     sim.Scope.SecondsPerDiv = 5e-4;   // five UART frames across the screen
                     _scopePanel.Refresh();
                     for (int i = 0; i < 30; i++) sim.StepOnce(1e-3);
+                    if (fault == "decode-pick")
+                    {
+                        // [ref] [decode] the screen kept as the reference, a little more run over it, a byte picked
+                        sim.Scope.KeepReference();
+                        for (int i = 0; i < 5; i++) sim.StepOnce(1e-3);
+                        sim.Scope.Acquire(sim.Time);
+                        _scopePanel.PickDecodedForSnapshot(2);
+                    }
+
                     break;
                 case "scope-power":
                     sim.Scope.Autoset(sim.Time);

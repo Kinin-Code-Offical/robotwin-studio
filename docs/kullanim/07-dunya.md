@@ -545,7 +545,7 @@ Servolarla kurduğunuz bir kolun bir parçasını seçin (örneğin servo kol ş
    - Çalışırken **Servoları sür**, servolara bu açıları verir. Bu, sinyal kablosuna servo test cihazı takmak gibidir: yazılımın darbelerinin yerine geçer, servo ise kendi hızı, torku ve beslemesiyle döner. **Yazılıma bırak** komutu geri verir.
    - **Açıları kopyala**, açıları koda yapıştırılacak sabitler olarak panoya alır, servonun bağlı olduğu pinle birlikte (örneğin `const int OMUZ_SERVOSU = 75;   // 74.9° · D9`).
 
-Hedef ulaşılamıyorsa en yakın nokta ve nedeni yazılır. Neden ya erişim dışı olması ya da servo sınırıdır.
+Hedef ulaşılamıyorsa en yakın nokta ve nedeni yazılır, nedeni de ayrıntısıyla: hedef kolun erişim alanındaysa ama bir eksenin sınırı engelse hangi eksen olduğu, oraya hangi açıyla gideceği ve aralığı ("Dirsek servosu oraya ancak 205° ile gider, aralığı 0…180°"); erişim dışındaysa ilk eksenden ne kadar uzakta olduğu ve kolun en çok ne kadar uzandığı; ilk eksene çok yakınsa kolun ne kadar içeri katlanabildiği. Bunun için çözücü hedefi eksenler sınırsızmış gibi bir kez daha çözer.
 
 Bütün servo eksenleri paralelse (servo kol şablonundaki gibi) uç tek bir düzlemde gezer. Bu durumda hedef o düzleme indirilir. Fark 1 mm'den büyükse bu da yazılır.
 

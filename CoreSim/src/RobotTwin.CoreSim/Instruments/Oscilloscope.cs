@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using RobotTwin.CoreSim.Analog;
 
 namespace RobotTwin.CoreSim.Instruments
@@ -309,6 +310,43 @@ namespace RobotTwin.CoreSim.Instruments
         }
 
         public ScopeFrame? Frame { get; private set; }
+
+        /// <summary>
+        /// [ref] A screen kept to compare with (a bench scope's REF memory): the frame shown when it was kept, its traces at
+        /// their own scales and time base, drawn under the live ones; it outlives runs, so one run can be laid over another.
+        /// </summary>
+        public ScopeFrame? Reference { get; set; }
+
+        /// <summary>[ref] Keeps the screen now as the reference; false when nothing is shown yet.</summary>
+        public bool KeepReference()
+        {
+            if (Frame == null || (Frame.Traces.Count == 0 && Frame.Math == null)) return false;
+            Reference = Frame;
+            return true;
+        }
+
+        /// <summary>
+        /// [ref] How far a live trace strays from the kept one on the same channel: the RMS of their difference over the
+        /// samples both screens share (same time base and length), or NaN when they cannot be compared sample by sample.
+        /// </summary>
+        public static double ReferenceDeviation(ScopeFrame reference, ScopeFrame live, ScopeTrace liveTrace)
+        {
+            var kept = reference.Traces.FirstOrDefault(t => t.Channel != null && t.Channel == liveTrace.Channel);
+            if (kept == null || reference.Length != live.Length || Math.Abs(reference.SampleInterval - live.SampleInterval) > 1e-12 * Math.Max(1, live.SampleInterval)) return double.NaN;
+            int n = Math.Min(kept.Values.Length, liveTrace.Values.Length);
+            if (n == 0) return double.NaN;
+            double sum = 0;
+            int count = 0;
+            for (int i = 0; i < n; i++)
+            {
+                double d = liveTrace.Values[i] - kept.Values[i];
+                if (double.IsNaN(d)) continue;
+                sum += d * d;
+                count++;
+            }
+
+            return count == 0 ? double.NaN : Math.Sqrt(sum / count);
+        }
 
         public double SampleRate => Math.Min(MaxSampleRate, RecordLength / (HorizontalDivisions * SecondsPerDiv));
 
