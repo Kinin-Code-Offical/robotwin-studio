@@ -163,6 +163,17 @@ Unity'deki Is Trigger'dır. Bir gövdeye **Bileşen ekle → Tetik bölgesi** ve
 
 Unity'deki Constant Force bileşenidir. Hareket edebilen bir parçaya **Bileşen ekle → Sabit kuvvet** ile ekleyin: **Kuvvet (N) X · Y · Z** her fizik adımında parçanın kütle merkezine etkir (F = m·a), **Tork (N·m) X · Y · Z** onu döndürür. Altlarındaki kutular değeri dünya eksenleri yerine parçanın kendi eksenlerinde verir; böylece bir roketin itkisi ya da bir pervanenin çekişi parça döndükçe onunla döner. Z yukarıdır. Yerçekimi, sürükleme, temaslar ve bağlantılar aynı fizikte işlemeye devam eder; sabitlenmiş bir parçaya eklenmez. Kartın kutusuyla kapatılabilir, ⋮ menüsüyle kopyalanıp başka parçaya yapıştırılabilir.
 
+### Kısıtlar
+
+Unity'deki kısıt bileşenleridir; **Bileşen ekle → Kısıtlar** altında dört tane vardır. Kartta **Kaynak** seçilir; parça o andaki farkı korur (Unity'deki Activate), kaynak taşınınca ya da döndürülünce izler, ona takılı parçalar da birlikte gelir.
+
+- **Hedefe bak kısıtı**: parçanın **Bakan eksen**i (kamera ve mesafe sensörü +X boyunca bakar) hep kaynağa döner, yan yatmadan.
+- **Konum kısıtı**: parça kaynağıyla aynı uzaklıkta kalır; **İzlenen eksenler** X, Y, Z ayrı ayrı seçilir, **Uzaklık (mm)** elle de verilir.
+- **Dönüş kısıtı**: parça kaynağıyla birlikte döner; **Açı farkı (°)** aradaki açıdır.
+- **Üst nesne kısıtı**: parça kaynağına takılıymış gibi onunla taşınır ve döner, sahne ağacı değişmez.
+
+**Şimdiki yerini koru** parçanın kaynağa göre şimdiki yerini yeni fark yapar. Kısıtlar dünyayı düzenlerken tutar. Çalışırken parçaları yalnız fizik yürütür: kuvvetler, eklemler ve temaslar. Bu yüzden çalışma, kısıtların bıraktığı yerden başlar. Çalışırken de birlikte gitmesi gereken bir parçayı takın ya da hizalayın. Unity'deki ölçek kısıtının karşılığı yoktur, çünkü bir parçanın boyu gerçek boyudur. Kart kutusuyla kapatılır; kaynak da kopyalanırsa kopya, kaynağın kopyasını izler.
+
 ![Ateşlemeden 0,1 s sonra: 24 bar, 1275 °C, 100 N itki; yakıt yüzeyinin tamamı yanıyor](../images/world-rocket-ignite.png)
 
 ![Tepe noktasında açılan 45 cm paraşütle iniş](../images/world-rocket-chute.png)

@@ -15,7 +15,11 @@ namespace RobotTwin.CoreSim.Sandbox
         public const string OffSuffix = ".off";
 
         /// <summary>The keys of the components that can be switched off.</summary>
-        public static readonly string[] Switchable = { "shell", "vessel", "parachute", MachineFaults.Key, WorldPhysics.ConstantForceKey, WorldPhysics.TriggerKey };
+        public static readonly string[] Switchable =
+        {
+            "shell", "vessel", "parachute", MachineFaults.Key, WorldPhysics.ConstantForceKey, WorldPhysics.TriggerKey,
+            WorldConstraints.AimKey, WorldConstraints.PositionKey, WorldConstraints.RotationKey, WorldConstraints.ParentKey   // [constraints]
+        };
 
         public static bool IsOff(WorldObject o, string key) => o.Parameters.ContainsKey(key + OffSuffix);
 
@@ -49,6 +53,7 @@ namespace RobotTwin.CoreSim.Sandbox
             "parachute" => new[] { "parachute", "parachute.deploy", "parachute.cd" },
             MachineFaults.Key => new[] { MachineFaults.Key, MachineFaults.AtKey, MachineFaults.ValueKey },
             WorldPhysics.ConstantForceKey => new[] { WorldPhysics.ConstantForceKey, WorldPhysics.ConstantForceLocalKey, WorldPhysics.ConstantTorqueKey, WorldPhysics.ConstantTorqueLocalKey },
+            WorldConstraints.AimKey or WorldConstraints.PositionKey or WorldConstraints.RotationKey or WorldConstraints.ParentKey => WorldConstraints.KeysOf(key),
             _ => new[] { key }
         };
 
@@ -72,6 +77,7 @@ namespace RobotTwin.CoreSim.Sandbox
                                  && MachineFaults.For(o.PartId).Any(f => f.Id == id),
             WorldPhysics.ConstantForceKey => o.Kind != WorldObjectKind.Empty && !o.IsStatic,
             WorldPhysics.TriggerKey => o.Kind == WorldObjectKind.Body && !Has(o, "shell") && !Has(o, "vessel"),
+            WorldConstraints.AimKey or WorldConstraints.PositionKey or WorldConstraints.RotationKey or WorldConstraints.ParentKey => true,   // [constraints] any part
             _ => false
         };
 

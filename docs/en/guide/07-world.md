@@ -163,6 +163,17 @@ Unity's Is Trigger. Give a body **Add component → Trigger zone** and the part 
 
 Unity's Constant Force component. Add it to a part that can move with **Add component → Constant force**: **Force (N) X · Y · Z** acts on the part's centre of mass on every physics step (F = m·a), **Torque (N·m) X · Y · Z** turns it. The boxes under them give the value along the part's own axes instead of the world's, so a rocket's thrust or a propeller's pull turns with the part. Z is up. Gravity, drag, contacts and joints keep working in the same physics; a fixed part cannot take one. The card's box switches it off, and its ⋮ menu copies it to paste on another part.
 
+### Constraints
+
+Unity's constraint components; there are four under **Add component → Constraints**. Pick the **Source** on the card; the part keeps the offset it has then (Unity's Activate), follows when the source is moved or turned, and the parts mounted on it come along.
+
+- **Aim constraint**: the part's **Aim axis** (a camera and a distance sensor look along +X) keeps turning to the source, without rolling over.
+- **Position constraint**: the part stays the same distance from its source; **Followed axes** X, Y, Z are chosen one by one, and the **Offset (mm)** can be typed.
+- **Rotation constraint**: the part turns with its source; **Angle offset (°)** is the angle between them.
+- **Parent constraint**: the part is carried and turned with its source as if mounted on it, without changing the scene tree.
+
+**Keep where it is now** makes the part's present place relative to the source the new offset. Constraints hold while you lay out the world. A run moves parts by physics alone: forces, joints and contacts. So a run starts from where the constraints put things; mount or mate a part that must go along while running. Unity's scale constraint has no counterpart, because a part's size is its real size. The card's box switches a constraint off; copied together with its source, the copy follows the source's copy.
+
 ![0.1 s after ignition: 24 bar, 1275 °C, 100 N of thrust; the whole grain surface is burning](../../images/en/world-rocket-ignite.png)
 
 ![Descending under the 45 cm parachute thrown at apogee](../../images/en/world-rocket-chute.png)

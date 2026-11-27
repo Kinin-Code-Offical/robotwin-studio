@@ -861,6 +861,7 @@ namespace RobotWin.Studio.Pages
             if (!IsSwitchPart(o)) LaunchSection(world, o);   // [launch] parachute
             ConstantForceSection(o);   // [cforce] Unity's Constant Force (Pages/WorldPage.ConstantForce.cs)
             TriggerSection(o);   // [trigger] Unity's Is Trigger (Pages/WorldPage.Trigger.cs)
+            ConstraintSections(world, o);   // [constraints] Unity's aim, position, rotation, parent constraints (Pages/WorldPage.Constraints.cs)
             SdkSection(world, o);   // [sdk] its own air settings, behaviours, live forces
             FaultSection(o);   // [fault] the part's fault scenario, when it has one
             FeaturesSection(world, o);   // "Özellik ekle ▾"
@@ -1947,6 +1948,12 @@ namespace RobotWin.Studio.Pages
             if (template == "mate")
             {
                 MateSnapshot();   // [mate] Pages/WorldPage.Mates.cs
+                return;
+            }
+
+            if (template == "constraints")
+            {
+                ConstraintSnapshot();   // [constraints]
                 return;
             }
 

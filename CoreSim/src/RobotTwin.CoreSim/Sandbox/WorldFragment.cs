@@ -91,6 +91,12 @@ namespace RobotTwin.CoreSim.Sandbox
                 made.Add(o);
             }
 
+            // [constraints] a constraint whose source was copied too points at the source's copy
+            foreach (var o in made)
+                foreach (var key in WorldConstraints.Keys)
+                    foreach (var k in new[] { key, key + WorldComponents.OffSuffix })
+                        if (o.Parameters.TryGetValue(k, out var src) && ids.TryGetValue(src, out var copy)) o.Parameters[k] = copy;
+
             var jointIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var src in Joints)
             {

@@ -266,7 +266,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Fizik gövdesi: kütle, doğrusal / açısal sönüm, kütle merkezi ve eylemsizlik otomatik ya da elle, yerçekimi, kinematik, ara değerleme, çarpışma algılama, konum / dönüş kilitleri (X/Y/Z) | kütle, sabit, doğrusal / açısal sönüm, konum / dönüş kilitleri (Kısıtlar ve sönüm); kütle merkezi, kinematik sonra | kısmi | 2 |
 | Çarpışma şekilleri: kutu, küre, kapsül, ağ, tekerlek, arazi; tetik | çarpışma şekilleri; Tetik bölgesi bileşeni (giriş / çıkış olayları, içindekiler, taşıyıcıyla gider) | var | |
 | Eklemler: menteşe, sabit, yay, karakter, yapılandırılabilir; sınırlar, yaylar, kırılma kuvveti ve torku | menteşe, kızak, sabit, yay ve sönüm, rulman; sınırlar, kırılma kuvveti ve torku (denetçide eklem başına); karakter ve yapılandırılabilir sonra | kısmi | 3 |
-| Kısıtlar: hedefe bak, üst nesne, konum, dönüş, ölçek | yok | yok | 2 |
+| Kısıtlar: hedefe bak, üst nesne, konum, dönüş, ölçek | Kısıtlar bileşenleri: hedefe bak (bakan eksen, yan yatmaz), konum (izlenen eksenler, uzaklık), dönüş (açı farkı), üst nesne; kaynak seçilince fark korunur, takılı parçalar birlikte gelir; düzenlerken tutar, çalışırken fizik yürütür; ölçek yok (boy gerçek boydur) | var | |
 | Sabit kuvvet | Sabit kuvvet bileşeni: kuvvet ve tork, dünya ya da kendi eksenlerinde; açılıp kapanır, kopyalanır | var | |
 | Etiket, katman (çarpışma katmanları), statik | adın altında Etiket ve Katman; katman ekle, çarpışma matrisi (fizikte maske); Sabit = statik | var | |
 

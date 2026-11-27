@@ -914,6 +914,7 @@ namespace RobotWin.Studio.Shell
         public void CommitWorldChange(string? status = null)
         {
             if (_active.World == null) return;
+            RobotTwin.CoreSim.Sandbox.WorldConstraints.Apply(_active.World);   // [constraints] constrained parts follow their sources
             _active.IsDirty = true;
             if (_active.OwnerProject is { } owner) owner.IsDirty = true;   // [assembly] the project holds its Montaj
             if (status != null) Status = status;
