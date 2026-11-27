@@ -234,6 +234,23 @@ namespace RobotWin.Studio.Pcb
         public event EventHandler<string>? BoardEdited;
 
         public event EventHandler? ToolChanged;
+
+        /// <summary>[routebar] The route being laid changed (started, moved, a via, finished): the options bar's live part follows.</summary>
+        public event EventHandler? RouteStatusChanged;
+
+        /// <summary>[routebar] What the route being laid is now: its net and class, clearance, width, lengths and whether it gets through.</summary>
+        public readonly record struct RouteStatus(string Net, string ClassName, double Clearance, double Width, double RouteLength, double NetLength, bool Clear, CopperLayer Layer, int Vias);
+
+        /// <summary>[routebar] The route being laid, or null when none is.</summary>
+        public RouteStatus? CurrentRoute
+        {
+            get
+            {
+                if (_router == null || _routePts.Count == 0 || Board == null) return null;
+                var (route, net) = RouteLengths();
+                return new RouteStatus(_routeNet, Board.ClassNameFor(_routeNet), _router.Class.Clearance, _router.Width, route, net, _preview.Count == 0 || _previewReached, _routeLayer, _routeVias.Count);
+            }
+        }
         public event EventHandler? ActiveLayerChanged;
         public event EventHandler<string>? Hint;
         public event EventHandler? CursorMoved;
@@ -367,10 +384,12 @@ namespace RobotWin.Studio.Pcb
         {
             if (_moving) CancelMove();
             _keyboardSegmentDrag = false;
+            bool routing = _router != null;
             _routePts.Clear();
             _routeVias.Clear();
             _preview.Clear();
             _router = null;
+            if (routing) RouteStatusChanged?.Invoke(this, EventArgs.Empty);   // [routebar] the route ended
             _routeStartPad = null;
             _polyPts.Clear();
             _gfx.Clear();   // [graphics]
@@ -1234,6 +1253,7 @@ namespace RobotWin.Studio.Pcb
             _preview = _router.Walkaround(_routeLayer, last, target, _diagonalFirst, _only90);
             var end = _preview[_preview.Count - 1];
             _previewReached = Math.Abs(end.X - target.X) < 1e-6 && Math.Abs(end.Y - target.Y) < 1e-6;
+            RouteStatusChanged?.Invoke(this, EventArgs.Empty);   // [routebar]
         }
 
         private void CommitPreview()

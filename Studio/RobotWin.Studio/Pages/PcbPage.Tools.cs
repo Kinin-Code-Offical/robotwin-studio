@@ -55,6 +55,10 @@ namespace RobotWin.Studio.Pages
             _drawPanel.Overlay.Shown = false;   // opens with the drawing button
             _overlays.Arrange();
             Canvas.KeepoutDrawn += OnKeepoutDrawn;   // [keepout]
+            Canvas.RouteStatusChanged += (_, _) => UpdateRouteLive();   // [routebar]
+            // the options bar never lies over the view bar in the top right: when it grows that wide it drops below it
+            ToolOptions.SizeChanged += (_, _) => PlaceToolOptions();
+            Canvas.SizeChanged += (_, _) => PlaceToolOptions();
             ToolFlyout.Attach(ToolRoute, new[]
             {
                 new ToolChoice(nameof(PcbTool.Route), "Yol", "I.Wire", "X"),
@@ -173,6 +177,21 @@ namespace RobotWin.Studio.Pages
                 ToolOptionsRow.Children.Add(layer);
             }
 
+            if (Canvas.Tool == PcbTool.Route)
+            {
+                // [routebar] while a route is laid: its net and class, the clearance rule, the lengths and whether it gets through
+                _routeLive = new TextBlock { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+                _routeLive.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
+                _routeState = new Border { CornerRadius = new CornerRadius(3), Padding = new Thickness(6, 1, 6, 1), Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+                _routeStateText = new TextBlock { FontSize = 11.5 };
+                _routeState.Child = _routeStateText;
+                _routeState.Margin = new Thickness(16, 0, 0, 0);
+                _routeLive.Margin = new Thickness(10, 0, 0, 0);
+                ToolOptionsRow.Children.Add(_routeState);   // the state first: it must never be cut off
+                ToolOptionsRow.Children.Add(_routeLive);
+                UpdateRouteLive();
+            }
+
             if (Canvas.Tool == PcbTool.DiffPair)
             {
                 // [diffroute] each pair keeps its own gap and skew limit (board setup); name-found pairs take 0.2 mm
@@ -184,6 +203,43 @@ namespace RobotWin.Studio.Pages
             }
 
             ToolOptions.Visibility = Visibility.Visible;
+        }
+
+        private TextBlock? _routeLive;
+        private Border? _routeState;
+        private TextBlock? _routeStateText;
+
+        private void PlaceToolOptions()
+        {
+            bool tooWide = ToolOptions.ActualWidth + 10 + HeadsUp.ActualWidth + 24 > Canvas.ActualWidth;
+            var want = new Thickness(10, tooWide ? 10 + HeadsUp.ActualHeight + 8 : 10, 0, 0);
+            if (ToolOptions.Margin != want) ToolOptions.Margin = want;
+        }
+
+        /// <summary>[routebar] The options bar's live part while routing (KiCad's and Altium's routing status).</summary>
+        private void UpdateRouteLive()
+        {
+            if (_routeLive == null || _routeState == null || _routeStateText == null) return;
+            if (Canvas.CurrentRoute is not { } r)
+            {
+                _routeLive.Text = Shell.Lang.T("Bir pedden ya da yol ucundan başlayın");
+                _routeState.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            string net = r.Net.Length > 0 ? r.Net : Shell.Lang.T("yeni hat");
+            string Mm(double v) => v.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture) + " mm";
+            _routeLive.Text = $"{net} ({r.ClassName}) · " + Shell.Lang.T("boşluk") + " " + Mm(r.Clearance) + " · " + Mm(r.RouteLength)
+                              + (r.NetLength > 0 ? " / " + Mm(r.NetLength + r.RouteLength) : string.Empty)
+                              + (r.Vias > 0 ? $" · {r.Vias} via" : string.Empty);
+            _routeLive.ToolTip = Shell.Lang.T("Hat (sınıfı) · sınıfın boşluk kuralı · bu yolun uzunluğu / hattın çizili toplamı · eklenen via");
+            _routeState.Visibility = Visibility.Visible;
+            _routeStateText.Text = Shell.Lang.T(r.Clear ? "DRC temiz" : "DRC: engel");
+            _routeState.SetResourceReference(Border.BackgroundProperty, r.Clear ? "B.Success" : "B.Danger");
+            _routeStateText.SetResourceReference(TextBlock.ForegroundProperty, "B.OnPrimary");
+            _routeState.ToolTip = Shell.Lang.T(r.Clear
+                ? "Yol imlece kadar boşluk kuralını bozmadan gidiyor"
+                : "İmlecin olduğu yere boşluk kuralını bozmadan gidilemiyor: yol, kırmızı çarpının önündeki engelde duruyor");
         }
 
         /// <summary>[keepout] What a new rule area forbids and on which layers (the active one or all).</summary>
