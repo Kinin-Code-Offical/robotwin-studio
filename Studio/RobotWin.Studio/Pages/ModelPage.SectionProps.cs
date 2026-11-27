@@ -50,7 +50,7 @@ namespace RobotWin.Studio.Pages
             string text = sb.ToString();
 
             var panel = new StackPanel { Width = 560 };
-            panel.Children.Add(new TextBlock { Text = Lang.T("Kesit özellikleri"), Style = (Style)FindResource("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 4) });
+            panel.Children.Add(new TextBlock { Text = Lang.T("Kesit özellikleri"), Style = (Style)FindResource("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 4) });
             panel.Children.Add(new TextBlock { Text = Lang.T("Kesit görünümünün düzleminde, kesilen yüzlerin alan integralleri; momentler kesitin ağırlık merkezinden geçen eksenlere göre."), Style = (Style)FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) });
             panel.Children.Add(new TextBox
             {

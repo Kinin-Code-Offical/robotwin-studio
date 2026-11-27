@@ -386,7 +386,7 @@ namespace RobotWin.Studio.Pages
                 ShowInTaskbar = false
             };
             var panel = new StackPanel { Margin = new Thickness(22, 18, 22, 18), Width = width };
-            panel.Children.Add(new TextBlock { Text = title, Style = Res<Style>("Text.Title"), FontSize = 17, Margin = new Thickness(0, 0, 0, 12) });
+            panel.Children.Add(new TextBlock { Text = title, Style = Res<Style>("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 12) });
             panel.Children.Add(body);
             var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 16, 0, 0) };
             var okButton = new Button { Content = ok, MinWidth = 96, Style = Res<Style>("Btn.Primary"), IsDefault = true };
@@ -1006,7 +1006,7 @@ namespace RobotWin.Studio.Pages
             var head = new DockPanel { Margin = new Thickness(0, 0, 0, 12) };
             head.Children.Add(new TextBlock { Text = "Esc / F1 kapat", Style = Res<Style>("Text.Caption"), VerticalAlignment = VerticalAlignment.Center });
             DockPanel.SetDock(head.Children[0], Dock.Right);
-            head.Children.Add(new TextBlock { Text = "Kısayollar", Style = Res<Style>("Text.Title"), FontSize = 18 });
+            head.Children.Add(new TextBlock { Text = "Kısayollar", Style = Res<Style>("Text.Title"), FontSize = Shell.TypeScale.Heading });
             stack.Children.Add(head);
             stack.Children.Add(grid);
             stack.Children.Add(new TextBlock { Text = "Sağ tık her öğede bağlama uygun menüyü açar; menülerde kısayollar sağda gösterilir.", Style = Res<Style>("Text.Caption") });

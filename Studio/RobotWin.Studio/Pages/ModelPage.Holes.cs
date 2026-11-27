@@ -33,7 +33,7 @@ namespace RobotWin.Studio.Pages
 
             var spec = new DrillSpec { Type = LastHole.Type, Size = LastHole.Size, Fit = LastHole.Fit, Depth = LastHole.Depth };
             var panel = new StackPanel { Width = 380 };
-            panel.Children.Add(new TextBlock { Text = Lang.T("Delik sihirbazı"), Style = (Style)FindResource("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 4) });
+            panel.Children.Add(new TextBlock { Text = Lang.T("Delik sihirbazı"), Style = (Style)FindResource("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 4) });
             panel.Children.Add(new TextBlock { Text = Lang.T("Vida ölçüsüne göre delik; ölçüler ISO 273, DIN 974-1, ISO 15065 ve kaba diş kılavuz çaplarından."), Style = (Style)FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) });
 
             ComboBox Combo<T>((T Value, string Name)[] items, T selected)

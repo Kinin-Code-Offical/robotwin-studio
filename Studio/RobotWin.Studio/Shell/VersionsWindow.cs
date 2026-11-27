@@ -33,7 +33,7 @@ namespace RobotWin.Studio.Shell
             SetResourceReference(ForegroundProperty, "B.Text");
 
             var panel = new StackPanel { Margin = new Thickness(26, 22, 26, 20), Width = 600 };
-            panel.Children.Add(new TextBlock { Text = "Önceki sürümler", Style = R<Style>("Text.Title"), FontSize = 18 });
+            panel.Children.Add(new TextBlock { Text = "Önceki sürümler", Style = R<Style>("Text.Title"), FontSize = Shell.TypeScale.Heading });
             panel.Children.Add(new TextBlock
             {
                 Text = versions.Count == 0

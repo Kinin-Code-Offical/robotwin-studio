@@ -1341,7 +1341,7 @@ namespace RobotWin.Studio.Pages
             }
 
             var spec = new TextBlock { Style = (Style)FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 0), MaxWidth = 520, HorizontalAlignment = HorizontalAlignment.Left };
-            var warning = new TextBlock { Foreground = (Brush)FindResource("B.Warning"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0), MaxWidth = 520, HorizontalAlignment = HorizontalAlignment.Left, FontSize = 12.5 };
+            var warning = new TextBlock { Foreground = (Brush)FindResource("B.Warning"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0), MaxWidth = 520, HorizontalAlignment = HorizontalAlignment.Left, FontSize = Shell.TypeScale.Body };
             _meterRefresh.Add(() =>
             {
                 var meter = sim.ActiveMeter;

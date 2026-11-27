@@ -205,7 +205,7 @@ namespace RobotWin.Studio.Shell
             {
                 if (layout == OverlayLayout.Panel)
                 {
-                    var label = new TextBlock { Text = Lang.T(Title), FontSize = 11.5, FontWeight = FontWeights.SemiBold, Margin = new Thickness(6, 0, 6, 4) };
+                    var label = new TextBlock { Text = Lang.T(Title), FontSize = Shell.TypeScale.Caption, FontWeight = FontWeights.SemiBold, Margin = new Thickness(6, 0, 6, 4) };
                     label.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
                     DockPanel.SetDock(label, System.Windows.Controls.Dock.Top);
                     stack.Children.Add(label);

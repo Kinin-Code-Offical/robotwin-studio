@@ -23,7 +23,7 @@ namespace RobotWin.Studio.Pages
             var world = World;
             if (world == null) return;
             var panel = new StackPanel { Width = 460 };
-            panel.Children.Add(new TextBlock { Text = Lang.T("Delik hizası"), Style = (Style)FindResource("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 4) });
+            panel.Children.Add(new TextBlock { Text = Lang.T("Delik hizası"), Style = (Style)FindResource("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 4) });
             panel.Children.Add(new TextBlock { Text = Lang.T("Birbirinin devamı olan ama ekseni biraz kayık delikler: cıvatanın geçmeyeceği yerler. Delikler parçaların kendi şekillerinden bulunur."), Style = (Style)FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) });
             var deviation = new TextBox { Text = Fmt(_holeDeviationMm), Width = 80, HorizontalAlignment = HorizontalAlignment.Left, ToolTip = Lang.T("Eksenleri bundan çok ayrık delikler ayrı delik sayılır (mm)") };
             panel.Children.Add(Field("En çok kayma (mm)", deviation));

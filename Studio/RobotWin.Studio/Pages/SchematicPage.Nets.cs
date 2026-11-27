@@ -185,7 +185,7 @@ namespace RobotWin.Studio.Pages
             var note = target as SchematicNote;
             var at = target is GridPoint g ? g : note?.Position ?? new GridPoint(0, 0);
             var panel = new StackPanel { Width = 420 };
-            panel.Children.Add(new TextBlock { Text = Lang.T(note == null ? "Metin ekle" : "Metni düzenle"), Style = (Style)FindResource("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 8) });
+            panel.Children.Add(new TextBlock { Text = Lang.T(note == null ? "Metin ekle" : "Metni düzenle"), Style = (Style)FindResource("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 8) });
             var box = new TextBox { Text = note?.Text ?? string.Empty, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 90, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
             panel.Children.Add(box);
             var row = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };

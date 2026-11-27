@@ -43,7 +43,7 @@ namespace RobotWin.Studio.Shell
             SetResourceReference(ForegroundProperty, "B.Text");
 
             var panel = new StackPanel { Margin = new Thickness(26, 22, 26, 20), Width = 680 };
-            panel.Children.Add(new TextBlock { Text = "Tasarım alternatifleri", Style = R<Style>("Text.Title"), FontSize = 18 });
+            panel.Children.Add(new TextBlock { Text = "Tasarım alternatifleri", Style = R<Style>("Text.Title"), FontSize = Shell.TypeScale.Heading });
             panel.Children.Add(new TextBlock
             {
                 Text = "Aynı devrenin sürümleri: bazı parçalar takılmaz, bazı değerler ya da parçalar başkadır. Seçili olan simüle edilir, BOM'a, üretim dosyalarına ve montaja girer. Bir alternatif seçiliyken parçanın değişikliğini denetçisinden yaparsınız.",

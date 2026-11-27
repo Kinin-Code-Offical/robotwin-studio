@@ -21,7 +21,7 @@ import sys
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 STUDIO = os.path.join(ROOT, 'Studio', 'RobotWin.Studio')
 BASELINE = os.path.join(ROOT, 'tools', 'tokens', 'baseline.json')
-SCALE = {'12', '13', '14', '20', '30'}
+SCALE = {'12', '13', '14', '17', '20', '24', '30'}   # Theme/Tokens.xaml T.Caption … T.Hero
 
 # the drawing code: technical colours are its job
 DRAWING = ('Editor' + os.sep + 'SchematicCanvas', 'Editor' + os.sep + 'Symbol', 'Pcb' + os.sep, 'World' + os.sep, 'Render' + os.sep,

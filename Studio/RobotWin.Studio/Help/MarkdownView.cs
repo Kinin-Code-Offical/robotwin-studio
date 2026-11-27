@@ -165,7 +165,7 @@ namespace RobotWin.Studio.Help
                     var p = new Paragraph
                     {
                         FontFamily = R<FontFamily>("F.Mono"),
-                        FontSize = 12.5,
+                        FontSize = Shell.TypeScale.Body,
                         LineHeight = 19,
                         Foreground = R<Brush>("B.Text"),
                         Background = R<Brush>("B.Raised"),
@@ -283,7 +283,7 @@ namespace RobotWin.Studio.Help
             if (header) row.Background = R<Brush>("B.Raised");
             for (int c = 0; c < Math.Max(1, t.Header.Count); c++)
             {
-                var p = new Paragraph { Margin = new Thickness(0), LineHeight = 20, FontSize = 13.5 };
+                var p = new Paragraph { Margin = new Thickness(0), LineHeight = 20, FontSize = Shell.TypeScale.Body };
                 if (header)
                 {
                     p.FontWeight = FontWeights.SemiBold;
@@ -402,7 +402,7 @@ namespace RobotWin.Studio.Help
                         var span = new Span
                         {
                             FontFamily = R<FontFamily>("F.Mono"),
-                            FontSize = 12.5,
+                            FontSize = Shell.TypeScale.Body,
                             Foreground = R<Brush>("B.Text"),
                             Background = R<Brush>("B.Raised")
                         };

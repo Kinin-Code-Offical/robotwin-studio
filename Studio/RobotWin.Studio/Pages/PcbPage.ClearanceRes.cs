@@ -36,7 +36,7 @@ namespace RobotWin.Studio.Pages
             var c = CultureInfo.InvariantCulture;
             string Mm(double v) => v.ToString("0.###", c) + " mm";
             var panel = new StackPanel();
-            panel.Children.Add(new TextBlock { Text = Lang.T("Aralık çözümlemesi"), Style = S("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 4) });
+            panel.Children.Add(new TextBlock { Text = Lang.T("Aralık çözümlemesi"), Style = S("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 4) });
             panel.Children.Add(Caption(Lang.T("Seçili iki öğe arasında hangi kuralın geçerli olduğu ve bakırlarının gerçekte ne kadar uzak olduğu."), 0));
 
             void Line(string label, string value, Brush? color = null)

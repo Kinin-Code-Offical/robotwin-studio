@@ -24,7 +24,7 @@ namespace RobotWin.Studio.Pages
             var world = World;
             if (world == null) return;
             var panel = new StackPanel { Width = 460 };
-            panel.Children.Add(new TextBlock { Text = Lang.T("Çakışma algılama"), Style = (Style)FindResource("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 4) });
+            panel.Children.Add(new TextBlock { Text = Lang.T("Çakışma algılama"), Style = (Style)FindResource("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 4) });
             panel.Children.Add(new TextBlock { Text = Lang.T("Aynı yeri kaplayan parça çiftleri ve ortak hacimleri (parçaların dış şekilleriyle)."), Style = (Style)FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) });
             var touching = new CheckBox { Content = Lang.T("Değen yüzeyleri de çakışma say"), Margin = new Thickness(0, 0, 0, 4) };
             var joined = new CheckBox { Content = Lang.T("Eklemle bağlı parçaları da denetle"), Margin = new Thickness(0, 0, 0, 4), ToolTip = Lang.T("Servo koluyla servo, tekerle motor gibi bilerek iç içe olanlar") };

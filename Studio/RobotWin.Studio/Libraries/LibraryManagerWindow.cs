@@ -211,7 +211,7 @@ namespace RobotWin.Studio.Libraries
             };
             DockPanel.SetDock(enabled, Dock.Right);
             top.Children.Add(enabled);
-            var name = new TextBlock { Text = lib.Name, FontSize = 14.5, Foreground = B(lib.Enabled ? "B.Text" : "B.TextMuted"), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+            var name = new TextBlock { Text = lib.Name, FontSize = Shell.TypeScale.Subtitle, Foreground = B(lib.Enabled ? "B.Text" : "B.TextMuted"), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
             var nameRow = new StackPanel { Orientation = Orientation.Horizontal };
             nameRow.Children.Add(name);
             nameRow.Children.Add(Chip(lib.SourceText, lib.Source switch

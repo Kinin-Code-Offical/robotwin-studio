@@ -588,7 +588,7 @@ namespace RobotWin.Studio.Pages
             _newsRefresh = refresh;
             DockPanel.SetDock(refresh, Dock.Right);
             head.Children.Add(refresh);
-            head.Children.Add(new TextBlock { Text = "Haberler", Style = (Style)FindResource("Text.Title"), FontSize = 26 });
+            head.Children.Add(new TextBlock { Text = "Haberler", Style = (Style)FindResource("Text.Title"), FontSize = Shell.TypeScale.Headline });
             root.Children.Add(head);
             root.Children.Add(new TextBlock
             {
@@ -639,7 +639,7 @@ namespace RobotWin.Studio.Pages
                 title.Children.Add(badge);
             }
 
-            title.Children.Add(new TextBlock { Text = n.Title, Style = (Style)FindResource("Text.Subtitle"), FontSize = 16, TextWrapping = TextWrapping.Wrap });
+            title.Children.Add(new TextBlock { Text = n.Title, Style = (Style)FindResource("Text.Subtitle"), FontSize = Shell.TypeScale.Heading, TextWrapping = TextWrapping.Wrap });
             sp.Children.Add(title);
             string kind = n.Release != null ? "Sürüm notları · " + n.Release.DisplayVersion + (n.Release.IsPrerelease ? " · ön sürüm" : string.Empty) : "Duyuru";
             string date = n.Date == DateTimeOffset.MinValue ? string.Empty : n.Date.ToLocalTime().ToString("d MMMM yyyy", RobotWin.Studio.Shell.Lang.Culture) + " · ";
@@ -725,14 +725,14 @@ namespace RobotWin.Studio.Pages
             var info = um.Install;
             var s = AppSettings.Current;
             var root = new StackPanel { Margin = new Thickness(56, 36, 56, 48), MaxWidth = 900, HorizontalAlignment = HorizontalAlignment.Left };
-            root.Children.Add(new TextBlock { Text = "Güncellemeler", Style = (Style)FindResource("Text.Title"), FontSize = 26, Margin = new Thickness(0, 0, 0, 18) });
+            root.Children.Add(new TextBlock { Text = "Güncellemeler", Style = (Style)FindResource("Text.Title"), FontSize = Shell.TypeScale.Headline, Margin = new Thickness(0, 0, 0, 18) });
 
             // ---- status card
             var status = new StackPanel();
             var line = new DockPanel();
             var ver = new StackPanel();
             ver.Children.Add(new TextBlock { Text = "Yüklü sürüm", Style = (Style)FindResource("Text.Caption") });
-            ver.Children.Add(new TextBlock { Text = um.CurrentVersion.ToString(), Style = (Style)FindResource("Text.Title"), FontSize = 24, Margin = new Thickness(0, 2, 0, 0) });
+            ver.Children.Add(new TextBlock { Text = um.CurrentVersion.ToString(), Style = (Style)FindResource("Text.Title"), FontSize = Shell.TypeScale.Headline, Margin = new Thickness(0, 2, 0, 0) });
             line.Children.Add(ver);
             var mode = new TextBlock
             {
@@ -811,7 +811,7 @@ namespace RobotWin.Studio.Pages
             root.Children.Add(new Border { Style = (Style)FindResource("Card"), Child = status, Margin = new Thickness(0, 0, 0, 30) });
 
             // ---- every release
-            var versionsHeader = new TextBlock { Text = "Tüm sürümler", Style = (Style)FindResource("Text.Subtitle"), FontSize = 16, Margin = new Thickness(0, 0, 0, 4) };
+            var versionsHeader = new TextBlock { Text = "Tüm sürümler", Style = (Style)FindResource("Text.Subtitle"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 4) };
             root.Children.Add(versionsHeader);
             root.Children.Add(new TextBlock
             {
@@ -857,7 +857,7 @@ namespace RobotWin.Studio.Pages
         {
             var sp = new StackPanel();
             var head = new WrapPanel();
-            head.Children.Add(new TextBlock { Text = r.Title, Style = (Style)FindResource("Text.Subtitle"), FontSize = 15, Margin = new Thickness(0, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center });
+            head.Children.Add(new TextBlock { Text = r.Title, Style = (Style)FindResource("Text.Subtitle"), FontSize = Shell.TypeScale.Subtitle, Margin = new Thickness(0, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center });
             int cmp = r.Version?.CompareTo(um.CurrentVersion) ?? -1;
             if (cmp == 0) head.Children.Add(Pill("Yüklü", "B.Success"));
             else if (r == um.Available) head.Children.Add(Pill("Yeni", "B.Accent"));

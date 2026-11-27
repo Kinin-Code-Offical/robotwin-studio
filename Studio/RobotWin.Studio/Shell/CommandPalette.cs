@@ -48,7 +48,7 @@ namespace RobotWin.Studio.Shell
             panel.SetResourceReference(Border.BorderBrushProperty, "B.BorderStrong");
             var stack = new StackPanel();
             _query.Tag = "Komut, sayfa, sekme, dosya, şablon veya parça ara…";
-            _query.FontSize = 15;
+            _query.FontSize = Shell.TypeScale.Subtitle;
             _query.Margin = new Thickness(10, 10, 10, 6);
             _query.Padding = new Thickness(10, 7, 10, 7);
             _query.TextChanged += (_, _) => Filter();

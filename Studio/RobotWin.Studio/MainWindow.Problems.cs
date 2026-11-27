@@ -128,7 +128,7 @@ namespace RobotWin.Studio
             again.Click += (_, _) => RefreshProblems();
             DockPanel.SetDock(again, Dock.Right);
             head.Children.Add(again);
-            head.Children.Add(new TextBlock { Text = Lang.T("Sorunlar"), Style = (Style)FindResource("Text.Title"), FontSize = 18 });
+            head.Children.Add(new TextBlock { Text = Lang.T("Sorunlar"), Style = (Style)FindResource("Text.Title"), FontSize = Shell.TypeScale.Heading });
             DockPanel.SetDock(head, Dock.Top);
             root.Children.Add(head);
             root.Children.Add(new ScrollViewer { Content = _problemsList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });

@@ -184,7 +184,7 @@ namespace RobotWin.Studio.Updates
 
             var panel = new StackPanel { Margin = new Thickness(26, 22, 26, 20), Width = 440 };
             _title.Style = R<Style>("Text.Title");
-            _title.FontSize = 18;
+            _title.FontSize = Shell.TypeScale.Heading;
             _title.Text = $"RobotWin Studio {release.DisplayVersion} indiriliyor";
             panel.Children.Add(_title);
             panel.Children.Add(new TextBlock { Text = asset.Name + " · " + UpdateLogic.FormatSize(asset.Size), Style = R<Style>("Text.Caption"), Margin = new Thickness(0, 6, 0, 16) });

@@ -29,7 +29,7 @@ namespace RobotWin.Studio.Pages
             void Fill()
             {
                 panel.Children.Clear();
-                panel.Children.Add(new TextBlock { Text = Lang.T("Ayak izi atama"), Style = S("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 4) });
+                panel.Children.Add(new TextBlock { Text = Lang.T("Ayak izi atama"), Style = S("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 4) });
                 panel.Children.Add(Caption(Lang.T("Her parçanın ayak izi ve parçanın her pininin orada pedi olup olmadığı. Değiştir başka bir ayak izi seçtirir."), 0));
                 var grid = new Grid { Margin = new Thickness(0, 10, 0, 0) };
                 foreach (var w in new[] { 70.0, 120, 150, 0, 92 })

@@ -115,7 +115,7 @@ namespace RobotWin.Studio.Pages
             head.Children.Add(new TextBlock { Text = w.Label.Length > 0 ? w.Label : w.Variable, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
             stack.Children.Add(head);
             string plcName = world.Find(w.Plc)?.Name ?? "?";
-            stack.Children.Add(new TextBlock { Text = $"{plcName} · {w.Variable}", FontSize = 11, Foreground = (Brush)FindResource("B.TextSecondary"), Margin = new Thickness(0, 0, 0, 6) });
+            stack.Children.Add(new TextBlock { Text = $"{plcName} · {w.Variable}", FontSize = Shell.TypeScale.Caption, Foreground = (Brush)FindResource("B.TextSecondary"), Margin = new Thickness(0, 0, 0, 6) });
             var on = new SolidColorBrush(Color.FromRgb(0x3C, 0xD0, 0x64));
             var off = (Brush)FindResource("B.Border");
             switch (w.Kind)
@@ -163,7 +163,7 @@ namespace RobotWin.Studio.Pages
 
                 case HmiWidget.Number:
                 {
-                    var number = new TextBlock { FontSize = 22, FontFamily = (FontFamily)FindResource("F.Mono") };
+                    var number = new TextBlock { FontSize = Shell.TypeScale.Headline, FontFamily = (FontFamily)FindResource("F.Mono") };
                     stack.Children.Add(number);
                     _hmiRefresh.Add(() =>
                     {
@@ -194,7 +194,7 @@ namespace RobotWin.Studio.Pages
                 default:
                 {
                     var bar = new ProgressBar { Minimum = w.Min, Maximum = w.Max > w.Min ? w.Max : w.Min + 1, Height = 14 };
-                    var value = new TextBlock { FontSize = 11, Margin = new Thickness(0, 4, 0, 0) };
+                    var value = new TextBlock { FontSize = Shell.TypeScale.Caption, Margin = new Thickness(0, 4, 0, 0) };
                     stack.Children.Add(bar);
                     stack.Children.Add(value);
                     _hmiRefresh.Add(() =>

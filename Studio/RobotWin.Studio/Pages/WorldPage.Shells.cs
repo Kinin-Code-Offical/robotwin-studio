@@ -201,6 +201,6 @@ namespace RobotWin.Studio.Pages
         }
 
         private TextBlock StatusLine(string text, Color colour) =>
-            new TextBlock { Text = text, Foreground = new SolidColorBrush(colour), TextWrapping = TextWrapping.Wrap, FontSize = 12.5, Margin = new Thickness(0, 1, 0, 3) };
+            new TextBlock { Text = text, Foreground = new SolidColorBrush(colour), TextWrapping = TextWrapping.Wrap, FontSize = Shell.TypeScale.Body, Margin = new Thickness(0, 1, 0, 3) };
     }
 }

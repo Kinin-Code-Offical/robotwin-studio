@@ -209,7 +209,7 @@ namespace RobotWin.Studio
             DockPanel.SetDock(close, Dock.Right);
             head.Children.Add(close);
             head.Children.Add(_guideStepText);
-            _guideTitle = new TextBlock { FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6) };
+            _guideTitle = new TextBlock { FontSize = Shell.TypeScale.Subtitle, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6) };
             _guideTitle.SetResourceReference(TextBlock.ForegroundProperty, "B.Text");
             _guideBody = new TextBlock { TextWrapping = TextWrapping.Wrap, Style = (Style)FindResource("Text.Body"), Margin = new Thickness(0, 0, 0, 12) };
             _guideDo = new Button { Style = (Style)FindResource("Btn.Primary"), Padding = new Thickness(12, 5, 12, 5), HorizontalAlignment = HorizontalAlignment.Left };

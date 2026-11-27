@@ -99,7 +99,7 @@ namespace RobotWin.Studio.Pages
             var name = new TextBlock
             {
                 Text = o.Name,
-                FontSize = 12.5,
+                FontSize = Shell.TypeScale.Body,
                 VerticalAlignment = VerticalAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 Foreground = !o.Visible ? Res("B.TextDisabled") : active ? Res("B.Text") : selected ? Res("B.Text") : Res("B.TextSecondary"),
@@ -170,7 +170,7 @@ namespace RobotWin.Studio.Pages
             var o = _ed.Doc.Find(id);
             if (o == null) return;
             var grid = (Grid)r.Row.Child;
-            var box = new TextBox { Text = o.Name, FontSize = 12.5, Padding = new Thickness(4, 1, 4, 1) };
+            var box = new TextBox { Text = o.Name, FontSize = Shell.TypeScale.Body, Padding = new Thickness(4, 1, 4, 1) };
             Grid.SetColumn(box, 2);
             grid.Children.Remove(r.Name);
             grid.Children.Add(box);
@@ -887,7 +887,7 @@ namespace RobotWin.Studio.Pages
         {
             string text = stats.Report(title, Shell.Lang.T);
             var panel = new StackPanel { Width = 560 };
-            panel.Children.Add(new TextBlock { Text = Shell.Lang.T("Kütle özellikleri"), Style = (Style)FindResource("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 4) });
+            panel.Children.Add(new TextBlock { Text = Shell.Lang.T("Kütle özellikleri"), Style = (Style)FindResource("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 4) });
             panel.Children.Add(new TextBlock { Text = Shell.Lang.T("Malzemenin yoğunluğu ve doluluk oranıyla; ağırlık merkezi ve tensör dünya eksenlerinde."), Style = (Style)FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) });
             var box = new TextBox
             {
@@ -1226,7 +1226,7 @@ namespace RobotWin.Studio.Pages
                 var swatch = new Border { Width = 18, Height = 18, CornerRadius = new CornerRadius(4), Background = new SolidColorBrush(ModelGeometry.ParseColor(t.Color, Colors.Gray)), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 2, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
                 g.Children.Add(swatch);
                 var text = new StackPanel();
-                text.Children.Add(new TextBlock { Text = id == "enclosure" ? "Muhafaza kutusu + kapak" : t.Name, FontSize = 12.5, Foreground = Res("B.Text") });
+                text.Children.Add(new TextBlock { Text = id == "enclosure" ? "Muhafaza kutusu + kapak" : t.Name, FontSize = Shell.TypeScale.Body, Foreground = Res("B.Text") });
                 text.Children.Add(new TextBlock { Text = t.Description, FontSize = 12, Foreground = Res("B.TextMuted"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
                 text.Children.Add(new TextBlock { Text = $"{t.Material} · {t.Params.Count} parametre", FontSize = 12, Foreground = Res("B.TextMuted"), Margin = new Thickness(0, 4, 0, 0) });
                 Grid.SetColumn(text, 1);

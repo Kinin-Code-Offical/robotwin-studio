@@ -24,7 +24,7 @@ namespace RobotWin.Studio.Shell
             };
 
             var panel = new StackPanel { Margin = new Thickness(26, 22, 26, 20), MaxWidth = 460 };
-            panel.Children.Add(new TextBlock { Text = title, Style = (Style)Application.Current.FindResource("Text.Title"), FontSize = 18 });
+            panel.Children.Add(new TextBlock { Text = title, Style = (Style)Application.Current.FindResource("Text.Title"), FontSize = Shell.TypeScale.Heading });
             panel.Children.Add(new TextBlock { Text = message, Style = (Style)Application.Current.FindResource("Text.Body"), Margin = new Thickness(0, 10, 0, 20) });
             var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
             for (int i = 0; i < buttons.Length; i++)
@@ -90,7 +90,7 @@ namespace RobotWin.Studio.Shell
             };
 
             var panel = new StackPanel { Margin = new Thickness(26, 22, 26, 20), Width = 420 };
-            panel.Children.Add(new TextBlock { Text = title, Style = (Style)Application.Current.FindResource("Text.Title"), FontSize = 18 });
+            panel.Children.Add(new TextBlock { Text = title, Style = (Style)Application.Current.FindResource("Text.Title"), FontSize = Shell.TypeScale.Heading });
             panel.Children.Add(new TextBlock { Text = message, Style = (Style)Application.Current.FindResource("Text.Body"), Margin = new Thickness(0, 10, 0, 8), TextWrapping = TextWrapping.Wrap });
             var box = new TextBox { Text = initial, Margin = new Thickness(0, 0, 0, 18) };
             panel.Children.Add(box);

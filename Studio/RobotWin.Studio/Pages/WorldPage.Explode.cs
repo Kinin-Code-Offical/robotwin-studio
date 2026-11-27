@@ -54,7 +54,7 @@ namespace RobotWin.Studio.Pages
             var world = World;
             if (world == null) return;
             var panel = new StackPanel { Width = 460 };
-            panel.Children.Add(new TextBlock { Text = Lang.T("Boşluk doğrulama"), Style = (Style)FindResource("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 4) });
+            panel.Children.Add(new TextBlock { Text = Lang.T("Boşluk doğrulama"), Style = (Style)FindResource("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 4) });
             panel.Children.Add(new TextBlock { Text = Lang.T("Birbirine istenen boşluktan yakın duran parça çiftleri, aradaki en kısa mesafe ve yeri (parçaların dış şekilleriyle)."), Style = (Style)FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) });
             var minimum = new TextBox { Text = Fmt(_clearanceMm), Width = 80, HorizontalAlignment = HorizontalAlignment.Left, ToolTip = Lang.T("Bundan yakın duran çiftler listelenir (mm)") };
             panel.Children.Add(Field("En az boşluk (mm)", minimum));
@@ -164,7 +164,7 @@ namespace RobotWin.Studio.Pages
             }
 
             var panel = new StackPanel { Width = 440 };
-            panel.Children.Add(new TextBlock { Text = Lang.T("Patlatılmış görünüm"), Style = (Style)FindResource("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 4) });
+            panel.Children.Add(new TextBlock { Text = Lang.T("Patlatılmış görünüm"), Style = (Style)FindResource("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 4) });
             panel.Children.Add(new TextBlock { Text = Lang.T("Parçaları adım adım ayırır: montaj sırası, bakım ve belgeler için. Yalnız görüntü: parçaların yeri değişmez."), Style = (Style)FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4) });
 
             // ---- steps

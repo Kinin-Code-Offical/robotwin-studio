@@ -77,7 +77,9 @@
     <sys:Double x:Key="T.Caption">12</sys:Double>
     <sys:Double x:Key="T.Body">13</sys:Double>
     <sys:Double x:Key="T.Subtitle">14</sys:Double>
+    <sys:Double x:Key="T.Heading">17</sys:Double>
     <sys:Double x:Key="T.Title">20</sys:Double>
+    <sys:Double x:Key="T.Headline">24</sys:Double>
     <sys:Double x:Key="T.Hero">30</sys:Double>
 
     <!-- Geometry -->

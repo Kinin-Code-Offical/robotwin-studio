@@ -190,7 +190,7 @@ namespace RobotWin.Studio.Pages
                 _routeLive = new TextBlock { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
                 _routeLive.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
                 _routeState = new Border { CornerRadius = new CornerRadius(3), Padding = new Thickness(6, 1, 6, 1), Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-                _routeStateText = new TextBlock { FontSize = 11.5 };
+                _routeStateText = new TextBlock { FontSize = Shell.TypeScale.Caption };
                 _routeState.Child = _routeStateText;
                 _routeState.Margin = new Thickness(16, 0, 0, 0);
                 _routeLive.Margin = new Thickness(10, 0, 0, 0);

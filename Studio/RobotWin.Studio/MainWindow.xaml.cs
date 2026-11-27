@@ -1859,7 +1859,7 @@ namespace RobotWin.Studio
         public DetachedPlaceholder(string page, Action focus, Action dock)
         {
             var panel = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            panel.Children.Add(new TextBlock { Text = page + " ayrı pencerede açık", FontSize = 18, HorizontalAlignment = HorizontalAlignment.Center });
+            panel.Children.Add(new TextBlock { Text = page + " ayrı pencerede açık", FontSize = Shell.TypeScale.Heading, HorizontalAlignment = HorizontalAlignment.Center });
             panel.Children.Add(new TextBlock { Text = "İkinci ekranda çalışabilirsiniz; tüm sayfalar aynı projeyi canlı olarak paylaşır.", Margin = new Thickness(0, 6, 0, 16), HorizontalAlignment = HorizontalAlignment.Center });
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
             var show = new Button { Content = "Pencereye git", Margin = new Thickness(0, 0, 8, 0), Padding = new Thickness(14, 6, 14, 6) };

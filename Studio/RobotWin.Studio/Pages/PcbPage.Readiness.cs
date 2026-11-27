@@ -37,7 +37,7 @@ namespace RobotWin.Studio.Pages
             buttons.Children.Add(again);
             buttons.Children.Add(export);
             var root = new DockPanel { Margin = new Thickness(18, 14, 18, 16) };
-            var title = new TextBlock { Text = Lang.T("Üretime hazırlık"), Style = (Style)FindResource("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 4) };
+            var title = new TextBlock { Text = Lang.T("Üretime hazırlık"), Style = (Style)FindResource("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 4) };
             DockPanel.SetDock(title, Dock.Top);
             DockPanel.SetDock(summary, Dock.Top);
             DockPanel.SetDock(buttons, Dock.Bottom);
@@ -125,7 +125,7 @@ namespace RobotWin.Studio.Pages
             text.Children.Add(detail);
             if (item.State == ReadinessState.NotChecked)
             {
-                var note = new TextBlock { Text = Lang.T("Bu ekranda denetlenmedi"), FontSize = 11.5, FontStyle = FontStyles.Italic };
+                var note = new TextBlock { Text = Lang.T("Bu ekranda denetlenmedi"), FontSize = Shell.TypeScale.Caption, FontStyle = FontStyles.Italic };
                 note.SetResourceReference(TextBlock.ForegroundProperty, "B.TextMuted");
                 text.Children.Add(note);
             }

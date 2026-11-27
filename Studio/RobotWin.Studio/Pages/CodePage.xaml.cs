@@ -272,7 +272,7 @@ namespace RobotWin.Studio.Pages
         }
 
         private TreeViewItem Group(string title, string tip) =>
-            new TreeViewItem { Header = new TextBlock { Text = title, FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = (Brush)FindResource("B.TextMuted") }, IsExpanded = true, ToolTip = tip, Focusable = false };
+            new TreeViewItem { Header = new TextBlock { Text = title, FontSize = Shell.TypeScale.Caption, FontWeight = FontWeights.SemiBold, Foreground = (Brush)FindResource("B.TextMuted") }, IsExpanded = true, ToolTip = tip, Focusable = false };
 
         private TextBlock Muted(string text) => new TextBlock { Text = text, Foreground = (Brush)FindResource("B.TextMuted"), FontSize = 12 };
 
@@ -298,7 +298,7 @@ namespace RobotWin.Studio.Pages
             var head = new StackPanel { Orientation = Orientation.Horizontal };
             head.Children.Add(new TextBlock { Text = f is BoardCode ? "▣ " : "▤ ", Foreground = (Brush)FindResource(f is BoardCode ? "B.Accent" : "B.TextSecondary") });
             head.Children.Add(new TextBlock { Text = f.Title, Foreground = (Brush)FindResource("B.Text") });
-            head.Children.Add(new TextBlock { Text = "  " + (f is BoardCode b ? b.Subtitle : string.Empty), Foreground = (Brush)FindResource("B.TextMuted"), FontSize = 11.5 });
+            head.Children.Add(new TextBlock { Text = "  " + (f is BoardCode b ? b.Subtitle : string.Empty), Foreground = (Brush)FindResource("B.TextMuted"), FontSize = Shell.TypeScale.Caption });
             var item = new TreeViewItem { Header = head, Tag = new Node(f, null, true), ToolTip = f.Subtitle, IsExpanded = f == _folder };
             // Files and folders as a tree.
             var dirs = new Dictionary<string, TreeViewItem>(StringComparer.Ordinal) { [string.Empty] = item };
@@ -340,7 +340,7 @@ namespace RobotWin.Studio.Pages
         private StackPanel Label(string mark, string text)
         {
             var s = new StackPanel { Orientation = Orientation.Horizontal };
-            s.Children.Add(new TextBlock { Text = mark, Foreground = (Brush)FindResource("B.TextMuted"), FontSize = 11 });
+            s.Children.Add(new TextBlock { Text = mark, Foreground = (Brush)FindResource("B.TextMuted"), FontSize = Shell.TypeScale.Caption });
             s.Children.Add(new TextBlock { Text = text, Foreground = (Brush)FindResource("B.Text") });
             return s;
         }

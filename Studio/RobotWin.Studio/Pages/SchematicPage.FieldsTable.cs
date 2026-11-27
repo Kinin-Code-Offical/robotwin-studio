@@ -32,7 +32,7 @@ namespace RobotWin.Studio.Pages
             void Fill()
             {
                 panel.Children.Clear();
-                panel.Children.Add(new TextBlock { Text = Lang.T("Alan tablosu"), Style = S("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 4) });
+                panel.Children.Add(new TextBlock { Text = Lang.T("Alan tablosu"), Style = S("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 4) });
                 panel.Children.Add(RobotWin.Studio.Pcb.PcbForms.Caption(Lang.T("Şemadaki bütün parçalar. Bir satırın değeri değişince o satırdaki bütün parçalar değişir (tek adımda geri alınır); referansa tıklamak parçaları şemada seçer."), 0));
                 var group = new CheckBox { Content = Lang.T("Aynı tür ve değerdekileri grupla"), IsChecked = _fieldsGrouped, Margin = new Thickness(0, 8, 0, 0) };
                 group.Click += (_, _) =>

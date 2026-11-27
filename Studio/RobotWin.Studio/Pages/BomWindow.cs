@@ -56,7 +56,7 @@ namespace RobotWin.Studio.Pages
 
             var root = new DockPanel { Margin = new Thickness(22, 18, 22, 16) };
             var head = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
-            head.Children.Add(new TextBlock { Text = "Malzeme listesi ve tedarik", Style = R<Style>("Text.Title"), FontSize = 18 });
+            head.Children.Add(new TextBlock { Text = "Malzeme listesi ve tedarik", Style = R<Style>("Text.Title"), FontSize = Shell.TypeScale.Heading });
             head.Children.Add(new TextBlock
             {
                 Text = "Her satırın üreticisi, üretici parça numarası, tedarikçisi, fiyatı ve en az sipariş adedi projeyle saklanır (aynı parçalar tek satır). Sipariş, istenen kart sayısı ve tedarikçinin en azına göre hesaplanır.",

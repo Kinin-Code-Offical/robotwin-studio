@@ -968,7 +968,7 @@ namespace RobotWin.Studio.Shell
             w.Places.Children.Clear();
             w.Places.Children.Add(new TextBlock
             {
-                Text = "Yerleştir:", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0), FontSize = 11.5,
+                Text = "Yerleştir:", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0), FontSize = Shell.TypeScale.Caption,
                 ToolTip = "Pencereyi başlığından sürükleyip ana pencerenin sol, sağ veya alt kenarına bırakarak da yerleştirebilirsiniz"
             });
             ((TextBlock)w.Places.Children[0]).SetResourceReference(TextBlock.ForegroundProperty, "B.TextMuted");
@@ -977,7 +977,7 @@ namespace RobotWin.Studio.Shell
                 if (place == DockPlace.Bottom && !it.CanBottom) continue;
                 var b = new Button
                 {
-                    Content = label, Height = 24, Padding = new Thickness(10, 0, 10, 0), Margin = new Thickness(4, 0, 0, 0), FontSize = 11.5,
+                    Content = label, Height = 24, Padding = new Thickness(10, 0, 10, 0), Margin = new Thickness(4, 0, 0, 0), FontSize = Shell.TypeScale.Caption,
                     ToolTip = place == DockPlace.Left ? "Sol sütuna yerleştir" : place == DockPlace.Right ? "Sağ sütuna yerleştir" : "Alt bölmeye sekme olarak yerleştir"
                 };
                 b.Click += (_, _) => Dock(it, place);

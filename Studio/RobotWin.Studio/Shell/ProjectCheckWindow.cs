@@ -45,7 +45,7 @@ namespace RobotWin.Studio.Shell
             SetResourceReference(ForegroundProperty, "B.Text");
 
             var panel = new StackPanel { Margin = new Thickness(26, 22, 26, 20), Width = 600 };
-            panel.Children.Add(new TextBlock { Text = "Proje denetimi", Style = R<Style>("Text.Title"), FontSize = 18 });
+            panel.Children.Add(new TextBlock { Text = "Proje denetimi", Style = R<Style>("Text.Title"), FontSize = Shell.TypeScale.Heading });
             _summary.Style = R<Style>("Text.Caption");
             _summary.TextWrapping = TextWrapping.Wrap;
             _summary.Margin = new Thickness(0, 6, 0, 14);

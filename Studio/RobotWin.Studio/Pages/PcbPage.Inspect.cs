@@ -31,7 +31,7 @@ namespace RobotWin.Studio.Pages
             var c = CultureInfo.InvariantCulture;
             string F(double v, string f = "0.##") => v.ToString(f, c);
             var panel = new StackPanel();
-            panel.Children.Add(new TextBlock { Text = "Kart istatistikleri", Style = S("Text.Title"), FontSize = 18, Margin = new Thickness(0, 0, 0, 4) });
+            panel.Children.Add(new TextBlock { Text = "Kart istatistikleri", Style = S("Text.Title"), FontSize = Shell.TypeScale.Heading, Margin = new Thickness(0, 0, 0, 4) });
             panel.Children.Add(Caption("Kartın neyden yapıldığı: üretici teklifi ve hızlı bir denetim için.", 0));
 
             var columns = new Grid { Margin = new Thickness(0, 8, 0, 0) };

@@ -176,7 +176,7 @@
                     <DockPanel>
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                             <TextBlock DockPanel.Dock="Right" Text="F1 / ? / Esc: kapat" Style="{StaticResource Text.Caption}" VerticalAlignment="Center"/>
-                            <TextBlock Text="PCB kısayolları" Style="{StaticResource Text.Title}" FontSize="18"/>
+                            <TextBlock Text="PCB kısayolları" Style="{StaticResource Text.Title}" FontSize="{StaticResource T.Heading}"/>
                         </DockPanel>
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <WrapPanel x:Name="HelpColumns"/>
@@ -243,7 +243,7 @@
                                     <GroupStyle>
                                         <GroupStyle.HeaderTemplate>
                                             <DataTemplate>
-                                                <TextBlock Margin="2,10,0,4" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource B.TextSecondary}">
+                                                <TextBlock Margin="2,10,0,4" FontSize="{StaticResource T.Caption}" FontWeight="SemiBold" Foreground="{DynamicResource B.TextSecondary}">
                                                     <Run Text="{Binding Name, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding ItemCount, Mode=OneWay}"/>
                                                 </TextBlock>
                                             </DataTemplate>
