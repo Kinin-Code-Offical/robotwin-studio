@@ -8654,6 +8654,8 @@
   "A deliği": "Hole A",
   "B deliği": "Hole B",
   "Aynala": "Mirror",
+  "Çıkış endüktansı": "Output inductance",
+  "Açık çevrim direnci": "Open-loop resistance",
   "Doğrulama raporu": "Validation report",
   "Doğrulama raporu: gerilme analizinin teoriden sapması": "Validation report: how far the stress analysis is from theory",
   "Parça değişti: sonuç artık ona uymuyor, yeniden çözün.": "The part changed: the result no longer fits it, solve again.",

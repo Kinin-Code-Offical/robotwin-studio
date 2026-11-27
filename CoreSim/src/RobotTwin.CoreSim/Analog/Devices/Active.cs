@@ -67,6 +67,14 @@ namespace RobotTwin.CoreSim.Analog.Devices
 
         public StageMode Mode { get; set; } = StageMode.Regulating;
         public double OutputResistance { get; set; } = 0.05;
+
+        /// <summary>
+        /// [regulator] The reactive part of the output impedance for this step, as a resistance (Ω) in series with
+        /// <see cref="OutputResistance"/>, and the source term it brings (V): Z·i − <see cref="ReactiveVoltage"/>.
+        /// </summary>
+        public double ReactiveImpedance { get; set; }
+
+        public double ReactiveVoltage { get; set; }
         public double SourceLimit { get; set; } = 1.0;
 
         /// <summary>Maximum current the stage can sink; 0 for a source-only stage such as a regulator.</summary>
@@ -116,7 +124,9 @@ namespace RobotTwin.CoreSim.Analog.Devices
                     ctx.AddMatrix(branch, branch, 1.0);
                     break;
                 default:
-                    // V(out) - sum(d_k * V_k) - Rout * i = T0 - sum(d_k * V_k0)
+                    // V(out) - sum(d_k * V_k) + (Rout + Z) * i = T0 - sum(d_k * V_k0) + Z * i_L: the current the stage
+                    // sources (i > 0, from the supply into the output) drops the output below the target, as on a datasheet's
+                    // load regulation; Z * (i − i_L) is the loop's reactive part (the regulator's L ∥ R_ol)
                     double rhs = target;
                     ctx.AddRowNode(branch, output, 1.0);
                     for (int i = 0; i < controlCount; i++)
@@ -125,8 +135,8 @@ namespace RobotTwin.CoreSim.Analog.Devices
                         rhs -= _gains[i] * ctx.V(_nodes[i]);
                     }
 
-                    ctx.AddMatrix(branch, branch, -OutputResistance);
-                    ctx.AddRhs(branch, rhs);
+                    ctx.AddMatrix(branch, branch, OutputResistance + ReactiveImpedance);
+                    ctx.AddRhs(branch, rhs + ReactiveVoltage);
                     break;
             }
         }
@@ -334,6 +344,21 @@ namespace RobotTwin.CoreSim.Analog.Devices
         public double Dropout { get; set; } = 2.0;
         public double CurrentLimit { get; set; } = 1.5;
         public double OutputResistance { get; set; } = 0.02;
+
+        /// <summary>
+        /// [regulator] The control loop's finite speed seen from the output (H): above the loop's crossover the output
+        /// impedance rises as an inductor's would (a datasheet's "output impedance vs frequency"), so a fast load step dips
+        /// the output and a small output capacitor rings with it. 0: an instant loop.
+        /// </summary>
+        public double OutputInductance { get; set; }
+
+        /// <summary>
+        /// [regulator] Where that rise stops (Ω): far above the crossover the loop no longer acts and the output is the
+        /// pass device's own resistance, in parallel with <see cref="OutputInductance"/>; it damps a small output
+        /// capacitor's ringing. 0: no limit (a pure inductance).
+        /// </summary>
+        public double OpenLoopResistance { get; set; }
+
         public double QuiescentCurrent { get; set; } = 5e-3;
         public double MaxInputVoltage { get; set; } = 35.0;
         public double ThermalResistance { get; set; } = 50.0;
@@ -360,9 +385,23 @@ namespace RobotTwin.CoreSim.Analog.Devices
 
         public override void BeginStep(StepInfo step) => _stage.BeginStep();
 
+        /// <summary>
+        /// [regulator] The (L ∥ R_ol) part of the output impedance over a step of <paramref name="dt"/>, backward Euler:
+        /// v = Z·(i − i_L,prev) with Z = (L/dt) ∥ R_ol; 0 at DC (the inductance is a short) or without one.
+        /// </summary>
+        private double Reactive(double dt, bool dc)
+        {
+            if (dc || OutputInductance <= 0.0 || !(dt > 0.0)) return 0.0;
+            double g = dt / OutputInductance + (OpenLoopResistance > 0.0 ? 1.0 / OpenLoopResistance : 0.0);
+            return 1.0 / g;
+        }
+
+        private double _iL;
+
         public override void Reset()
         {
             _shutdown = false;
+            _iL = 0.0;
             _stage.Mode = StageMode.Regulating;
             _stage.LastCurrent = 0.0;
             Thermal?.Reset(25.0);
@@ -415,6 +454,9 @@ namespace RobotTwin.CoreSim.Analog.Devices
 
             double target = Target(ctx.V(Input), ctx.V(Ground), out double dVin, out double dVg);
             _stage.OutputResistance = OutputResistance;
+            double z = Reactive(ctx.Dt, ctx.IsDc);
+            _stage.ReactiveImpedance = z;
+            _stage.ReactiveVoltage = z * _iL;
             _stage.SourceLimit = CurrentLimit;
             _stage.SinkLimit = 0.0;
             _stage.SetControl(0, Input, dVin);
@@ -428,6 +470,10 @@ namespace RobotTwin.CoreSim.Analog.Devices
             Vin = ctx.V(Input, Ground);
             Vout = ctx.V(Output, Ground);
             Current = ctx.Unknown(BranchBase);
+            // [regulator] the inductance's current after this step: at DC all of it, else i_L + (dt/L)·v with v = Z·(i − i_L)
+            double zl = Reactive(ctx.Dt, ctx.IsDc);
+            if (zl <= 0.0 || _stage.Mode != StageMode.Regulating) _iL = Current;
+            else _iL += ctx.Dt / OutputInductance * zl * (Current - _iL);
             if (!_shutdown && !IsFailed)
             {
                 double target = Target(ctx.V(Input), ctx.V(Ground), out _, out _);

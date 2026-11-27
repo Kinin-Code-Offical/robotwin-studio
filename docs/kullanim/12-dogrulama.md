@@ -188,6 +188,9 @@ Baraj yıkılması deneyinde kapak bir anda kalkmadığı için sayısal yöntem
 | Aynı, 10 V'a kadar kapı yükü | 19,965 nC | 19,965 nC | ≈0 % | ±2 % |
 | Step motor, ani yükte adım kaçırma torku (enerji yöntemi: 0,7245·K·I) | 0,1206 N·m | 0,1211 N·m | +0,4 % | −6 / +8 % |
 | Aynı, yavaş artan yükte (K·I ± detent) | 0,144–0,188 N·m | 0,1854 N·m | aralıkta | aralık |
+| LM7805 yük regülasyonu, 5 mA → 1,5 A (TI veri sayfası: tipik 10, en çok 25 mV) | 10 mV | 11,96 mV | +20 % | en çok 25 mV |
+| LM7805 çıkış empedansı, çıkış kondansatörü yok (veri sayfası Şekil 7, grafikten): 100 Hz / 1 kHz / 10 kHz / 100 kHz | 8 / 9 / 28 / 270 mΩ | 8,0 / 8,7 / 32,7 / 305 mΩ | 0 / −4 / +17 / +13 % | ±40 % |
+| LM7805, 0,1 µF üzerinde 0,1 → 0,6 A basamak (1 µs): çıkışın çöküşü, modelin denklemlerinin ince adımlı çözümüne göre | 244,5 mV | 243,9 mV | −0,2 % | ±5 % |
 | GPS medyan yatay hatası (datasheet CEP) | 2,5 m | 2,64 m | +6 % | 1,2–4,5 m |
 | Tekerlek ağının yarıçapı (ortalama / en kötü) | — | %0,07 / %1,47 | — | en kötü ≤ %3 |
 

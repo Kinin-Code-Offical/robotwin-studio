@@ -591,6 +591,9 @@ namespace RobotTwin.CoreSim.Design
                 c => c.Add(new LinearRegulator(c.RefDes, c.Pin("IN"), c.Pin("GND"), c.Pin("OUT"), c.Num("vout", 5))
                 {
                     Dropout = c.Num("dropout", 2),
+                    OutputResistance = c.Num("rout", 0.008),
+                    OutputInductance = c.Num("lout", 0.5e-6),
+                    OpenLoopResistance = c.Num("rol", 1.2),
                     CurrentLimit = c.Num("ilim", 1.5),
                     QuiescentCurrent = c.Num("iq", 5e-3),
                     MaxInputVoltage = c.Num("vinmax", 35),
@@ -598,18 +601,22 @@ namespace RobotTwin.CoreSim.Design
                 }),
                 P("model", "Model", "LM7805"), P("vout", "Çıkış", "5", "V"), P("dropout", "Düşme gerilimi", "2", "V"),
                 P("ilim", "Akım sınırı", "1.5", "A"), P("iq", "Boşta akım", "5m", "A"), P("vinmax", "Maks. giriş", "35", "V"),
-                P("rth", "Rth (soğutucusuz)", "65", "K/W"), P("pinout", "Bacak sırası", "IGO"), P("tolerance", "Çıkış toleransı", "2", "%"))
+                P("rth", "Rth (soğutucusuz)", "65", "K/W"), P("pinout", "Bacak sırası", "IGO"), P("tolerance", "Çıkış toleransı", "2", "%"),
+                // [regulator] the output impedance: R + L ∥ R_ol (the LM7805's, TI SNOSBT0L, for the default part)
+                P("rout", "Çıkış direnci", "8m", "Ω"), P("lout", "Çıkış endüktansı", "0.5u", "H"), P("rol", "Açık çevrim direnci", "1.2", "Ω"))
                 .Pin("IN", "1", -4, 0).Pin("GND", "2", 0, 3).Pin("OUT", "3", 4, 0).Size(3, 1.5);
 
-            Preset(lib, "lm7805", "LM7805", "regulator", Power, "5 V 1.5 A lineer regülatör (TO-220)");
+            // [regulator] TI SNOSBT0L: output resistance 8 mΩ at 1 kHz; Figure 7 (no output capacitor) rises like 0.5 µH above
+            // ~2 kHz and levels near 1 Ω toward 1 MHz
+            Preset(lib, "lm7805", "LM7805", "regulator", Power, "5 V 1.5 A lineer regülatör (TO-220)", "model=LM7805;rout=0.008;lout=0.5u;rol=1.2");
             Preset(lib, "lm7809", "LM7809", "regulator", Power, "9 V 1.5 A lineer regülatör (TO-220)", "model=LM7809;vout=9");
             Preset(lib, "lm7812", "LM7812", "regulator", Power, "12 V 1.5 A lineer regülatör (TO-220)", "model=LM7812;vout=12");
             Preset(lib, "ams1117-3v3", "AMS1117-3.3", "regulator", Power, "3.3 V 1 A LDO (SOT-223)",
-                "model=AMS1117-3.3;vout=3.3;dropout=1.1;ilim=1;vinmax=15;rth=90;pinout=GOI;footprint=SOT223");
+                "model=AMS1117-3.3;vout=3.3;dropout=1.1;ilim=1;vinmax=15;rth=90;pinout=GOI;footprint=SOT223;rout=0.02;lout=0;rol=0");   // LDOs: no output impedance data yet, an instant loop
             Preset(lib, "ams1117-5v0", "AMS1117-5.0", "regulator", Power, "5 V 1 A LDO (SOT-223)",
-                "model=AMS1117-5.0;vout=5;dropout=1.1;ilim=1;vinmax=15;rth=90;pinout=GOI;footprint=SOT223");
+                "model=AMS1117-5.0;vout=5;dropout=1.1;ilim=1;vinmax=15;rth=90;pinout=GOI;footprint=SOT223;rout=0.02;lout=0;rol=0");
             Preset(lib, "ld1117v33", "LD1117V33", "regulator", Power, "3.3 V 800 mA LDO (TO-220)",
-                "model=LD1117V33;vout=3.3;dropout=1.1;ilim=0.8;vinmax=15;pinout=GOI");
+                "model=LD1117V33;vout=3.3;dropout=1.1;ilim=0.8;vinmax=15;pinout=GOI;rout=0.02;lout=0;rol=0");
             Preset(lib, "mcp1700-3v3", "MCP1700-3.3", "regulator", Power, "3.3 V 250 mA düşük akımlı LDO (TO-92)",
                 "model=MCP1700-3.3;vout=3.3;dropout=0.18;ilim=0.25;iq=1.6u;vinmax=6;rth=200;pinout=GIO;footprint=TO92");
 

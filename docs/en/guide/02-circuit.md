@@ -36,6 +36,8 @@ The category list above the search box has two levels. Main categories (e.g. **P
 - **Power-up:** below its UVLO voltage the module is off. When it turns on, the output rises over the soft-start time, and the capacitors' charging current shows too.
 - **Heating:** the losses heat the module, up to its thermal shutdown.
 
+**Linear regulators** (LM7805, AMS1117 …) let their output sag a little under load (load regulation; about 12 mV from 5 mA to 1.5 A on an LM7805). Their control loop is not infinitely fast: on a quick load step the output dips for a moment and, with a small output capacitor, rings a few times as it recovers (a 0.5 A step on 0.1 µF dips an LM7805 by ≈ 0.24 V). The part's **Output resistance**, **Output inductance** and **Open-loop resistance** set this; the LM7805's come from its datasheet's output impedance curve.
+
 **The model's limits:** every model has limits. A part's page in the library and its inspector in the circuit have a **The model's limits** heading saying what that model leaves out or simplifies. For example, the regulator modules have no switching ripple, the buttons have no contact bounce, and the MOSFET is a level 1 model. Keep it in mind when reading a result.
 
 ## Wiring

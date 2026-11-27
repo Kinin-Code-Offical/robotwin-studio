@@ -36,6 +36,8 @@ Arama kutusunun üstündeki kategori listesi iki seviyelidir. Ana kategorilerin 
 - **Açılış:** giriş UVLO geriliminin altındayken modül kapalıdır. Açılınca çıkış yumuşak başlama süresinde yükselir; kondansatörlerin şarj akımı da görünür.
 - **Isınma:** kayıplar modülü ısıtır ve ısıl kapanmaya kadar götürebilir.
 
+**Lineer regülatörler** (LM7805, AMS1117 …) yükle çıkışlarını biraz düşürür (yük regülasyonu; LM7805'te 5 mA'den 1,5 A'e yaklaşık 12 mV). Denetim döngüsü sonsuz hızlı değildir: hızlı bir yük basamağında çıkış bir an çöker ve küçük bir çıkış kondansatörüyle birkaç kez salınarak toparlanır (LM7805'te 0,1 µF üzerinde 0,5 A'lik basamak ≈ 0,24 V). Parçanın **Çıkış direnci**, **Çıkış endüktansı** ve **Açık çevrim direnci** değerleri bunu belirler; LM7805'in değerleri veri sayfasının çıkış empedansı eğrisinden alınmıştır.
+
 **Modelin sınırları:** her modelin bir sınırı vardır. Kütüphanedeki parça sayfasında ve devredeki parçanın denetçisinde **Modelin sınırları** başlığı, o modelin neyi dışarıda bıraktığını ya da sadeleştirdiğini yazar. Örneğin regülatör modülünde anahtarlama dalgalanması yoktur, düğmede kontak sıçraması yoktur, MOSFET seviye 1 modeldir. Bir sonucu okurken buna bakın.
 
 ## Kablolama

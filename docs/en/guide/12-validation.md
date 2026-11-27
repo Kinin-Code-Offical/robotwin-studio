@@ -188,6 +188,9 @@ Numerical methods usually run 5–10 % ahead of the dam-break experiment, whose 
 | Same, gate charge to 10 V | 19.965 nC | 19.965 nC | ≈0 % | ±2 % |
 | Stepper, pull-out torque of a sudden load (energy method: 0.7245·K·I) | 0.1206 N·m | 0.1211 N·m | +0.4 % | −6 / +8 % |
 | Same, a load raised slowly (K·I ± detent) | 0.144–0.188 N·m | 0.1854 N·m | in range | range |
+| LM7805 load regulation, 5 mA → 1.5 A (TI datasheet: typ. 10, max. 25 mV) | 10 mV | 11.96 mV | +20 % | max. 25 mV |
+| LM7805 output impedance, no output capacitor (datasheet Figure 7, read off the graph): 100 Hz / 1 kHz / 10 kHz / 100 kHz | 8 / 9 / 28 / 270 mΩ | 8.0 / 8.7 / 32.7 / 305 mΩ | 0 / −4 / +17 / +13 % | ±40 % |
+| LM7805, a 0.1 → 0.6 A step (1 µs) on 0.1 µF: the output's dip, against the model's equations solved with a fine step | 244.5 mV | 243.9 mV | −0.2 % | ±5 % |
 | GPS median horizontal error (datasheet CEP) | 2.5 m | 2.64 m | +6 % | 1.2–4.5 m |
 | Wheel mesh radius (mean / worst) | — | 0.07 % / 1.47 % | — | worst ≤ 3 % |
 
