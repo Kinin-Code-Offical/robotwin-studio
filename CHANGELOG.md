@@ -50,6 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Redraw a net from the Problems panel:** a missing connection, a track too near something or a loose track end on the PCB offers to draw that net again: its tracks are taken up and the autorouter routes it alone among the other nets, whose copper stays where it was; one undo step, the DRC runs again.
+- **An arm preview moves everything with the arm:** the selection outline, the label and the centre of mass go with a previewed arm, its move handles hide while it is turned away from where it is built, and the arm's skeleton is a dashed drawing over the view shown only while its inverse kinematics is in use (it was a glowing rod through the parts on every pick).
+- **Why an arm cannot go there, collisions too:** the inverse kinematics of an arm built in a world checks the solved pose and the way to it against the scene and the floor (each moving part's box, at most 1° per step) and says which part hits what, how far along and how deep. The arm's result is now translated sentence by sentence, so it reads in English too.
 - **Live values on the PCB:** while the circuit runs, a part selected on the PCB lists the current through it, its temperature, the rating it is closest to and its pads' voltages in the selection panel, from the same simulation as the circuit's inspector.
 - **The 3D board frames the selected part:** a part picked on the PCB, in the circuit or in the Montaj is boxed in the accent colour where it sits on the 3D board, and stays boxed when the board is rebuilt.
 - **Measure on the Part page reads faces and holes:** besides the distance it gives the angle between the two faces clicked, a parallel pair's gap, and on a hole's wall the hole's diameter, centre and depth.

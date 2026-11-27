@@ -90,15 +90,20 @@ namespace RobotTwin.CoreSim.Robotics
         /// </summary>
         public double OffPlane { get; internal set; }
 
-        /// <summary>Why it failed (or how the target was taken), in Turkish; empty when it simply got there.</summary>
+        /// <summary>Why it failed (or how the target was taken), in Turkish, a line for each thing it says; empty when it simply got there.</summary>
         public string Message { get; internal set; } = string.Empty;
 
         /// <summary>
         /// [kin] Why the target was missed: "sınır" (inside the arm's span, but an axis would have to go past its limit —
         /// <see cref="LimitAxis"/>), "uzak" (beyond the farthest the arm stretches), "yakın" (nearer the first axis than the
-        /// arm can fold), or empty when it got there or the reason is not one of these.
+        /// arm can fold), "çarpışma" (it gets there, but the pose or the way to it runs into something —
+        /// <see cref="Hit"/>, from <see cref="WorldArm.CheckCollision"/>), or empty when it got there clear or the reason is
+        /// not one of these.
         /// </summary>
         public string Cause { get; internal set; } = string.Empty;
+
+        /// <summary>[kin] What the pose or the way to it runs into (null: clear, or not checked).</summary>
+        public WorldArmHit? Hit { get; internal set; }
 
         /// <summary>The axis whose limit stood in the way (index into <see cref="WorldArm.Axes"/>), or -1.</summary>
         public int LimitAxis { get; internal set; } = -1;
@@ -129,7 +134,7 @@ namespace RobotTwin.CoreSim.Robotics
     /// the reach work on any chain with the same <see cref="ArmKinematics"/> the industrial cells use, and its values are
     /// the physics' own joint values, so a measurement and a prediction can be compared.
     /// </summary>
-    public sealed class WorldArm
+    public sealed partial class WorldArm
     {
         private const string Ground = "\u0000ground";
 
@@ -400,6 +405,8 @@ namespace RobotTwin.CoreSim.Robotics
             foreach (var (id, lv) in level)
             {
                 if (id == Ground || world.Find(id) is not { } o) continue;
+                arm._assembly.Add(id);   // [kin] none of the arm's own parts is in its way; the moving ones are checked
+                if (lv >= 0 && !(arm.Grounded && o.IsStatic)) arm._moving.Add((id, lv));
                 if (arm.Grounded && o.IsStatic) continue;   // held by the ground: no load on any axis
                 var g = G(o);
                 arm._masses.Add((o.Pose.ToWorld((g.Min + g.Max) * 0.5), o.MassKg ?? g.MassKg, lv));
@@ -608,7 +615,7 @@ namespace RobotTwin.CoreSim.Robotics
             if (!result.Success)
             {
                 WhyNot(result, model, map, goal, aim, current, miss);
-                if (result.OffPlane > 1e-3) result.Message += $" Eksenleri paralel olduğundan uç {where} gezer; hedef bu düzlemin {result.OffPlane * 1000:0.#} mm dışındaydı.";
+                if (result.OffPlane > 1e-3) result.Message += $"\nEksenleri paralel olduğundan uç {where} gezer; hedef bu düzlemin {result.OffPlane * 1000:0.#} mm dışındaydı.";   // a line of its own: translated as it is
             }
             else if (result.OffPlane > 1e-3)
             {

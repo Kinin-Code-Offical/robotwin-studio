@@ -127,6 +127,46 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void AnObstacleInTheArmsWayIsTheCause()
+        {
+            // [kin] Clear: the template's arm swings 80° with nothing in its way (its own base and parts are not obstacles).
+            var (w, g) = ServoArm();
+            var arm = WorldArm.Build(w, g, Named(w, "Kol 2").Id)!;
+            var to = new[] { Deg(80), 0.0 };
+            Assert.Null(arm.FirstHit(w, g, new double[2], to));
+            var clear = arm.Solve(arm.Tip(to), new double[2]);
+            arm.CheckCollision(clear, w, g, new double[2]);
+            Assert.True(clear.Success);
+            Assert.Null(clear.Hit);
+            Assert.Equal(string.Empty, clear.Cause);
+
+            // A small block where the first link passes at 40°: the way there hits it, part way along.
+            var p1 = arm.Axes[0].Spec.Point;
+            var p2 = arm.Axes[1].Spec.Point;
+            double a = Deg(40);
+            var d = (p2 - p1) * 0.5;
+            var mid = p1 + new Vec3(d.X * Math.Cos(a) - d.Y * Math.Sin(a), d.X * Math.Sin(a) + d.Y * Math.Cos(a), 0);
+            var link1 = Named(w, "Kol 1");
+            var block = new WorldObject { Id = w.NextId("O"), Name = "Engel", Kind = WorldObjectKind.Body, Shape = "box", SizeX = 0.01, SizeY = 0.01, SizeZ = 0.01, MassKg = 0.05, IsStatic = true, Pose = new WorldPose { X = mid.X, Y = mid.Y, Z = link1.Pose.Z } };
+            w.Objects.Add(block);
+            var tip = arm.Tip(to);
+            _out.WriteLine($"block at {mid.X * 1000:0.0},{mid.Y * 1000:0.0},{link1.Pose.Z * 1000:0.0} mm; target {tip.X * 1000:0.0},{tip.Y * 1000:0.0},{tip.Z * 1000:0.0} mm");
+            var hit = arm.FirstHit(w, new ApproximateGeometry(w, Lib).GeometryOf, new double[2], to);
+            Assert.NotNull(hit);
+            _out.WriteLine($"{w.Find(hit!.PartId)!.Name} ↔ {hit.ObstacleId} at {hit.Along:0.00}, {hit.Depth * 1000:0.0} mm");
+            Assert.Equal(block.Id, hit.ObstacleId);
+            Assert.InRange(hit.Along, 0.2, 0.6);
+            Assert.False(hit.AtPose);
+
+            var blocked = arm.Solve(arm.Tip(to), new double[2]);
+            arm.CheckCollision(blocked, w, new ApproximateGeometry(w, Lib).GeometryOf, new double[2]);
+            _out.WriteLine(blocked.Message);
+            Assert.Equal("çarpışma", blocked.Cause);
+            Assert.Contains("Engel", blocked.Message);
+            Assert.Contains("Oraya giderken", blocked.Message);
+        }
+
+        [Fact]
         public void ATargetBeyondTheArmsSpanSaysHowFarItStretches()
         {
             var (w, g) = ServoArm();

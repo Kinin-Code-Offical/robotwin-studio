@@ -8657,6 +8657,7 @@
   "A deliği": "Hole A",
   "B deliği": "Hole B",
   "Aynala": "Mirror",
+  "Tekil konuma yakın: kol gergin ya da katlanmış, bu yönlerde küçük hareketler büyük açı ister.": "Close to a singularity: the arm is stretched out or folded; small movements in these directions need large angles.",
   "ARIZALI (yandı / bozuldu)": "FAULTY (burnt out / broken)",
   "Bu parça devrede simüle edilmiyor.": "This part is not simulated in the circuit.",
   "Elektriksel model": "Electrical model",
@@ -9387,6 +9388,15 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+    "Hattı yeniden çiz: {…} hattının yolları kaldırılır, otomatik rota yalnız onu öbür hatların arasından yeniden çizer (geri alınabilir)": "Redraw the net: the tracks of {0} are taken up and the autorouter draws it alone among the other nets (can be undone)",
+    "{…} hattı yeniden çiziliyor…": "Redrawing net {0}…",
+    "{…} hattı yeniden çizildi": "Net {0} redrawn",
+    "{…} hattı yeniden çizildi: {…} bağlantı, {…} via": "Net {0} redrawn: {1} connections, {2} vias",
+    "{…} hattında {…} bağlantı çizilemedi: parçaları açın, katman ekleyin ya da elle çizin": "{1} connections of net {0} could not be drawn: spread the parts, add layers or draw them by hand",
+    "Bu konumda {…} ile {…} çakışır ({…} mm iç içe).": "In this pose {0} and {1} overlap ({2} mm deep).",
+    "Oraya giderken {…} ile {…} çarpışır (yolun %{…}'inde, {…} mm iç içe).": "On the way there {0} and {1} collide ({2} % of the way, {3} mm deep).",
+    "{…} bu konumda tutma torkunun %{…}'ini harcar": "{0} uses {1}% of its holding torque in this position",
+    "Eksenleri paralel olduğundan uç {…} gezer; hedef bu düzlemin {…} mm dışındaydı.": "Because its axes are parallel, the tip moves {0}; the target was {1} mm off this plane.",
     "ID {…} · VGS {…}": "ID {0} · VGS {1}",
     "açı {…}° (hedef {…}) · {…}": "angle {0}° (target {1}) · {2}",
     "{…} rpm · {…} · {…}": "{0} rpm · {1} · {2}",

@@ -276,7 +276,21 @@ namespace RobotTwin.CoreSim.Pcb
 
         private int LayerIndex(CopperLayer l) => _layers.IndexOf(l);
 
-        public RoutingResult Route(bool clearExisting = true)
+        /// <summary>
+        /// [problems] Only <paramref name="nets"/> drawn again (the DRC fix "Hattı yeniden çiz"): their tracks and vias are
+        /// taken up, every other net's copper stays where it is as an obstacle, and their connections are routed among it.
+        /// </summary>
+        public RoutingResult RouteNets(IEnumerable<string> nets)
+        {
+            var only = new HashSet<string>(nets.Where(n => !string.IsNullOrEmpty(n)), StringComparer.OrdinalIgnoreCase);
+            _board.Tracks.RemoveAll(t => only.Contains(t.Net));
+            _board.Vias.RemoveAll(v => only.Contains(v.Net));
+            return Route(false, only);
+        }
+
+        public RoutingResult Route(bool clearExisting = true) => Route(clearExisting, null);
+
+        private RoutingResult Route(bool clearExisting, HashSet<string>? only)
         {
             if (clearExisting)
             {
@@ -290,6 +304,8 @@ namespace RobotTwin.CoreSim.Pcb
             {
                 if (_planeNets.Contains(pad.Net) && !pad.Pad.IsThroughHole) connections.Add((pad.Net, pad, null));
             }
+
+            if (only != null) connections = connections.Where(c => only.Contains(c.Net)).ToList();
 
             var order = connections
                 .OrderByDescending(c => _board.ClassFor(c.Net).TrackWidth)

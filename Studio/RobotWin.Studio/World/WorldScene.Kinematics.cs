@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -49,11 +50,15 @@ namespace RobotWin.Studio.World
         /// <summary>Servo horn / motor shaft angles (rad, by object id) shown while the world is stopped; null = as built.</summary>
         public IReadOnlyDictionary<string, double>? PreviewAngles { get; private set; }
 
+        /// <summary>[kin] The arm's axis points and tool point (world), drawn over the view; null: none.</summary>
+        private List<Point3D>? _armSkeleton;
+
         /// <summary>Turns the horns to <paramref name="angles"/> while the world is stopped (null puts them back as built).</summary>
         public void Preview(IReadOnlyDictionary<string, double>? angles)
         {
             PreviewAngles = angles;
             UpdateKinematics();
+            if (Selected != null) RebuildOverlay();   // the outline goes where the part is now shown
         }
 
         private double PreviewAngle(string objectId) => PreviewAngles != null && PreviewAngles.TryGetValue(objectId, out double a) ? a : 0;
@@ -64,7 +69,10 @@ namespace RobotWin.Studio.World
         /// </summary>
         public void ShowArm(IReadOnlyList<Vec3>? reach, Transform3 reachMotion, IReadOnlyList<Vec3>? skeleton, Vec3? target, Vec3? reached)
         {
-            if (reach == null && skeleton == null && target == null && reached == null)
+            // [kin] the skeleton is drawn over the view as a dashed line (TechMarks), not as a rod among the parts
+            _armSkeleton = skeleton is { Count: > 1 } ? skeleton.Select(p => new Point3D(p.X, p.Y, p.Z)).ToList() : null;
+            PlaceTechLabel();
+            if (reach == null && target == null && reached == null)
             {
                 _kinematicsVisual.Content = null;
                 return;
@@ -87,17 +95,6 @@ namespace RobotWin.Studio.World
                 var moved = new Model3DGroup { Transform = new MatrixTransform3D(Matrix(reachMotion)) };
                 moved.Children.Add(_reachModel);
                 g.Children.Add(moved);
-            }
-
-            if (skeleton is { Count: > 1 })
-            {
-                var pts = new List<Point3D>();
-                foreach (var p in skeleton) pts.Add(new Point3D(p.X, p.Y, p.Z));
-                g.Children.Add(M.Model(Tube(pts, 0.0011, 6), Glow(Color.FromRgb(0xF0, 0xC0, 0x40), 0.9)));
-                var joints = new MeshGeometry3D();
-                for (int i = 0; i < skeleton.Count - 1; i++) Octahedron(joints, skeleton[i], 0.0028);
-                joints.Freeze();
-                g.Children.Add(M.Model(joints, Glow(Color.FromRgb(0xF0, 0xC0, 0x40), 0.9)));
             }
 
             if (target is { } t)

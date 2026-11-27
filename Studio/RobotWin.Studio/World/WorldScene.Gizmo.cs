@@ -110,7 +110,11 @@ namespace RobotWin.Studio.World
             if (!ShowGizmo || ReadOnly || Gizmo == GizmoMode.None || _terrainEditing || Tool != WorldTool.Select || World == null || Selected == null) return null;
             if (Session != null && Session.State != Simulation.SimState.Stopped) return null;
             var o = World.Find(Selected);
-            return o == null || WorldBuilding.IsLocked(o) ? null : o;
+            if (o == null || WorldBuilding.IsLocked(o)) return null;
+            // [kin] a part an arm preview shows turned away from where it is built: its handles would stand in the air
+            // where it is built (and moving it would end the preview); "Kurulduğu gibi" brings them back
+            if (PreviewAngles != null && _items.TryGetValue(o.Id, out var shown) && shown.Current != shown.Placed) return null;
+            return o;
         }
 
         private double GizmoLength => Math.Max(0.02, _distance * 0.09);

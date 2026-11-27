@@ -31,6 +31,12 @@ namespace RobotTwin.CoreSim.Pcb
         /// <summary>Copper layer of the violation, when it belongs to one.</summary>
         public CopperLayer? Layer { get; }
 
+        /// <summary>
+        /// [problems] The net whose tracks the violation is about (a missing connection, a track too near something, a
+        /// track end left loose), so a fix can draw that net again (<see cref="AutoRouter.RouteNets"/>); null otherwise.
+        /// </summary>
+        public string? Net { get; internal set; }
+
         public override string ToString() => $"[{Severity}] {Rule}: {Message} @ ({X:0.##}, {Y:0.##}) mm";
     }
 
@@ -170,7 +176,7 @@ namespace RobotTwin.CoreSim.Pcb
                         if (d < need - Eps)
                         {
                             v.Add(Clearance(d <= 0 ? "Kısa devre" : "Ped-ped aralığı",
-                                $"{a.Component.RefDes}.{a.Pad.Name}", $"{b.Component.RefDes}.{b.Pad.Name}", d, need, a.X, a.Y, l));
+                                $"{a.Component.RefDes}.{a.Pad.Name}", $"{b.Component.RefDes}.{b.Pad.Name}", d, need, a.X, a.Y, l, copper: false));
                         }
                     }
                 }
@@ -246,7 +252,7 @@ namespace RobotTwin.CoreSim.Pcb
                 foreach (var t in board.Tracks)
                 {
                     double d = Geometry.PointSegmentDistance(h.X, h.Y, t.X1, t.Y1, t.X2, t.Y2) - h.Drill / 2 - t.Width / 2;
-                    if (d < rules.HoleClearance - Eps) v.Add(new DrcViolation(DrcSeverity.Error, "Delik aralığı", $"{t.Net} yolu montaj deliğine {Math.Max(0, d):0.###} mm", h.X, h.Y, t.Layer));
+                    if (d < rules.HoleClearance - Eps) v.Add(new DrcViolation(DrcSeverity.Error, "Delik aralığı", $"{t.Net} yolu montaj deliğine {Math.Max(0, d):0.###} mm", h.X, h.Y, t.Layer) { Net = t.Net });
                 }
 
                 foreach (var via in board.Vias)
@@ -277,7 +283,7 @@ namespace RobotTwin.CoreSim.Pcb
                 double m = EdgeDist(t.X1, t.Y1, t.X2, t.Y2) - t.Width / 2;
                 if (m < rules.EdgeClearance - Eps)
                 {
-                    v.Add(new DrcViolation(DrcSeverity.Error, "Kart kenarı", $"{t.Net} yolu kenara {m:0.##} mm (en az {rules.EdgeClearance} mm)", t.X1, t.Y1, t.Layer));
+                    v.Add(new DrcViolation(DrcSeverity.Error, "Kart kenarı", $"{t.Net} yolu kenara {m:0.##} mm (en az {rules.EdgeClearance} mm)", t.X1, t.Y1, t.Layer) { Net = t.Net });
                 }
             }
 
@@ -358,7 +364,7 @@ namespace RobotTwin.CoreSim.Pcb
             var connectivity = BoardConnectivity.Build(board);
             foreach (var (net, x, y) in connectivity.Unrouted())
             {
-                v.Add(new DrcViolation(DrcSeverity.Error, "Bağlanmamış", $"{net} hattında bağlantısı yapılmamış ped var", x, y));
+                v.Add(new DrcViolation(DrcSeverity.Error, "Bağlanmamış", $"{net} hattında bağlantısı yapılmamış ped var", x, y) { Net = net });
             }
 
             foreach (var t in board.Tracks)
@@ -368,7 +374,7 @@ namespace RobotTwin.CoreSim.Pcb
                 {
                     if (!connectivity.EndConnected(t, x, y))
                     {
-                        v.Add(new DrcViolation(DrcSeverity.Warning, "Boşta yol ucu", $"{t.Net} yolunun ucu hiçbir şeye bağlı değil", x, y, t.Layer));
+                        v.Add(new DrcViolation(DrcSeverity.Warning, "Boşta yol ucu", $"{t.Net} yolunun ucu hiçbir şeye bağlı değil", x, y, t.Layer) { Net = t.Net });
                     }
                 }
             }
@@ -552,8 +558,12 @@ namespace RobotTwin.CoreSim.Pcb
         private static bool SameNet(string a, string b) =>
             !string.IsNullOrEmpty(a) && string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
-        private static DrcViolation Clearance(string rule, string a, string b, double d, double need, double x, double y, CopperLayer layer) =>
-            new DrcViolation(DrcSeverity.Error, rule, $"{a} ↔ {b}: {Math.Max(0, d):0.###} mm (en az {need:0.###} mm) · {PcbLayers.DisplayName(layer)}", x, y, layer);
+        /// <summary>A clearance marker; <paramref name="copper"/>: <paramref name="a"/> is a track's or a via's net (drawn again by the fix).</summary>
+        private static DrcViolation Clearance(string rule, string a, string b, double d, double need, double x, double y, CopperLayer layer, bool copper = true) =>
+            new DrcViolation(DrcSeverity.Error, rule, $"{a} ↔ {b}: {Math.Max(0, d):0.###} mm (en az {need:0.###} mm) · {PcbLayers.DisplayName(layer)}", x, y, layer)
+            {
+                Net = copper && !string.IsNullOrEmpty(a) ? a : null
+            };
 
         /// <summary>Nets whose pads are not all joined by copper (zone fills count).</summary>
         public static List<(string Net, double X, double Y)> UnroutedNets(BoardDocument board) => BoardConnectivity.Build(board).Unrouted();

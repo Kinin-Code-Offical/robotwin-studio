@@ -218,7 +218,7 @@ namespace RobotTwin.CoreSim.Sandbox
             return worst;
         }
 
-        private static double BoxOverlap((Vec3 C, Vec3[] Axes, Vec3 Half) a, (Vec3 C, Vec3[] Axes, Vec3 Half) b)
+        internal static double BoxOverlap((Vec3 C, Vec3[] Axes, Vec3 Half) a, (Vec3 C, Vec3[] Axes, Vec3 Half) b)
         {
             var d = b.C - a.C;
             double min = double.PositiveInfinity;

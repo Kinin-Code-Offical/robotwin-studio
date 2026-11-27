@@ -25,12 +25,17 @@ namespace RobotWin.Studio.World
         public readonly System.Collections.Generic.List<Point[]> Turns = new System.Collections.Generic.List<Point[]>();
         public Point? Com;
 
+        /// <summary>[kin] An arm's axes and tool point on screen, while its inverse kinematics is in use (dashed: a drawing, not a part).</summary>
+        public Point[]? Skeleton;
+
         private static readonly Brush Amber = Frozen(new SolidColorBrush(Color.FromRgb(0xF2, 0xB8, 0x3B)));
         private static readonly Brush Light = Frozen(new SolidColorBrush(Color.FromRgb(0xF4, 0xF4, 0xF5)));
         private static readonly Brush Dark = Frozen(new SolidColorBrush(Color.FromRgb(0x18, 0x18, 0x1B)));
         private static readonly Pen AxisPen = Frozen(new Pen(Amber, 2) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round });
         private static readonly Pen Outline = Frozen(new Pen(Dark, 1.2));
         private static readonly Pen LimitPen = Frozen(new Pen(Amber, 1.5) { DashStyle = new DashStyle(new double[] { 3, 2 }, 0), StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round });
+        private static readonly Pen SkeletonPen = Frozen(new Pen(Amber, 1.5) { DashStyle = new DashStyle(new double[] { 5, 3 }, 0) });
+        private static readonly Pen RingPen = Frozen(new Pen(Amber, 2));
 
         private static T Frozen<T>(T f) where T : Freezable
         {
@@ -42,6 +47,13 @@ namespace RobotWin.Studio.World
 
         protected override void OnRender(DrawingContext dc)
         {
+            if (Skeleton is { Length: > 1 } sk)
+            {
+                for (int i = 1; i < sk.Length; i++) dc.DrawLine(SkeletonPen, sk[i - 1], sk[i]);
+                for (int i = 0; i < sk.Length - 1; i++) dc.DrawEllipse(Dark, RingPen, sk[i], 4, 4);   // an axis: a ring
+                dc.DrawEllipse(Amber, Outline, sk[^1], 3.5, 3.5);   // the tool point
+            }
+
             foreach (var line in Limits)
             {
                 if (line.Length < 2) continue;
@@ -368,12 +380,26 @@ namespace RobotWin.Studio.World
         {
             double mass = it.Object.MassKg ?? (EstimatedMassGrams?.Invoke(it.Object) ?? 0) / 1000;
             var body = Session?.Physics?.Scene.FindBody(it.Object.Id);
-            if (body == null && !CablesSettling) body = _cableLayout?.Scene.FindBody(it.Object.Id);
+            bool asBuilt = false;
+            if (body == null && !CablesSettling)
+            {
+                body = _cableLayout?.Scene.FindBody(it.Object.Id);
+                asBuilt = body != null;   // the stopped world's layout: the part where it is built
+            }
+
             if (body != null)
             {
-                var p = body.Position;
+                var p = new Point3D(body.Position.X, body.Position.Y, body.Position.Z);
+                // [kin] shown elsewhere (an arm's preview turns it): the mark goes with the part
+                if (asBuilt && it.Current != it.Placed && it.Placed.HasInverse)
+                {
+                    var back = it.Placed;
+                    back.Invert();
+                    p = (back * it.Current).Transform(p);
+                }
+
                 bool moving = !body.IsStatic && body.Mass > 0 && !double.IsInfinity(body.Mass);
-                return (new Point3D(p.X, p.Y, p.Z), moving ? body.Mass : mass, moving ? body.Velocity.Length : null);
+                return (p, moving ? body.Mass : mass, moving ? body.Velocity.Length : null);
             }
 
             return (new Point3D(bounds.X + bounds.SizeX / 2, bounds.Y + bounds.SizeY / 2, bounds.Z + bounds.SizeZ / 2), mass, null);
@@ -383,7 +409,9 @@ namespace RobotWin.Studio.World
         private void PlaceTechLabel()
         {
             Point? On(Point3D? p) => p is { } w && Project(w) is var (s, _, visible) && visible ? s : null;
-            bool hadMarks = _techMarks.Com != null || _techMarks.Joints.Count > 0 || _techMarks.Limits.Count > 0;
+            bool hadMarks = _techMarks.Com != null || _techMarks.Joints.Count > 0 || _techMarks.Limits.Count > 0 || _techMarks.Skeleton != null;
+            var skeleton = _armSkeleton?.Select(p => On(p)).ToList();
+            _techMarks.Skeleton = skeleton != null && skeleton.Count > 1 && skeleton.All(p => p != null) ? skeleton.Select(p => p!.Value).ToArray() : null;
             _techMarks.Joints.Clear();
             foreach (var (anchor, a, b) in _techJoints)
                 if (On(anchor) is { } pa) _techMarks.Joints.Add((pa, On(a), On(b)));
@@ -402,7 +430,7 @@ namespace RobotWin.Studio.World
                 if (screen.All(p => p != null)) _techMarks.Turns.Add(screen.Select(p => p!.Value).ToArray());
             }
             _techMarks.Com = On(_techCom);
-            if (hadMarks || _techMarks.Com != null || _techMarks.Joints.Count > 0) _techMarks.InvalidateVisual();
+            if (hadMarks || _techMarks.Com != null || _techMarks.Joints.Count > 0 || _techMarks.Skeleton != null) _techMarks.InvalidateVisual();
 
             if (_techAt is not { } at)
             {

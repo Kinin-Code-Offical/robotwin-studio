@@ -58,14 +58,56 @@ namespace RobotWin.Studio.Pages
             foreach (var v in _drc.Shown)
             {
                 var marker = v;
-                // [problems] the suggested fix: accept it as an exception (it stays in the report, with its reason asked)
+                // [problems] the suggested fix: a net's track drawn again among the others (a missing connection, a track
+                // too near something, a loose end); otherwise accept it as an exception (it stays in the report, with its reason)
+                string? net = v.Net;
                 r.Problems.Add(new Problem(ProblemsHub.Pcb, v.Severity == DrcSeverity.Error ? ProblemLevel.Error : ProblemLevel.Warning, v.Rule, v.Message, () => ShowMarker(marker))
                 {
-                    Fix = () => Exclude(marker), FixTip = "İstisna olarak işaretle…: kabul edildi, raporda nedeniyle istisna olarak kalır"
+                    Fix = net != null ? () => RerouteNet(net) : () => Exclude(marker),
+                    FixTip = net != null
+                        ? Lang.T($"Hattı yeniden çiz: {net} hattının yolları kaldırılır, otomatik rota yalnız onu öbür hatların arasından yeniden çizer (geri alınabilir)")
+                        : "İstisna olarak işaretle…: kabul edildi, raporda nedeniyle istisna olarak kalır"
                 });
             }
 
             return r;
+        }
+
+        /// <summary>
+        /// [problems] One net drawn again (the DRC fix): its tracks and vias taken up and the router run for it alone among
+        /// the other nets' copper, the zones refilled and the DRC run again; one undo step.
+        /// </summary>
+        private async void RerouteNet(string net)
+        {
+            if (_working) return;
+            var board = Board;
+            var copy = board.Clone();
+            Working(true);
+            W.Status = Lang.T($"{net} hattı yeniden çiziliyor…");
+            RoutingResult result;
+            List<DrcViolation> violations;
+            try
+            {
+                (result, violations) = await System.Threading.Tasks.Task.Run(() =>
+                {
+                    var r = new AutoRouter(copy).RouteNets(new[] { net });
+                    if (copy.Zones.Count > 0) ZoneFiller.FillAll(copy);
+                    return (r, DesignRuleChecker.Check(copy));
+                });
+            }
+            finally
+            {
+                Working(false);
+            }
+
+            if (Board != board) return;
+            Edit(Lang.T($"{net} hattı yeniden çizildi"), () => TakeCopper(board, copy, tracks: true));
+            SetDrc(violations);
+            W.Status = Lang.T(result.Complete
+                ? $"{net} hattı yeniden çizildi: {result.Routed} bağlantı, {result.ViasAdded} via"
+                : $"{net} hattında {result.Failed.Count} bağlantı çizilemedi: parçaları açın, katman ekleyin ya da elle çizin");
+            UpdatePanel();
+            Canvas.InvalidateVisual();
         }
 
         /// <summary>Goes to a DRC marker as a click on its row does (the row selected when the filters show it).</summary>

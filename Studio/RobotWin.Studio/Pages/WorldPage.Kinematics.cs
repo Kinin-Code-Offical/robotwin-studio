@@ -178,7 +178,9 @@ namespace RobotWin.Studio.Pages
         private void SolveArm()
         {
             if (_arm == null || _armTarget is not { } target) return;
-            _armSolution = _arm.Solve(target, ArmQ());
+            var current = ArmQ();
+            _armSolution = _arm.Solve(target, current);
+            if (World is { } world) _arm.CheckCollision(_armSolution, world, Scene.GeometryOf, current);   // [kin] the pose or the way there runs into something
             ShowArmResult();
             DrawArm();
         }
@@ -193,15 +195,18 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            var sb = new StringBuilder();
-            sb.Append(s.Success ? "Çözüm: " : "En yakın çözüm: ");
-            sb.Append(string.Join(" · ", _arm.Axes.Select((a, i) => a.Actuated ? $"{a.Name} {(Math.Round(a.Display(s.Q[i]), 1) + 0.0).ToString("0.#", CultureInfo.CurrentCulture)}{a.Unit}" : null).Where(x => x != null)));
-            if (s.Message.Length > 0) sb.Append(". ").Append(s.Message.TrimEnd('.'));
-            if (s.Success && s.Dexterity < 0.1) sb.Append(". Tekil konuma yakın: kol gergin ya da katlanmış, bu yönlerde küçük hareketler büyük açı ister.");
+            // [lang] each sentence translated on its own (the pack has them one by one), then one paragraph
+            var parts = new List<string>
+            {
+                Shell.Lang.T(s.Success ? "Çözüm: " : "En yakın çözüm: ")
+                + string.Join(" · ", _arm.Axes.Select((a, i) => a.Actuated ? $"{a.Name} {(Math.Round(a.Display(s.Q[i]), 1) + 0.0).ToString("0.#", CultureInfo.CurrentCulture)}{a.Unit}" : null).Where(x => x != null))
+            };
+            foreach (var line in s.Message.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)) parts.Add(Shell.Lang.T(line.Trim()).TrimEnd('.'));
+            if (s.Success && s.Dexterity < 0.1) parts.Add(Shell.Lang.T("Tekil konuma yakın: kol gergin ya da katlanmış, bu yönlerde küçük hareketler büyük açı ister.").TrimEnd('.'));
             var load = _arm.GravityLoad(s.Q);
             var heavy = _arm.Axes.Select((a, i) => (a, i)).Where(x => x.a.Actuated && x.a.StallTorque > 0 && Math.Abs(load[x.i]) > 0.5 * x.a.StallTorque).ToList();
-            foreach (var (a, i) in heavy) sb.Append($". {a.Name} bu konumda tutma torkunun %{Math.Abs(load[i]) / a.StallTorque * 100:0}'ini harcar");
-            _armResult.Text = Shell.Lang.T(sb.ToString());   // [lang]
+            foreach (var (a, i) in heavy) parts.Add(Shell.Lang.T($"{a.Name} bu konumda tutma torkunun %{Math.Abs(load[i]) / a.StallTorque * 100:0}'ini harcar"));
+            _armResult.Text = string.Join(". ", parts) + ".";
         }
 
         private void PreviewArm()
@@ -361,7 +366,8 @@ namespace RobotWin.Studio.Pages
             skeleton.Add(motion.Apply(_arm.Tip(q)));
             Vec3? target = _armTarget is { } t ? motion.Apply(t) : null;
             Vec3? reached = _armSolution != null && !_armSolution.Success ? motion.Apply(_armSolution.Reached) : null;
-            Scene.ShowArm(_armShowReach ? _armReach?.Points : null, motion, skeleton, target, reached);
+            bool inUse = _armTarget != null || _armShowReach || Scene.PreviewAngles != null;
+            Scene.ShowArm(_armShowReach ? _armReach?.Points : null, motion, inUse ? skeleton : null, target, reached);
         }
 
         /// <summary>The servo angles, the tip (model and physics), the load and how far from singular, live.</summary>
@@ -414,13 +420,37 @@ namespace RobotWin.Studio.Pages
         /// <summary>
         /// [kin] Snapshot options: --arm "Kol 2" selects an arm's tip, --arm-target x,y,z (mm) solves for it, --arm-preview
         /// turns the horns there, --arm-reach draws the reach, --arm-drive drives the servos there for a second and a half
-        /// of a run (with --simulate).
+        /// of a run (with --simulate), --arm-obstacle x,y,z[,size] (mm) puts a block in the arm's way first.
         /// </summary>
         private void KinematicsSnapshot()
         {
             var args = Environment.GetCommandLineArgs();
             int i = Array.IndexOf(args, "--arm");
             if (i < 0 || i + 1 >= args.Length || World?.Objects.FirstOrDefault(o => NamedLike(o, args[i + 1])) is not { } tip) return;
+            int ob = Array.IndexOf(args, "--arm-obstacle");
+            if (ob >= 0 && ob + 1 < args.Length && World is { } world)
+            {
+                var b = args[ob + 1].Split(',').Select(x => double.Parse(x, CultureInfo.InvariantCulture) / 1000).ToArray();
+                double size = b.Length > 3 ? b[3] : 0.01;
+                // a post from what lies under it (the floor, or a part's top) up to the block's top: nothing floats
+                double floor = 0;
+                foreach (var o in world.Objects)
+                {
+                    var g = Scene.GeometryOf(o);
+                    var corners = new[] { g.Min, g.Max, new Vec3(g.Min.X, g.Max.Y, g.Min.Z), new Vec3(g.Max.X, g.Min.Y, g.Max.Z) }.Select(o.Pose.ToWorld).ToList();
+                    if (b[0] < corners.Min(c => c.X) || b[0] > corners.Max(c => c.X) || b[1] < corners.Min(c => c.Y) || b[1] > corners.Max(c => c.Y)) continue;
+                    double top = corners.Max(c => c.Z);
+                    if (top < b[2] - size / 2 && top > floor) floor = top;
+                }
+
+                double height = b[2] + size / 2 - floor;
+                Edit("Engel eklendi", () => world.Objects.Add(new WorldObject
+                {
+                    Id = world.NextId("O"), Name = "Engel", Kind = WorldObjectKind.Body, Shape = "box", SizeX = size, SizeY = size, SizeZ = height,
+                    MassKg = 0.05, IsStatic = true, Color = "#C0504D", Pose = new WorldPose { X = b[0], Y = b[1], Z = floor + height / 2 }
+                }));
+            }
+
             Scene.Select(tip.Id);
             BuildInspector();
             if (_arm == null) return;
