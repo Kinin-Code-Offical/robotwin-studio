@@ -15,7 +15,10 @@ namespace RobotTwin.CoreSim.Pcb
         Polygon,
 
         /// <summary>[bezier] A cubic Bézier curve (KiCad's gr_curve): start, two control points, end.</summary>
-        Bezier
+        Bezier,
+
+        /// <summary>[image] A reference picture between two corners (KiCad's image): seen while laying out, not made.</summary>
+        Image
     }
 
     /// <summary>
@@ -41,12 +44,17 @@ namespace RobotTwin.CoreSim.Pcb
         /// <summary>A rectangle, circle or polygon filled in (a solid logo or marking).</summary>
         public bool Filled { get; set; }
 
+        /// <summary>[image] The picture, base64 PNG (images only).</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ImageData { get; set; }
+
         /// <summary>Whether the points are enough for the shape.</summary>
         public bool IsComplete => Shape switch
         {
             GraphicShape.Arc => Points.Count >= 3,
             GraphicShape.Polygon => Points.Count >= 3,
             GraphicShape.Bezier => Points.Count >= 4,
+            GraphicShape.Image => Points.Count >= 2 && ImageData != null,
             _ => Points.Count >= 2
         };
 
@@ -59,7 +67,7 @@ namespace RobotTwin.CoreSim.Pcb
         public List<Segment2> Strokes(double tolerance = 0.02)
         {
             var s = new List<Segment2>();
-            if (!IsComplete) return s;
+            if (!IsComplete || Shape == GraphicShape.Image) return s;   // [image] a picture has no strokes: nothing goes to the legend
             var p = Points;
             switch (Shape)
             {
@@ -138,6 +146,14 @@ namespace RobotTwin.CoreSim.Pcb
         public double DistanceTo(double x, double y)
         {
             if (!IsComplete) return double.PositiveInfinity;
+            if (Shape == GraphicShape.Image)
+            {
+                // [image] picked anywhere on the picture
+                double dx = Math.Max(Math.Min(Points[0].X, Points[1].X) - x, Math.Max(0, x - Math.Max(Points[0].X, Points[1].X)));
+                double dy = Math.Max(Math.Min(Points[0].Y, Points[1].Y) - y, Math.Max(0, y - Math.Max(Points[0].Y, Points[1].Y)));
+                return Math.Sqrt(Math.Max(0, dx) * Math.Max(0, dx) + Math.Max(0, dy) * Math.Max(0, dy));
+            }
+
             if (Filled && Area().Count >= 3 && Inside(Area(), x, y)) return 0;
             double best = double.PositiveInfinity;
             foreach (var seg in Strokes(0.05)) best = Math.Min(best, Geometry.PointSegmentDistance(x, y, seg.X1, seg.Y1, seg.X2, seg.Y2));
@@ -146,6 +162,8 @@ namespace RobotTwin.CoreSim.Pcb
 
         public (double MinX, double MinY, double MaxX, double MaxY) Bounds()
         {
+            if (Shape == GraphicShape.Image && Points.Count >= 2)
+                return (Math.Min(Points[0].X, Points[1].X), Math.Min(Points[0].Y, Points[1].Y), Math.Max(Points[0].X, Points[1].X), Math.Max(Points[0].Y, Points[1].Y));
             var strokes = Strokes(0.05);
             if (strokes.Count == 0) return (0, 0, 0, 0);
             double h = Width / 2;
@@ -162,6 +180,7 @@ namespace RobotTwin.CoreSim.Pcb
                 GraphicShape.Rectangle => $"dikdörtgen {Math.Abs(Points[1].X - Points[0].X):0.##} × {Math.Abs(Points[1].Y - Points[0].Y):0.##} mm",
                 GraphicShape.Circle => $"daire Ø{2 * Radius:0.##} mm",
                 GraphicShape.Arc => $"yay R{Radius:0.##} mm, {ArcAngles().Sweep * 180 / Math.PI:0}°",
+                GraphicShape.Image => $"resim {Math.Abs(Points[1].X - Points[0].X):0.##} × {Math.Abs(Points[1].Y - Points[0].Y):0.##} mm",
                 GraphicShape.Bezier => $"eğri {Strokes(0.05).Sum(q => Math.Sqrt((q.X2 - q.X1) * (q.X2 - q.X1) + (q.Y2 - q.Y1) * (q.Y2 - q.Y1))):0.##} mm",
                 _ => $"çokgen, {Points.Count} köşe"
             };

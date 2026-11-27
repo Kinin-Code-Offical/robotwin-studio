@@ -1091,6 +1091,19 @@ namespace RobotWin.Studio.Pages
                             ?? sch.Parts.FirstOrDefault();
             switch (fault)
             {
+                case "image":   // [image] --image-file <png>: a logo beside the circuit, picked
+                {
+                    var args = Environment.GetCommandLineArgs();
+                    int at = Array.IndexOf(args, "--image-file");
+                    if (at < 0 || at + 1 >= args.Length) return;
+                    string data = RobotWin.Studio.Theme.Pictures.FromFile(args[at + 1]);
+                    var logo = new SchematicShape { Kind = SheetShapeKind.Image, ImageData = data, Points = { new GridPoint(b.MaxX + 4, b.MinY), new GridPoint(b.MaxX + 16, b.MinY + 12) } };
+                    sch.Shapes.Add(logo);
+                    Canvas.SelectItems(new object[] { logo });
+                    Canvas.InvalidateVisual();
+                    return;
+                }
+
                 case "bezier":   // [bezier] a curve beside the circuit, picked: its stroke and control points
                 {
                     var curve = new SchematicShape

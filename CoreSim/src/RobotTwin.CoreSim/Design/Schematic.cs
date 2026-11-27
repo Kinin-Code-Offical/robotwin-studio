@@ -163,7 +163,10 @@ namespace RobotTwin.CoreSim.Design
         Arc,
 
         /// <summary>[bezier] A cubic Bézier curve: start, first control point, second control point, end.</summary>
-        Bezier
+        Bezier,
+
+        /// <summary>[image] A picture (a logo, a photo of the wiring, a block diagram) between two corners; it stays upright.</summary>
+        Image
     }
 
     /// <summary>
@@ -191,6 +194,21 @@ namespace RobotTwin.CoreSim.Design
         /// <summary>A dashed stroke (KiCad's dash style).</summary>
         public bool Dashed { get; set; }
 
+        /// <summary>[image] The picture, base64 PNG (images only).</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ImageData { get; set; }
+
+        /// <summary>[image] The middle of the shape's first two points (an image's centre).</summary>
+        [JsonIgnore]
+        public GridPoint Centre => Points.Count >= 2 ? new GridPoint((Points[0].X + Points[1].X) / 2, (Points[0].Y + Points[1].Y) / 2) : Points.Count == 1 ? Points[0] : new GridPoint(0, 0);
+
+        /// <summary>[image] Moves an image so its centre is there, its size and its upright kept.</summary>
+        public void MoveCentreTo(GridPoint centre)
+        {
+            var c = Centre;
+            for (int i = 0; i < Points.Count; i++) Points[i] = new GridPoint(Points[i].X + centre.X - c.X, Points[i].Y + centre.Y - c.Y);
+        }
+
         /// <summary>The circle's radius in grid units.</summary>
         public double Radius => Points.Count >= 2 ? Math.Sqrt(Sq(Points[1].X - Points[0].X) + Sq(Points[1].Y - Points[0].Y)) : 0;
 
@@ -214,7 +232,7 @@ namespace RobotTwin.CoreSim.Design
             var pts = new List<GridPoint>();
             switch (Kind)
             {
-                case SheetShapeKind.Rectangle when Points.Count >= 2:
+                case SheetShapeKind.Rectangle or SheetShapeKind.Image when Points.Count >= 2:
                     var (p, q) = (Points[0], Points[1]);
                     pts.AddRange(new[] { p, new GridPoint(q.X, p.Y), q, new GridPoint(p.X, q.Y), p });
                     break;

@@ -80,7 +80,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Bakır alan | Dolgu alanı | var | |
 | Yasak bölge (kural alanı) | Alanlar grubunda (DRC, dolgu, iki yönlendirici, KiCad) | var | |
 | Çizgi, yay, dikdörtgen, daire, çokgen | Çizim grubu | var | |
-| Bezier, resim | Bezier eğrisi (başlangıç, bitiş, iki denetim noktası; kollar görünür; Gerber, DRC, 3B ve KiCad gr_curve); resim sonra | kısmi | 3 |
+| Bezier, resim | Bezier eğrisi (başlangıç, bitiş, iki denetim noktası; kollar görünür; Gerber, DRC, 3B ve KiCad gr_curve); Resim (referans resmi: yarı saydam, seçilir, taşınır, üretime girmez; KiCad image) | var | |
 | Yazı | Yazı | var | |
 | Yazı kutusu, tablo | Yazı kutusu: çok satır, genişliğe göre kaydırma, çerçeve; Gerber ve KiCad gr_text_box; tablo sonra | kısmi | 3 |
 | Ölçü (hizalı) | Ölçü çizgisi | var | |
@@ -127,7 +127,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Hiyerarşik sayfa, sayfa pini | yok | yok | 3 |
 | Metin, metin kutusu | Metin (T), çerçeveli = metin kutusu | var | |
 | Tablo | yok | yok | 3 |
-| Dikdörtgen, daire, yay, çizgi, Bezier, resim | Çiz: çizgi, dikdörtgen, daire, yay, Bezier eğrisi (seçilir, taşınır, döndürülür, kopyalanır; KiCad'e gider ve gelir; görüntüye çizilir); resim sonra | kısmi | 3 |
+| Dikdörtgen, daire, yay, çizgi, Bezier, resim | Çiz: çizgi, dikdörtgen, daire, yay, Bezier eğrisi, resim (dik kalır, PNG olarak gömülür) (seçilir, taşınır, döndürülür, kopyalanır; KiCad'e gider ve gelir; görüntüye çizilir) | var | |
 | Silici | Del; araç çubuğunda Silici aracı (her tıklama altındakini siler) | var | |
 | Izgara, birim, imleç, gizli pinler | ızgara (nokta / çizgi / kapalı), artı imleç (Ctrl+Shift+X), göreli orijin, birim (ızgara adımı, mm, mil, inç); gizli pin yok: sembollerin bütün pinleri görünür | var | |
 | Kablo açı kipi (90° / 45° / serbest) | var | var | |

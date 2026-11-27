@@ -236,6 +236,17 @@ namespace RobotWin.Studio.Pages
                 menu.Items.Add(item);
             }
 
+            // [image] a picture from a file: it follows the cursor until a click puts it down
+            var picture = new MenuItem { Header = "Resim…", Icon = new RobotWin.Studio.Theme.Icon { Data = (System.Windows.Media.Geometry)FindResource("I.Picture"), Size = 14 } };
+            picture.Click += (_, _) =>
+            {
+                if (RobotWin.Studio.Theme.Pictures.Pick(Window.GetWindow(this)) is { } data)
+                {
+                    Canvas.BeginImage(data);
+                    Canvas.Focus();
+                }
+            };
+            menu.Items.Add(picture);
             menu.IsOpen = true;
         }
 

@@ -181,6 +181,7 @@ namespace RobotWin.Studio.Editor
                 EditorTool.Circle => "Daire · merkeze, sonra çemberin bir noktasına tıklayın",
                 EditorTool.Arc => "Yay · başlangıca, yayın bir noktasına, sonra bitişe tıklayın",
                 EditorTool.Bezier => "Bezier eğrisi · başlangıca, bitişe, sonra iki denetim noktasına tıklayın",
+                EditorTool.Image => "Resim · koymak istediğiniz yere tıklayın · Esc vazgeçer",
                 EditorTool.Place => "Yerleştir · R döndür · X/Y aynala · Esc bitir",
                 _ => string.Empty
             };

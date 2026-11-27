@@ -17,6 +17,36 @@ namespace RobotWin.Studio.Editor
     {
         private List<GridPoint>? _shapeDraft;
 
+        /// <summary>[image] The picture waiting to be placed and its size in grid steps.</summary>
+        private (string Data, double W, double H)? _pendingImage;
+
+        /// <summary>[image] Starts placing a picture (base64 PNG) at its 300 ppi size: it follows the cursor until a click puts it down.</summary>
+        public void BeginImage(string data)
+        {
+            var (w, h) = EmbeddedImage.SizeMm(data);
+            if (w <= 0 || h <= 0) return;
+            _pendingImage = (data, w / 2.54, h / 2.54);
+            Tool = EditorTool.Image;
+            InvalidateVisual();
+        }
+
+        private SchematicShape? PendingImageAt(GridPoint centre) => _pendingImage is not { } p ? null : new SchematicShape
+        {
+            Kind = SheetShapeKind.Image, ImageData = p.Data,
+            Points = { new GridPoint(centre.X - p.W / 2, centre.Y - p.H / 2), new GridPoint(centre.X + p.W / 2, centre.Y + p.H / 2) }
+        };
+
+        private void PlaceImage()
+        {
+            if (PendingImageAt(Snap(_mouseGrid)) is not { } image) return;
+            _pendingImage = null;
+            W.BeginChange();
+            Doc.Shapes.Add(image);
+            W.CommitChange(Shell.Lang.T("Resim eklendi"));
+            Tool = EditorTool.Select;
+            SelectItems(new object[] { image });
+        }
+
         private static bool IsShapeTool(EditorTool t) => t is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier;
 
         private static SheetShapeKind KindOf(EditorTool t) => t switch
@@ -79,6 +109,13 @@ namespace RobotWin.Studio.Editor
         private void DrawShapes(DrawingContext dc)
         {
             foreach (var s in Doc.Shapes) DrawShape(dc, s, _selection.Contains(s) ? Accent : TextColor);
+            if (_tool == EditorTool.Image && PendingImageAt(Snap(_mouseGrid)) is { } ghost)
+            {
+                dc.PushOpacity(0.6);
+                DrawShape(dc, ghost, Accent);
+                dc.Pop();
+            }
+
             if (_shapeDraft is { Count: > 0 } draft && IsShapeTool(_tool))
             {
                 var preview = new SchematicShape { Kind = KindOf(_tool), Points = draft.Concat(new[] { Snap(_mouseGrid) }).ToList(), Dashed = true };
@@ -102,6 +139,16 @@ namespace RobotWin.Studio.Editor
 
         private void DrawShape(DrawingContext dc, SchematicShape s, Color color)
         {
+            if (s.Kind == SheetShapeKind.Image && s.Points.Count >= 2)
+            {
+                // [image] the picture in its frame; picked, its edge in the accent
+                var r = new Rect(ToScreen(s.Points[0]), ToScreen(s.Points[1]));
+                if (Theme.Pictures.Decode(s.ImageData) is { } bitmap) dc.DrawImage(bitmap, r);
+                else dc.DrawRectangle(null, MakePen(color, 1, false), r);
+                if (color == Accent) dc.DrawRectangle(null, MakePen(Accent, 1.5, false), r);
+                return;
+            }
+
             var outline = s.Outline();
             if (outline.Count < 2) return;
             bool closed = s.Kind is SheetShapeKind.Rectangle or SheetShapeKind.Circle;
@@ -127,7 +174,7 @@ namespace RobotWin.Studio.Editor
                 double reach = Math.Max(5, s.Width / 2.54 * _scale / 2 + 3);
                 for (int i = 0; i + 1 < pts.Count; i++)
                     if (Distance(screen, pts[i], pts[i + 1]) <= reach) return s;
-                if (s.Filled && s.Kind is SheetShapeKind.Rectangle or SheetShapeKind.Circle && Inside(screen, pts)) return s;
+                if ((s.Filled && s.Kind is SheetShapeKind.Rectangle or SheetShapeKind.Circle || s.Kind == SheetShapeKind.Image) && Inside(screen, pts)) return s;
             }
 
             return null;

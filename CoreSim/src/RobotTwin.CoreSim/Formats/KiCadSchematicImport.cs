@@ -82,6 +82,9 @@ namespace RobotTwin.CoreSim.Formats
         public double Width { get; set; }
         public bool Dashed { get; set; }
         public bool Filled { get; set; }
+
+        /// <summary>[image] An image's picture (base64 PNG).</summary>
+        public string? ImageData { get; set; }
     }
 
     public sealed class KiCadSchFile
@@ -414,6 +417,18 @@ namespace RobotTwin.CoreSim.Formats
                 shape.Points.Add(c);
                 shape.Points.Add((c.X + r, c.Y));
                 Style(n, shape);
+                file.Shapes.Add(shape);
+            }
+
+            foreach (var n in root.Children("image"))   // [image] centred at its place, its size from the picture's pixels at 300 ppi and its scale
+            {
+                string data = string.Concat((n.Child("data")?.Items.Skip(1) ?? Enumerable.Empty<SExpression>()).Select(i => i.Atom ?? string.Empty)).Replace(" ", "").Replace("\n", "");
+                var (w, h) = EmbeddedImage.SizeMm(data, n.Child("scale")?.Number(1) ?? 1);
+                if (w <= 0 || h <= 0) continue;
+                var c = At(n);
+                var shape = new KiCadSheetShape { Kind = SheetShapeKind.Image, ImageData = data };
+                shape.Points.Add((c.X - w / 2, c.Y - h / 2));
+                shape.Points.Add((c.X + w / 2, c.Y + h / 2));
                 file.Shapes.Add(shape);
             }
 
@@ -857,7 +872,7 @@ namespace RobotTwin.CoreSim.Formats
             {
                 var (ox, oy) = offsets.TryGetValue(sheetPath, out var o) ? o : (0, 0);
                 double G(double mm) => Math.Round(mm * spreadUsed / (2 * MmPerGridUnit)) / 2;
-                var drawn = new SchematicShape { Kind = shape.Kind, Width = shape.Width > 0 ? shape.Width : 0.15, Dashed = shape.Dashed, Filled = shape.Filled };
+                var drawn = new SchematicShape { Kind = shape.Kind, Width = shape.Width > 0 ? shape.Width : 0.15, Dashed = shape.Dashed, Filled = shape.Filled, ImageData = shape.ImageData };
                 foreach (var (x, y) in shape.Points) drawn.Points.Add(new GridPoint(G(x + ox), G(y + oy)));
                 if (shape.Kind == SheetShapeKind.Arc && drawn.ArcCircle() == null) drawn.Kind = SheetShapeKind.Line;   // flattened by the grid
                 result.Schematic.Shapes.Add(drawn);

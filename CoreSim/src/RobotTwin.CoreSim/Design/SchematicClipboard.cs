@@ -69,7 +69,7 @@ namespace RobotTwin.CoreSim.Design
                     case NetLabel l: f.Labels.Add(new NetLabel { Name = l.Name, Position = l.Position, Global = l.Global, Group = l.Group }); break;
                     case NoConnectFlag nc: f.NoConnects.Add(new NoConnectFlag { Position = nc.Position, Group = nc.Group }); break;
                     case SchematicNote n: f.Notes.Add(new SchematicNote { Text = n.Text, Position = n.Position, Size = n.Size, Boxed = n.Boxed, Bold = n.Bold, Group = n.Group }); break;
-                    case SchematicShape sh: f.Shapes.Add(new SchematicShape { Kind = sh.Kind, Points = new List<GridPoint>(sh.Points), Width = sh.Width, Filled = sh.Filled, Dashed = sh.Dashed, Group = sh.Group }); break;   // [shapes]
+                    case SchematicShape sh: f.Shapes.Add(new SchematicShape { Kind = sh.Kind, Points = new List<GridPoint>(sh.Points), Width = sh.Width, Filled = sh.Filled, Dashed = sh.Dashed, Group = sh.Group, ImageData = sh.ImageData }); break;   // [shapes]
                 }
             }
 

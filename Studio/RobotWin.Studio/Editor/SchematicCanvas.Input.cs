@@ -148,6 +148,9 @@ namespace RobotWin.Studio.Editor
                 case EditorTool.Bezier:   // [bezier]
                     ShapeClick(e.ClickCount >= 2);
                     return;
+                case EditorTool.Image:   // [image]
+                    PlaceImage();
+                    return;
                 case EditorTool.Text:   // [notes]
                     RequestCommand(SchematicCommand.EditNote, Snap(_mouseGrid));
                     Tool = EditorTool.Select;

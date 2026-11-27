@@ -32,6 +32,9 @@ namespace RobotWin.Studio.Pcb
 
         /// <summary>[bezier] A cubic Bézier curve: start, end, then its two control points.</summary>
         Bezier,
+
+        /// <summary>[image] A reference picture picked from a file, placed where clicked.</summary>
+        Image,
         Via,
 
         /// <summary>[tuning] KiCad's length tuner: meanders on the clicked segment up to its pair's or group's length.</summary>
@@ -306,6 +309,16 @@ namespace RobotWin.Studio.Pcb
 
         public void SetTool(PcbTool tool)
         {
+            if (tool == PcbTool.Image && _pendingImage == null)
+            {
+                // [image] the picture first; none picked: the tool stays as it was
+                if (RobotWin.Studio.Theme.Pictures.Pick(Window.GetWindow(this)) is not { } data) return;
+                var (w, h) = RobotTwin.CoreSim.Design.EmbeddedImage.SizeMm(data);
+                if (w <= 0 || h <= 0) return;
+                _pendingImage = (data, w, h);
+            }
+            else if (tool != PcbTool.Image) _pendingImage = null;
+
             CancelInteractions();
             _tool = tool;
             Cursor = tool == PcbTool.Select ? null : Cursors.Cross;
@@ -325,6 +338,7 @@ namespace RobotWin.Studio.Pcb
             PcbTool.Circle => "Daire: merkeze, sonra çevresinden bir noktaya tıklayın · Esc: iptal",
             PcbTool.Arc => "Yay: merkeze, başlangıca ve bitişe tıklayın (saat yönünün tersine) · Esc: iptal",
             PcbTool.Bezier => "Bezier eğrisi: başlangıca, bitişe, sonra iki denetim noktasına tıklayın · Esc: iptal",
+            PcbTool.Image => "Resim: koymak istediğiniz yere tıklayın (seçenek çubuğundaki katmana; üretime girmez, yalnız yol gösterir) · Esc: iptal",
             PcbTool.Polygon => "Çokgen: köşelere tıklayın · çift tık, ilk köşeye tıklamak ya da Enter: kapat · Esc: iptal",
             PcbTool.Via => "Via: yere tıklayın (altındaki yolun, pedin ya da dolgunun hattını alır) · Esc: çık",
             PcbTool.Keepout => "Yasak bölge: köşelere tıklayın · çift tık veya Enter: kapat · seçenek çubuğundan katman ve neyin yasak olduğu · Esc: iptal",

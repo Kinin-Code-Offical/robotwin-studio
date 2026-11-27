@@ -21,7 +21,8 @@ namespace RobotTwin.CoreSim.Tests
         private static void ScanUntil(StProgram p, Func<bool> done)
         {
             var w = Stopwatch.StartNew();
-            while (!done() && w.Elapsed.TotalSeconds < 10)
+            // 30 s: the full suite runs the physics tests beside it and a loaded machine answers late; it returns as soon as it is done
+            while (!done() && w.Elapsed.TotalSeconds < 30)
             {
                 Assert.True(p.Scan(10), p.Fault);
                 System.Threading.Thread.Sleep(1);

@@ -985,6 +985,16 @@ namespace RobotWin.Studio.Pages
                     UpdateToolOptions();
                     break;
                 }
+                case "image":   // [image] --image-file <png>: a reference picture on the top silkscreen
+                {
+                    var args = Environment.GetCommandLineArgs();
+                    int at = Array.IndexOf(args, "--image-file");
+                    if (at >= 0 && at + 1 < args.Length)
+                        board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Image, ImageData = RobotWin.Studio.Theme.Pictures.FromFile(args[at + 1]), Points = { new PcbPoint(board.Width - 14, 2), new PcbPoint(board.Width - 2, 14) } });
+                    Canvas.Refresh();
+                    break;
+                }
+
                 case "draw":   // [graphics] a logo frame, a filled mark, an arc and a polygon drawn; the rectangle tool with its options
                     board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Rectangle, Points = { new PcbPoint(3, 3), new PcbPoint(18, 9) }, Width = 0.2 });
                     board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Circle, Points = { new PcbPoint(10.5, 6), new PcbPoint(12, 6) }, Filled = true });

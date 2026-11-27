@@ -8592,6 +8592,14 @@
   "Seçenekler": "Options",
   "Renkli (kapalıyken her şey siyah: toner transferi, film)": "In colour (off: everything black, for toner transfer and film)",
   "Aynala": "Mirror",
+  "Resim…": "Picture…",
+  "Resim seçin": "Choose a picture",
+  "Resimler": "Pictures",
+  "Resim": "Picture",
+  "Resim okunamadı: ": "The picture could not be read: ",
+  "Resim eklendi": "Picture added",
+  "Resim · koymak istediğiniz yere tıklayın · Esc vazgeçer": "Picture · click where it should go · Esc cancels",
+  "Resim: koymak istediğiniz yere tıklayın (seçenek çubuğundaki katmana; üretime girmez, yalnız yol gösterir) · Esc: iptal": "Picture: click where it should go (on the options bar's layer; it is not made, it only guides you) · Esc: cancel",
   "Bezier eğrisi": "Bezier curve",
   "Bezier eğrisi · başlangıca, bitişe, sonra iki denetim noktasına tıklayın": "Bezier curve · click the start, the end, then its two control points",
   "Bezier eğrisi: başlangıca, bitişe, sonra iki denetim noktasına tıklayın · Esc: iptal": "Bezier curve: click the start, the end, then its two control points · Esc: cancel",
@@ -9012,6 +9020,7 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+  "resim {…} × {…} mm": "picture {0} × {1} mm",
   "eğri {…} mm": "curve {0} mm",
   "Draft analizi: çekme {…} · en az {…}° (yalnız görüntü)": "Draft analysis: pull {0} · at least {1}° (display only)",
   "Simetri denetimi: gövdelerin ortasından geçen {…} düzlemine göre (yalnız görüntü)": "Symmetry check: across the {0} plane through the middle of the bodies (display only)",

@@ -588,6 +588,15 @@ namespace RobotTwin.CoreSim.Pcb
                         break;
                     }
 
+                    case GraphicShape.Image when g.ImageData is { } data:   // [image] a reference picture: KiCad does not plot it either
+                    {
+                        var (pw, _) = EmbeddedImage.SizeMm(data);
+                        double wide = Math.Abs(p[1].X - p[0].X);
+                        yield return new SNode("image", XY("at", (p[0].X + p[1].X) / 2, (p[0].Y + p[1].Y) / 2), new SNode("layer", Q(layer)), new SNode("scale", N(pw > 0 ? wide / pw : 1)),
+                            new SNode("data", EmbeddedImage.Lines(data).Select(Q).ToArray()), uid);
+                        break;
+                    }
+
                     case GraphicShape.Bezier:   // [bezier]
                     {
                         var pts = new SNode("pts");
@@ -1115,6 +1124,14 @@ namespace RobotTwin.CoreSim.Pcb
                     case SheetShapeKind.Arc when sh.Points.Count >= 3:
                         root.Add(new SNode("arc", At("start", sh.Points[0]), At("mid", sh.Points[1]), At("end", sh.Points[2]), stroke, new SNode("fill", new SNode("type", "none")), id));
                         break;
+                    case SheetShapeKind.Image when sh.Points.Count >= 2 && sh.ImageData is { } data:   // [image] centred, scaled from its 300 ppi size
+                    {
+                        var (pw, _) = EmbeddedImage.SizeMm(data);
+                        double wide = Math.Abs(sh.Points[1].X - sh.Points[0].X) * SchematicGridMm;
+                        root.Add(new SNode("image", At("at", sh.Centre), new SNode("scale", N(pw > 0 ? wide / pw : 1)), id, new SNode("data", EmbeddedImage.Lines(data).Select(Q).ToArray())));
+                        break;
+                    }
+
                     case SheetShapeKind.Bezier when sh.Points.Count >= 4:   // [bezier]
                         root.Add(new SNode("bezier", new SNode("pts", sh.Points.Take(4).Select(q => At("xy", q))), stroke, new SNode("fill", new SNode("type", "none")), id));
                         break;

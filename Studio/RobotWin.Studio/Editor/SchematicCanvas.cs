@@ -46,6 +46,9 @@ namespace RobotWin.Studio.Editor
         /// <summary>[bezier] A cubic Bézier curve: start, end, then its two control points.</summary>
         Bezier,
 
+        /// <summary>[image] A picture picked from a file, placed where clicked.</summary>
+        Image,
+
         /// <summary>[erase] KiCad's eraser: every click deletes what is under it (a wire, a part, a label, a note, a flag).</summary>
         Erase
     }

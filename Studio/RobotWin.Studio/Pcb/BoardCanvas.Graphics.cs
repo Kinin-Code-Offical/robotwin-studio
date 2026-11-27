@@ -65,6 +65,37 @@ namespace RobotWin.Studio.Pcb
         /// <summary>New rectangles, circles and polygons filled in.</summary>
         public bool DrawFilled { get; set; }
 
+        /// <summary>[image] The picture waiting to be placed and its size (mm).</summary>
+        private (string Data, double W, double H)? _pendingImage;
+
+        private BoardGraphic? PendingImageAt(double x, double y) => _pendingImage is not { } p ? null : new BoardGraphic
+        {
+            Shape = GraphicShape.Image, Layer = GraphicDrawLayer, ImageData = p.Data,
+            Points = { new PcbPoint(SnapX(x) - p.W / 2, SnapY(y) - p.H / 2), new PcbPoint(SnapX(x) + p.W / 2, SnapY(y) + p.H / 2) }
+        };
+
+        private void PlaceImage(double x, double y)
+        {
+            var board = Board;
+            if (board == null || PendingImageAt(x, y) is not { } image) return;
+            _pendingImage = null;
+            BeforeEdit?.Invoke(this, EventArgs.Empty);
+            board.Graphics.Add(image);
+            Edited($"Çizim eklendi: {image.Describe()} · {LayerName(image.Layer)}");
+            SetTool(PcbTool.Select);
+        }
+
+        /// <summary>[image] A picture in its frame, seen through a little so the copper under it still shows.</summary>
+        private void DrawImageGraphic(DrawingContext dc, BoardGraphic g, double opacity)
+        {
+            if (g.Points.Count < 2) return;
+            var r = new Rect(S(g.Points[0].X, g.Points[0].Y), S(g.Points[1].X, g.Points[1].Y));
+            dc.PushOpacity(opacity);
+            if (RobotWin.Studio.Theme.Pictures.Decode(g.ImageData) is { } bitmap) dc.DrawImage(bitmap, r);
+            else dc.DrawRectangle(null, P(GraphicColor(g.Layer), 1), r);
+            dc.Pop();
+        }
+
         public static bool IsGraphicTool(PcbTool t) => t is PcbTool.Line or PcbTool.Rectangle or PcbTool.Circle or PcbTool.Arc or PcbTool.Polygon or PcbTool.Bezier;
 
         private static GraphicShape ShapeOf(PcbTool t) => t switch
@@ -191,6 +222,12 @@ namespace RobotWin.Studio.Pcb
             foreach (var g in board.Graphics)
             {
                 if (!GraphicShown(g)) continue;
+                if (g.Shape == GraphicShape.Image)
+                {
+                    DrawImageGraphic(dc, g, 0.8);
+                    continue;
+                }
+
                 var color = GraphicColor(g.Layer);
                 if (g.Filled && g.Area().Count >= 3) dc.DrawGeometry(SymbolRenderer.Brush(color), null, Poly(g.Area()));
                 var pen = P(color, Math.Max(1, g.Width * _scale));
@@ -225,6 +262,12 @@ namespace RobotWin.Studio.Pcb
         /// <summary>The shape being drawn, its last point following the cursor.</summary>
         private void DrawGraphicPreview(DrawingContext dc)
         {
+            if (_tool == PcbTool.Image && PendingImageAt(_cursor.X, _cursor.Y) is { } ghost)
+            {
+                DrawImageGraphic(dc, ghost, 0.5);
+                return;
+            }
+
             if (!IsGraphicTool(_tool) || _gfx.Count == 0) return;
             var pts = _gfx.ToList();
             var cursor = Magnet(_cursor.X, _cursor.Y);   // [magnet]
@@ -267,6 +310,12 @@ namespace RobotWin.Studio.Pcb
 
         private void DrawSelectedGraphic(DrawingContext dc, BoardGraphic g)
         {
+            if (g.Shape == GraphicShape.Image && g.Points.Count >= 2)
+            {
+                dc.DrawRectangle(null, P(A(Accent, (byte)0xC0), 2), new Rect(S(g.Points[0].X, g.Points[0].Y), S(g.Points[1].X, g.Points[1].Y)));
+                return;
+            }
+
             var pen = P(A(Accent, (byte)0xC0), Math.Max(1, g.Width * _scale) + 4);
             foreach (var s in g.Strokes(0.5 / Math.Max(1, _scale))) dc.DrawLine(pen, S(s.X1, s.Y1), S(s.X2, s.Y2));
             foreach (var p in g.Points) dc.DrawRectangle(SymbolRenderer.Brush(Accent), null, new Rect(S(p.X, p.Y) - new Vector(3, 3), new Size(6, 6)));
