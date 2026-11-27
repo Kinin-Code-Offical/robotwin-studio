@@ -28,6 +28,7 @@ Draw the board edge as a polygon with the **Board edge** tool on the left toolba
 
 - Drag parts with the mouse. **R** rotates, **F** flips a part to the bottom / top side, **L** locks it.
 - **Place** does an automatic placement by the connections; locked parts stay where they are.
+- **Cross-selection:** a part you select in the circuit is selected on the PCB too, and one you select on the PCB in the circuit (as KiCad's cross-probing); no page's view moves, the part waits selected when you switch. It goes by the part's identity, so a renamed part is still the same one. **Settings → World and editing → Cross-selection** turns it off. To take the view to the part as well, use **Show in circuit** on the right-click menu, or **Show in PCB** in the circuit.
 
 ## Routing
 

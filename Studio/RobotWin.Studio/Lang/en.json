@@ -8628,6 +8628,8 @@
   "Kütüphane sayfası: parçanın dosyasını içe aktarın": "Library page: import the part's file",
   "Denetim penceresinde düzelt (kurulum ilerlemesiyle)": "Fix in the check window (with the install's progress)",
   "Boştaki NC işareti silindi": "Stray NC mark deleted",
+  "Ortak seçim (devre ↔ PCB)": "Cross-selection (circuit ↔ PCB)",
+  "Devrede seçilen parça PCB'de de seçili olur, PCB'de seçilen devrede; görünüm yerinde kalır (KiCad'in çapraz seçimi gibi).": "A part selected in the circuit is selected on the PCB too, and one selected on the PCB in the circuit; the view stays where it is (as KiCad's cross-probing).",
   "Aynala": "Mirror",
   "Elektriksel model": "Electrical model",
   "Firmware": "Firmware",

@@ -867,6 +867,12 @@ namespace RobotWin.Studio
             if (page == "home" && fault == "examples")   // [examples] the example cards in view
                 Dispatcher.BeginInvoke(new Action(() => _home.ExampleList.BringIntoView(new Rect(0, 0, 10, 700))), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
 
+            if (fault != null && fault.StartsWith("crossselect:", StringComparison.Ordinal))   // [crossprobe] a part picked in the circuit, the picture of another page
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (W.Schematic.FindPart(fault.Substring("crossselect:".Length)) is { } part) _schematic.Canvas.SelectItems(new object[] { part });
+                }), System.Windows.Threading.DispatcherPriority.Background);
+
             if (fault != null && fault.StartsWith("workspace:", StringComparison.Ordinal))   // [workspaces] --fault "workspace:Ölçüm"
                 Dispatcher.BeginInvoke(new Action(() => ApplyWorkspace(fault.Substring("workspace:".Length))), System.Windows.Threading.DispatcherPriority.Background);
 

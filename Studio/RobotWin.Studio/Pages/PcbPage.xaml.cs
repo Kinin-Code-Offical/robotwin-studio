@@ -81,6 +81,26 @@ namespace RobotWin.Studio.Pages
             Angle45Toggle.IsChecked = Canvas.Constrain45;
             InitDock();   // [dock-min]
             Canvas.SelectionChanged += (_, _) => UpdateSelection();
+            // [crossprobe] one part picked here is picked in the circuit too; one picked there is picked here (the view stays)
+            Canvas.SelectionChanged += (_, _) =>
+            {
+                if (!_crossSelecting && Canvas.SelectedComponent is { } c) CrossProbe.SelectPart(this, c.PartUid, c.RefDes);
+            };
+            CrossProbe.PartSelected += (sender, _) =>
+            {
+                if (ReferenceEquals(sender, this) || W.Schematic.Board is not { } board) return;
+                var comp = board.Components.FirstOrDefault(x => CrossProbe.IsSelected(x.PartUid, x.RefDes));
+                if (comp == null || ReferenceEquals(Canvas.SelectedComponent, comp)) return;
+                _crossSelecting = true;
+                try
+                {
+                    Canvas.Select(comp);
+                }
+                finally
+                {
+                    _crossSelecting = false;
+                }
+            };
             Canvas.BeforeEdit += (_, _) => W.BeginChange();
             Canvas.EditCancelled += (_, _) => W.CancelChange();
             Canvas.BoardEdited += (_, msg) => AfterEdit(msg);

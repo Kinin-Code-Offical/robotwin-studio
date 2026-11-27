@@ -169,6 +169,9 @@ namespace RobotWin.Studio.Shell
         public bool WorldShowGizmo { get; set; } = true;
         public bool WorldShowSensorOverlays { get; set; } = true;
 
+        /// <summary>[crossprobe] A part selected on the circuit is selected on the PCB too, and the other way round.</summary>
+        public bool CrossSelect { get; set; } = true;
+
         /// <summary>[technical] The selected object's cables, joints and centre of mass drawn on it, its values beside it.</summary>
         public bool WorldShowTechnical { get; set; } = true;
 

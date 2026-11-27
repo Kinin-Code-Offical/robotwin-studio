@@ -21,6 +21,9 @@ namespace RobotWin.Studio.Pages
         // [overlays] the tool strip on the board's left edge (the World view's), the drawing tools as a strip of their own
         private OverlayHost? _overlays;
 
+        /// <summary>[crossprobe] Selecting what another page selected (it is not announced back).</summary>
+        private bool _crossSelecting;
+
         /// <summary>[workspaces] The tool strips over the board.</summary>
         public OverlayHost? ToolOverlays => _overlays;
         private SceneOverlay? _toolsOverlay;

@@ -173,6 +173,8 @@ namespace RobotWin.Studio.Pages
                 c.Children.Add(Choice("Yeni dünyaların yerçekimi", new[] { ("Dünya 9.81 m/s²", 9.81), ("Ay 1.62 m/s²", 1.62), ("Mars 3.71 m/s²", 3.71), ("Sıfır", 0.0) }, S.WorldGravity, v => S.WorldGravity = v));
                 c.Children.Add(Choice("Dünya editörü ızgarası", new[] { ("Kapalı", 0.0), ("1 mm", 1.0), ("2.5 mm", 2.5), ("5 mm", 5.0), ("10 mm", 10.0) }, S.WorldGridMm, v => S.WorldGridMm = v,
                     "Nesneler taşınırken bu adıma yaslanır; sürüklerken Alt basılıysa ızgara kapanır."));
+                c.Children.Add(Toggle("Ortak seçim (devre ↔ PCB)", S.CrossSelect, v => S.CrossSelect = v,
+                    "Devrede seçilen parça PCB'de de seçili olur, PCB'de seçilen devrede; görünüm yerinde kalır (KiCad'in çapraz seçimi gibi)."));
             });
 
             Category("Derleyiciler", "Kartların kodunu gerçek araç zinciriyle derleyen programlar.");

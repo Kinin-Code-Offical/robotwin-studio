@@ -75,6 +75,26 @@ namespace RobotWin.Studio.Pages
             };
 
             Canvas.SelectionChanged += (_, _) => BuildInspector();
+            // [crossprobe] one part picked here is picked on the PCB too; one picked there is picked here (the view stays)
+            Canvas.SelectionChanged += (_, _) =>
+            {
+                if (!_crossSelecting && Canvas.Selection.Count == 1 && SelectedPart is { } p) CrossProbe.SelectPart(this, p.Uid, p.RefDes);
+            };
+            CrossProbe.PartSelected += (sender, _) =>
+            {
+                if (ReferenceEquals(sender, this)) return;
+                var part = W.Schematic.Parts.FirstOrDefault(x => CrossProbe.IsSelected(x.Uid, x.RefDes));
+                if (part == null || (Canvas.Selection.Count == 1 && ReferenceEquals(SelectedPart, part))) return;
+                _crossSelecting = true;
+                try
+                {
+                    Canvas.SelectItems(new object[] { part });
+                }
+                finally
+                {
+                    _crossSelecting = false;
+                }
+            };
             Canvas.ToolChanged += (_, _) => SyncTools();
             InitSheets();   // [sheets] Pages/SchematicPage.Sheets.cs
             Canvas.PartDoubleClicked += (_, _) => BuildInspector();
