@@ -6,12 +6,15 @@ using System.Text.Json;
 
 namespace RobotWin.Studio.Shell
 {
-    /// <summary>[workspaces] A saved workspace: the page it opens and the layout of each page's panels.</summary>
+    /// <summary>[workspaces] A saved workspace: the page it opens, the layout of each page's panels and its tool strips.</summary>
     public sealed class WorkspaceProfile
     {
         public string Name { get; set; } = string.Empty;
         public string Page { get; set; } = "schematic";
         public Dictionary<string, DockLayoutState> Layouts { get; set; } = new Dictionary<string, DockLayoutState>();
+
+        /// <summary>[workspaces] Each page's tool strips over its canvas, as <see cref="OverlayHost.SaveLayout"/> writes them.</summary>
+        public Dictionary<string, string> Strips { get; set; } = new Dictionary<string, string>();
     }
 
     /// <summary>
@@ -21,18 +24,22 @@ namespace RobotWin.Studio.Shell
     /// </summary>
     public static class WorkspaceProfiles
     {
-        /// <summary>A built-in workspace: its page, and on a page with panels whether the bottom row shows and on which tab.</summary>
-        public sealed record Builtin(string Name, string Page, string Description, bool Bottom = false, string? Tab = null);
+        /// <summary>
+        /// A built-in workspace: its page, and on a page with panels whether the bottom row shows and on which tab; and its
+        /// tool strips ("id=open|folded|closed,…"): as Fusion's workspaces change the toolbar, designing opens the tools,
+        /// measuring and running fold them to their handle out of the way.
+        /// </summary>
+        public sealed record Builtin(string Name, string Page, string Description, bool Bottom = false, string? Tab = null, string? Strips = null);
 
         public static IReadOnlyList<Builtin> Builtins { get; } = new[]
         {
-            new Builtin("Devre tasarımı", "schematic", "Şema geniş, alt panel kapalı: parça yerleştirme ve kablolama"),
-            new Builtin("Ölçüm", "schematic", "Şema ve altta osiloskop: simülasyonu izleme", true, "scope"),
+            new Builtin("Devre tasarımı", "schematic", "Şema geniş, alt panel kapalı, araç şeridi açık: parça yerleştirme ve kablolama", Strips: "tools=open,draw=closed"),
+            new Builtin("Ölçüm", "schematic", "Şema ve altta osiloskop, araç şeridi katlı: simülasyonu izleme", true, "scope", "tools=folded,draw=closed"),
             new Builtin("Kod", "code", "Kartların kodu, derleme ve hata ayıklama"),
-            new Builtin("PCB", "pcb", "Kart yerleşimi, yönlendirme ve DRC"),
-            new Builtin("Mekanik", "model", "Parça modelleme"),
-            new Builtin("Dünya", "world", "Sahne, palet ve denetçi: dünyayı kurma", false),
-            new Builtin("Dünya simülasyonu", "world", "Sahne ve altta kablolar ve ölçümler: çalışan dünyayı izleme", true, "cables")
+            new Builtin("PCB", "pcb", "Kart yerleşimi, yönlendirme ve DRC; araç şeridi açık", Strips: "tools=open,draw=closed"),
+            new Builtin("Mekanik", "model", "Parça modelleme; araç şeridi açık", Strips: "tools=open"),
+            new Builtin("Dünya", "world", "Sahne, palet ve denetçi; araçlar, ızgara ve yakalama açık: dünyayı kurma", false, null, "tools=open,grid=open"),
+            new Builtin("Dünya simülasyonu", "world", "Sahne ve altta kablolar ve ölçümler; araçlar katlı, ızgara kapalı: çalışan dünyayı izleme", true, "cables", "tools=folded,grid=closed")
         };
 
         private static readonly string? TestPath = Environment.GetEnvironmentVariable("ROBOTWIN_WORKSPACES");
@@ -127,6 +134,33 @@ namespace RobotWin.Studio.Shell
             Persist();
             return true;
         }
+
+        // ------------------------------------------------------------------ [workspaces] a project's own layout
+
+        /// <summary>The name a project's own layout goes by (in the menu and the title bar).</summary>
+        public const string ProjectLayoutName = "Projenin düzeni";
+
+        private const string ProjectKey = "workspace";
+
+        /// <summary>
+        /// The layout kept in a project's settings (the package's app-owned settings.json), as KiCad keeps a project's view
+        /// in its .kicad_prl and Visual Studio a solution's windows: null when it has none or it cannot be read.
+        /// </summary>
+        public static WorkspaceProfile? FromProject(string? settings)
+        {
+            try
+            {
+                return ProjectSettings.Get(settings, ProjectKey)?.Deserialize<WorkspaceProfile>(Json);
+            }
+            catch (Exception ex) when (ex is JsonException || ex is InvalidOperationException || ex is FormatException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>The project's settings with its layout set (null: taken out); other settings it holds stay.</summary>
+        public static string? WithProjectLayout(string? settings, WorkspaceProfile? profile) =>
+            ProjectSettings.With(settings, ProjectKey, profile == null ? null : JsonSerializer.SerializeToNode(profile, Json));
 
         /// <summary>Forgets what was read (tests point the store elsewhere between cases).</summary>
         public static void Reload() => _store = null;

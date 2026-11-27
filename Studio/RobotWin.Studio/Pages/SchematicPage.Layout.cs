@@ -16,6 +16,9 @@ namespace RobotWin.Studio.Pages
 
         // [overlays] the tools down the canvas' left edge and the drawing tools as a strip of their own (Shell/PageOverlays.cs)
         private OverlayHost? _overlays;
+
+        /// <summary>[workspaces] The tool strips over the sheet.</summary>
+        public OverlayHost? ToolOverlays => _overlays;
         private ToolPanel? _drawPanel;
 
         /// <summary>The bottom tabs in their original order (the code picks them by this index).</summary>
@@ -89,6 +92,7 @@ namespace RobotWin.Studio.Pages
             _overlays = PageOverlays.Attach((Panel)Canvas.Parent, "schematic", "tools:Left:40:40:Vertical:0:1:Left;draw:Left:40:40:Vertical:0:0:Left", new[] { tools, _drawPanel.Overlay });
             _drawPanel.Overlay.Shown = false;   // opens with the Çiz button
             _overlays.Arrange();
+            _overlays.LayoutChanged += (_, _) => SyncTools();   // [workspaces] a workspace opened or closed the drawing strip
         }
 
         private void PickDrawing(string tag)

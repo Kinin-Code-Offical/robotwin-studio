@@ -3,14 +3,17 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
 using RobotWin.Studio.Shell;
 
 namespace RobotWin.Studio
 {
     /// <summary>
     /// [workspaces] Task-oriented layouts as Blender's and Fusion's workspaces, switched from the title bar, the Pencere menu
-    /// and the command palette: the built-in ones set the page and its bottom row, a saved one brings every panel back where
-    /// it was; "Varsayılan düzene dön" resets the panels as VS Code's Reset View Locations does.
+    /// and the command palette: the built-in ones set the page, its bottom row and its tool strips (as Fusion's change the
+    /// toolbar), a saved one brings every panel and strip back where it was; "Varsayılan düzene dön" resets the panels as
+    /// VS Code's Reset View Locations does. A project can keep its own layout (as KiCad's .kicad_prl, Visual Studio's .suo):
+    /// it comes back when the project opens.
     /// </summary>
     public partial class MainWindow
     {
@@ -21,12 +24,17 @@ namespace RobotWin.Studio
             {
                 Navigate(b.Page);
                 DockOf(b.Page)?.ShowBottom(b.Bottom, b.Tab);
+                if (b.Strips != null && StripsOf(b.Page) is { } host)
+                {
+                    foreach (var (id, shown, folded) in WorkspaceStrips.Parse(b.Strips)) host.SetState(id, shown, folded);
+                    host.Apply();
+                }
+
                 name = b.Name;
             }
             else if (WorkspaceProfiles.Find(name) is { } p)
             {
-                foreach (var kv in p.Layouts) DockOf(kv.Key)?.Restore(kv.Value);
-                Navigate(p.Page);
+                ApplyProfile(p);
                 name = p.Name;
             }
             else
@@ -50,6 +58,25 @@ namespace RobotWin.Studio
             W.Status = d.Collapsed ? "Tam görünüm: paneller gizlendi (Ctrl+Space ile geri gelir)" : "Paneller geri geldi";
         }
 
+        /// <summary>A saved layout back on screen: every page's panels and tool strips, then its page.</summary>
+        private void ApplyProfile(WorkspaceProfile p)
+        {
+            foreach (var kv in p.Layouts) DockOf(kv.Key)?.Restore(kv.Value);
+            foreach (var kv in p.Strips)
+                if (StripsOf(kv.Key) is { } host && host.LoadLayout(kv.Value)) host.Apply();
+            Navigate(p.Page);
+        }
+
+        /// <summary>A page's tool strips over its canvas (the Kod page has none).</summary>
+        private OverlayHost? StripsOf(string page) => page switch
+        {
+            "schematic" => _schematic.ToolOverlays,
+            "world" => _world.ToolOverlays,
+            "pcb" => _pcb.ToolOverlays,
+            "model" => _model.ToolOverlays,
+            _ => null
+        };
+
         private DockManager? DockOf(string page) => page switch
         {
             "schematic" => _schematic.Panels,
@@ -69,7 +96,62 @@ namespace RobotWin.Studio
             if (_pcb.Panels is { } pc) p.Layouts["pcb"] = pc.Snapshot();
             if (_model.Panels is { } md) p.Layouts["model"] = md.Snapshot();
             if (_code.Panels is { } cd) p.Layouts["code"] = cd.Snapshot();
+            foreach (var page in new[] { "schematic", "world", "pcb", "model" })
+                if (StripsOf(page) is { } host) p.Strips[page] = host.SaveLayout();
             return p;
+        }
+
+        // ------------------------------------------------------------------ [workspaces] the project's own layout
+
+        private bool ProjectOpen => W.ActiveDocument.Kind != DocumentKind.World;
+
+        private bool ProjectHasLayout => ProjectOpen && WorkspaceProfiles.FromProject(W.Project.Settings) != null;
+
+        /// <summary>The layout on screen into the project: it comes back whenever the project opens (saved with it).</summary>
+        private void SaveLayoutToProject()
+        {
+            if (!ProjectOpen) return;
+            W.Project.Settings = WorkspaceProfiles.WithProjectLayout(W.Project.Settings, CaptureWorkspace(WorkspaceProfiles.ProjectLayoutName));
+            W.MarkProjectChanged();
+            WorkspaceProfiles.Active = WorkspaceProfiles.ProjectLayoutName;
+            UpdateWorkspaceButton();
+            W.Status = "Düzen projeye eklendi: kaydedince projeyle birlikte saklanır, proje açılınca geri gelir";
+        }
+
+        private void ApplyProjectLayout()
+        {
+            if (!ProjectOpen || WorkspaceProfiles.FromProject(W.Project.Settings) is not { } p) return;
+            ApplyProfile(p);
+            WorkspaceProfiles.Active = WorkspaceProfiles.ProjectLayoutName;
+            UpdateWorkspaceButton();
+            W.Status = "Projenin düzeni açıldı";
+        }
+
+        private void RemoveProjectLayout()
+        {
+            if (!ProjectHasLayout) return;
+            W.Project.Settings = WorkspaceProfiles.WithProjectLayout(W.Project.Settings, null);
+            W.MarkProjectChanged();
+            if (WorkspaceProfiles.Active == WorkspaceProfiles.ProjectLayoutName) WorkspaceProfiles.Active = null;
+            UpdateWorkspaceButton();
+            W.Status = "Projenin düzeni kaldırıldı (ekrandaki düzen olduğu gibi kalır)";
+        }
+
+        /// <summary>A project opened from its file: its own layout, if it keeps one, once the page it opened on is up.</summary>
+        private void OnProjectOpened()
+        {
+            if (!ProjectHasLayout)
+            {
+                if (WorkspaceProfiles.Active == WorkspaceProfiles.ProjectLayoutName)
+                {
+                    WorkspaceProfiles.Active = null;   // the one before kept a layout of its own; this one does not
+                    UpdateWorkspaceButton();
+                }
+
+                return;
+            }
+
+            Dispatcher.BeginInvoke(new Action(ApplyProjectLayout), DispatcherPriority.Background);
         }
 
         private void SaveWorkspaceAs()
@@ -148,12 +230,23 @@ namespace RobotWin.Studio
                 }
             }
 
+            if (ProjectHasLayout)
+            {
+                m.Items.Add(new Separator());
+                var mine = Check(WorkspaceProfiles.ProjectLayoutName, null, active == WorkspaceProfiles.ProjectLayoutName, _ => ApplyProjectLayout());
+                mine.ToolTip = Lang.T("Bu projeyle kaydedilen düzen");
+                m.Items.Add(mine);
+            }
+
             bool own = active != null && WorkspaceProfiles.Find(active) != null;
             m.Items.Add(new Separator());
             m.Items.Add(Item("Ekrandaki düzeni çalışma alanı olarak kaydet…", null, SaveWorkspaceAs));
             m.Items.Add(Item("Bu çalışma alanını ekrandaki düzenle güncelle", null, UpdateActiveWorkspace, own));
             m.Items.Add(Item("Yeniden adlandır…", null, RenameActiveWorkspace, own));
             m.Items.Add(Item("Sil", null, DeleteActiveWorkspace, own));
+            m.Items.Add(new Separator());
+            m.Items.Add(Item(ProjectHasLayout ? "Projenin düzenini ekrandakiyle güncelle" : "Ekrandaki düzeni projeye kaydet", null, SaveLayoutToProject, ProjectOpen));
+            if (ProjectHasLayout) m.Items.Add(Item("Projenin düzenini kaldır", null, RemoveProjectLayout));
             m.Items.Add(new Separator());
             m.Items.Add(Item("Varsayılan düzene dön", null, ResetLayouts));
         }
@@ -184,6 +277,7 @@ namespace RobotWin.Studio
             }
 
             yield return new PaletteCommand(group, "Ekrandaki düzeni çalışma alanı olarak kaydet…", SaveWorkspaceAs) { Keywords = "workspace save layout kaydet" };
+            yield return new PaletteCommand(group, "Ekrandaki düzeni projeye kaydet", SaveLayoutToProject) { Keywords = "workspace project layout proje düzen kaydet" };
             yield return new PaletteCommand(group, "Varsayılan düzene dön", ResetLayouts) { Keywords = "reset layout panel sıfırla" };
         }
     }

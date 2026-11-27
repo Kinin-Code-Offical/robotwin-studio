@@ -20,6 +20,9 @@ namespace RobotWin.Studio.Pages
     {
         // [overlays] the tool strip on the board's left edge (the World view's), the drawing tools as a strip of their own
         private OverlayHost? _overlays;
+
+        /// <summary>[workspaces] The tool strips over the board.</summary>
+        public OverlayHost? ToolOverlays => _overlays;
         private SceneOverlay? _toolsOverlay;
         private ToolPanel? _drawPanel;
         private List<System.Windows.Controls.Primitives.ToggleButton> _toolButtons = new List<System.Windows.Controls.Primitives.ToggleButton>();
@@ -54,6 +57,7 @@ namespace RobotWin.Studio.Pages
             _overlays = PageOverlays.Attach(ContentGrid, "pcb", "tools:Left:40:40:Vertical:0:1:Left;draw:Left:40:40:Vertical:0:0:Left", new[] { _toolsOverlay, _drawPanel.Overlay }, column: 3);
             _drawPanel.Overlay.Shown = false;   // opens with the drawing button
             _overlays.Arrange();
+            _overlays.LayoutChanged += (_, _) => SyncTools();   // [workspaces] a workspace opened or closed the drawing strip
             Canvas.KeepoutDrawn += OnKeepoutDrawn;   // [keepout]
             Canvas.RouteStatusChanged += (_, _) => UpdateRouteLive();   // [routebar]
             // the options bar never lies over the view bar in the top right: when it grows that wide it drops below it

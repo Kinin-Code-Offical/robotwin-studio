@@ -176,6 +176,7 @@ namespace RobotWin.Studio
             Tabs.ItemsSource = W.Documents;
             W.PreviewProvider = RenderPreview;
             Loaded += (_, _) => UpdateWorkspaceButton();   // [workspaces]
+            W.ProjectOpened += (_, _) => OnProjectOpened();   // [workspaces] a project brings its own layout back
             W.WorldPreviewProvider = doc => W.ActiveWorld == doc.World ? _world.Scene.RenderPreview() : null;   // [home] drawn from the world, not the screen
             W.PropertyChanged += OnWorkspaceChanged;
             W.ActiveDocumentChanged += (_, _) => OnActiveDocumentChanged();
@@ -865,6 +866,9 @@ namespace RobotWin.Studio
         {
             if (page == "home" && fault == "examples")   // [examples] the example cards in view
                 Dispatcher.BeginInvoke(new Action(() => _home.ExampleList.BringIntoView(new Rect(0, 0, 10, 700))), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+
+            if (fault != null && fault.StartsWith("workspace:", StringComparison.Ordinal))   // [workspaces] --fault "workspace:Ölçüm"
+                Dispatcher.BeginInvoke(new Action(() => ApplyWorkspace(fault.Substring("workspace:".Length))), System.Windows.Threading.DispatcherPriority.Background);
 
             if (page == "home" && fault != null && fault.StartsWith("example-info", StringComparison.Ordinal))
             {

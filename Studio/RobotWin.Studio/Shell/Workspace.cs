@@ -595,6 +595,16 @@ namespace RobotWin.Studio.Shell
         /// <summary>Raised when a different document is loaded.</summary>
         public event EventHandler? DocumentReplaced;
 
+        /// <summary>[workspaces] Raised when a project was opened from a file (its own layout comes back with it).</summary>
+        public event EventHandler? ProjectOpened;
+
+        /// <summary>[workspaces] The project changed in what it keeps beside the design (its layout): to be saved, no undo step.</summary>
+        public void MarkProjectChanged()
+        {
+            if (_active.Kind == DocumentKind.World) return;
+            SetDesignDirty(true);
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         private void SetDesignDirty(bool dirty)
@@ -714,6 +724,7 @@ namespace RobotWin.Studio.Shell
             OnPropertyChanged(nameof(CanUndo));
             OnPropertyChanged(nameof(CanRedo));
             OnPropertyChanged(nameof(FilePath));
+            if (path != null) ProjectOpened?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>A path already open in a tab (switches to it instead of opening twice).</summary>

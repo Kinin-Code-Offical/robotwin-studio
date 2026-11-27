@@ -353,6 +353,17 @@ namespace RobotWin.Studio.Shell
 
         public SceneOverlay? Find(string id) => Overlays.FirstOrDefault(o => o.Id == id);
 
+        /// <summary>[workspaces] Shows, folds or hides an overlay (a page's own tool strip is never hidden, only folded).</summary>
+        public void SetState(string id, bool shown, bool folded)
+        {
+            if (Find(id) is not { } o) return;
+            o.Shown = shown || !o.CanHide;
+            o.Collapsed = folded || (!shown && !o.CanHide);
+        }
+
+        /// <summary>[workspaces] Lays the overlays out again and keeps the layout (after <see cref="SetState"/> or <see cref="LoadLayout"/>).</summary>
+        public void Apply() => Changed();
+
         internal void Changed()
         {
             Arrange();

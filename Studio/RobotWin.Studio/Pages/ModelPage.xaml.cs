@@ -62,6 +62,9 @@ namespace RobotWin.Studio.Pages
 
         // [overlays] the tool shelf as the World view's tool strip: on the view's left edge, dragged by its handle (Shell/PageOverlays.cs)
         private Shell.OverlayHost? _overlays;
+
+        /// <summary>[workspaces] The tool strip over the part.</summary>
+        public Shell.OverlayHost? ToolOverlays => _overlays;
         private Shell.SceneOverlay? _toolsOverlay;
 
         private void InitToolStrip()

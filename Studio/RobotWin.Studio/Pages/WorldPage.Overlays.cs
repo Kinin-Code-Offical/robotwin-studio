@@ -53,6 +53,9 @@ namespace RobotWin.Studio.Pages
 
         private ViewCube? _viewCube;
 
+        /// <summary>[workspaces] The tool strips over the scene.</summary>
+        public OverlayHost ToolOverlays => Scene.OverlayPanels;
+
         private void InitOverlayPanels()
         {
             var host = Scene.OverlayPanels;
