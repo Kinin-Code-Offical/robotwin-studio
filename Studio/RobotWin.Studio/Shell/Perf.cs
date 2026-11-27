@@ -127,8 +127,10 @@ namespace RobotWin.Studio.Shell
             _recSections = null;
             if (frames.Count < 2) return "kare yok";
             var sorted = frames.OrderBy(f => f).ToList();
-            double mean = frames.Average(), p95 = sorted[(int)(0.95 * (sorted.Count - 1))], worst = sorted[^1];
-            var sb = new StringBuilder($"{1000 / mean,5:0} FPS  kare ort {mean,5:0.0} ms  p95 {p95,5:0.0}  en kötü {worst,5:0.0}");
+            double mean = frames.Average(), p95 = sorted[(int)(0.95 * (sorted.Count - 1))], p99 = sorted[(int)(0.99 * (sorted.Count - 1))], worst = sorted[^1];
+            // [bigscene] the slow tail too (p99), and the memory the process holds when the recording ends
+            double mb = System.Diagnostics.Process.GetCurrentProcess().WorkingSet64 / (1024.0 * 1024.0);
+            var sb = new StringBuilder($"{1000 / mean,5:0} FPS  kare ort {mean,5:0.0} ms  p95 {p95,5:0.0}  p99 {p99,5:0.0}  en kötü {worst,5:0.0}  bellek {mb,5:0} MB");
             foreach (var kv in sections.OrderByDescending(kv => kv.Value.Sum()))
             {
                 sb.Append($"  | {kv.Key} {kv.Value.Average():0.00}/{kv.Value.Max():0.0} ms");

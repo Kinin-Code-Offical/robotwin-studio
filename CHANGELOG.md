@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Large-scene benchmark:** `--bench … --bench-copies N` builds each template N times over in one world (objects, joints and cables), and every bench line now gives p95, p99, the worst frame and the process memory.
 - **One type scale:** window and dialog headings, list rows and notes take their sizes from the theme's type scale (two steps added: Heading 17, Headline 24), read from code through `TypeScale`; hard-coded sizes and colours outside the drawings went from 135 to 62.
 - **Theme colours:** the World page's warnings (a burned or overloaded cable, a cable that does not fit) use the theme's danger and warning colours, and the import window's footprint preview the canvas colours, so both read right in light themes too.
 - **Problems panel:** an opened "info" fold no longer closes again whenever the list is redrawn (after a check or a fix).

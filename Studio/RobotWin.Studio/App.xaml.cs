@@ -546,7 +546,10 @@ namespace RobotWin.Studio
             // --bench-filter id1,id2: only these templates (quick A/B runs between versions).
             var only = Environment.GetCommandLineArgs().SkipWhile(a => a != "--bench-filter").Skip(1).FirstOrDefault()?.Split(',');
             var templates = Examples.WorldTemplates.All.Where(t => only == null || only.Contains(t.Id)).ToList();
-            var log = new StringBuilder($"RobotWin Studio kare hızı ölçümü · {DateTime.Now:yyyy-MM-dd HH:mm} · {secs:0.#} s/şablon · 1600×960{Environment.NewLine}");
+            // [bigscene] --bench-copies N: each template N times over in one world (its objects, joints and cables pasted in a
+            // grid), for the large-scene numbers: many parts, hundreds of cables, several boards with their own code
+            int copies = int.TryParse(Environment.GetCommandLineArgs().SkipWhile(a => a != "--bench-copies").Skip(1).FirstOrDefault(), out int cp) ? Math.Max(1, cp) : 1;
+            var log = new StringBuilder($"RobotWin Studio kare hızı ölçümü · {DateTime.Now:yyyy-MM-dd HH:mm} · {secs:0.#} s/şablon · 1600×960" + (copies > 1 ? $" · her şablon ×{copies}" : string.Empty) + Environment.NewLine);
             int index = -1;
             var phaseStart = DateTime.Now;
             int phase = 0;   // 0 = load, 1 = idle, 2 = running
@@ -581,7 +584,10 @@ namespace RobotWin.Studio
                         }
 
                         Write($"{templates[index].Id,-14} açılıyor…");
-                        window.NewWorld(templates[index].Build());
+                        var built = templates[index].Build();
+                        if (copies > 1) Multiply(built, copies);
+                        if (copies > 1) log.AppendLine($"{templates[index].Id,-14} sahne      {built.Objects.Count} nesne · {built.Cables.Count} kablo · {built.Joints.Count} bağlantı");
+                        window.NewWorld(built);
                         window.Navigate("world");
                         Write($"{templates[index].Id,-14} durgun ölçülüyor…");
                         phase = 1;
@@ -614,6 +620,25 @@ namespace RobotWin.Studio
                 }
             };
             timer.Start();
+        }
+
+        /// <summary>
+        /// [bigscene] A world laid out <paramref name="copies"/> times over in a square grid, each copy its objects, joints and
+        /// cables pasted as the editor pastes them (new identities, the cables between the copy's own objects).
+        /// </summary>
+        internal static void Multiply(RobotTwin.CoreSim.Sandbox.WorldDocument world, int copies)
+        {
+            var ids = world.Objects.Select(o => o.Id).ToList();
+            if (ids.Count == 0) return;
+            double minX = world.Objects.Min(o => o.Pose.X), maxX = world.Objects.Max(o => o.Pose.X + o.SizeX);
+            double minY = world.Objects.Min(o => o.Pose.Y), maxY = world.Objects.Max(o => o.Pose.Y + o.SizeY);
+            double stepX = Math.Max(0.3, maxX - minX + 0.2), stepY = Math.Max(0.3, maxY - minY + 0.2);
+            int side = (int)Math.Ceiling(Math.Sqrt(copies));
+            for (int k = 1; k < copies; k++)
+            {
+                var piece = RobotTwin.CoreSim.Sandbox.WorldFragment.Take(world, ids);
+                piece.PasteInto(world, new RobotTwin.CoreSim.Mechanics.Vec3(stepX * (k % side), stepY * (k / side), 0));
+            }
         }
 
         /// <summary>Headless end-to-end check of every example: compile, simulate, lay out a PCB, run DRC.</summary>
