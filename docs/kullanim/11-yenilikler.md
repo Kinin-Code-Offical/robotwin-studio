@@ -115,7 +115,7 @@ Ayrıntılar ve düzeltmelerin tamamı: [CHANGELOG.md](https://github.com/Kinin-
   - kendi arenasında, kendi koduyla.
 - **Denemek için ortam:** Montaj'ı atölye, çizgi pisti, engelli ya da rampalı alanda deneyin.
 - **ESP32'de Arduino kütüphaneleri:** çizimin içerdiği kurulu kütüphaneler, kendi bağımlılıklarıyla birlikte çizimle derlenir. Kütüphaneler sekmesi ESP32 için de arar.
-- **PCB'de 32 bakır katmana kadar** (KiCad'deki gibi). Kart ayarları penceresi, yığının sığması için en az gereken kalınlığı yazar.
+- **PCB'de 32 bakır katmana kadar**. Kart ayarları penceresi, yığının sığması için en az gereken kalınlığı yazar.
 - **Çizgi izleyen örnek gerçek optik TCRT5000 modülleri kullanır** (kızılötesi LED, fototransistör, LM393). Montajında gerçek tekerleklerle oval pisti izler: 8 saniyede bir tur, en çok 22 mm sapma.
 - **Montaj açıkken soldaki Dünya** artık bir test dünyasına geçer; Montaj'ı yeniden göstermez.
 
@@ -149,7 +149,7 @@ Ayrıntılar ve düzeltmelerin tamamı: [CHANGELOG.md](https://github.com/Kinin-
   - Klasörlere dosya ve alt klasör (`src/`) eklenir; dosya ya da klasör içe aktarılır (sürükle-bırak da olur).
   - Klasör istediğiniz yere Arduino çizim klasörü olarak kaydedilir, zip olarak dışa aktarılır, yeniden adlandırılır, silinir.
 - **Kod her karta yüklenir:** **Kart** listesinde projedeki ve açık dünyadaki her Arduino Uno, Nano ve ESP32 var. **Karta yükle ve çalıştır**, klasördeki kodu karta kopyalar, derler ve projeyi ya da dünyayı çalıştırır.
-- **Çok dosyalı çizimler:** ana `.ino`, yanındaki `.h` / `.cpp` dosyaları ve `src/` alt klasörleri Arduino IDE'deki gibi birlikte derlenir. Bu Uno / Nano'da da ESP32'de de geçerlidir.
+- **Çok dosyalı çizimler:** ana `.ino`, yanındaki `.h` / `.cpp` dosyaları ve `src/` alt klasörleri tek bir çizim olarak birlikte derlenir. Bu Uno / Nano'da da ESP32'de de geçerlidir.
 - **Kod tamamlama** kartın gerçek başlık dosyalarından gelir: `.`, `->`, `::` ve `#include <` yazınca ya da **Ctrl+Space** ile açılır. Değişkenin türünü bilir: `kol.` yazınca `Servo` üyeleri listelenir. Sağdaki panel imzayı ve açıklamayı gösterir. Parantez açınca parametreler satırın üstünde görünür.
 - **Kütüphaneler sekmesi:** yaklaşık 10 000 Arduino kütüphanesinde arama yapar. **Kur ve ekle** kütüphaneyi kurar ve `#include` satırını ekler; kurulu kütüphaneler kaldırılabilir. Kurulu olmayan bir başlık işaretlenir ve onu sağlayan kütüphane önerilir.
 - **Ayarlanabilir AC/DC güç kaynağı:** DC (CV/CC), AC (RMS gerilim, frekans, faz) ya da DC üstünde AC verir. AC'de akım sınırı iki yönde de geçerlidir ve rapor gerçek RMS değerleri verir. Hazır ayarlar: 12 V~ 50 Hz, 24 V~ 60 Hz, 230 V~ şebeke, 12 V DC + 1 V dalgalanma. Ayrıntılar: [8. Ölçü aletleri](08-olcu-aletleri.md#ayarlanabilir-acdc-güç-kaynağı).
@@ -276,4 +276,4 @@ Ayrıntılar ve düzeltmelerin tamamı: [CHANGELOG.md](https://github.com/Kinin-
 
 ## 1.0.0 — 20 Kasım 2026
 
-**İlk genel sürüm:** kartlarınızı tasarlayın, dünyaya koyun, kablolayın ve hepsini birlikte gerçek fizikle simüle edin. Tasarımdan gerçeğe hattı (Devre → PCB → Kod → Modelle → Montaj → Dünya), KiCad düzeyinde şema editörü, PCB, Arduino ve ESP32 emülasyonu, Blender benzeri modelleyici, açık dünya, radyo ve kumandalar, ölçü aletleri.
+**İlk genel sürüm:** kartlarınızı tasarlayın, dünyaya koyun, kablolayın ve hepsini birlikte gerçek fizikle simüle edin. Tasarımdan gerçeğe hattı (Devre → PCB → Kod → Modelle → Montaj → Dünya), şema editörü, PCB, Arduino ve ESP32 emülasyonu, modelleyici, açık dünya, radyo ve kumandalar, ölçü aletleri.

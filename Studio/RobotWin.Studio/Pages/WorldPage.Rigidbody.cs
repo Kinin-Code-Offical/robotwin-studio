@@ -32,7 +32,7 @@ namespace RobotWin.Studio.Pages
                 Style = (Style)FindResource("Btn.Ghost"),
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Margin = new Thickness(0, 2, 0, 4),
-                ToolTip = "Unity'deki Rigidbody ayarları: kinematik, elle kütle merkezi ve eylemsizlik, hızın ve dönüşün saniyede ne kadarının söndüğü (yağ, sıvı, fren) ve parçanın hareket edemeyeceği ya da dönemeyeceği dünya eksenleri"
+                ToolTip = "Kinematik, elle kütle merkezi ve eylemsizlik, hızın ve dönüşün saniyede ne kadarının söndüğü (yağ, sıvı, fren) ve parçanın hareket edemeyeceği ya da dönemeyeceği dünya eksenleri"
             };
             head.Click += (_, _) =>
             {
@@ -58,7 +58,7 @@ namespace RobotWin.Studio.Pages
         private void InterpolationField(WorldObject o)
         {
             string now = o.Parameters.TryGetValue(WorldPhysics.InterpolationKey, out var v) ? v : "interpolate";
-            var box = new ComboBox { MinWidth = 150, ToolTip = "Unity'deki Interpolate: çalışırken parçanın fizik adımları arasında nasıl çizildiği (fiziği, sensörleri ve betikleri değiştirmez)" };
+            var box = new ComboBox { MinWidth = 150, ToolTip = "Çalışırken parçanın fizik adımları arasında nasıl çizildiği (fiziği, sensörleri ve betikleri değiştirmez)" };
             foreach (var (key, label) in new[] { ("none", "Yok"), ("interpolate", "Ara değerle"), ("extrapolate", "Öngör") })
                 box.Items.Add(new ComboBoxItem { Content = label, Tag = key, IsSelected = key == now });
             box.SelectionChanged += (_, _) =>
@@ -80,7 +80,7 @@ namespace RobotWin.Studio.Pages
             var box = new CheckBox
             {
                 Content = "Kinematik (yalnız kendi hızıyla gider)", IsChecked = kinematic, Margin = new Thickness(0, 0, 0, 6),
-                ToolTip = "Unity'deki Is Kinematic: yerçekimi, kuvvetler, çarpmalar ve eklemler onu itmez; aşağıdaki hızla (ya da bir davranışın verdiğiyle) gider ve önündekini sonsuz ağırmış gibi iter: asansör, piston, taşıyıcı tabla"
+                ToolTip = "Yerçekimi, kuvvetler, çarpmalar ve eklemler onu itmez; aşağıdaki hızla (ya da bir davranışın verdiğiyle) gider ve önündekini sonsuz ağırmış gibi iter: asansör, piston, taşıyıcı tabla"
             };
             box.Click += (_, _) => Edit("Kinematik değişti", () =>
             {
@@ -106,7 +106,7 @@ namespace RobotWin.Studio.Pages
             var centre = new CheckBox
             {
                 Content = "Kütle merkezini elle ver", IsChecked = manualCentre, Margin = new Thickness(0, 4, 0, 6),
-                ToolTip = "Unity'deki Automatic Center Of Mass kapalı: kütle merkezi parçanın kendi çerçevesinde (mm). Gizli bir ağırlık (pil, karşı ağırlık) parçayı dengeler ya da devirir; parçanın şekli yerinde kalır."
+                ToolTip = "Kütle merkezi parçanın kendi çerçevesinde (mm). Gizli bir ağırlık (pil, karşı ağırlık) parçayı dengeler ya da devirir; parçanın şekli yerinde kalır."
             };
             centre.Click += (_, _) => Edit("Kütle merkezi değişti", () =>
             {
@@ -122,7 +122,7 @@ namespace RobotWin.Studio.Pages
             var inertia = new CheckBox
             {
                 Content = "Eylemsizliği elle ver", IsChecked = manualInertia, Margin = new Thickness(0, 4, 0, 6),
-                ToolTip = "Unity'deki Automatic Tensor kapalı: parçanın eksenleri çevresindeki eylemsizlik momentleri (g·cm²), kütle merkezinden geçen eksenlere göre. Ölçülmüş ya da CAD'den alınmış değerler için."
+                ToolTip = "Parçanın eksenleri çevresindeki eylemsizlik momentleri (g·cm²), kütle merkezinden geçen eksenlere göre. Ölçülmüş ya da CAD'den alınmış değerler için."
             };
             inertia.Click += (_, _) => Edit("Eylemsizlik değişti", () =>
             {

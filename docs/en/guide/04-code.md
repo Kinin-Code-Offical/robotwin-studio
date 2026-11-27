@@ -53,7 +53,7 @@ Right-clicking a folder or a file gives:
 
 ### Multi-file sketches
 
-A sketch can have several files: the main `.ino`, `.h` / `.cpp` files next to it and subfolders under `src/`. As in the Arduino IDE they are compiled together, on the Uno / Nano and on the ESP32 alike. Files added to a board's folder are saved in the project file.
+A sketch can have several files: the main `.ino`, `.h` / `.cpp` files next to it and subfolders under `src/`. They are compiled together as one sketch, on the Uno / Nano and on the ESP32 alike. Files added to a board's folder are saved in the project file.
 
 ## Step by step: your first code
 
@@ -208,7 +208,7 @@ The values also refresh while the board runs. A value that changed since you las
 
 ![The servo arm stopped at a breakpoint: line 29, the variables and the status bar](../../images/en/code-debugger.png)
 
-> In code compiled with `-Os`, the compiler merges some lines or inlines them into others, so steps sometimes go in a different order than you expect. The Arduino IDE's debugger behaves the same way.
+> In code compiled with `-Os`, the compiler merges some lines or inlines them into others, so steps sometimes go in a different order than you expect.
 
 ESP32 sketches run natively on the computer's processor, so for now breakpoints are only for the Arduino Uno / Nano (ATmega328P).
 

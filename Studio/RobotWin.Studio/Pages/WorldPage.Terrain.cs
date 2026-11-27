@@ -219,7 +219,7 @@ namespace RobotWin.Studio.Pages
         {
             var env = world.Environment;
             Palette.Children.Add(Caption("Arazi oluştur", 0));
-            Palette.Children.Add(Note("Yükseklik haritası tabanlı, şekillendirilebilir ve boyanabilir zemin (Unity Terrain gibi). Fiziği gerçektir: tekerler eğimde, tümseklerde ve gevşek zeminde (kum, çakıl, çamur) batarak ve kayarak hareket eder."));
+            Palette.Children.Add(Note("Yükseklik haritası tabanlı, şekillendirilebilir ve boyanabilir zemin. Fiziği gerçektir: tekerler eğimde, tümseklerde ve gevşek zeminde (kum, çakıl, çamur) batarak ve kayarak hareket eder."));
             double w = Math.Max(2, env.Width), d = Math.Max(2, env.Depth);
             double cell = Math.Max(2, Math.Round(Math.Max(w, d) / 300 * 100));
             int layer = TerrainLayers.IndexOf("grass");

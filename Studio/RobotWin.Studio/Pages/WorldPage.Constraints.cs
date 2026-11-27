@@ -83,7 +83,7 @@ namespace RobotWin.Studio.Pages
             var group = new MenuItem
             {
                 Header = "Kısıtlar",
-                ToolTip = "Unity'deki kısıtlar: parça bir kaynağa göre yerleşir; kaynak taşınınca izler. Düzenlerken tutar, çalışırken parçayı fizik yürütür."
+                ToolTip = "Parça bir kaynağa göre yerleşir; kaynak taşınınca izler. Düzenlerken tutar, çalışırken parçayı fizik yürütür."
             };
             void Item(string key, string tip)
             {
@@ -101,10 +101,10 @@ namespace RobotWin.Studio.Pages
                 group.Items.Add(mi);
             }
 
-            Item(WorldConstraints.AimKey, "Unity'deki Aim / Look At: parçanın bir ekseni (kamerada, sensörde +X) hep hedefe bakar, yan yatmadan.");
-            Item(WorldConstraints.PositionKey, "Unity'deki Position Constraint: parça kaynağıyla aynı uzaklıkta kalır; seçilen eksenlerde izler.");
-            Item(WorldConstraints.RotationKey, "Unity'deki Rotation Constraint: parça kaynağıyla birlikte döner, aradaki açı korunur.");
-            Item(WorldConstraints.ParentKey, "Unity'deki Parent Constraint: parça kaynağına takılıymış gibi onunla taşınır ve döner, hiyerarşi değişmeden.");
+            Item(WorldConstraints.AimKey, "Parçanın bir ekseni (kamerada, sensörde +X) hep hedefe bakar, yan yatmadan.");
+            Item(WorldConstraints.PositionKey, "Parça kaynağıyla aynı uzaklıkta kalır; seçilen eksenlerde izler.");
+            Item(WorldConstraints.RotationKey, "Parça kaynağıyla birlikte döner, aradaki açı korunur.");
+            Item(WorldConstraints.ParentKey, "Parça kaynağına takılıymış gibi onunla taşınır ve döner, hiyerarşi değişmeden.");
             return group.Items.Count > 0 ? group : null;
         }
 
@@ -136,7 +136,7 @@ namespace RobotWin.Studio.Pages
 
                 if (source != null && key != WorldConstraints.AimKey)
                     Inspector.Children.Add(Action("Şimdiki yerini koru", () => Edit(title + ": yeri korundu", () => Activate(o, key, source)),
-                        "Unity'deki Activate: parçanın kaynağa göre şimdiki yeri ve açısı yeni fark olur."));
+                        "Parçanın kaynağa göre şimdiki yeri ve açısı yeni fark olur."));
                 Inspector.Children.Add(Note(source == null
                     ? "Kaynak seçin: parça ona göre yerleşir."
                     : "Kaynak taşınınca ya da döndürülünce parça (ve ona takılı olanlar) izler. Çalışırken parçaları yalnız fizik yürütür: birlikte gitmesi gereken bir parçayı takın ya da hizalayın."));

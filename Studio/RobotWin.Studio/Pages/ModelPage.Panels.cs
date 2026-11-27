@@ -344,9 +344,9 @@ namespace RobotWin.Studio.Pages
                 }
 
                 menu.IsOpen = true;
-            }, "SolidWorks'teki kaburga: parçanın bir düzlemindeki çizgiden parçaya doğru dolan, verilen kalınlıkta bir duvar (braket köşesine payanda); özellik geçmişine girer");
+            }, "Parçanın bir düzlemindeki çizgiden parçaya doğru dolan, verilen kalınlıkta bir duvar (braket köşesine payanda); özellik geçmişine girer");
             wrap.Children.Add(rib);
-            wrap.Children.Add(SmallButton("Delik sihirbazı…", OpenHoleWizard, "Vida ölçüsüne göre delik: geçiş, silindir başlı, havşa başlı, kılavuz, ısıyla gömme somun (SolidWorks'teki gibi); yüzeye tıklayarak yerleştirin"));
+            wrap.Children.Add(SmallButton("Delik sihirbazı…", OpenHoleWizard, "Vida ölçüsüne göre delik: geçiş, silindir başlı, havşa başlı, kılavuz, ısıyla gömme somun; yüzeye tıklayarak yerleştirin"));
             Props.Children.Add(wrap);
             Caption(objs.Count > 1
                 ? "Boolean hedefi en son seçilen (etkin) nesnedir; diğerleri araçtır ve işlemden sonra kaldırılır."
@@ -932,7 +932,7 @@ namespace RobotWin.Studio.Pages
             Line("Durum", s.Closed ? "kapalı (su geçirmez)" : "açık ağ (delik/çakışma var)", s.Closed ? Res("B.Success") : Res("B.Warning"));
             var report = objs.Count > 1 ? ModelMeasure.Total(_ed.Doc, objs) : s;
             string title = objs.Count > 1 ? Shell.Lang.T($"{objs.Count} nesne") : o.Name;
-            var more = new Button { Content = "Kütle özellikleri…", Style = (Style)FindResource("Btn.Ghost"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 0), ToolTip = "Ağırlık merkezi, atalet tensörü, asal eksenler ve momentler; panoya kopyalanır (SolidWorks'ün kütle özellikleri gibi)" };
+            var more = new Button { Content = "Kütle özellikleri…", Style = (Style)FindResource("Btn.Ghost"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 0), ToolTip = "Ağırlık merkezi, atalet tensörü, asal eksenler ve momentler; panoya kopyalanır" };
             more.Click += (_, _) => ShowMassProperties(report, title);
             Props.Children.Add(more);
             if (objs.Count > 1)
@@ -1148,9 +1148,9 @@ namespace RobotWin.Studio.Pages
             {
                 _vp.NextBevelSegments = 8;
                 _vp.StartModal(ModalKind.Bevel);
-            }, "SolidWorks'teki radyüs: seçili kenarlar iki yüze teğet bir yayla yuvarlanır; fareyle ya da mm yazarak yarıçapı, tekerlekle parça sayısını ayarlayın"));
+            }, "Seçili kenarlar iki yüze teğet bir yayla yuvarlanır; fareyle ya da mm yazarak yarıçapı, tekerlekle parça sayısını ayarlayın"));
             wrap.Children.Add(SmallButton("Kalınlık ver", () => _vp.StartModal(ModalKind.Solidify), "Yüzeye içe doğru et kalınlığı verir: açık yüzey kalın bir duvar, kapalı gövde içi boş kabuk olur"));
-            wrap.Children.Add(SmallButton("Kabuk", StartShell, "SolidWorks'teki kabuk: seçili yüzler açılır, gövdenin geri kalanı içe doğru duvar kalınlığı alır (kutu, kapak, muhafaza)"));
+            wrap.Children.Add(SmallButton("Kabuk", StartShell, "Seçili yüzler açılır, gövdenin geri kalanı içe doğru duvar kalınlığı alır (kutu, kapak, muhafaza)"));
             wrap.Children.Add(SmallButton("Alt böl", _ed.Subdivide));
             Button? spin = null;
             spin = SmallButton("Döndürerek çoğalt…", () =>   // [spin] Blender's Spin, about one of the object's axes
@@ -1164,7 +1164,7 @@ namespace RobotWin.Studio.Pages
                 }
 
                 menu.IsOpen = true;
-            }, "Blender'daki Spin: seçili yüzleri ya da kenarları bir eksen çevresinde adım adım döndürerek çoğaltır; tam turda kendine kapanır (torna gibi)");
+            }, "Seçili yüzleri ya da kenarları bir eksen çevresinde adım adım döndürerek çoğaltır; tam turda kendine kapanır (torna gibi)");
             wrap.Children.Add(spin);
             wrap.Children.Add(SmallButton("Yumuşat", _ed.SmoothSubdivide, "Catmull–Clark: tüm ağ"));
             wrap.Children.Add(SmallButton("Birleştir  M", _ed.MergeAtCenter));

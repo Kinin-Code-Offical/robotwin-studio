@@ -1884,7 +1884,7 @@ namespace RobotWin.Studio.Pages
 
             BoardPanel.Children.Add(Overline("Kart"));
             BoardPanel.Children.Add(Caption($"{board.LayerCount} bakır katman · {board.Stackup.Thickness:0.##} mm · dış bakır {BoardStackup.UmToOz(board.Rules.CopperThicknessUm):0.#} oz{(board.Stackup.AllowBlindBuriedVias ? " · kör/gömülü via" : string.Empty)}", 0));
-            BoardPanel.Children.Add(Buttons(Button("Kart ayarları…", OnBoardSetup), Button("İstatistikler…", OnStatistics, tip: "Parçalar, pedler, vialar, delik listesi, yol uzunlukları ve alan (KiCad'in kart istatistikleri gibi)")));
+            BoardPanel.Children.Add(Buttons(Button("Kart ayarları…", OnBoardSetup), Button("İstatistikler…", OnStatistics, tip: "Parçalar, pedler, vialar, delik listesi, yol uzunlukları ve alan")));
             bool polygon = board.Outline.Count >= 3;
             if (!polygon)
             {
@@ -2213,7 +2213,7 @@ namespace RobotWin.Studio.Pages
             LayersPanel.Children.Add(Overline("Görünüm"));
             LayersPanel.Children.Add(Switch("Serigrafi", Canvas.ShowSilk, v => { Canvas.ShowSilk = v; Canvas.InvalidateVisual(); }));
             LayersPanel.Children.Add(Switch("Ratsnest", Canvas.ShowRatsnest, v => { Canvas.ShowRatsnest = v; Canvas.InvalidateVisual(); }));
-            LayersPanel.Children.Add(Caption("Kapalıyken seçili parçaların ve sağ tık ▸ Yerel ratsnest'i göster ile işaretlenenlerin çizgileri görünür (KiCad'deki yerel ratsnest).", 4));   // [local-rats]
+            LayersPanel.Children.Add(Caption("Kapalıyken seçili parçaların ve sağ tık ▸ Yerel ratsnest'i göster ile işaretlenenlerin çizgileri görünür.", 4));   // [local-rats]
             LayersPanel.Children.Add(Switch("Kilitleri geçersiz kıl", Canvas.OverrideLocks, v =>   // [locks] KiCad's Override locks
             {
                 Canvas.OverrideLocks = v;

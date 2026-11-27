@@ -118,7 +118,7 @@ namespace RobotWin.Studio.Pages
             }, box => SliderInput.AttachLength(box.Slider, box.Box)));
             // [grid] Unity's linked step: off, Y and Z take their own
             var linked = new CheckBox { Content = Lang.T("X, Y ve Z aynı adım"), IsChecked = s.WorldGridLinked, Margin = new Thickness(104, 0, 0, 6),
-                ToolTip = Lang.T("Kapalıyken Y ve Z kendi taşıma adımlarını alır (Unity'deki bağlı adım)") };
+                ToolTip = Lang.T("Kapalıyken Y ve Z kendi taşıma adımlarını alır") };
             linked.Click += (_, _) =>
             {
                 s.WorldGridLinked = linked.IsChecked == true;
@@ -193,7 +193,7 @@ namespace RobotWin.Studio.Pages
             root.Children.Add(place);
             var originButtons = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
             var fromSelected = new Button { Content = Lang.T("Seçiliden al"), Style = (Style)FindResource("Btn"), Margin = new Thickness(0, 0, 6, 0),
-                ToolTip = Lang.T("Izgaranın yerini ve dönüşünü seçili parçanınkine taşır (Unity'deki etkin nesneden kopyala)"), IsEnabled = World?.Find(Scene.Selected) != null };
+                ToolTip = Lang.T("Izgaranın yerini ve dönüşünü seçili parçanınkine taşır"), IsEnabled = World?.Find(Scene.Selected) != null };
             fromSelected.Click += (_, _) =>
             {
                 if (World?.Find(Scene.Selected) is not { } sel) return;

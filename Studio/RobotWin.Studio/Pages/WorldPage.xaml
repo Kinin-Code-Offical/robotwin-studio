@@ -53,7 +53,7 @@
                         <ToggleButton x:Name="ToolCable" Style="{StaticResource Toggle.Tool}" Click="OnTool" Tag="Cable" Margin="2,0"
                                       ToolTip="Bağla: kablo (K), eklem (B), hizala (H)"/>
                         <Button x:Name="EvaluateButton" Style="{StaticResource Btn.Icon}" Click="OnEvaluate" Margin="2,0"
-                                ToolTip="Değerlendir: çakışma, boşluk, delik hizası, patlatılmış görünüm (SolidWorks'teki gibi)"/>
+                                ToolTip="Değerlendir: çakışma, boşluk, delik hizası, patlatılmış görünüm"/>
                         <Button x:Name="EditButton" Style="{StaticResource Btn.Icon}" Click="OnEditAction" Margin="2,0"
                                 ToolTip="Düzenle: döndürme adımı kadar çevir (Ctrl+E), çoğalt (Ctrl+D), sil (Del)"/>
                         <!-- [overlays] the scene's own tools: the Araçlar and Izgara overlays take them (Pages/WorldPage.Overlays.cs) -->
@@ -149,7 +149,7 @@
                         <!-- [sdk] Pages/WorldPage.Sdk.cs -->
                         <RadioButton x:Name="TabSdk" Style="{StaticResource Chip}" Content="Betikler" GroupName="pal" Margin="4,0,0,4" Click="OnPaletteTab" ToolTip="Betikler ve eklentiler: kendi fizik kodunuz, ifadeler, kuvvet alanları"/>
                         <!-- [terrain] terrain / world editor (Pages/WorldPage.Terrain.cs) -->
-                        <RadioButton x:Name="TabTerrain" Style="{StaticResource Chip}" Content="Arazi" GroupName="pal" Margin="4,0,0,4" Click="OnPaletteTab" ToolTip="Arazi düzenleyici: şekillendir, boya, yol, nesneler (Unity Terrain gibi)"/>
+                        <RadioButton x:Name="TabTerrain" Style="{StaticResource Chip}" Content="Arazi" GroupName="pal" Margin="4,0,0,4" Click="OnPaletteTab" ToolTip="Arazi düzenleyici: şekillendir, boya, yol, nesneler"/>
                     </WrapPanel>
                     <Grid x:Name="SearchRow" DockPanel.Dock="Top" Margin="0,0,6,8" Visibility="Collapsed">
                         <TextBox x:Name="SearchBox" Tag="Parça ara (servo, motor, pil, sensör…)" Padding="28,4,8,4" TextChanged="OnSearch"/>

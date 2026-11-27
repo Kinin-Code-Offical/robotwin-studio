@@ -90,7 +90,7 @@ Several robots or a custom test area go in separate worlds on the [World](07-wor
 
 ## Interference detection
 
-The **Interference detection** button beside **Align** on the toolbar (in the command palette: "detect interference") lists, as SolidWorks does, the pairs of parts taking up the same space with their common volume (mm³). Parts are compared by the outer shapes of their 3D models where they stand. Options:
+The **Interference detection** button beside **Align** on the toolbar (in the command palette: "detect interference") lists, the pairs of parts taking up the same space with their common volume (mm³). Parts are compared by the outer shapes of their 3D models where they stand. Options:
 
 - **Count touching faces as interference:** parts that only touch are listed too.
 - **Check parts joined by a joint too:** parts overlapping on purpose, as a servo horn and its servo or a wheel and its motor, count too (skipped by default).
@@ -100,9 +100,9 @@ Picking a row selects its first part, and the status bar gives the overlap's vol
 
 ## Clearance verification
 
-The **Clearance verification** button (in the command palette, "verify clearance") lists, as in SolidWorks, the pairs of parts closer to each other than the **Minimum clearance** (mm), with their smallest distance: a cable's bend allowance, a fan's breathing room, a tolerance. The distance is measured exactly between the parts' outer shapes (GJK). Picking a row draws a line across the gap between its two ends in the scene. Interfering pairs are listed as "interfering" (this can be turned off); the joined-parts and selected-part options work as in interference detection.
+The **Clearance verification** button (in the command palette, "verify clearance") lists, the pairs of parts closer to each other than the **Minimum clearance** (mm), with their smallest distance: a cable's bend allowance, a fan's breathing room, a tolerance. The distance is measured exactly between the parts' outer shapes (GJK). Picking a row draws a line across the gap between its two ends in the scene. Interfering pairs are listed as "interfering" (this can be turned off); the joined-parts and selected-part options work as in interference detection.
 
-The **Hole alignment** button (in the command palette, "hole alignment") lists, as in SolidWorks, holes in two parts that run on into each other but whose axes are slightly off: where a bolt would not go through. Holes are found from the parts' own shapes (round walls facing inward; a pin or a shaft facing outward is not a hole). Holes whose axes are further apart than the **Maximum deviation** (mm) count as separate holes, and holes exactly in line are not listed; holes with a washer's gap between them (up to 1 mm) still count as running on into each other. Picking a row draws a line between the two axes where the holes meet. The row also gives both holes' diameters.
+The **Hole alignment** button (in the command palette, "hole alignment") lists, holes in two parts that run on into each other but whose axes are slightly off: where a bolt would not go through. Holes are found from the parts' own shapes (round walls facing inward; a pin or a shaft facing outward is not a hole). Holes whose axes are further apart than the **Maximum deviation** (mm) count as separate holes, and holes exactly in line are not listed; holes with a washer's gap between them (up to 1 mm) still count as running on into each other. Picking a row draws a line between the two axes where the holes meet. The row also gives both holes' diameters.
 
 ## Exploded view
 

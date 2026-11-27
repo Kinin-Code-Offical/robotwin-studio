@@ -133,10 +133,10 @@ namespace RobotWin.Studio.Pages
             if (body && !WorldPhysics.IsWing(o) && !WorldComponents.Has(o, "parachute"))
                 Item("Kurtarma paraşütü", "Tepe noktasında (ya da belli bir zamanda) atılan paraşüt; 45 cm kanopiyle başlar.", () => o.Parameters["parachute"] = "0.45");
             if (body && !WorldComponents.Has(o, WorldPhysics.TriggerKey) && !WorldComponents.Has(o, "shell") && !WorldComponents.Has(o, "vessel"))   // [trigger]
-                Item("Tetik bölgesi", "Unity'deki Is Trigger: parça hiçbir şeyin çarpmadığı bir bölgeye döner; içine giren ve çıkan parçaları olaylara yazar, çalışırken içindekileri gösterir.",
+                Item("Tetik bölgesi", "Parça hiçbir şeyin çarpmadığı bir bölgeye döner; içine giren ve çıkan parçaları olaylara yazar, çalışırken içindekileri gösterir.",
                     () => o.Parameters[WorldPhysics.TriggerKey] = "1");
             if (o.Kind != WorldObjectKind.Empty && !o.IsStatic && !WorldComponents.Has(o, WorldPhysics.ConstantForceKey))   // [cforce]
-                Item("Sabit kuvvet", "Unity'deki Constant Force: her adımda etkiyen bir kuvvet (N) ve tork (N·m), dünya ya da parçanın kendi eksenlerinde; itici, rüzgâr itişi, sürekli dönen bir mil.",
+                Item("Sabit kuvvet", "Her adımda etkiyen bir kuvvet (N) ve tork (N·m), dünya ya da parçanın kendi eksenlerinde; itici, rüzgâr itişi, sürekli dönen bir mil.",
                     () => o.Parameters[WorldPhysics.ConstantForceKey] = "0,0,0");
             if (world.Sdk.AeroOf(o.Id) == null)
                 Item("Hava (özel ayar)", "Sürüklemeyi kapatın, Cd ve referans alanı elle verin ya da kaldırma kuvveti (balon, köpük) ekleyin. Ayarlanmadıkça sürükleme gövdenin şeklinden hesaplanır.",

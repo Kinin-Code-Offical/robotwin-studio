@@ -32,7 +32,7 @@ namespace RobotWin.Studio.Pages
             {
                 TwistFields(joint);
                 SwingFields(joint, true, true);
-                Inspector.Children.Add(Note("Unity'deki Character Joint: bağlantı noktası yerinde kalır; parça eksen çevresinde burulma sınırları arasında döner, eksenden de iki salınım açısının çizdiği elips koni içinde sapar (omuz, kalça, bir kuklanın uzuvları)."));
+                Inspector.Children.Add(Note("Bağlantı noktası yerinde kalır; parça eksen çevresinde burulma sınırları arasında döner, eksenden de iki salınım açısının çizdiği elips koni içinde sapar (omuz, kalça, bir kuklanın uzuvları)."));
                 return;
             }
 
@@ -46,12 +46,12 @@ namespace RobotWin.Studio.Pages
             Cell(grid, new TextBlock { Text = "Açısal", Foreground = (Brush)FindResource("B.TextSecondary"), Margin = new Thickness(2, 0, 2, 3) }, 0, 2);
             string[] axes = { "X (eksen)", "Y", "Z" };
             for (int r = 0; r < 3; r++) Cell(grid, new TextBlock { Text = axes[r], Foreground = (Brush)FindResource("B.TextSecondary"), VerticalAlignment = VerticalAlignment.Center }, r + 1, 0);
-            Cell(grid, MotionBox(joint.MotionX, m => joint.MotionX = m, "X ekseni boyunca kayma (Unity: X Motion)"), 1, 1);
-            Cell(grid, MotionBox(joint.MotionY, m => joint.MotionY = m, "Y ekseni boyunca kayma (Unity: Y Motion)"), 2, 1);
-            Cell(grid, MotionBox(joint.MotionZ, m => joint.MotionZ = m, "Z ekseni boyunca kayma (Unity: Z Motion)"), 3, 1);
-            Cell(grid, MotionBox(joint.AngularMotionX, m => joint.AngularMotionX = m, "Eksen çevresinde burulma (Unity: Angular X Motion)"), 1, 2);
-            Cell(grid, MotionBox(joint.AngularMotionY, m => joint.AngularMotionY = m, "Y çevresinde salınım (Unity: Angular Y Motion)"), 2, 2);
-            Cell(grid, MotionBox(joint.AngularMotionZ, m => joint.AngularMotionZ = m, "Z çevresinde salınım (Unity: Angular Z Motion)"), 3, 2);
+            Cell(grid, MotionBox(joint.MotionX, m => joint.MotionX = m, "X ekseni boyunca kayma"), 1, 1);
+            Cell(grid, MotionBox(joint.MotionY, m => joint.MotionY = m, "Y ekseni boyunca kayma"), 2, 1);
+            Cell(grid, MotionBox(joint.MotionZ, m => joint.MotionZ = m, "Z ekseni boyunca kayma"), 3, 1);
+            Cell(grid, MotionBox(joint.AngularMotionX, m => joint.AngularMotionX = m, "Eksen çevresinde burulma"), 1, 2);
+            Cell(grid, MotionBox(joint.AngularMotionY, m => joint.AngularMotionY = m, "Y çevresinde salınım"), 2, 2);
+            Cell(grid, MotionBox(joint.AngularMotionZ, m => joint.AngularMotionZ = m, "Z çevresinde salınım"), 3, 2);
             Inspector.Children.Add(grid);
 
             if (j.MotionX == AxisMotion.Limited || j.MotionY == AxisMotion.Limited || j.MotionZ == AxisMotion.Limited)
@@ -104,7 +104,7 @@ namespace RobotWin.Studio.Pages
                 Style = (Style)FindResource("Btn.Ghost"),
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Margin = new Thickness(0, 0, 0, 4),
-                ToolTip = "Unity'deki X / Y / Z Drive ve Slerp Drive: parçayı hedef konumuna ve açısına çeken yay ile sönüm"
+                ToolTip = "Parçayı hedef konumuna ve açısına çeken yay ile sönüm"
             };
             head.Click += (_, _) =>
             {

@@ -1,13 +1,145 @@
 # RobotWin Studio
 
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
-[![Windows](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6.svg)](#indirme-ve-kurulum)
+[![Windows](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6.svg)](#download-and-install)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Kinin-Code-Offical/robotwin-studio?label=release)](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest)
 
-**Türkçe** · [English](#english) · **Belgeler / Docs: [kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)**
+**English** · [Türkçe](#türkçe) · **Docs: [kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)**
 
-![RobotWin Studio açılış ekranı](docs/images/splash.png)
+![RobotWin Studio splash screen](docs/images/splash.png)
+
+**RobotWin Studio** is a Windows desktop app for building robot and electronics projects end to end: draw the circuit, lay out the PCB, write the firmware, model the chassis, then drop everything into an open world with real physics, wire it up and run it all together. Arduino (ATmega328P) firmware runs as real compiled HEX on an emulated MCU, ESP32 sketches run in co-simulation with the circuit, and motors, servos, sensors, cables and parts genuinely affect each other. The interface starts in English; Turkish and other language packs are chosen in Settings → General → Language.
+
+Documentation site: **[kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)** — the step-by-step user guide (complete in Turkish and English, with screenshots), the physics and maths reference and the developer docs.
+
+> **New in 1.7.0 (a big release):** an English interface with language packs and 16 themes; our own GPU renderer; a hardware-compatible ESP32 mode running real firmware on our own Xtensa core; gears, belts, bearings, lead screws, steppers and their drivers; a PLC with Structured Text and ladder diagrams, an HMI, Modbus TCP/RTU, OPC UA and pneumatics; URDF/xacro and ROS 2; AC analysis, SPICE models, FMU models and opening KiCad schematics; DFM/DFT, differential pairs and a costed BOM on the PCB; dimensioned sketches, STEP/IGES. Details: [11. What's new](docs/en/guide/11-whats-new.md).
+>
+> **New in 1.6.1:** tabs scroll, pin and list; a tab shows its file's own name.
+>
+> **New in 1.6.0:** breakpoints, steps and variables in Arduino code. When the board stops on a line, the circuit and the world stop at that instant too.
+>
+> **New in 1.5.1:** the Arduino compiler comes with the installer (Uno / Nano code builds right away), and the **İlk robotun** (your first robot) guide gets your first robot running in 5–10 minutes.
+>
+> **New in 1.5.0:** The rail in three groups (electronics, mechanics, test). The Parça (part) page holds several parts per file, and *send to assembly* makes each one a body of its own. The Montaj (assembly) is the robot itself: projects come in with or without their PCB, several projects share one Montaj, and it is saved with its project and follows its circuit, PCB and code. Robot examples are built as real vehicles. Arduino libraries on the ESP32, PCBs of up to 32 layers. **1.4.2:** the code page is a code editor. Details: [11. What's new](docs/en/guide/11-whats-new.md), [CHANGELOG.md](CHANGELOG.md).
+
+## What's inside
+
+The left-hand **"design-to-real line"** (*Tasarımdan gerçeğe hattı*) shows a project's stages in three groups: **ELEKTRONİK** (electronics: circuit, PCB, code), **MEKANİK** (mechanics: part, assembly), **TEST** (world).
+
+| Stage (UI name) | Shortcut | What you do |
+| --- | --- | --- |
+| Circuit (**Devre**) | Ctrl+1 | Schematic capture with 256 real parts, live analog simulation, 4-channel oscilloscope, multimeter, bench supply, tolerances, Monte Carlo, fault diagnosis, ERC; BOM/KiCad/SPICE/PNG/SVG export. |
+| **PCB** | Ctrl+2 | Boards of 2 to 32 copper layers, copper zones, interactive router that walks around obstacles, auto-placement and auto-routing, DRC, Gerber RS-274X X2 + Excellon + BOM + CPL, KiCad 8 project export, footprint editor, 3D board view. |
+| Code (**Kod**) | Ctrl+3 | Write, build (F7) and run (F5) firmware: Arduino Uno/Nano via `arduino-cli` on a cycle-counted ATmega328P emulator (timers/PWM, USART, ADC, EEPROM, watchdog, TWI with SSD1306/LCD/MPU-6050 models); ESP32 sketches compiled natively with MSVC against an Arduino-level HAL (GPIO, ADC, LEDC, DAC, timers, FreeRTOS, Wire, Servo, simulated Wi-Fi, BLE subset, Bluepad32). Source-level debugging of Uno/Nano code (breakpoints, steps, variables from the build's DWARF) on one clock with the circuit and the world. |
+| Part (**Parça**) | Ctrl+4 | 3D modeller, several parts per file: primitives, edit mode (vertex/edge/face, extrude, inset, knife, loop cut, bevel, solidify, subdivide, …), slicing into two closed pieces, CSG union/difference/intersection, mirror/array, parametric robot parts, materials and mass, STL/OBJ/PLY import/export; *send to assembly* makes each part a body of its own. |
+| Assembly (**Montaj**) | Ctrl+5 | The robot itself: the boards and parts of one or more projects (with or without their PCB) and the bodies modelled on the Parça page, joined. Saved with the project and brought up to date with its circuit, PCB and code when opened; rover projects are built on their chassis with the wheels on the motor shafts. Record and run fault experiments. |
+| World (**Dünya**) | Ctrl+6 | Place your boards, catalogue parts, mechanical bodies and imported meshes in a physics world; wire them with real cables (AWG, standard jumper lengths, resistance and voltage drop, rope physics that pulls plugs out when too short, burn-out), join them (fixed, servo horn/motor shaft, hinge, slider) and run everything in lock-step: circuit, firmware, radio and rigid-body physics. Pressure vessels, water rockets and solid motors share one gas physics: Noble–Abel real gas for hot products, isentropic nozzle flow with Schmucker separation, ignition through the real chain (bridgewire, pyrogen, grain surface soak by convection and radiation, flame spread from the head end; a weak igniter fails), erosive burning, wall and throat heating (Dittus–Boelter, Bartz) shown in the thermal camera, launch switches on a countdown and parachutes at apogee — the **solid rocket** template climbs to ~1 km and comes down under its canopy. Ultrasonic sensors ray-cast the scene; BLE/Wi-Fi/Bluetooth gamepads and IR remotes are simulated; a PC + USB cable powers a board and opens its serial port. **Record and render** (● Record, Ctrl+R; Simulation › Render, Ctrl+F5): the recorded stretch is recomputed off-screen at full accuracy — every pose, force and signal, FEM stress of every part at video frame rate, 3D lattice-Boltzmann flow around the whole assembly and heating — and replayed like a video in the same 3D scene with a timeline, slow motion, per-part stress colours, force arrows, a flow slice and graphs that jump to the clicked second. |
+
+Plus **Home** (Ctrl+0), **Library** (Ctrl+7: browse parts, make custom `.rwpart` parts, import KiCad symbols/footprints) and **Settings** (Ctrl+,). Window features: document tabs, split view (Ctrl+\\), detach a page into its own window, focus mode, full screen (F11), command palette (Ctrl+K), autosave backups.
+
+Screenshots are shown in the [Turkish section below](#ekran-görüntüleri).
+
+## Validation: how far from theory?
+
+Every solver is checked against problems with a known answer: analytic solutions, published benchmarks and datasheet values. Each row is an automated test that runs on every build and fails it when the deviation exceeds the tolerance.
+
+| Area | Measurement | Theory / reference | Simulation | Deviation | Tolerance |
+| --- | --- | --- | --- | --- | --- |
+| Mechanics | Hinged pendulum period | 0.89769 s | 0.89767 s | −0.002 % | ±0.5 % |
+| Mechanics | Terminal velocity of a sphere in air | 8.5568 m/s | 8.5567 m/s | −0.001 % | ±0.5 % |
+| FEM | Cantilever tip deflection (Timoshenko) | 0.20156 mm | 0.19993 mm | −0.81 % | −3 / +2 % |
+| FEM | Plate with a hole, Kt | 3.133 | 2.946 | −6.0 % | ±8 % |
+| Heat | Energy balance of a heated plate | 18.797 K | 18.798 K | +0.005 % | ±2 % |
+| Aerodynamics | Wing C_L (AR 6, 4°), lifting line | 0.318 | 0.319 | +0.3 % | ±7 % |
+| Flow (CFD) | Cylinder Cd, Schäfer–Turek 2D-1 (Re 20) | 5.5795 | 5.624 | +0.8 % | ±2 % |
+| Flow (CFD) | Cylinder Strouhal, Schäfer–Turek 2D-2 (Re 100) | 0.300 | 0.2999 | −0.03 % | ±5 % |
+| Flow (CFD) | Sphere Cd (Re 100, Schiller–Naumann) | 1.092 | 1.176 | +7.7 % | −8 / +10 % |
+| Flow (CFD) | Cube Cd, Re 10⁵ (real Re, LES) | ≈1.05 | 0.883 | −15.9 % | −22 / +15 % |
+| Liquids | Force of 6 cm of still water on a side wall | 1.0576 N | 1.0795 N | +2.1 % | ±5 % |
+| Liquids | Dam-break front (Martin & Moyce 1952), T = 2.98 | 3.67 | 3.82 | +4.1 % | ±12 % |
+| Gas | Air tank blow-down, 0.5 s (adiabatic) | 4.671 bar | 4.709 bar | +0.8 % | −2 / +3 % |
+| Electrical | Motor no-load speed (datasheet) | ≈209 rpm | 210 rpm | +0.5 % | −12 / +2 % |
+
+All 54 measurements in eight areas, grid convergence and a before/after comparison: **[12. Validation](docs/en/guide/12-validation.md)**.
+
+## Download and install
+
+1. Download the one installer, `RobotWinStudio-Setup-<version>.exe` (about half a megabyte), from [Releases](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest). It downloads the components you choose from the same release and checks each with SHA-256. Each release also has: the components themselves (`RobotWinStudio-<version>-app.rwpack`, `-dotnet.rwpack`, `-arduino.rwpack`, `-occt.rwpack`; put them next to the installer to install offline), `RobotWinStudio-<version>-win-x64-portable.zip` (no installation: unzip and run), `RobotWin-Headless-<version>-win-x64.zip` and `RobotWin-Headless-<version>-linux-x64.tar.gz` (the windowless simulator and automation API; the graphical app is Windows-only), the source as `RobotWinStudio-<version>-source.zip` / `.tar.gz`, and `SHA256SUMS.txt`.
+2. Run it. On the first page choose the **language** (the wizard's and the app's) and the **kind of installation**: **Full** (recommended: the app, its own .NET 10, the Arduino compiler and STEP / IGES support; everything works offline right away), **Lite** (the app alone on the PC's .NET 10 Desktop Runtime, adding its own copy only when there is none) or **Custom** (choose the components).
+3. Then choose **how**: for this user (default, `%LOCALAPPDATA%\Programs\RobotWin Studio`), for all users (`Program Files`, administrator) or **portable** (a folder only: no shortcuts, registry or file types). Components can be added or removed later with **Settings → Updates → Change components…** or Windows *Apps → Modify*. Command line: `/S` (silent; updates an existing installation with its kind and components), `/PASSIVE`, `/TYPE=full|lite`, `/COMPONENTS=app,arduino,occt`, `/LANG=en|tr`, `/ALLUSERS`, `/PORTABLE`, `/D=<dir>`, `/SOURCE=<folder or URL>`, `/NODESKTOP`, `/NOTYPES`, `/LAUNCH`. Uninstall from Windows *Apps* or `Uninstall.exe`.
+
+Optional compilers for your own firmware (bundled examples ship precompiled): `winget install ArduinoSA.CLI` then `arduino-cli core install arduino:avr` for AVR; Visual Studio 2022 / Build Tools with the **Desktop development with C++** workload for ESP32. Paths can be overridden in **Settings → Compilers** (*Ayarlar → Derleyiciler*).
+
+## Quick start: your first world in 5 steps
+
+1. **New world** (*Yeni dünya*, Ctrl+Shift+N): an empty 4 × 3 m workshop opens.
+2. In the **Parts** tab (*Parçalar*) add *4×AA Pil 6 V* and *TT Redüktörlü Motor 1:48*; select the motor and switch on **Physics → Fixed** (*Fizik → Sabit*).
+3. From the **Mechanical** tab (*Mekanik*) add a **Wheel** (*Tekerlek*); with the wheel selected, pick the **Join** tool (B), click the motor and choose **"Motor miline sabitle (birlikte döner)"** (fix to motor shaft).
+4. With the **Cable** tool (K) connect battery `+` to one motor pin and `−` to the other.
+5. **Run the world** (F5): the motor spins the wheel, you hear it, and the *Kablolar ve ölçümler* tab shows the cable current. Shift+F5 stops and resets.
+
+Or simply open a template from the Home page (e.g. *Arduino ile iki eksenli servo kol*) and press F5.
+
+## Keyboard shortcuts
+
+Ctrl+N new circuit/board · Ctrl+Shift+N new world · Ctrl+O open · Ctrl+S save · Ctrl+Shift+S save as · Ctrl+Z/Ctrl+Y undo/redo · Ctrl+K command palette · Ctrl+0…7 pages · Ctrl+, settings · Ctrl+B expand rail · Ctrl+\\ split view · Ctrl+Tab/Ctrl+Shift+Tab/Ctrl+W tabs · F5/Shift+F5 run-pause/stop · F7 build · F10 menu bar · F11 full screen. Page-specific keys: [docs/kullanim/09-kisayollar.md](docs/kullanim/09-kisayollar.md).
+
+## File types
+
+All are versioned ZIP containers with a `manifest.json`: `.rwproj` (project/board: schematic, PCB, assembly, firmware sources and builds), `.rwworld` (world, with embedded boards), `.rwpart` (custom part), `.rwlib` (part collection), `.rwsim` (simulation recording), `.rwmodel` (modeller document), `.rwfp` (footprint).
+
+## Build from source
+
+Requirements: Windows 10/11 x64, .NET 10 SDK (pinned by `global.json`), Git.
+
+```powershell
+git clone https://github.com/Kinin-Code-Offical/robotwin-studio.git
+cd robotwin-studio
+dotnet build RobotWinStudio.sln -c Debug
+builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe
+```
+
+Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.0` → `builds\installer\release\RobotWinStudio-Setup-1.7.0.exe` and the components it downloads (`*.rwpack`), proven by installing them all into a portable folder. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (the installer and its components, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app starts on its own .NET and that the headless simulators run, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
+
+## Tests
+
+`dotnet test RobotWinStudio.sln` runs the xUnit suite in `CoreSim/tests`. `RobotWinStudio.exe --selftest --selftest-out selftest.txt` builds, simulates, auto-places, auto-routes and DRC-checks every example project and must end with `SELFTEST PASS`. `--snapshot` renders any page to PNG for visual checks. See [docs/TESTING.md](docs/TESTING.md).
+
+**How far to trust it.**
+- **Checked against analytic results:** cantilever deflection and stress, the plate-with-hole stress concentration (Kt ≈ 3), torsion, inertia relief, Poiseuille flow, cylinder shedding (Strouhal), sphere drag (Schiller–Naumann), heat conduction, the BMP280 datasheet example, and the motor's datasheet no-load current and speed against the physics shaft's turns.
+- **For your own part:** the mesh and the supports matter more than any table. Two tools address this. The *mesh convergence check* re-solves the worst instant on a finer mesh and reports the change. The *.inp export* writes the same case (mesh, material, supports, loads at that instant) for CalculiX, ANSYS or Abaqus, so you can compare against an independent solver.
+- **Part spread:** datasheet values are typical. Clone servos and motors differ by 30–40 % in current. Readings show this uncertainty, and the render's uncertainty band draws the range real parts may fall in. Bench-check before sizing a supply.
+- **ESP32 behaves like the real chip:** SPI talks to the device that is really wired, and wiring or mode mistakes give wrong data as on the bench. The ESP-IDF task watchdog fires and reboots the chip.
+
+## Command line
+
+`RobotWinStudio.exe <file>` opens a file; `--selftest [--selftest-out f]`; `--snapshot out.png --page home|schematic|pcb|code|model|assembly|world|library|settings [--example id] [--simulate s] [--fault name] [--size WxH] [--wait s] [--nav-expanded]`; `--gallery <dir>`; `--export-logo <dir>`; `--register-file-types` / `--unregister-file-types`.
+
+## Project layout
+
+`Studio/RobotWin.Studio` (WPF app) → `CoreSim/src/RobotTwin.CoreSim` (simulation core) with `CoreSim/native/esp32hal` (ESP32 HAL sources) and `CoreSim/tests` (xUnit). `Installer/` + `tools/build-installer.ps1` produce the setup. `FirmwareEngine/` and `NativeEngine/` are legacy C++ engines from the 1.x design and are not used by the app. See [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Roadmap (in progress)
+
+Next (the full list: [docs/gelistirici/YOL_HARITASI.md](docs/gelistirici/YOL_HARITASI.md), in Turkish):
+
+- Embedded: BLE and ESP-NOW in the ESP32's hardware mode, TLS, mDNS; Xtensa FPU divide/sqrt and MAC16; RP2040 and STM32.
+- Industrial: OPC UA security (Basic256Sha256, user and password); FMI Model Exchange and FMI 3.0, the circuit exported as an FMU.
+- Robotics: an end-to-end run with MoveIt (a real ROS 2 install, which needs a download approval).
+- Performance: drawing off the UI thread, simplified meshes for distant heavy models, the liquid solver's cost.
+- Physics (P2): hydraulics, flexible structures and fatigue, motor and bearing thermal models, FEM/CFD mesh convergence.
+
+## License
+
+MIT. See [LICENSE](LICENSE). Contributions: [CONTRIBUTING.md](CONTRIBUTING.md) · Security: [SECURITY.md](SECURITY.md) · Accessibility: [ACCESSIBILITY.md](docs/ACCESSIBILITY.md) · Changes: [CHANGELOG.md](CHANGELOG.md).
+
+---
+
+# Türkçe
+
+[English](#robotwin-studio) · **Türkçe**
+
 
 **RobotWin Studio**, robot ve elektronik projelerini baştan sona tek bir Windows uygulamasında yapmanızı sağlar: devreyi çizin, PCB'sini çıkarın, kodunu yazın, şasesini modelleyin, sonra her şeyi gerçek fizikli bir açık dünyaya koyup kablolayın ve birlikte çalıştırın. Arduino (ATmega328P) kodu gerçek derlenmiş HEX olarak emüle edilir, ESP32 kodu devreyle eş zamanlı (co-simulation) çalışır; motorlar, servolar, sensörler, kablolar ve parçalar birbirini gerçekten etkiler.
 
@@ -52,7 +184,7 @@ Uygulamanın sol tarafındaki **"Tasarımdan gerçeğe hattı"** bir projenin a�
 | **Devre** | Ctrl+1 | Şema çizin, 256 gerçek parçadan seçin, analog çözücüyle canlı simüle edin; osiloskop, multimetre, Monte Carlo, arıza tespiti. |
 | **PCB** | Ctrl+2 | 2'den 32'ye kadar katmanlı kart, bakır alanlar, etkileşimli ve otomatik yol çizimi, DRC, Gerber/Excellon ve KiCad 8 dışa aktarımı. |
 | **Kod** | Ctrl+3 | Arduino Uno/Nano (arduino-cli ile) ve ESP32 (MSVC ile) kodu yazın, derleyin, emüle karta yükleyip çalıştırın. Uno / Nano kodunda kesme noktası, adım ve değişkenler: kart durunca devre ve dünya da durur. |
-| **Parça** | Ctrl+4 | Blender benzeri 3D modelleyici, bir dosyada birden çok parça: temel şekiller, nokta/kenar/yüz düzenleme, ekstrüzyon, bıçak ve dilimleme, halka kesim, pah, kalınlık, CSG (birleşim/fark/kesişim), hazır robot parçaları, STL/OBJ/PLY. **Montaja gönder** her parçayı ayrı gövde yapar. |
+| **Parça** | Ctrl+4 | 3D modelleyici, bir dosyada birden çok parça: temel şekiller, nokta/kenar/yüz düzenleme, ekstrüzyon, bıçak ve dilimleme, halka kesim, pah, kalınlık, CSG (birleşim/fark/kesişim), hazır robot parçaları, STL/OBJ/PLY. **Montaja gönder** her parçayı ayrı gövde yapar. |
 | **Montaj** | Ctrl+5 | Robotun kendisi: bir ya da birden çok projenin kartı ve parçaları (PCB'li ya da PCB'siz) ile Parça'da modellenen gövdeler bir arada, bağlantılarıyla. Projeyle birlikte kaydedilir, açılınca devre, PCB ve kod değişikliklerini alır; araç projeleri şasesi ve tekerlekleriyle kurulur. |
 | **Dünya** | Ctrl+6 | Kartları, parçaları, gövdeleri ve modelleri gerçek fizikli bir dünyaya koyun; kablolayın, mekanik olarak bağlayın, çalıştırın. |
 
@@ -65,7 +197,7 @@ Ayrıca **Başlangıç** (Ctrl+0), **Kütüphane** (Ctrl+7) ve **Ayarlar** (Ctrl
 | ![Devre editörü ve canlı simülasyon](docs/images/schematic.png) | ![PCB editörü](docs/images/pcb.png) |
 | **Devre:** şema editörü ve canlı simülasyon | **PCB:** katmanlar, yollar, DRC |
 | ![3D modelleyici](docs/images/modeler.png) | ![Dünya: iki eksenli servo kol](docs/images/world-servo-arm.png) |
-| **Modelle:** Blender benzeri 3D modelleyici | **Dünya:** Arduino ile iki eksenli servo kol |
+| **Modelle:** 3D modelleyici | **Dünya:** Arduino ile iki eksenli servo kol |
 | ![Modelle: dilimleme, pah ve kalınlık](docs/images/modeler-cut.png) | ![Modelle: halka kesimler](docs/images/modeler-cut-edit.png) |
 | **Modelle:** dilimlenip döndürülmüş boru, pahlı blok, kalınlık verilmiş tepsi | **Modelle:** düzenleme modunda halka kesimler ve yeni araçlar |
 | ![Dünya: kumandalı araba](docs/images/world-ps5-car.png) | ![Dünya: ultrasonik sensör](docs/images/world-sonar.png) |
@@ -413,130 +545,3 @@ Sıradaki işler (ayrıntılı liste: [docs/gelistirici/YOL_HARITASI.md](docs/ge
 MIT. Ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
 
 ---
-
-## English
-
-**RobotWin Studio** is a Windows desktop app for building robot and electronics projects end to end: draw the circuit, lay out the PCB, write the firmware, model the chassis, then drop everything into an open world with real physics, wire it up and run it all together. Arduino (ATmega328P) firmware runs as real compiled HEX on an emulated MCU, ESP32 sketches run in co-simulation with the circuit, and motors, servos, sensors, cables and parts genuinely affect each other. The interface starts in English; Turkish and other language packs are chosen in Settings → General → Language.
-
-Documentation site: **[kinin-code-offical.github.io/robotwin-studio](https://kinin-code-offical.github.io/robotwin-studio/)** — the step-by-step user guide (complete in Turkish and English, with screenshots), the physics and maths reference and the developer docs.
-
-> **New in 1.7.0 (a big release):** an English interface with language packs and 16 themes; our own GPU renderer; a hardware-compatible ESP32 mode running real firmware on our own Xtensa core; gears, belts, bearings, lead screws, steppers and their drivers; a PLC with Structured Text and ladder diagrams, an HMI, Modbus TCP/RTU, OPC UA and pneumatics; URDF/xacro and ROS 2; AC analysis, SPICE models, FMU models and opening KiCad schematics; DFM/DFT, differential pairs and a costed BOM on the PCB; dimensioned sketches, STEP/IGES. Details: [11. What's new](docs/en/guide/11-whats-new.md).
->
-> **New in 1.6.1:** tabs scroll, pin and list; a tab shows its file's own name.
->
-> **New in 1.6.0:** breakpoints, steps and variables in Arduino code. When the board stops on a line, the circuit and the world stop at that instant too.
->
-> **New in 1.5.1:** the Arduino compiler comes with the installer (Uno / Nano code builds right away), and the **İlk robotun** (your first robot) guide gets your first robot running in 5–10 minutes.
->
-> **New in 1.5.0:** The rail in three groups (electronics, mechanics, test). The Parça (part) page holds several parts per file, and *send to assembly* makes each one a body of its own. The Montaj (assembly) is the robot itself: projects come in with or without their PCB, several projects share one Montaj, and it is saved with its project and follows its circuit, PCB and code. Robot examples are built as real vehicles. Arduino libraries on the ESP32, PCBs of up to 32 layers. **1.4.2:** the code page is a code editor. Details: [11. What's new](docs/en/guide/11-whats-new.md), [CHANGELOG.md](CHANGELOG.md).
-
-### What's inside
-
-The left-hand **"design-to-real line"** (*Tasarımdan gerçeğe hattı*) shows a project's stages in three groups: **ELEKTRONİK** (electronics: circuit, PCB, code), **MEKANİK** (mechanics: part, assembly), **TEST** (world).
-
-| Stage (UI name) | Shortcut | What you do |
-| --- | --- | --- |
-| Circuit (**Devre**) | Ctrl+1 | Schematic capture with 256 real parts, live analog simulation, 4-channel oscilloscope, multimeter, bench supply, tolerances, Monte Carlo, fault diagnosis, ERC; BOM/KiCad/SPICE/PNG/SVG export. |
-| **PCB** | Ctrl+2 | Boards of 2 to 32 copper layers, copper zones, interactive router that walks around obstacles, auto-placement and auto-routing, DRC, Gerber RS-274X X2 + Excellon + BOM + CPL, KiCad 8 project export, footprint editor, 3D board view. |
-| Code (**Kod**) | Ctrl+3 | Write, build (F7) and run (F5) firmware: Arduino Uno/Nano via `arduino-cli` on a cycle-counted ATmega328P emulator (timers/PWM, USART, ADC, EEPROM, watchdog, TWI with SSD1306/LCD/MPU-6050 models); ESP32 sketches compiled natively with MSVC against an Arduino-level HAL (GPIO, ADC, LEDC, DAC, timers, FreeRTOS, Wire, Servo, simulated Wi-Fi, BLE subset, Bluepad32). Source-level debugging of Uno/Nano code (breakpoints, steps, variables from the build's DWARF) on one clock with the circuit and the world. |
-| Part (**Parça**) | Ctrl+4 | Blender-like modeller, several parts per file: primitives, edit mode (vertex/edge/face, extrude, inset, knife, loop cut, bevel, solidify, subdivide, …), slicing into two closed pieces, CSG union/difference/intersection, mirror/array, parametric robot parts, materials and mass, STL/OBJ/PLY import/export; *send to assembly* makes each part a body of its own. |
-| Assembly (**Montaj**) | Ctrl+5 | The robot itself: the boards and parts of one or more projects (with or without their PCB) and the bodies modelled on the Parça page, joined. Saved with the project and brought up to date with its circuit, PCB and code when opened; rover projects are built on their chassis with the wheels on the motor shafts. Record and run fault experiments. |
-| World (**Dünya**) | Ctrl+6 | Place your boards, catalogue parts, mechanical bodies and imported meshes in a physics world; wire them with real cables (AWG, standard jumper lengths, resistance and voltage drop, rope physics that pulls plugs out when too short, burn-out), join them (fixed, servo horn/motor shaft, hinge, slider) and run everything in lock-step: circuit, firmware, radio and rigid-body physics. Pressure vessels, water rockets and solid motors share one gas physics: Noble–Abel real gas for hot products, isentropic nozzle flow with Schmucker separation, ignition through the real chain (bridgewire, pyrogen, grain surface soak by convection and radiation, flame spread from the head end; a weak igniter fails), erosive burning, wall and throat heating (Dittus–Boelter, Bartz) shown in the thermal camera, launch switches on a countdown and parachutes at apogee — the **solid rocket** template climbs to ~1 km and comes down under its canopy. Ultrasonic sensors ray-cast the scene; BLE/Wi-Fi/Bluetooth gamepads and IR remotes are simulated; a PC + USB cable powers a board and opens its serial port. **Record and render** (● Record, Ctrl+R; Simulation › Render, Ctrl+F5): the recorded stretch is recomputed off-screen at full accuracy — every pose, force and signal, FEM stress of every part at video frame rate, 3D lattice-Boltzmann flow around the whole assembly and heating — and replayed like a video in the same 3D scene with a timeline, slow motion, per-part stress colours, force arrows, a flow slice and graphs that jump to the clicked second. |
-
-Plus **Home** (Ctrl+0), **Library** (Ctrl+7: browse parts, make custom `.rwpart` parts, import KiCad symbols/footprints) and **Settings** (Ctrl+,). Window features: document tabs, split view (Ctrl+\\), detach a page into its own window, focus mode, full screen (F11), command palette (Ctrl+K), autosave backups.
-
-Screenshots are shown in the [Turkish section above](#ekran-görüntüleri).
-
-### Validation: how far from theory?
-
-Every solver is checked against problems with a known answer: analytic solutions, published benchmarks and datasheet values. Each row is an automated test that runs on every build and fails it when the deviation exceeds the tolerance.
-
-| Area | Measurement | Theory / reference | Simulation | Deviation | Tolerance |
-| --- | --- | --- | --- | --- | --- |
-| Mechanics | Hinged pendulum period | 0.89769 s | 0.89767 s | −0.002 % | ±0.5 % |
-| Mechanics | Terminal velocity of a sphere in air | 8.5568 m/s | 8.5567 m/s | −0.001 % | ±0.5 % |
-| FEM | Cantilever tip deflection (Timoshenko) | 0.20156 mm | 0.19993 mm | −0.81 % | −3 / +2 % |
-| FEM | Plate with a hole, Kt | 3.133 | 2.946 | −6.0 % | ±8 % |
-| Heat | Energy balance of a heated plate | 18.797 K | 18.798 K | +0.005 % | ±2 % |
-| Aerodynamics | Wing C_L (AR 6, 4°), lifting line | 0.318 | 0.319 | +0.3 % | ±7 % |
-| Flow (CFD) | Cylinder Cd, Schäfer–Turek 2D-1 (Re 20) | 5.5795 | 5.624 | +0.8 % | ±2 % |
-| Flow (CFD) | Cylinder Strouhal, Schäfer–Turek 2D-2 (Re 100) | 0.300 | 0.2999 | −0.03 % | ±5 % |
-| Flow (CFD) | Sphere Cd (Re 100, Schiller–Naumann) | 1.092 | 1.176 | +7.7 % | −8 / +10 % |
-| Flow (CFD) | Cube Cd, Re 10⁵ (real Re, LES) | ≈1.05 | 0.883 | −15.9 % | −22 / +15 % |
-| Liquids | Force of 6 cm of still water on a side wall | 1.0576 N | 1.0795 N | +2.1 % | ±5 % |
-| Liquids | Dam-break front (Martin & Moyce 1952), T = 2.98 | 3.67 | 3.82 | +4.1 % | ±12 % |
-| Gas | Air tank blow-down, 0.5 s (adiabatic) | 4.671 bar | 4.709 bar | +0.8 % | −2 / +3 % |
-| Electrical | Motor no-load speed (datasheet) | ≈209 rpm | 210 rpm | +0.5 % | −12 / +2 % |
-
-All 54 measurements in eight areas, grid convergence and a before/after comparison: **[12. Validation](docs/en/guide/12-validation.md)**.
-
-### Download and install
-
-1. Download the one installer, `RobotWinStudio-Setup-<version>.exe` (about half a megabyte), from [Releases](https://github.com/Kinin-Code-Offical/robotwin-studio/releases/latest). It downloads the components you choose from the same release and checks each with SHA-256. Each release also has: the components themselves (`RobotWinStudio-<version>-app.rwpack`, `-dotnet.rwpack`, `-arduino.rwpack`, `-occt.rwpack`; put them next to the installer to install offline), `RobotWinStudio-<version>-win-x64-portable.zip` (no installation: unzip and run), `RobotWin-Headless-<version>-win-x64.zip` and `RobotWin-Headless-<version>-linux-x64.tar.gz` (the windowless simulator and automation API; the graphical app is Windows-only), the source as `RobotWinStudio-<version>-source.zip` / `.tar.gz`, and `SHA256SUMS.txt`.
-2. Run it. On the first page choose the **language** (the wizard's and the app's) and the **kind of installation**: **Full** (recommended: the app, its own .NET 10, the Arduino compiler and STEP / IGES support; everything works offline right away), **Lite** (the app alone on the PC's .NET 10 Desktop Runtime, adding its own copy only when there is none) or **Custom** (choose the components).
-3. Then choose **how**: for this user (default, `%LOCALAPPDATA%\Programs\RobotWin Studio`), for all users (`Program Files`, administrator) or **portable** (a folder only: no shortcuts, registry or file types). Components can be added or removed later with **Settings → Updates → Change components…** or Windows *Apps → Modify*. Command line: `/S` (silent; updates an existing installation with its kind and components), `/PASSIVE`, `/TYPE=full|lite`, `/COMPONENTS=app,arduino,occt`, `/LANG=en|tr`, `/ALLUSERS`, `/PORTABLE`, `/D=<dir>`, `/SOURCE=<folder or URL>`, `/NODESKTOP`, `/NOTYPES`, `/LAUNCH`. Uninstall from Windows *Apps* or `Uninstall.exe`.
-
-Optional compilers for your own firmware (bundled examples ship precompiled): `winget install ArduinoSA.CLI` then `arduino-cli core install arduino:avr` for AVR; Visual Studio 2022 / Build Tools with the **Desktop development with C++** workload for ESP32. Paths can be overridden in **Settings → Compilers** (*Ayarlar → Derleyiciler*).
-
-### Quick start: your first world in 5 steps
-
-1. **New world** (*Yeni dünya*, Ctrl+Shift+N): an empty 4 × 3 m workshop opens.
-2. In the **Parts** tab (*Parçalar*) add *4×AA Pil 6 V* and *TT Redüktörlü Motor 1:48*; select the motor and switch on **Physics → Fixed** (*Fizik → Sabit*).
-3. From the **Mechanical** tab (*Mekanik*) add a **Wheel** (*Tekerlek*); with the wheel selected, pick the **Join** tool (B), click the motor and choose **"Motor miline sabitle (birlikte döner)"** (fix to motor shaft).
-4. With the **Cable** tool (K) connect battery `+` to one motor pin and `−` to the other.
-5. **Run the world** (F5): the motor spins the wheel, you hear it, and the *Kablolar ve ölçümler* tab shows the cable current. Shift+F5 stops and resets.
-
-Or simply open a template from the Home page (e.g. *Arduino ile iki eksenli servo kol*) and press F5.
-
-### Keyboard shortcuts
-
-Ctrl+N new circuit/board · Ctrl+Shift+N new world · Ctrl+O open · Ctrl+S save · Ctrl+Shift+S save as · Ctrl+Z/Ctrl+Y undo/redo · Ctrl+K command palette · Ctrl+0…7 pages · Ctrl+, settings · Ctrl+B expand rail · Ctrl+\\ split view · Ctrl+Tab/Ctrl+Shift+Tab/Ctrl+W tabs · F5/Shift+F5 run-pause/stop · F7 build · F10 menu bar · F11 full screen. Page-specific keys: [docs/kullanim/09-kisayollar.md](docs/kullanim/09-kisayollar.md).
-
-### File types
-
-All are versioned ZIP containers with a `manifest.json`: `.rwproj` (project/board: schematic, PCB, assembly, firmware sources and builds), `.rwworld` (world, with embedded boards), `.rwpart` (custom part), `.rwlib` (part collection), `.rwsim` (simulation recording), `.rwmodel` (modeller document), `.rwfp` (footprint).
-
-### Build from source
-
-Requirements: Windows 10/11 x64, .NET 10 SDK (pinned by `global.json`), Git.
-
-```powershell
-git clone https://github.com/Kinin-Code-Offical/robotwin-studio.git
-cd robotwin-studio
-dotnet build RobotWinStudio.sln -c Debug
-builds\RobotWin.Studio\Debug\net10.0-windows\RobotWinStudio.exe
-```
-
-Installer (needs Visual Studio C++ tools): `powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -Version 1.7.0` → `builds\installer\release\RobotWinStudio-Setup-1.7.0.exe` and the components it downloads (`*.rwpack`), proven by installing them all into a portable folder. Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds every release file on the system it is for (the installer and its components, the portable zip, the Windows and Linux headless packages, the source archives), checks that the portable app starts on its own .NET and that the headless simulators run, and attaches them with `SHA256SUMS.txt` to the GitHub release. See [docs/BUILD_RELEASE.md](docs/BUILD_RELEASE.md).
-
-### Tests
-
-`dotnet test RobotWinStudio.sln` runs the xUnit suite in `CoreSim/tests`. `RobotWinStudio.exe --selftest --selftest-out selftest.txt` builds, simulates, auto-places, auto-routes and DRC-checks every example project and must end with `SELFTEST PASS`. `--snapshot` renders any page to PNG for visual checks. See [docs/TESTING.md](docs/TESTING.md).
-
-**How far to trust it.**
-- **Checked against analytic results:** cantilever deflection and stress, the plate-with-hole stress concentration (Kt ≈ 3), torsion, inertia relief, Poiseuille flow, cylinder shedding (Strouhal), sphere drag (Schiller–Naumann), heat conduction, the BMP280 datasheet example, and the motor's datasheet no-load current and speed against the physics shaft's turns.
-- **For your own part:** the mesh and the supports matter more than any table. Two tools address this. The *mesh convergence check* re-solves the worst instant on a finer mesh and reports the change. The *.inp export* writes the same case (mesh, material, supports, loads at that instant) for CalculiX, ANSYS or Abaqus, so you can compare against an independent solver.
-- **Part spread:** datasheet values are typical. Clone servos and motors differ by 30–40 % in current. Readings show this uncertainty, and the render's uncertainty band draws the range real parts may fall in. Bench-check before sizing a supply.
-- **ESP32 behaves like the real chip:** SPI talks to the device that is really wired, and wiring or mode mistakes give wrong data as on the bench. The ESP-IDF task watchdog fires and reboots the chip.
-
-### Command line
-
-`RobotWinStudio.exe <file>` opens a file; `--selftest [--selftest-out f]`; `--snapshot out.png --page home|schematic|pcb|code|model|assembly|world|library|settings [--example id] [--simulate s] [--fault name] [--size WxH] [--wait s] [--nav-expanded]`; `--gallery <dir>`; `--export-logo <dir>`; `--register-file-types` / `--unregister-file-types`.
-
-### Project layout
-
-`Studio/RobotWin.Studio` (WPF app) → `CoreSim/src/RobotTwin.CoreSim` (simulation core) with `CoreSim/native/esp32hal` (ESP32 HAL sources) and `CoreSim/tests` (xUnit). `Installer/` + `tools/build-installer.ps1` produce the setup. `FirmwareEngine/` and `NativeEngine/` are legacy C++ engines from the 1.x design and are not used by the app. See [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-### Roadmap (in progress)
-
-Next (the full list: [docs/gelistirici/YOL_HARITASI.md](docs/gelistirici/YOL_HARITASI.md), in Turkish):
-
-- Embedded: BLE and ESP-NOW in the ESP32's hardware mode, TLS, mDNS; Xtensa FPU divide/sqrt and MAC16; RP2040 and STM32.
-- Industrial: OPC UA security (Basic256Sha256, user and password); FMI Model Exchange and FMI 3.0, the circuit exported as an FMU.
-- Robotics: an end-to-end run with MoveIt (a real ROS 2 install, which needs a download approval).
-- Performance: drawing off the UI thread, simplified meshes for distant heavy models, the liquid solver's cost.
-- Physics (P2): hydraulics, flexible structures and fatigue, motor and bearing thermal models, FEM/CFD mesh convergence.
-
-### License
-
-MIT. See [LICENSE](LICENSE). Contributions: [CONTRIBUTING.md](CONTRIBUTING.md) · Security: [SECURITY.md](SECURITY.md) · Accessibility: [ACCESSIBILITY.md](docs/ACCESSIBILITY.md) · Changes: [CHANGELOG.md](CHANGELOG.md).

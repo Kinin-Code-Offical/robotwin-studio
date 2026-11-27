@@ -159,7 +159,7 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | K | Draw cable |
 | B | Connect |
 | Esc | Cancel / select tool |
-| W / E / R / Y / T / Q | Move / rotate / scale / all-in-one / rect handles / no handles (as in Unity) |
+| W / E / R / Y / T / Q | Move / rotate / scale / all-in-one / rect handles / no handles |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste (with what is mounted) |
 | Ctrl+Shift+V | Paste mounted on the selected part |
 | F2 | Rename |

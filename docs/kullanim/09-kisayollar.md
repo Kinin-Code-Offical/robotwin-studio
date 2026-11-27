@@ -159,7 +159,7 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | K | Kablo çek |
 | B | Bağla |
 | Esc | İptal / seçme aracı |
-| W / E / R / Y / T / Q | Taşı / döndür / ölçekle / hepsi bir arada / dikdörtgen tutamacı / tutamaçsız (Unity'deki gibi) |
+| W / E / R / Y / T / Q | Taşı / döndür / ölçekle / hepsi bir arada / dikdörtgen tutamacı / tutamaçsız |
 | Ctrl+C / Ctrl+X / Ctrl+V | Kopyala / kes / yapıştır (takılı olanlarla) |
 | Ctrl+Shift+V | Seçilinin üstüne takılı olarak yapıştır |
 | F2 | Yeniden adlandır |

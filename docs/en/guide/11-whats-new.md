@@ -115,7 +115,7 @@ Every detail and fix: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robot
   - in their own arena, on their own code.
 - **Environment to try it in:** try the Assembly in a workshop, on a line track, or in an obstacle or ramp field.
 - **Arduino libraries on the ESP32:** the installed libraries a sketch includes compile with it, with their own dependencies. The libraries tab searches for the ESP32 too.
-- **PCBs of up to 32 copper layers** (as in KiCad). The board set-up window gives the least thickness the stack needs.
+- **PCBs of up to 32 copper layers**. The board set-up window gives the least thickness the stack needs.
 - **The line-following example uses real optical TCRT5000 modules** (IR LED, phototransistor, LM393). In its Assembly it follows the oval track on real wheels: a lap in 8 seconds, at most 22 mm off.
 - **World on the rail while an Assembly is open** now goes to a test world instead of showing the Assembly again.
 
@@ -149,7 +149,7 @@ Every detail and fix: [CHANGELOG.md](https://github.com/Kinin-Code-Offical/robot
   - Folders take files and subfolders (`src/`); files and folders can be imported (drag and drop works too).
   - A folder can be saved anywhere as an Arduino sketch folder, exported as a zip, renamed and deleted.
 - **Code loads onto any board:** the **Board** list holds every Arduino Uno, Nano and ESP32 of the project and of the open world. **Upload to board and run** copies the folder's code into the board, compiles it and runs the project or the world.
-- **Multi-file sketches:** the main `.ino`, the `.h` / `.cpp` files next to it and `src/` subfolders compile together as in the Arduino IDE, on the Uno / Nano and on the ESP32 alike.
+- **Multi-file sketches:** the main `.ino`, the `.h` / `.cpp` files next to it and `src/` subfolders compile together as one sketch, on the Uno / Nano and on the ESP32 alike.
 - **Code completion** comes from the board's real header files: it opens after `.`, `->`, `::` and `#include <`, or with **Ctrl+Space**. It knows a variable's type: `kol.` lists the `Servo` members. The panel on the right shows the signature and a description. Opening a parenthesis shows the parameters above the line.
 - **Libraries tab:** searches about 10 000 Arduino libraries. **Install and add** installs a library and adds its `#include` line; installed libraries can be removed. A header no installed library provides is flagged and the library that provides it is suggested.
 - **Adjustable AC/DC power supply:** DC (CV/CC), AC (RMS voltage, frequency, phase) or AC on top of DC. On AC the current limit holds in both directions and the report gives true RMS values. Presets: 12 V~ 50 Hz, 24 V~ 60 Hz, 230 V~ mains, 12 V DC + 1 V ripple. Details: [8. Instruments](08-instruments.md#adjustable-acdc-power-supply).
@@ -255,4 +255,4 @@ One shared physics for circuit, rigid bodies, heat, air, gas and radio: real ass
 
 ## 1.0.0 — 20 November 2026
 
-First public release: the design-to-reality pipeline (Circuit → PCB → Code → Model → Assembly → World), a KiCad-level schematic editor, PCB, Arduino and ESP32 emulation, a Blender-like modeller, an open world, radio and controllers, and instruments.
+First public release: the design-to-reality pipeline (Circuit → PCB → Code → Model → Assembly → World), a schematic editor, PCB, Arduino and ESP32 emulation, a modeller, an open world, radio and controllers, and instruments.

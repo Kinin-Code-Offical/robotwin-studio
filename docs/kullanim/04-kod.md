@@ -53,7 +53,7 @@ Diskteki dosyalarda **Ctrl+S** kaydeder.
 
 ### Çok dosyalı çizimler
 
-Bir çizim birden çok dosyadan oluşabilir: ana `.ino`, yanında `.h` / `.cpp` dosyaları ve `src/` altındaki alt klasörler. Arduino IDE'deki gibi hepsi birlikte derlenir. Bu hem Uno / Nano'da hem ESP32'de geçerlidir. Bir kartın klasörüne eklediğiniz dosyalar proje dosyasında saklanır.
+Bir çizim birden çok dosyadan oluşabilir: ana `.ino`, yanında `.h` / `.cpp` dosyaları ve `src/` altındaki alt klasörler. Hepsi tek bir çizim olarak birlikte derlenir. Bu hem Uno / Nano'da hem ESP32'de geçerlidir. Bir kartın klasörüne eklediğiniz dosyalar proje dosyasında saklanır.
 
 ## Adım adım: ilk kodunuz
 
@@ -208,7 +208,7 @@ Değerler kart çalışırken de yenilenir. Son bakıştan beri değişen değer
 
 ![Kesme noktasında duran servo kol: 29. satır, değişkenler ve durum çubuğu](../images/code-debugger.png)
 
-> `-Os` ile derlenen kodda derleyici bazı satırları birleştirir ya da başka satırların içine gömer. Bu yüzden adımlar bazen beklediğinizden farklı bir sırayla ilerler. Arduino IDE'nin hata ayıklayıcısında da durum aynıdır.
+> `-Os` ile derlenen kodda derleyici bazı satırları birleştirir ya da başka satırların içine gömer. Bu yüzden adımlar bazen beklediğinizden farklı bir sırayla ilerler.
 
 ESP32 çizimleri bilgisayarın işlemcisinde yerel olarak çalıştığı için kesme noktaları şimdilik yalnız Arduino Uno / Nano (ATmega328P) içindir.
 

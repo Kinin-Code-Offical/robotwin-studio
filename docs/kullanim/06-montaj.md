@@ -90,7 +90,7 @@ Birden çok robotu ya da özel bir test alanını [Dünya](07-dunya.md) sayfası
 
 ## Çakışma algılama
 
-Araç çubuğunda **Hizala**'nın yanındaki **Çakışma algılama** düğmesi (komut paletinde "çakışma algıla"), SolidWorks'teki gibi aynı yeri kaplayan parça çiftlerini ortak hacimleriyle (mm³) listeler. Parçalar kendi 3B modellerinin dış şekilleriyle, bulundukları yerde karşılaştırılır. Seçenekler:
+Araç çubuğunda **Hizala**'nın yanındaki **Çakışma algılama** düğmesi (komut paletinde "çakışma algıla"), aynı yeri kaplayan parça çiftlerini ortak hacimleriyle (mm³) listeler. Parçalar kendi 3B modellerinin dış şekilleriyle, bulundukları yerde karşılaştırılır. Seçenekler:
 
 - **Değen yüzeyleri de çakışma say:** yalnızca değen parçalar da listelenir.
 - **Eklemle bağlı parçaları da denetle:** servo koluyla servo, tekerle motor gibi bilerek iç içe olanlar da sayılır (öntanımlı olarak atlanır).
@@ -100,9 +100,9 @@ Bir satır seçilince ilk parça seçilir, durum çubuğu çakışmanın hacmini
 
 ## Boşluk doğrulama
 
-**Boşluk doğrulama** düğmesi (komut paletinde "boşluk doğrula"), SolidWorks'teki gibi birbirine **En az boşluk**'tan (mm) yakın duran parça çiftlerini en kısa mesafeleriyle listeler: kablonun bükülme payı, fanın nefes alanı, tolerans. Mesafe parçaların dış şekilleri arasında kesin olarak ölçülür (GJK). Bir satır seçilince sahnede iki uç arasına boşluğu gösteren bir çizgi çizilir. Çakışan çiftler "çakışıyor" diye listelenir (kapatılabilir); eklemle bağlı parçalar ve yalnız seçili parça seçenekleri çakışma algılamadaki gibidir.
+**Boşluk doğrulama** düğmesi (komut paletinde "boşluk doğrula"), birbirine **En az boşluk**'tan (mm) yakın duran parça çiftlerini en kısa mesafeleriyle listeler: kablonun bükülme payı, fanın nefes alanı, tolerans. Mesafe parçaların dış şekilleri arasında kesin olarak ölçülür (GJK). Bir satır seçilince sahnede iki uç arasına boşluğu gösteren bir çizgi çizilir. Çakışan çiftler "çakışıyor" diye listelenir (kapatılabilir); eklemle bağlı parçalar ve yalnız seçili parça seçenekleri çakışma algılamadaki gibidir.
 
-**Delik hizası** düğmesi (komut paletinde "delik hizası"), SolidWorks'teki gibi iki parçada birbirinin devamı olan ama ekseni biraz kayık delikleri listeler: cıvatanın geçmeyeceği yerler. Delikler parçaların kendi şekillerinden bulunur (içe bakan yuvarlak duvarlar; dışa bakan pim ve mil delik sayılmaz). Eksenleri **En çok kayma**'dan (mm) fazla ayrık delikler ayrı delik sayılır, tam hizalı olanlar listelenmez; aralarında pul kadar (1 mm'ye kadar) boşluk olan delikler de birbirinin devamı sayılır. Bir satır seçilince deliklerin buluştuğu yerde iki eksen arasına kaymayı gösteren bir çizgi çizilir. Satırda iki deliğin çapı da yazar.
+**Delik hizası** düğmesi (komut paletinde "delik hizası"), iki parçada birbirinin devamı olan ama ekseni biraz kayık delikleri listeler: cıvatanın geçmeyeceği yerler. Delikler parçaların kendi şekillerinden bulunur (içe bakan yuvarlak duvarlar; dışa bakan pim ve mil delik sayılmaz). Eksenleri **En çok kayma**'dan (mm) fazla ayrık delikler ayrı delik sayılır, tam hizalı olanlar listelenmez; aralarında pul kadar (1 mm'ye kadar) boşluk olan delikler de birbirinin devamı sayılır. Bir satır seçilince deliklerin buluştuğu yerde iki eksen arasına kaymayı gösteren bir çizgi çizilir. Satırda iki deliğin çapı da yazar.
 
 ## Patlatılmış görünüm
 

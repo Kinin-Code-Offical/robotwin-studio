@@ -25,8 +25,8 @@ namespace RobotWin.Studio.Pages
                 Style = (Style)FindResource("Btn.Ghost"),
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Margin = new Thickness(8, 0, 0, 4),
-                ToolTip = moving ? "Unity'deki eklem sınırları ve Break Force / Break Torque: eklemin gidebileceği aralık ve onu koparan kuvvet ile tork"
-                                 : "Unity'deki Break Force / Break Torque: bağlantıyı koparan kuvvet ve tork"
+                ToolTip = moving ? "Eklemin gidebileceği aralık ve onu koparan kuvvet ile tork"
+                                 : "Bağlantıyı koparan kuvvet ve tork"
             };
             head.Click += (_, _) =>
             {
