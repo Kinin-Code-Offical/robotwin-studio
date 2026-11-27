@@ -174,6 +174,30 @@ namespace RobotWin.Studio.World
             Children.Add(_techLabel);
         }
 
+        // ------------------------------------------------------------------ [selfilter] what a click may pick
+
+        /// <summary>
+        /// [selfilter] SolidWorks' selection filter: the kinds a click in the view may pick ("mekanik", "elektronik", "sensör",
+        /// "kablo"); what is filtered out is clicked through, to what lies behind it. Empty: everything.
+        /// </summary>
+        public System.Collections.Generic.HashSet<string> PickOnly { get; } = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>The kind of an object for the selection filter.</summary>
+        public static string PickKindOf(WorldObject o, RobotTwin.CoreSim.Design.PartLibrary? library)
+        {
+            if (o.Kind == WorldObjectKind.Board) return "elektronik";
+            if (o.Kind == WorldObjectKind.Component)
+                return library?.Find(o.PartId ?? string.Empty)?.Category == "Sensör" ? "sensör" : "elektronik";
+            return "mekanik";
+        }
+
+        /// <summary>Whether a click may pick this object (or a cable, with <paramref name="cable"/>).</summary>
+        private bool Pickable(WorldObject? o, bool cable = false) =>
+            PickOnly.Count == 0 || (cable ? PickOnly.Contains("kablo") : o != null && PickOnly.Contains(PickKindOf(o, PickLibrary)));
+
+        /// <summary>The part library the filter reads sensors from (the page sets it).</summary>
+        public RobotTwin.CoreSim.Design.PartLibrary? PickLibrary { get; set; }
+
         /// <summary>A cable that ends on the selected object: lit with it.</summary>
         private bool TiedToSelection(WorldCable c) =>
             _showTechnical && Selected != null &&

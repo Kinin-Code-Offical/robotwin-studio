@@ -169,6 +169,9 @@ namespace RobotWin.Studio.Shell
         public bool WorldShowGizmo { get; set; } = true;
         public bool WorldShowSensorOverlays { get; set; } = true;
 
+        /// <summary>[selfilter] What a click in the World view may pick (mekanik, elektronik, sensör, kablo); empty: everything.</summary>
+        public List<string> WorldPickOnly { get; set; } = new List<string>();
+
         /// <summary>[crossprobe] A part selected on the circuit is selected on the PCB too, and the other way round.</summary>
         public bool CrossSelect { get; set; } = true;
 

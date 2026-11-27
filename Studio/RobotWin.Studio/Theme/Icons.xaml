@@ -129,5 +129,6 @@
     <Geometry x:Key="I.SimLayers">M3,14 L12,18.5 L21,14 M3,18 L12,22.5 L21,18 M3,10 L12,14.5 L21,10 L12,5.5 Z M7.5,10 L9.5,8.5 L11.5,11 L13.5,8.5 L15.5,10</Geometry>
     <Geometry x:Key="I.Checklist">M4,6.5 L5.6,8 L8.2,5 M4,12.5 L5.6,14 L8.2,11 M4,18.5 L5.6,20 L8.2,17 M11,6.5 H20 M11,12.5 H20 M11,18.5 H20</Geometry>
     <Geometry x:Key="I.Stackup">M4,6 H20 M4,10 H20 M4,14 H20 M4,18 H20</Geometry>
+    <Geometry x:Key="I.Filter">M4,5 H20 L14,12.5 V19 L10,17 V12.5 Z</Geometry>
     <Geometry x:Key="I.Fix">M14.6,4.2 A4.6,4.6 0 1 0 19.8,9.4 L16.9,9.6 L14.4,7.1 Z M12.4,11.6 L4.6,19.4</Geometry>
 </ResourceDictionary>

@@ -8630,6 +8630,9 @@
   "Boştaki NC işareti silindi": "Stray NC mark deleted",
   "Ortak seçim (devre ↔ PCB)": "Cross-selection (circuit ↔ PCB)",
   "Devrede seçilen parça PCB'de de seçili olur, PCB'de seçilen devrede; görünüm yerinde kalır (KiCad'in çapraz seçimi gibi).": "A part selected in the circuit is selected on the PCB too, and one selected on the PCB in the circuit; the view stays where it is (as KiCad's cross-probing).",
+  "Mekanik (gövdeler, modeller, şase)": "Mechanical (bodies, models, chassis)",
+  "Elektronik (kartlar, parçalar)": "Electronics (boards, parts)",
+  "Seçim süzgeci: hepsi seçilebilir": "Selection filter: everything can be picked",
   "Aynala": "Mirror",
   "Elektriksel model": "Electrical model",
   "Firmware": "Firmware",
@@ -9359,6 +9362,7 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+  "Seçim süzgeci: yalnız {…}": "Selection filter: only {0}",
   "pin {…}: kartta yok": "pin {0}: not on the board",
   "{…}: bağlı değil": "{0}: not connected",
   "NC işareti kondu: {…}": "NC mark placed: {0}",

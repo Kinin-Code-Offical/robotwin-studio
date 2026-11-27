@@ -189,7 +189,69 @@ namespace RobotWin.Studio.Pages
             p.Children.Add(Divider(orientation));
             p.Children.Add(Take(GizmoPlace));
             p.Children.Add(Take(GizmoSpace));
+            p.Children.Add(Divider(orientation));
+            p.Children.Add(PickFilterButton());   // [selfilter]
             return p;
+        }
+
+        private static readonly (string Kind, string Label)[] PickKinds =
+        {
+            ("mekanik", "Mekanik (gövdeler, modeller, şase)"), ("elektronik", "Elektronik (kartlar, parçalar)"), ("sensör", "Sensörler"), ("kablo", "Kablolar")
+        };
+
+        /// <summary>
+        /// [selfilter] The selection filter (SolidWorks' F5 filter): which kinds a click may pick; the rest is clicked through.
+        /// Lit while it filters; remembered.
+        /// </summary>
+        private FrameworkElement PickFilterButton()
+        {
+            var s = AppSettings.Current;
+            foreach (var k in s.WorldPickOnly) Scene.PickOnly.Add(k);
+            Scene.PickLibrary = W.Library;
+            var b = new ToggleButton { Content = new Theme.Icon { Data = (Geometry)FindResource("I.Filter"), Size = 16 }, Margin = new Thickness(1), IsChecked = Scene.PickOnly.Count > 0 };
+            b.SetResourceReference(StyleProperty, "Toggle.Tool");
+            void Tip() => b.ToolTip = Lang.T(Scene.PickOnly.Count == 0 ? "Seçim süzgeci: hepsi seçilebilir" : "Seçim süzgeci: yalnız " + string.Join(", ", PickKinds.Where(k => Scene.PickOnly.Contains(k.Kind)).Select(k => Lang.T(k.Label))));
+            Tip();
+            b.Click += (_, _) =>
+            {
+                b.IsChecked = Scene.PickOnly.Count > 0;   // the menu decides, not the click
+                var menu = new ContextMenu { PlacementTarget = b, Placement = PlacementMode.Right };
+                void Changed()
+                {
+                    s.WorldPickOnly = Scene.PickOnly.ToList();
+                    s.Save();
+                    b.IsChecked = Scene.PickOnly.Count > 0;
+                    Tip();
+                }
+
+                var all = new MenuItem { Header = Lang.T("Hepsi"), IsCheckable = true, IsChecked = Scene.PickOnly.Count == 0 };
+                all.Click += (_, _) =>
+                {
+                    Scene.PickOnly.Clear();
+                    Changed();
+                };
+                menu.Items.Add(all);
+                menu.Items.Add(new Separator());
+                foreach (var (kind, label) in PickKinds)
+                {
+                    string k = kind;
+                    var it = new MenuItem { Header = Lang.T(label), IsCheckable = true, IsChecked = Scene.PickOnly.Count == 0 || Scene.PickOnly.Contains(k), StaysOpenOnClick = true };
+                    it.Click += (_, _) =>
+                    {
+                        // from "everything" a first untick keeps the others; ticking all again is "everything"
+                        if (Scene.PickOnly.Count == 0) foreach (var (other, _) in PickKinds) Scene.PickOnly.Add(other);
+                        if (it.IsChecked) Scene.PickOnly.Add(k);
+                        else Scene.PickOnly.Remove(k);
+                        if (Scene.PickOnly.Count == PickKinds.Length) Scene.PickOnly.Clear();
+                        all.IsChecked = Scene.PickOnly.Count == 0;
+                        Changed();
+                    };
+                    menu.Items.Add(it);
+                }
+
+                menu.IsOpen = true;
+            };
+            return b;
         }
 
         /// <summary>The grid and snap overlay (Unity's): snapping, the grid shown, the move step, and the full window.</summary>

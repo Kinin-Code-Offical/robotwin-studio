@@ -1315,7 +1315,7 @@ namespace RobotWin.Studio.World
                 {
                     if (hit.VisualHit == _cables && hit.ModelHit != null && _cableModels.TryGetValue(hit.ModelHit, out var cid))
                     {
-                        if (Tool == WorldTool.Cable) return HitTestResultBehavior.Continue;
+                        if (Tool == WorldTool.Cable || !Pickable(null, cable: true)) return HitTestResultBehavior.Continue;   // [selfilter]
                         _pickedCable = cid;
                         return HitTestResultBehavior.Stop;
                     }
@@ -1331,6 +1331,7 @@ namespace RobotWin.Studio.World
                     {
                         if (it.Visual == hit.VisualHit)
                         {
+                            if (Tool != WorldTool.Cable && !Pickable(it.Object)) break;   // [selfilter] filtered out: clicked through
                             obj ??= it.Object.Id;
                             if (Tool != WorldTool.Cable) return HitTestResultBehavior.Stop;
                             break;
