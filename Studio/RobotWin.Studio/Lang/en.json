@@ -9359,6 +9359,8 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+  "pin {…}: kartta yok": "pin {0}: not on the board",
+  "{…}: bağlı değil": "{0}: not connected",
   "NC işareti kondu: {…}": "NC mark placed: {0}",
   "Kılıf: {…}": "Footprint: {0}",
   "Modelin {…} bilinen eksiği var (aşağıda)": "The model has {0} known shortcomings (below)",

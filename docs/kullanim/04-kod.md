@@ -93,6 +93,8 @@ Kullanım:
 - Sağdaki panel seçilen öğenin imzasını ve kısa açıklamasını gösterir.
 - Parantez açınca fonksiyonun parametreleri satırın üstünde görünür ve yazdığınız parametre kalın olur. Kaybolursa **Ctrl+Shift+Space** geri getirir.
 
+**Pinden parçaya:** imleç bir pinin üstündeyken (`digitalWrite(9, …)` gibi bir pin çağrısına verilen sayı ya da `#define LED 13`, `const int TRIG = 9;` gibi bir pin çağrısında kullanılan ad, tanımında da kullanıldığı yerde de) alttaki satır kartın pinini ve neye bağlı olduğunu yazar: "IO25 → R1". O parça devrede, PCB'de ve Montajda da seçilir (görünümler yerinde kalır; Ayarlar → Dünya ve düzenleme → Ortak seçim). Pin çağrısına hiç verilmeyen bir değişken (`int hiz = 9;`) pin sayılmaz.
+
 ## Arduino kütüphaneleri
 
 Alttaki **Kütüphaneler** sekmesi Arduino kütüphane listesinde arama yapar. Liste yaklaşık 10 000 kütüphane içerir ve bilgisayardaki `arduino-cli` listesinden okunur.

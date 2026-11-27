@@ -93,6 +93,8 @@ Use:
 - The panel on the right shows the chosen item's signature and a short description.
 - Opening a parenthesis shows the function's parameters above the line, with the one you are typing in bold. **Ctrl+Shift+Space** brings them back.
 
+**From pin to part:** with the caret on a pin (a number given to a pin call such as `digitalWrite(9, …)`, or a name used in one such as `#define LED 13` or `const int TRIG = 9;`, at its definition as well as where it is used) the line below gives the board pin and what it is wired to: "IO25 → R1". That part is selected in the circuit, on the PCB and in the Montaj too (the views stay; Settings → World and editing → Cross-selection). A variable never given to a pin call (`int speed = 9;`) is not taken for a pin.
+
 ## Arduino libraries
 
 The **Libraries** tab below searches the Arduino library index. The index holds about 10 000 libraries and is read from `arduino-cli`'s list on your PC.

@@ -48,6 +48,7 @@ namespace RobotWin.Studio.Pages
             TemplateBox.SelectedIndex = 0;
             Editor.TextChanged += OnTextChanged;
             Editor.Box.SelectionChanged += (_, _) => CaretText.Text = $"Satır {Editor.CaretLine}, Sütun {Editor.CaretColumn}";
+            InitPinProbe();   // [crossprobe] the pin under the caret and what it is wired to (Pages/CodePage.PinProbe.cs)
             W.DocumentReplaced += (_, _) => Dispatcher.BeginInvoke(new Action(Refresh));
             W.ActiveDocumentChanged += (_, _) =>
             {

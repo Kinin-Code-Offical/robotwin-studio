@@ -14,6 +14,16 @@ namespace RobotWin.Studio.Pages
         /// </summary>
         public void SnapshotBuildAndRun(string? fault)
         {
+            if (fault != null && fault.StartsWith("pin:", StringComparison.Ordinal))
+            {
+                // [crossprobe] the caret on the first place a token stands ("pin:LED_PIN"), the pin it means and its wiring
+                Refresh();
+                int at = Editor.Box.Text.IndexOf(fault.Substring(4), StringComparison.Ordinal);
+                if (at >= 0) Editor.Box.Select(at + 1, 0);
+                ProbePin();
+                return;
+            }
+
             if (fault != null && fault.StartsWith("world:", StringComparison.Ordinal) && Window.GetWindow(this) is MainWindow main
                 && Examples.WorldTemplates.Find(fault.Substring(6)) is { } template)
             {
