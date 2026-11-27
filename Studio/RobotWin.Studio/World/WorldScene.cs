@@ -903,7 +903,7 @@ namespace RobotWin.Studio.World
             var done = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var physics = Session != null && Session.State != Simulation.SimState.Stopped ? Session.Physics : null;
             Func<string, (RobotTwin.CoreSim.Mechanics.Vec3 Position, RobotTwin.CoreSim.Mechanics.Quat Orientation)?>? poseOf =
-                Playback != null ? Playback.PoseOf : physics != null ? physics.PoseOf : null;
+                Playback != null ? Playback.PoseOf : physics != null ? physics.RenderPoseOf : null;   // [interpolate] drawn between steps
             if (poseOf != null)
             {
                 foreach (var it in _items.Values)

@@ -54,6 +54,15 @@ namespace RobotTwin.CoreSim.Sandbox
             public Quat ShapeTurn = Quat.Identity;
 
             public Vec3 Centre;
+
+            /// <summary>[interpolate] The body's pose before the last step (what drawing blends from).</summary>
+            public Vec3 PrevPosition;
+
+            public Quat PrevOrientation = Quat.Identity;
+            public bool HasPrev;
+
+            /// <summary>[interpolate] Unity's Rigidbody Interpolate: 0 none, 1 interpolate (the default), 2 extrapolate.</summary>
+            public int Interpolation = 1;
             public SceneBody? Rotor;
             public List<SceneBody>? Walls;   // [shell] Sandbox/WorldPhysics.Shells.cs
             public SceneJoint? RotorJoint;
@@ -250,6 +259,7 @@ namespace RobotTwin.CoreSim.Sandbox
             }
 
             // [rigidbody] Unity's damping and frozen axes, from the part's parameters
+            it.Interpolation = (o.Parameters.TryGetValue(InterpolationKey, out var interp) ? interp : null) switch { "none" => 0, "extrapolate" => 2, _ => 1 };   // [interpolate]
             body.LinearDamping = Math.Max(0, Param(o, "rb.damping", 0));
             body.AngularDamping = Math.Max(0, Param(o, "rb.angdamping", 0));
             body.LockPosition = AxisMask(o, "rb.lockpos");
@@ -552,6 +562,14 @@ namespace RobotTwin.CoreSim.Sandbox
             while (_pending >= Step)
             {
                 _pending -= Step;
+                foreach (var it in _items.Values)
+                {
+                    // [interpolate] where each body stood before this step
+                    it.PrevPosition = it.Body.Position;
+                    it.PrevOrientation = it.Body.Orientation;
+                    it.HasPrev = true;
+                }
+
                 long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                 StepSwitches();   // [launch] timed and clicked switches (Sandbox/WorldPhysics.Launch.cs)
                 DriveJoints();   // [drive] motors on hinges and sliders (imported robots' axes)
@@ -728,6 +746,44 @@ namespace RobotTwin.CoreSim.Sandbox
         }
 
         // ================================================================ readouts
+
+        /// <summary>[interpolate] The parameter key of an object's interpolation: "none", "extrapolate"; absent: interpolate.</summary>
+        public const string InterpolationKey = "rb.interp";
+
+        /// <summary>
+        /// [interpolate] Unity's Rigidbody interpolation, for what is drawn: the physics runs in whole steps and keeps the
+        /// rest of a frame's time for the next, so the last step's pose is up to a step behind the frame. Interpolate
+        /// (the default) draws the body between its last two steps by that rest, smooth and at most a step late; extrapolate
+        /// carries it on along its velocity and spin to the frame's time, never late but a step ahead of a collision; none
+        /// draws the last step as it is. Sensors, scripts and the circuit read <see cref="PoseOf"/>, never this.
+        /// </summary>
+        public (Vec3 Position, Quat Orientation)? RenderPoseOf(string objectId)
+        {
+            if (!_items.TryGetValue(objectId, out var it)) return null;
+            var b = it.Body;
+            double alpha = Step > 0 ? Math.Max(0, Math.Min(1, _pending / Step)) : 0;
+            Vec3 bodyPos = b.Position;
+            Quat bodyRot = b.Orientation;
+            if (it.Interpolation == 1 && it.HasPrev && (!b.IsStatic || b.IsKinematic))
+            {
+                bodyPos = it.PrevPosition + (b.Position - it.PrevPosition) * alpha;
+                var q0 = it.PrevOrientation;
+                var q1 = b.Orientation;
+                if (q0.W * q1.W + q0.X * q1.X + q0.Y * q1.Y + q0.Z * q1.Z < 0) q1 = new Quat(-q1.W, -q1.X, -q1.Y, -q1.Z);   // the short way round
+                bodyRot = new Quat(q0.W + (q1.W - q0.W) * alpha, q0.X + (q1.X - q0.X) * alpha, q0.Y + (q1.Y - q0.Y) * alpha, q0.Z + (q1.Z - q0.Z) * alpha).Normalized();
+            }
+            else if (it.Interpolation == 2 && (!b.IsStatic || b.IsKinematic))
+            {
+                double ahead = _pending;
+                bodyPos = b.Position + b.Velocity * ahead;
+                var w = b.AngularVelocity;
+                var dq = new Quat(0, w.X, w.Y, w.Z) * b.Orientation;
+                bodyRot = new Quat(b.Orientation.W + 0.5 * ahead * dq.W, b.Orientation.X + 0.5 * ahead * dq.X, b.Orientation.Y + 0.5 * ahead * dq.Y, b.Orientation.Z + 0.5 * ahead * dq.Z).Normalized();
+            }
+
+            var q = bodyRot * it.ShapeTurn.Conjugate;
+            return (bodyPos - q.Rotate(it.Centre), q);
+        }
 
         /// <summary>Current pose of an object's frame (origin = its pose point).</summary>
         public (Vec3 Position, Quat Orientation)? PoseOf(string objectId)

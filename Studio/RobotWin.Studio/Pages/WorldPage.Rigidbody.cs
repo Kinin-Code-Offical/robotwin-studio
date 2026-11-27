@@ -23,7 +23,7 @@ namespace RobotWin.Studio.Pages
         private void RigidbodyFields(WorldObject o)
         {
             if (o.IsStatic) return;   // a fixed part does not move: nothing to damp or freeze
-            bool used = new[] { "rb.damping", "rb.angdamping", "rb.lockpos", "rb.lockrot", WorldPhysics.KinematicKey, WorldPhysics.RigidbodyCentreKey, WorldPhysics.RigidbodyInertiaKey }.Any(k => o.Parameters.TryGetValue(k, out var v) && !string.IsNullOrEmpty(v) && v != "0");
+            bool used = new[] { "rb.damping", "rb.angdamping", "rb.lockpos", "rb.lockrot", WorldPhysics.KinematicKey, WorldPhysics.RigidbodyCentreKey, WorldPhysics.RigidbodyInertiaKey, WorldPhysics.InterpolationKey }.Any(k => o.Parameters.TryGetValue(k, out var v) && !string.IsNullOrEmpty(v) && v != "0");
             bool open = _rigidbodyOpen || used;
 
             var head = new Button
@@ -44,10 +44,33 @@ namespace RobotWin.Studio.Pages
 
             KinematicFields(o);
             MassFields(o);
+            InterpolationField(o);
             Inspector.Children.Add(NumberField("Doğrusal sönüm (1/s)", Param(o, "rb.damping"), v => Edit("Sönüm değişti", () => SetParam(o, "rb.damping", v)), 0, 1000, "0.###"));
             Inspector.Children.Add(NumberField("Açısal sönüm (1/s)", Param(o, "rb.angdamping"), v => Edit("Sönüm değişti", () => SetParam(o, "rb.angdamping", v)), 0, 1000, "0.###"));
             Inspector.Children.Add(Labeled("Konumu dondur", AxisChips(o, "rb.lockpos", "Bu dünya ekseni boyunca hareket etmez")));
             Inspector.Children.Add(Labeled("Dönüşü dondur", AxisChips(o, "rb.lockrot", "Bu dünya ekseni çevresinde dönmez")));
+        }
+
+        /// <summary>
+        /// [interpolate] Unity's Interpolate: how the part is drawn between the 1 ms physics steps (the physics, the sensors
+        /// and the scripts are not changed by it).
+        /// </summary>
+        private void InterpolationField(WorldObject o)
+        {
+            string now = o.Parameters.TryGetValue(WorldPhysics.InterpolationKey, out var v) ? v : "interpolate";
+            var box = new ComboBox { MinWidth = 150, ToolTip = "Unity'deki Interpolate: çalışırken parçanın fizik adımları arasında nasıl çizildiği (fiziği, sensörleri ve betikleri değiştirmez)" };
+            foreach (var (key, label) in new[] { ("none", "Yok"), ("interpolate", "Ara değerle"), ("extrapolate", "Öngör") })
+                box.Items.Add(new ComboBoxItem { Content = label, Tag = key, IsSelected = key == now });
+            box.SelectionChanged += (_, _) =>
+            {
+                if (box.SelectedItem is not ComboBoxItem { Tag: string key } || key == now) return;
+                Edit("Ara değerleme değişti", () =>
+                {
+                    if (key == "interpolate") o.Parameters.Remove(WorldPhysics.InterpolationKey);
+                    else o.Parameters[WorldPhysics.InterpolationKey] = key;
+                });
+            };
+            Inspector.Children.Add(Labeled("Ara değerleme", box));
         }
 
         /// <summary>[rigidbody] Unity's Is Kinematic: the part goes only with the velocity given here (or a behaviour's) and pushes what it meets.</summary>
