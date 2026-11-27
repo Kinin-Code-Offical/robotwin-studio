@@ -230,7 +230,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Döndür (E): X / Y / Z halkaları (ön yarı), görüş halkası, içi serbest, sürüklerken açı dilimi | Döndür tutamacı | var | |
 | Ölçekle (R): eksen küpleri, ortada eşit ölçek | Ölçekle tutamacı (gövdeler, arazi nesneleri) | var | |
 | Hepsi bir arada (Y) | Hepsi bir arada | var | |
-| Dikdörtgen (T) | yok | yok | 3 |
+| Dikdörtgen (T) | Dikdörtgen (T): kameraya bakan yüzde kenar ve köşeden boyutlandır (karşı kenar yerinde, köşede Shift oran korur), içinden taşı, köşe dışından döndür; ızgara, boyut ve dönme adımları | var | |
 | Pivot / Center, Global / Local | Pivot / Merkez, Yerel / Dünya | var | |
 | Adımlı sürükleme (taşı 0,25 · döndür 15° · ölçek 1) | ızgara ve 15° varsayılan, Alt serbest | var | |
 | Izgara ve yakalama penceresi: ızgarayı göster, en yakın ızgara, ızgara düzlemi X/Y/Z, saydamlık, ızgara boyu, adım (bağlı X/Y/Z), ızgaranın konumu ve dönüşü, etkin nesneden kopyala, dünyaya sıfırla | Izgara ve yakalama: yakala aç / kapa, ızgarayı göster, saydamlık, taşıma · döndürme · boyut adımları, seçiliyi ızgaraya oturt, varsayılana dön; ızgara düzlemi XY / XZ / YZ (dik saydam ızgara), eksen başına adım (bağlı / ayrı), ızgaranın yeri ve dönüşü (seçiliden al, dünyaya sıfırla; döndürülmüş ızgarada çizgiler, dik düzlem ve yakalama onu izler) | var | |

@@ -443,7 +443,7 @@ namespace RobotWin.Studio.Pages
             {
                 Scene.GizmoLocal = !args.Contains("--gizmo-world");
                 Scene.GizmoCenter = args.Contains("--gizmo-center");
-                PickGizmo(args[gz + 1] switch { "rotate" => RobotWin.Studio.World.GizmoMode.Rotate, "scale" => RobotWin.Studio.World.GizmoMode.Scale, "all" => RobotWin.Studio.World.GizmoMode.All, _ => RobotWin.Studio.World.GizmoMode.Move });
+                PickGizmo(args[gz + 1] switch { "rotate" => RobotWin.Studio.World.GizmoMode.Rotate, "scale" => RobotWin.Studio.World.GizmoMode.Scale, "all" => RobotWin.Studio.World.GizmoMode.All, "rect" => RobotWin.Studio.World.GizmoMode.Rect, _ => RobotWin.Studio.World.GizmoMode.Move });
             }
 
             if (args.Contains("--vertex-pivot")) Scene.PinVertexPivot(new Point(Scene.ActualWidth, Scene.ActualHeight));   // [vertex-pivot] the handles on the selection's near right corner, as V held there puts them

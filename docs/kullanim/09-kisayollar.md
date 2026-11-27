@@ -155,7 +155,7 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | K | Kablo çek |
 | B | Bağla |
 | Esc | İptal / seçme aracı |
-| W / E / R / Y / Q | Taşı / döndür / ölçekle / hepsi bir arada tutamacı / tutamaçsız (Unity'deki gibi) |
+| W / E / R / Y / T / Q | Taşı / döndür / ölçekle / hepsi bir arada / dikdörtgen tutamacı / tutamaçsız (Unity'deki gibi) |
 | Ctrl+C / Ctrl+X / Ctrl+V | Kopyala / kes / yapıştır (takılı olanlarla) |
 | Ctrl+Shift+V | Seçilinin üstüne takılı olarak yapıştır |
 | F2 | Yeniden adlandır |
@@ -171,7 +171,7 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | Ctrl+Alt+N / Alt+Shift+N / Ctrl+Shift+G | Boş nesne / seçilinin altına boş nesne / seçileni boş üst nesnenin altına al |
 | Del | Sil |
 | Ctrl+Z / Ctrl+Y | Geri al / yinele |
-| T | Kamera seçili nesneyi takip etsin |
+| Shift+F | Kamera seçili nesneyi takip etsin |
 | F | Sığdır |
 | F5 / Shift+F5 | Çalıştır-duraklat / durdur ve başa dön |
 | Ctrl+R | Kaydı başlat / bitir |

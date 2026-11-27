@@ -22,6 +22,7 @@ namespace RobotWin.Studio.Pages
                 "Rotate" => GizmoMode.Rotate,
                 "Scale" => GizmoMode.Scale,
                 "All" => GizmoMode.All,
+                "Rect" => GizmoMode.Rect,
                 _ => GizmoMode.Move
             };
             // a second click on the one in use puts the handles away (Unity's Q)
@@ -38,6 +39,7 @@ namespace RobotWin.Studio.Pages
                 GizmoMode.Rotate => "Döndür tutamacı (E): halkayla bir eksen çevresinde, dış halkayla görüş ekseni çevresinde, içiyle serbest",
                 GizmoMode.Scale => "Ölçekle tutamacı (R): küple bir eksende, ortasıyla üç eksende",
                 GizmoMode.All => "Hepsi bir arada (Y): taşı, döndür, ölçekle",
+                GizmoMode.Rect => "Dikdörtgen (T): kenar ve köşeden boyutlandır (karşı kenar yerinde kalır, köşede Shift oranı korur), içinden taşı, köşenin dışından döndür",
                 _ => "Tutamaç yok (Q): yalnız seçim"
             };
         }
@@ -48,6 +50,7 @@ namespace RobotWin.Studio.Pages
             GizmoRotate.IsChecked = Scene.Gizmo == GizmoMode.Rotate;
             GizmoScale.IsChecked = Scene.Gizmo == GizmoMode.Scale;
             GizmoAll.IsChecked = Scene.Gizmo == GizmoMode.All;
+            GizmoRect.IsChecked = Scene.Gizmo == GizmoMode.Rect;   // [rect]
             GizmoPlace.Content = RobotWin.Studio.Shell.Lang.T(Scene.GizmoCenter ? "Merkez" : "Pivot");
             GizmoPlace.IsChecked = Scene.GizmoCenter;
             GizmoSpace.Content = RobotWin.Studio.Shell.Lang.T(Scene.GizmoLocal ? "Yerel" : "Dünya");

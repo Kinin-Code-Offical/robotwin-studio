@@ -904,7 +904,7 @@ Seri monitör çıktısını `.csv` olarak kaydedip içe aktarın. Aynı çizimi
 | --- | --- |
 | K | Kablo çek |
 | B | Bağla |
-| W / E / R / Y / Q | Taşı / döndür / ölçekle / hepsi bir arada tutamacı / tutamaçsız (Unity'deki gibi) |
+| W / E / R / Y / T / Q | Taşı / döndür / ölçekle / hepsi bir arada / dikdörtgen tutamacı / tutamaçsız (Unity'deki gibi) |
 | Ctrl+C / Ctrl+X / Ctrl+V | Kopyala / kes / yapıştır (takılı olanlarla) |
 | Ctrl+Shift+V | Seçilinin üstüne takılı olarak yapıştır |
 | F2 | Yeniden adlandır |
@@ -914,7 +914,7 @@ Seri monitör çıktısını `.csv` olarak kaydedip içe aktarın. Aynı çizimi
 | Ctrl+D | Çoğalt |
 | Del | Sil |
 | Ctrl+Z / Ctrl+Y | Geri al / yinele |
-| T | Kamera seçili nesneyi takip etsin |
+| Shift+F | Kamera seçili nesneyi takip etsin |
 | F | Seçime / her şeye sığdır |
 | Esc | İptal, seçme aracına dön |
 
@@ -928,12 +928,13 @@ Nesneler yalnızca simülasyon dururken taşınabilir. Konumu ve açıyı denet�
 
 ### Taşı, döndür, ölçekle tutamaçları
 
-Seçili parçanın üstündeki tutamaçlar Unity'dekiler gibidir; araç çubuğundaki dört düğmeyle ya da W, E, R, Y ile seçilir, Q onları kaldırır. Montaj'da ve Dünya'da aynıdır.
+Seçili parçanın üstündeki tutamaçlar Unity'dekiler gibidir; araç çubuğundaki beş düğmeyle ya da W, E, R, Y, T ile seçilir, Q onları kaldırır. Montaj'da ve Dünya'da aynıdır.
 
 - **Taşı (W):** bir ok o eksen boyunca, renkli kareler iki eksenin düzleminde (kare kameraya bakan çeyrekte durur), ortadaki kare ekran düzleminde taşır.
 - **Döndür (E):** kırmızı, yeşil, mavi halkalar X, Y, Z çevresinde döndürür (halkanın kameraya bakan yarısı görünür); dış beyaz halka bakış ekseni çevresinde, halkaların içi serbest döndürür. Sürüklerken dönülen açı sarı bir dilimle gösterilir, değer görünümün altında yazar.
 - **Ölçekle (R):** eksen uçlarındaki küpler o eksende, ortadaki küp üç eksende birden boyutlandırır (gövdeler ve arazi nesneleri; hazır parçaların boyu modelinden gelir).
 - **Hepsi bir arada (Y):** üçü birlikte.
+- **Dikdörtgen (T):** Unity'deki Rect Tool. Parçanın kameraya en çok bakan yüzünde, şekil kutusu boyunca bir dikdörtgen çizilir: köşelerinde mavi noktalar, ortasında pivot halkası vardır. Bir kenarı ya da köşeyi sürüklemek parçayı o yüzün eksenlerinde boyutlandırır; karşı kenar yerinde kalır, köşede **Shift** oranı korur. İçini sürüklemek parçayı o düzlemde taşır. Bir köşenin hemen dışından sürüklemek onu yüzün normali çevresinde, ortası çevresinde döndürür. Boyut adımı, ızgara ve döndürme adımı geçerlidir, **Alt** serbest bırakır. Gövdeler ve arazi nesneleri boyutlandırılır.
 - **Köşe yakalama (V):** parçayı serbestçe ya da taşı tutamacının ortasından sürüklerken V basılı tutun: parçanın imlece en yakın köşesi tutulur ve imleç başka bir parçanın köşesine yaklaşınca iki köşe tam üst üste gelir (köşeler parçanın kendi eksenlerindeki şekil kutusunun köşeleridir); kutular, kartlar ve parçalar kenar kenara dizilir. Yakında köşe yoksa tutulan köşe imlecin altındaki yüzeye oturur (köşeden yüzeye). V basılıyken tutamaçlar seçili parçanın imlece en yakın köşesine geçer (pivotu köşeye): taşı tutamacı o köşeyi taşır, döndür ve ölçekle tutamaçları o köşe çevresinde döndürür ve büyütür; V bırakılınca tutamaç parçanın kendi pivotuna döner.
 - **Yüzeye oturtma (Ctrl+Shift):** parçayı serbestçe sürüklerken ya da taşı tutamacının ortasından sürüklerken Ctrl+Shift basılı tutun: parçanın tabanı imlecin altındaki yüzeye (başka bir parçanın, arazinin ya da zeminin) oturur; parçanın kendisi ve üstüne takılanlar hesaba katılmaz.
 - **Bakışla döndürme (Ctrl+Shift+tık, döndürme tutamacıyla):** döndürme tutamacı açıkken (E) Ctrl+Shift basılı bir yüzeye tıklayın. Seçili parça, kendi +X ekseni (kamera ve mesafe sensörü bu yöne bakar) o noktaya bakacak biçimde döner, yan yatmaz. Üstüne takılanlar onunla birlikte döner.

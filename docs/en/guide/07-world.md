@@ -905,7 +905,7 @@ Save the serial monitor output as `.csv` and import it. Load the same sketch int
 | --- | --- |
 | K | Draw cable |
 | B | Connect |
-| W / E / R / Y / Q | Move / rotate / scale / all-in-one handles / no handles (as in Unity) |
+| W / E / R / Y / T / Q | Move / rotate / scale / all-in-one / rect handles / no handles (as in Unity) |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste (with what is mounted) |
 | Ctrl+Shift+V | Paste mounted on the selected part |
 | F2 | Rename |
@@ -915,7 +915,7 @@ Save the serial monitor output as `.csv` and import it. Load the same sketch int
 | Ctrl+D | Duplicate |
 | Del | Delete |
 | Ctrl+Z / Ctrl+Y | Undo / redo |
-| T | Camera follows the selected object |
+| Shift+F | Camera follows the selected object |
 | F | Fit the selection / everything |
 | Esc | Cancel, back to the select tool |
 
@@ -929,12 +929,13 @@ A right click on a row of the **Scene** tab (as in Unity): **Cut**, **Copy**, **
 
 ### Move, rotate and scale handles
 
-The handles on the selected part work as in Unity; pick them with the four toolbar buttons or W, E, R, Y, and Q puts them away. They are the same in Assembly and World.
+The handles on the selected part work as in Unity; pick them with the five toolbar buttons or W, E, R, Y, T, and Q puts them away. They are the same in Assembly and World.
 
 - **Move (W):** an arrow moves along its axis, the coloured squares in the plane of two axes (the square sits in the quarter facing the camera), the middle square in the screen plane.
 - **Rotate (E):** the red, green and blue rings turn about X, Y and Z (the half of a ring facing the camera shows); the outer white ring turns about the view axis and the inside of the rings turns freely. While dragging, the angle turned shows as a yellow slice and its value under the view.
 - **Scale (R):** the cubes at the ends of the axes size along that axis, the middle cube along all three (bodies and terrain objects; ready-made parts take their size from their model).
 - **All in one (Y):** the three together.
+- **Rect (T):** Unity's Rect Tool. A rectangle is drawn across the part's shape box on its face most turned to the camera, with a blue dot on each corner and the pivot ring in the middle. Dragging an edge or a corner resizes the part along that face's axes while the opposite edge stays put; on a corner **Shift** keeps the proportions. Dragging inside moves the part in that plane. Dragging just outside a corner turns it about the face's normal, about its middle. The size step, the grid and the turn step apply, **Alt** frees them. Bodies and terrain objects can be resized.
 - **Vertex snapping (V):** hold V while dragging a part freely or by the move handle's middle: the part's corner nearest the cursor is held, and when the cursor comes near another part's corner the two corners meet exactly (a part's corners are those of its shape's box in its own axes), so boxes, boards and parts line up edge to edge. With no corner near, the held corner rides on the surface under the cursor (vertex to surface). While V is held the handles stand on the selected part's corner nearest the cursor (pivot to vertex): the move handle carries that corner, the rotate and scale handles turn and size about it; let V go and the handles are back on the part's own pivot.
 - **Surface snapping (Ctrl+Shift):** hold Ctrl+Shift while dragging a part freely or by the move handle's middle: the part's base lands on the surface under the cursor (another part's, the terrain's or the floor's), leaving the part itself and what is mounted on it out.
 - **Turn towards a surface (Ctrl+Shift+click, with the rotate handle):** with the rotate handle on (E), Ctrl+Shift+click any surface: the selected part turns so its own +X, the way a camera or a distance sensor looks, points at that spot, without rolling over; what is mounted on it turns along.

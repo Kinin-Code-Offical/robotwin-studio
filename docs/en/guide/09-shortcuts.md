@@ -155,7 +155,7 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | K | Draw cable |
 | B | Connect |
 | Esc | Cancel / select tool |
-| W / E / R / Y / Q | Move / rotate / scale / all-in-one handles / no handles (as in Unity) |
+| W / E / R / Y / T / Q | Move / rotate / scale / all-in-one / rect handles / no handles (as in Unity) |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste (with what is mounted) |
 | Ctrl+Shift+V | Paste mounted on the selected part |
 | F2 | Rename |
@@ -171,7 +171,7 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | Ctrl+Alt+N / Alt+Shift+N / Ctrl+Shift+G | Empty object / empty child of the selection / put the selection under an empty parent |
 | Del | Delete |
 | Ctrl+Z / Ctrl+Y | Undo / redo |
-| T | Camera follows the selected object |
+| Shift+F | Camera follows the selected object |
 | F | Fit |
 | F5 / Shift+F5 | Run-pause / stop and rewind |
 | Ctrl+R | Start / end recording |

@@ -17,7 +17,10 @@ namespace RobotWin.Studio.World
         Move,
         Rotate,
         Scale,
-        All
+        All,
+
+        /// <summary>[rect] Unity's Rect Tool (T): resize by edges and corners on the face turned to the camera (World/WorldScene.Rect.cs).</summary>
+        Rect
     }
 
     /// <summary>
@@ -48,7 +51,9 @@ namespace RobotWin.Studio.World
             ScaleX,
             ScaleY,
             ScaleZ,
-            ScaleAll
+            ScaleAll,
+            RectEdge,   // [rect]
+            RectCorner
         }
 
         private GizmoPart _gizmoHot, _gizmoDrag;
@@ -235,6 +240,12 @@ namespace RobotWin.Studio.World
         {
             var o = GizmoTarget();
             if (o == null) return;
+            if (ShowsRect)
+            {
+                DrawRect(dc, o);   // [rect] World/WorldScene.Rect.cs
+                return;
+            }
+
             var (c, ax, ay, az) = GizmoFrame(o);
             var pc = Project(c);
             if (!pc.Visible) return;
@@ -429,6 +440,7 @@ namespace RobotWin.Studio.World
         {
             var o = GizmoTarget();
             if (o == null) return GizmoPart.None;
+            if (ShowsRect) return RectHit(o, p);   // [rect]
             var (c, ax, ay, az) = GizmoFrame(o);
             double L = GizmoLength;
             var pc = Project(c);
@@ -502,7 +514,7 @@ namespace RobotWin.Studio.World
             var part = GizmoHit(p);
             var o = GizmoTarget();
             if (part == GizmoPart.None || o == null) return false;
-            if (part is GizmoPart.ScaleX or GizmoPart.ScaleY or GizmoPart.ScaleZ or GizmoPart.ScaleAll && !CanScale(o))
+            if (part is GizmoPart.ScaleX or GizmoPart.ScaleY or GizmoPart.ScaleZ or GizmoPart.ScaleAll or GizmoPart.RectEdge or GizmoPart.RectCorner && !CanScale(o))
             {
                 _hint.Text = $"{o.Name} ölçeklenemez: bir hazır parçanın boyu modelinden gelir (gövdeler ve arazi nesneleri ölçeklenir)";
                 return true;
@@ -535,6 +547,7 @@ namespace RobotWin.Studio.World
                 .Distinct().Select(x => (x, x.Pose.Clone())).ToList();
             var ids = new HashSet<string>(_gizmoParts.Select(x => x.Part.Id), StringComparer.OrdinalIgnoreCase);
             _gizmoJoints = World.Joints.Where(j => ids.Contains(j.ObjectA)).Select(j => (j, j.AnchorX, j.AnchorY, j.AnchorZ, j.AxisX, j.AxisY, j.AxisZ)).ToList();
+            if (ShowsRect) RectBegin(o, p);   // [rect] the face's plane and middle for moves and turns
             CaptureMouse();
             RebuildOverlay();
             return true;
@@ -634,6 +647,9 @@ namespace RobotWin.Studio.World
                     Readout($"{o.Name}: serbest döndürme {ang * 180 / Math.PI:0.#}°");
                     return true;
                 }
+
+                case GizmoPart.RectEdge or GizmoPart.RectCorner:
+                    return RectResize(o, p, free);   // [rect]
 
                 case GizmoPart.ScaleX or GizmoPart.ScaleY or GizmoPart.ScaleZ or GizmoPart.ScaleAll:
                 {
@@ -830,6 +846,7 @@ namespace RobotWin.Studio.World
                 {
                     GizmoPart.RotX or GizmoPart.RotY or GizmoPart.RotZ or GizmoPart.RotView or GizmoPart.RotFree => $"{o.Name} döndürüldü ({o.Pose.Roll:0.#}°, {o.Pose.Pitch:0.#}°, {o.Pose.Yaw:0.#}°)",
                     GizmoPart.ScaleX or GizmoPart.ScaleY or GizmoPart.ScaleZ or GizmoPart.ScaleAll => $"{o.Name} ölçeklendi",
+                    GizmoPart.RectEdge or GizmoPart.RectCorner => $"{o.Name} boyutlandırıldı ({o.SizeX * 1000:0.#} × {o.SizeY * 1000:0.#} × {o.SizeZ * 1000:0.#} mm)",
                     _ => $"{o.Name} taşındı ({o.Pose.X * 1000:F0}, {o.Pose.Y * 1000:F0}, {o.Pose.Z * 1000:F0} mm)"
                 };
                 if (movedOthers.Count > 0) what += $" · +{movedOthers.Count} nesne";   // [multiselect]

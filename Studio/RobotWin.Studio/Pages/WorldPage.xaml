@@ -66,6 +66,10 @@
                                       ToolTip="Hepsi bir arada (Y): taşı, döndür ve ölçekle tutamaçları birlikte">
                             <t:Icon Data="{StaticResource I.Transform}" Size="16"/>
                         </ToggleButton>
+                        <ToggleButton x:Name="GizmoRect" Style="{StaticResource Toggle.Tool}" Tag="Rect" Click="OnGizmo"
+                                      ToolTip="Dikdörtgen (T): kameraya bakan yüzde kenar ve köşeden boyutlandır, içinden taşı, köşenin dışından döndür (gövdeler ve arazi nesneleri)">
+                            <t:Icon Data="{StaticResource I.RectTool}" Size="16"/>
+                        </ToggleButton>
                         <Border Background="{DynamicResource B.Surface}" CornerRadius="6" Padding="2" Margin="6,0,0,0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
                                 <ToggleButton x:Name="GizmoPlace" Style="{StaticResource Chip}" Content="Pivot" Click="OnGizmoPlace"
@@ -130,7 +134,7 @@
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                         <TextBlock x:Name="SimStatus" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <ToggleButton x:Name="FollowToggle" Style="{StaticResource Toggle.Tool}" ToolTip="Kamera seçili nesneyi takip etsin (T)" Click="OnFollow"><t:Icon Data="{StaticResource I.Eye}" Size="16"/></ToggleButton>
+                        <ToggleButton x:Name="FollowToggle" Style="{StaticResource Toggle.Tool}" ToolTip="Kamera seçili nesneyi takip etsin (Shift+F)" Click="OnFollow"><t:Icon Data="{StaticResource I.Eye}" Size="16"/></ToggleButton>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Üstten görünüm" Click="OnTop"><t:Icon Data="{StaticResource I.Layers}" Size="16"/></Button>
                         <Button Style="{StaticResource Btn.Icon}" ToolTip="Hepsini sığdır (F)" Click="OnFit"><t:Icon Data="{StaticResource I.ZoomFit}" Size="16"/></Button>
                         <Button x:Name="OverlayButton" Style="{StaticResource Btn.Icon}" ToolTip="Kaplamalar: ipucu satırı, tutamaç, sensör kaplamaları, ızgara (`)" Click="OnOverlayMenu"><t:Icon Data="{StaticResource I.Grid}" Size="16"/></Button>

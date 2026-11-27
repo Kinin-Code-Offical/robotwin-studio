@@ -1675,7 +1675,10 @@ namespace RobotWin.Studio.Pages
                 case Key.Y:
                     PickGizmo(GizmoMode.All);
                     break;
-                case Key.T:
+                case Key.T when !ctrl:   // [rect] Unity's Rect Tool
+                    PickGizmo(GizmoMode.Rect);
+                    break;
+                case Key.F when mods == ModifierKeys.Shift:   // Unity's Shift+F: the camera keeps the selection framed
                     FollowToggle.IsChecked = FollowToggle.IsChecked != true;
                     OnFollow(this, new RoutedEventArgs());
                     break;
