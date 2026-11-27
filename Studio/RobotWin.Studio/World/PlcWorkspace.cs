@@ -26,7 +26,10 @@ namespace RobotWin.Studio.World
         private readonly string _plcName;
         private readonly Func<string, double> _read;
         private readonly Func<string> _state;
-        private readonly Action<string> _save;
+        private readonly Action<string>? _save;
+        private readonly Action<LdProgram>? _saveLadder;
+        private readonly Pages.LadderEditor? _ladderEditor;   // a ladder PLC: the rungs are the program
+        private readonly TextBox _varsText = new TextBox();   // a ladder's VAR blocks as text, beside the table
         private readonly Action _restart;
         private readonly TextBox _editor = new TextBox();
         private readonly StackPanel _tree = new StackPanel();
@@ -71,14 +74,47 @@ namespace RobotWin.Studio.World
             ("Fonksiyonlar", "INT_TO_REAL", "Tamsayıdan gerçel sayıya", "INT_TO_REAL(Deger)"),
         };
 
+        /// <summary>A Structured Text PLC: <paramref name="program"/> is its text.</summary>
         public PlcWorkspace(Window? owner, string plcName, string program, Func<string, double> read, Func<string> state, Func<double> time, Action<string> save, Action restart)
+            : this(owner, plcName, program, null, read, state, time, save, null, restart)
+        {
+        }
+
+        /// <summary>[plc-workspace] A ladder PLC: the rungs in the Program tab, its VAR blocks in the variable table.</summary>
+        public PlcWorkspace(Window? owner, string plcName, LdProgram ladder, Func<string, double> read, Func<string> state, Func<double> time, Action<LdProgram> save, Action restart)
+            : this(owner, plcName, string.Empty, ladder, read, state, time, null, save, restart)
+        {
+        }
+
+        private PlcWorkspace(Window? owner, string plcName, string program, LdProgram? ladder, Func<string, double> read, Func<string> state, Func<double> time,
+            Action<string>? save, Action<LdProgram>? saveLadder, Action restart)
         {
             _plcName = plcName;
             _read = read;
             _state = state;
             _time = time;
             _save = save;
+            _saveLadder = saveLadder;
             _restart = restart;
+            if (ladder != null)
+            {
+                _ladderEditor = new Pages.LadderEditor(ladder, read, embedded: true);
+                _ladderEditor.Changed += () =>
+                {
+                    _dirty = true;
+                    Check();
+                };
+                _varsText.Text = ladder.Declarations.Replace("\n", Environment.NewLine);
+                _varsText.FontFamily = R<FontFamily>("F.Mono");
+                _varsText.AcceptsReturn = true;
+                _varsText.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+                _varsText.VerticalContentAlignment = VerticalAlignment.Top;
+                _varsText.TextChanged += (_, _) =>
+                {
+                    if (_varsText.IsKeyboardFocusWithin) SetVarsText(_varsText.Text.Replace("\r", string.Empty), fromText: true);
+                };
+            }
+
             Owner = owner;
             Title = Lang.T($"PLC çalışma alanı: {plcName}");
             WindowStyle = WindowStyle.None;
@@ -118,8 +154,8 @@ namespace RobotWin.Studio.World
             };
             DockPanel.SetDock(consoleBox, Dock.Bottom);
             root.Children.Add(consoleBox);
-            _tabs.Items.Add(new TabItem { Header = Lang.T("Program"), Content = _editor });
-            _tabs.Items.Add(new TabItem { Header = Lang.T("Değişkenler"), Content = new ScrollViewer { Content = _table, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new Thickness(4, 8, 4, 4) } });
+            _tabs.Items.Add(new TabItem { Header = Lang.T("Program"), Content = _ladderEditor != null ? _ladderEditor : _editor });
+            _tabs.Items.Add(new TabItem { Header = Lang.T("Değişkenler"), Content = VarsTab() });
             _tabs.Items.Add(new TabItem { Header = Lang.T("İzleme"), Content = WatchTab() });
             _tabs.SelectionChanged += (_, e) =>
             {
@@ -147,6 +183,44 @@ namespace RobotWin.Studio.World
         }
 
         private string Source => _editor.Text.Replace("\r", string.Empty);
+
+        /// <summary>The text that holds the VAR blocks: the program (Structured Text) or the ladder's declarations.</summary>
+        private string VarsText => _ladderEditor != null ? _ladderEditor.Ladder.Declarations : Source;
+
+        private void SetVarsText(string text, bool fromText = false)
+        {
+            if (_ladderEditor != null)
+            {
+                _ladderEditor.Ladder.Declarations = text;
+                _ladderEditor.ReloadDeclarations();
+                if (!fromText) _varsText.Text = text.Replace("\n", Environment.NewLine);
+                _dirty = true;
+                Check();
+            }
+            else
+            {
+                _editor.Text = text.Replace("\n", Environment.NewLine);
+            }
+        }
+
+        /// <summary>The variable table; for a ladder also its VAR blocks as text (lines the table cannot hold are edited there).</summary>
+        private UIElement VarsTab()
+        {
+            var table = new ScrollViewer { Content = _table, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new Thickness(4, 8, 4, 4) };
+            if (_ladderEditor == null) return table;
+            var dock = new DockPanel();
+            var asText = new System.Windows.Controls.Primitives.ToggleButton { Content = Lang.T("Metin olarak"), Style = R<Style>("Chip"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(4, 6, 0, 0), ToolTip = Lang.T("VAR … END_VAR bloklarını metin olarak düzenle") };
+            DockPanel.SetDock(asText, Dock.Top);
+            dock.Children.Add(asText);
+            var host = new Border { Child = table };
+            asText.Click += (_, _) =>
+            {
+                host.Child = asText.IsChecked == true ? _varsText : table;
+                if (asText.IsChecked != true) BuildTable();
+            };
+            dock.Children.Add(host);
+            return dock;
+        }
 
         // ---------------------------------------------------------------- head
 
@@ -187,7 +261,8 @@ namespace RobotWin.Studio.World
 
         private void Save()
         {
-            _save(Source);
+            if (_ladderEditor != null) _saveLadder?.Invoke(_ladderEditor.Ladder);
+            else _save?.Invoke(Source);
             _dirty = false;
             Log(Lang.T("Kaydedildi."), false, -1);
         }
@@ -196,11 +271,13 @@ namespace RobotWin.Studio.World
 
         private void Check()
         {
-            var program = StProgram.Compile(Source, out var errors);
-            _vars = StDeclarations.Read(Source);
+            List<StError> errors;
+            var program = _ladderEditor != null ? _ladderEditor.Ladder.Compile(out errors) : StProgram.Compile(Source, out errors);
+            _vars = StDeclarations.Read(VarsText);
             _console.Children.Clear();
-            if (program != null) Log(Lang.T($"Program geçerli: {_vars.Count} değişken, {Pous().Count} blok."), false, -1);
-            foreach (var e in errors.Take(50)) Log(e.ToString(), true, e.Line);
+            if (program != null)
+                Log(_ladderEditor != null ? Lang.T($"Merdiven geçerli: {_ladderEditor.Ladder.Rungs.Count} basamak, {_vars.Count} değişken.") : Lang.T($"Program geçerli: {_vars.Count} değişken, {Pous().Count} blok."), false, -1);
+            foreach (var e in errors.Take(50)) Log(e.ToString(), true, _ladderEditor != null ? -1 : e.Line);   // a ladder's lines are its generated text's
             BuildTree();
         }
 
@@ -235,6 +312,7 @@ namespace RobotWin.Studio.World
         private List<(string Kind, string Name, int Line)> Pous()
         {
             var list = new List<(string, string, int)>();
+            if (_ladderEditor != null) return new List<(string, string, int)>();
             var lines = Source.Split('\n');
             for (int i = 0; i < lines.Length; i++)
             {
@@ -249,20 +327,24 @@ namespace RobotWin.Studio.World
         {
             _tree.Children.Clear();
             _tree.Children.Add(Overline(Lang.T("Proje"), 0));
-            _tree.Children.Add(TreeItem(Lang.T("Program"), Lang.T("Yapısal Metin"), () => _tabs.SelectedIndex = 0));
+            _tree.Children.Add(TreeItem(Lang.T("Program"), Lang.T(_ladderEditor != null ? "Merdiven" : "Yapısal Metin"), () => _tabs.SelectedIndex = 0));
             _tree.Children.Add(TreeItem(Lang.T("Değişkenler"), _vars.Count.ToString(CultureInfo.CurrentCulture), () => _tabs.SelectedIndex = 1));
             foreach (var (kind, name, line) in Pous())
                 _tree.Children.Add(TreeItem("   " + name, kind == "FUNCTION" ? Lang.T("fonksiyon") : Lang.T("fonksiyon bloğu"), () => GoToLine(line)));
             _tree.Children.Add(TreeItem(Lang.T("İzleme"), _watched.Count.ToString(CultureInfo.CurrentCulture), () => _tabs.SelectedIndex = 2));
             _tree.Children.Add(Overline(Lang.T("Kütüphane"), 14));
-            _tree.Children.Add(new TextBlock { Text = Lang.T("Tıklayın: çağrı imlecin yerine yazılır (blokların örneği VAR içinde aynı adla tanımlanır)."), Style = R<Style>("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6) });
+            _tree.Children.Add(new TextBlock
+            {
+                Text = Lang.T(_ladderEditor != null ? "Tıklayın: blok seçili hücreye konur (merdivende TON, TOF, TP, CTU ve kenar kontakları var)." : "Tıklayın: çağrı imlecin yerine yazılır (blokların örneği VAR içinde aynı adla tanımlanır)."),
+                Style = R<Style>("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6),
+            });
             foreach (var group in Library.GroupBy(l => l.Group))
             {
                 _tree.Children.Add(new TextBlock { Text = Lang.T(group.Key), FontWeight = FontWeights.SemiBold, FontSize = TypeScale.Caption, Margin = new Thickness(0, 6, 0, 2), Foreground = R<Brush>("B.TextSecondary") });
                 foreach (var item in group)
                 {
                     var entry = item;
-                    var tile = TreeItem("   " + entry.Name, string.Empty, () => Insert(entry.Call), Lang.T(entry.Help));
+                    var tile = TreeItem("   " + entry.Name, string.Empty, () => Use(entry.Name, entry.Call), Lang.T(entry.Help));
                     if (tile is Button b && b.Content is DockPanel dp) foreach (var t in dp.Children.OfType<TextBlock>()) Lang.SetKeep(t, true);   // block names are code
                     _tree.Children.Add(tile);
                 }
@@ -287,6 +369,19 @@ namespace RobotWin.Studio.World
             return b;
         }
 
+        /// <summary>A library entry used: in a ladder on the selected cell, in Structured Text as a call at the cursor.</summary>
+        private void Use(string name, string call)
+        {
+            if (_ladderEditor == null)
+            {
+                Insert(call);
+                return;
+            }
+
+            _tabs.SelectedIndex = 0;
+            if (!_ladderEditor.PlaceBlock(name)) Log(Lang.T($"{name} merdivene konamadı: önce bir hücre seçin (merdivende TON, TOF, TP, CTU, R_TRIG ve F_TRIG var)."), true, -1);
+        }
+
         /// <summary>A library call at the editor's cursor (on a line of its own when the cursor is at a line's end).</summary>
         private void Insert(string call)
         {
@@ -307,7 +402,7 @@ namespace RobotWin.Studio.World
 
         private void BuildTable()
         {
-            _vars = StDeclarations.Read(Source);
+            _vars = StDeclarations.Read(VarsText);
             _table.Children.Clear();
             _table.RowDefinitions.Clear();
             _table.ColumnDefinitions.Clear();
@@ -373,7 +468,7 @@ namespace RobotWin.Studio.World
         private void Change(Action change)
         {
             change();
-            _editor.Text = StDeclarations.Write(Source, _vars).Replace("\n", Environment.NewLine);
+            SetVarsText(StDeclarations.Write(VarsText, _vars));
             BuildTable();
         }
 

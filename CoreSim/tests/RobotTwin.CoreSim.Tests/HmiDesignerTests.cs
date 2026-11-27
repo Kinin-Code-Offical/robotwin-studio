@@ -67,6 +67,49 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void APanelHasScreensThatLayOutRenameAndGoAway()
+        {
+            var panel = new HmiPanelSettings();
+            Assert.Equal(new[] { HmiPanelSettings.MainScreen }, panel.ScreenNames);
+            panel.Screens = new List<string> { "Ana", "Bakım", "Alarmlar" };
+            var lamp = new HmiWidget { Kind = HmiWidget.Lamp };                              // no screen: the first
+            var bar = new HmiWidget { Kind = HmiWidget.Bar, Screen = "Bakım" };
+            var lost = new HmiWidget { Kind = HmiWidget.Number, Screen = "Silinmiş" };       // a screen that is gone: the first
+            var go = new HmiWidget { Kind = HmiWidget.Navigate, Target = "Bakım", Screen = "Ana" };
+            var widgets = new List<HmiWidget> { lamp, bar, lost, go };
+            Assert.Equal("Ana", panel.ScreenOf(lamp));
+            Assert.Equal("Ana", panel.ScreenOf(lost));
+            Assert.Equal("Bakım", panel.ScreenOf(bar));
+            Assert.False(HmiWidget.Bound(HmiWidget.Navigate));
+
+            // each screen lays out on its own: the maintenance screen's bar starts at the top too
+            HmiLayout.Place(widgets, panel);
+            Assert.Equal(12, bar.Y);
+            Assert.Equal(12, lamp.Y);
+            Assert.True(go.Width > 0 && lost.Width > 0);
+
+            HmiLayout.RenameScreen(widgets, panel, "Bakım", "Servis");
+            Assert.Equal(new[] { "Ana", "Servis", "Alarmlar" }, panel.ScreenNames);
+            Assert.Equal("Servis", bar.Screen);
+            Assert.Equal("Servis", go.Target);   // the button that showed it follows
+            HmiLayout.RenameScreen(widgets, panel, "Servis", "Alarmlar");   // a name taken: nothing changes
+            Assert.Equal("Servis", bar.Screen);
+
+            HmiLayout.RenameScreen(widgets, panel, "Servis", null);
+            Assert.DoesNotContain(bar, widgets);   // its widgets go with it
+            Assert.Equal(string.Empty, go.Target);
+            Assert.Equal(new[] { "Ana", "Alarmlar" }, panel.ScreenNames);
+            HmiLayout.RenameScreen(widgets, panel, "Ana", "Giriş");
+            Assert.Equal("Giriş", panel.ScreenOf(lamp));
+            Assert.Equal(string.Empty, lamp.Screen);   // the first screen is the one with no name of its own
+
+            var w = new WorldDocument { Hmi = widgets, HmiPanel = panel };
+            var again = WorldDocument.FromJson(w.ToJson());
+            Assert.Equal(new[] { "Giriş", "Alarmlar" }, again.HmiPanel!.ScreenNames);
+            Assert.Contains(again.Hmi!, x => x.Kind == HmiWidget.Navigate);
+        }
+
+        [Fact]
         public void AlarmsComeGoAndStayUntilAcknowledged()
         {
             var high = new HmiAlarm { Plc = "P", Variable = "Seviye", Level = HmiAlarm.High, Condition = ">=", Threshold = 80, Text = "Seviye yüksek" };

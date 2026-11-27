@@ -11,19 +11,38 @@ using RobotTwin.CoreSim.Industrial;
 
 namespace RobotWin.Studio.Pages
 {
+    /// <summary>[plc] The ladder editor in a window of its own (the PLC's inspector opens it): <see cref="LadderEditor"/> with Save and Close.</summary>
+    public sealed class LadderWindow : Window
+    {
+        private readonly LadderEditor _editor;
+
+        public LadderWindow(LdProgram ladder, Action<LdProgram> save, Func<string, double>? live, string title)
+        {
+            Title = "Merdiven diyagramı — " + title;
+            Width = 1180;
+            Height = 820;
+            WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            Background = (Brush)Application.Current.FindResource("B.Surface");
+            Foreground = (Brush)Application.Current.FindResource("B.Text");
+            _editor = new LadderEditor(ladder, live, embedded: false) { SaveRequested = save, CloseRequested = Close };
+            Content = _editor;
+        }
+    }
+
     /// <summary>
     /// [plc] The ladder editor: the PLC's variables on the left, its rungs as grids in the middle (seven columns of contacts and
     /// blocks, the coils on the right, rows for parallel branches joined by vertical links), the selected cell's operand
     /// below. The program is checked as it is drawn; while the world runs, the contacts and coils that pass power are lit.
+    /// Embedded in the PLC workspace (World/PlcWorkspace.cs) it leaves the variables, the check and saving to the workspace.
     /// </summary>
-    public sealed class LadderWindow : Window
+    public sealed class LadderEditor : DockPanel
     {
         private const int LogicColumns = 7, CoilColumn = 7;
         private const double CellW = 96, CellH = 56, Rail = 14;
 
         private readonly LdProgram _ladder;
         private readonly Func<string, double>? _live;   // a running PLC's variable values, by name
-        private readonly Action<LdProgram> _save;
+        private readonly bool _embedded;
         private readonly TextBox _declarations;
         private readonly StackPanel _rungs = new StackPanel();
         private readonly TextBlock _check = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
@@ -36,20 +55,26 @@ namespace RobotWin.Studio.Pages
         private (int Rung, int Row, int Col)? _selected;
         private bool _loading;
 
-        public LadderWindow(LdProgram ladder, Action<LdProgram> save, Func<string, double>? live, string title)
+        /// <summary>Save and load into the PLC (the window's button); the workspace saves on its own.</summary>
+        public Action<LdProgram>? SaveRequested { get; set; }
+
+        public Action? CloseRequested { get; set; }
+
+        /// <summary>[plc-workspace] The ladder or its variables changed (to mark the workspace unsaved and check it again).</summary>
+        public event Action? Changed;
+
+        /// <summary>[plc-workspace] The program as drawn.</summary>
+        public LdProgram Ladder => _ladder;
+
+        public LadderEditor(LdProgram ladder, Func<string, double>? live, bool embedded)
         {
             _ladder = ladder;
-            _save = save;
             _live = live;
-            Title = "Merdiven diyagramı — " + title;
-            Width = 1180;
-            Height = 820;
-            WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            Background = Res("B.Surface");
-            Foreground = Res("B.Text");
+            _embedded = embedded;
             if (_ladder.Rungs.Count == 0) _ladder.Rungs.Add(new LdRung());
 
-            var root = new DockPanel { Background = Res("B.Surface") };
+            var root = this;
+            Background = Res("B.Surface");
 
             // Toolbar: the elements, placed on the selected cell.
             var tools = new WrapPanel { Margin = new Thickness(10, 8, 10, 4) };
@@ -94,8 +119,8 @@ namespace RobotWin.Studio.Pages
             DockPanel.SetDock(props, Dock.Top);
             root.Children.Add(props);
 
-            // Bottom: check, generated text, save.
-            var bottom = new StackPanel { Margin = new Thickness(10, 4, 10, 10) };
+            // Bottom: check, generated text, save (the workspace has its own check and save).
+            var bottom = new StackPanel { Margin = new Thickness(10, 4, 10, 10), Visibility = embedded ? Visibility.Collapsed : Visibility.Visible };
             bottom.Children.Add(_check);
             bottom.Children.Add(new Expander { Header = "Oluşan Yapısal Metin", Content = _generated, Margin = new Thickness(0, 6, 0, 0) });
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
@@ -103,18 +128,18 @@ namespace RobotWin.Studio.Pages
             saveButton.Click += (_, _) =>
             {
                 _ladder.Declarations = _declarations!.Text.Replace("\r", string.Empty);
-                _save(_ladder);
+                SaveRequested?.Invoke(_ladder);
             };
             var close = new Button { Content = "Kapat", Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(6, 0, 0, 0) };
-            close.Click += (_, _) => Close();
+            close.Click += (_, _) => CloseRequested?.Invoke();
             buttons.Children.Add(saveButton);
             buttons.Children.Add(close);
             bottom.Children.Add(buttons);
             DockPanel.SetDock(bottom, Dock.Bottom);
             root.Children.Add(bottom);
 
-            // Left: declarations.
-            var left = new DockPanel { Width = 300, Margin = new Thickness(10, 0, 6, 0) };
+            // Left: declarations (in the workspace: its Variables tab).
+            var left = new DockPanel { Width = 300, Margin = new Thickness(10, 0, 6, 0), Visibility = embedded ? Visibility.Collapsed : Visibility.Visible };
             var leftTitle = new TextBlock { Text = "Değişkenler (VAR … END_VAR)", Margin = new Thickness(0, 0, 0, 4) };
             DockPanel.SetDock(leftTitle, Dock.Top);
             left.Children.Add(leftTitle);
@@ -130,8 +155,10 @@ namespace RobotWin.Studio.Pages
             };
             _declarations.TextChanged += (_, _) =>
             {
+                if (_loading) return;
                 _ladder.Declarations = _declarations.Text.Replace("\r", string.Empty);
                 Check();
+                Changed?.Invoke();
             };
             left.Children.Add(_declarations);
             DockPanel.SetDock(left, Dock.Left);
@@ -144,20 +171,48 @@ namespace RobotWin.Studio.Pages
             {
                 _ladder.Rungs.Add(new LdRung());
                 Redraw();
+                Changed?.Invoke();
             };
             DockPanel.SetDock(addRung, Dock.Bottom);
             middle.Children.Add(addRung);
             middle.Children.Add(new ScrollViewer { Content = _rungs, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto });
             root.Children.Add(middle);
 
-            Content = root;
             Redraw();
             if (_live != null)
             {
+                // lit while shown: the timer lives with the editor in its window or tab
                 _timer.Tick += (_, _) => Redraw(keepFocus: true);
-                _timer.Start();
-                Closed += (_, _) => _timer.Stop();
+                Loaded += (_, _) => _timer.Start();
+                Unloaded += (_, _) => _timer.Stop();
             }
+        }
+
+        /// <summary>[plc-workspace] The variables changed outside (the workspace's table): the hidden text follows.</summary>
+        public void ReloadDeclarations()
+        {
+            _loading = true;
+            _declarations.Text = _ladder.Declarations.Replace("\n", Environment.NewLine);
+            _loading = false;
+            Check();
+        }
+
+        /// <summary>[plc-workspace] A block from the workspace's library on the selected cell (false: the ladder has no such block, or no cell is selected).</summary>
+        public bool PlaceBlock(string name)
+        {
+            LdKind? kind = name switch
+            {
+                "TON" => LdKind.Ton,
+                "TOF" => LdKind.Tof,
+                "TP" => LdKind.Tp,
+                "CTU" => LdKind.Ctu,
+                "R_TRIG" => LdKind.ContactRise,
+                "F_TRIG" => LdKind.ContactFall,
+                _ => null,
+            };
+            if (kind == null || _selected == null) return false;
+            Place(kind.Value);
+            return true;
         }
 
         private static Brush Res(string key) => (Brush)Application.Current.FindResource(key);
@@ -173,6 +228,7 @@ namespace RobotWin.Studio.Pages
             if (_loading || Selected is not { } cell) return;
             change(cell);
             Redraw(keepFocus: true);
+            Changed?.Invoke();
         }
 
         /// <summary>Puts an element on the selected cell: a coil goes to the coil column, the rest to the logic columns.</summary>
@@ -207,6 +263,7 @@ namespace RobotWin.Studio.Pages
 
             _selected = (s.Rung, s.Row, col);
             Redraw();
+            Changed?.Invoke();
         }
 
         private void ToggleLink()
@@ -217,11 +274,13 @@ namespace RobotWin.Studio.Pages
                 var rung = _ladder.Rungs[_selected!.Value.Rung];
                 if (cell.LinkDown && rung.Rows <= cell.Row + 1) rung.Cells.Add(new LdCell { Row = cell.Row + 1, Col = 0, Kind = LdKind.Empty });   // make room for the branch
                 Redraw();
+                Changed?.Invoke();
             }
             else if (_selected is { } s)
             {
                 _ladder.Rungs[s.Rung].Cells.Add(new LdCell { Row = s.Row, Col = s.Col, Kind = LdKind.Wire, LinkDown = true });
                 Redraw();
+                Changed?.Invoke();
             }
         }
 
@@ -256,7 +315,11 @@ namespace RobotWin.Studio.Pages
             var head = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 2) };
             head.Children.Add(new TextBlock { Text = $"Basamak {k + 1}", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
             var comment = new TextBox { Text = rung.Comment, Width = 320, ToolTip = "Basamağın açıklaması" };
-            comment.TextChanged += (_, _) => rung.Comment = comment.Text;
+            comment.TextChanged += (_, _) =>
+            {
+                rung.Comment = comment.Text;
+                Changed?.Invoke();
+            };
             head.Children.Add(comment);
             void HeadButton(string text, string tip, Action click)
             {
@@ -265,6 +328,7 @@ namespace RobotWin.Studio.Pages
                 {
                     click();
                     Redraw();
+                    Changed?.Invoke();
                 };
                 head.Children.Add(b);
             }

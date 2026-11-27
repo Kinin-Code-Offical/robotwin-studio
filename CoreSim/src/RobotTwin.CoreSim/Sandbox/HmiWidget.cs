@@ -17,10 +17,19 @@ namespace RobotTwin.CoreSim.Sandbox
         /// <summary>[hmi-designer] A dial with its scale, a trend of up to four variables, a motor's faceplate, the alarm list, a text.</summary>
         public const string Gauge = "kadran", Trend = "trend", Motor = "motor", Alarms = "alarmlar", Text = "yazı";
 
-        public static readonly string[] Kinds = { Lamp, Button, Switch, Number, SetPoint, Bar, Gauge, Trend, Motor, Alarms, Text };
+        /// <summary>[hmi-screens] A button that shows another screen of the panel (<see cref="Target"/>).</summary>
+        public const string Navigate = "ekran";
 
-        /// <summary>The kinds that show a value (no variable needed for the alarm list or a text).</summary>
-        public static bool Bound(string kind) => kind != Alarms && kind != Text;
+        public static readonly string[] Kinds = { Lamp, Button, Switch, Number, SetPoint, Bar, Gauge, Trend, Motor, Alarms, Text, Navigate };
+
+        /// <summary>The kinds that show a value (no variable needed for the alarm list, a text or a screen button).</summary>
+        public static bool Bound(string kind) => kind != Alarms && kind != Text && kind != Navigate;
+
+        /// <summary>[hmi-screens] The screen it is on (empty: the first one).</summary>
+        public string Screen { get; set; } = string.Empty;
+
+        /// <summary>[hmi-screens] A screen button's screen.</summary>
+        public string Target { get; set; } = string.Empty;
 
         /// <summary>A motor faceplate's roles: start and stop (pulsed while pressed), running and fault (lamps).</summary>
         public const string RoleStart = "başlat", RoleStop = "durdur", RoleRunning = "çalışıyor", RoleFault = "arıza";
@@ -98,6 +107,7 @@ namespace RobotTwin.CoreSim.Sandbox
             Motor => (220, 150),
             Alarms => (360, 160),
             Text => (200, 40),
+            Navigate => (160, 56),
             _ => (160, 96),
         };
     }
@@ -114,12 +124,30 @@ namespace RobotTwin.CoreSim.Sandbox
 
         /// <summary>Common HMI screen sizes: 7" (800 × 480), 10" (1024 × 600), 12" (1280 × 800), 15" (1024 × 768).</summary>
         public static readonly (double W, double H)[] Presets = { (800, 480), (1024, 600), (1280, 800), (1024, 768) };
+
+        /// <summary>[hmi-screens] The panel's screens by name, the first the one it starts on; null: one screen.</summary>
+        public List<string>? Screens { get; set; }
+
+        public const string MainScreen = "Ana ekran";
+
+        /// <summary>The screens' names (at least the main one).</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<string> ScreenNames => Screens is { Count: > 0 } s ? s : new[] { MainScreen };
+
+        /// <summary>The screen a widget is on, by name: its own, or the first when it names none (or one that is gone).</summary>
+        public string ScreenOf(HmiWidget w) => ScreenNames.Contains(w.Screen) ? w.Screen : ScreenNames[0];
     }
 
     /// <summary>[hmi-designer] Places the elements that have no place yet (a panel made before the designer), row by row.</summary>
     public static class HmiLayout
     {
         public static void Place(IList<HmiWidget> widgets, HmiPanelSettings panel)
+        {
+            // [hmi-screens] each screen lays out its own
+            foreach (var screen in widgets.GroupBy(panel.ScreenOf)) PlaceOn(screen.ToList(), panel);
+        }
+
+        private static void PlaceOn(IList<HmiWidget> widgets, HmiPanelSettings panel)
         {
             const double gap = 12;
             double x = gap, y = gap, row = 0;
@@ -141,6 +169,39 @@ namespace RobotTwin.CoreSim.Sandbox
                 x += dw + gap;
                 row = Math.Max(row, dh);
             }
+        }
+
+        /// <summary>
+        /// [hmi-screens] A screen renamed: its widgets and the buttons that show it follow; null <paramref name="to"/> removes
+        /// it, its widgets going with it and its buttons pointing nowhere (the first screen stays: a panel has at least one).
+        /// </summary>
+        public static void RenameScreen(IList<HmiWidget> widgets, HmiPanelSettings panel, string from, string? to)
+        {
+            var names = panel.ScreenNames.ToList();
+            int index = names.IndexOf(from);
+            if (index < 0) return;
+            bool first = index == 0;
+            if (to == null)
+            {
+                if (names.Count <= 1) return;
+                names.RemoveAt(index);
+                for (int i = widgets.Count - 1; i >= 0; i--)
+                    if (panel.ScreenOf(widgets[i]) == from) widgets.RemoveAt(i);
+                foreach (var w in widgets.Where(w => w.Target == from)) w.Target = string.Empty;
+            }
+            else
+            {
+                if (to.Length == 0 || names.Contains(to)) return;
+                names[index] = to;
+                foreach (var w in widgets)
+                {
+                    if (w.Screen == from || (first && w.Screen.Length == 0)) w.Screen = first ? string.Empty : to;
+                    if (w.Target == from) w.Target = to;
+                }
+            }
+
+            panel.Screens = names;
+            if (first && to == null) foreach (var w in widgets.Where(w => w.Screen == names[0])) w.Screen = string.Empty;
         }
 
         /// <summary>A value snapped to the grid (0: as it is).</summary>

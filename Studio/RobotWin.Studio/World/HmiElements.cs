@@ -32,6 +32,9 @@ namespace RobotWin.Studio.World
 
         /// <summary>A PLC's display name by its object id.</summary>
         public Func<string, string> PlcName { get; init; } = id => id;
+
+        /// <summary>[hmi-screens] Shows another screen of the panel (a screen button pressed).</summary>
+        public Action<string> ShowScreen { get; init; } = _ => { };
     }
 
     /// <summary>
@@ -168,6 +171,18 @@ namespace RobotWin.Studio.World
                 case HmiWidget.Motor:
                     body = Motor(w, Read, Write, refresh);
                     break;
+                case HmiWidget.Navigate:
+                {
+                    // [hmi-screens] a button to another screen: its label, or the screen's name
+                    var go = new Button { Content = w.Label.Length > 0 ? w.Label : w.Target.Length > 0 ? "→ " + Lang.T(w.Target) : Lang.T("Ekran seçin"), Padding = new Thickness(10, 6, 10, 6) };
+                    go.Click += (_, _) =>
+                    {
+                        if (ctx.Live && w.Target.Length > 0) ctx.ShowScreen(w.Target);
+                    };
+                    dock.Children.Clear();   // the button is the element: no title above it
+                    body = go;
+                    break;
+                }
                 case HmiWidget.Alarms:
                     body = AlarmList(ctx, refresh);
                     break;
@@ -182,8 +197,8 @@ namespace RobotWin.Studio.World
                 Width = w.Width,
                 Height = w.Height,
                 Padding = new Thickness(10, 8, 10, 8),
-                Background = w.Kind == HmiWidget.Text ? Brushes.Transparent : Res("B.Raised"),
-                BorderBrush = w.Kind == HmiWidget.Text ? Brushes.Transparent : Res("B.Border"),
+                Background = w.Kind is HmiWidget.Text or HmiWidget.Navigate ? Brushes.Transparent : Res("B.Raised"),
+                BorderBrush = w.Kind is HmiWidget.Text or HmiWidget.Navigate ? Brushes.Transparent : Res("B.Border"),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(8),
                 Child = dock,
@@ -300,6 +315,7 @@ namespace RobotWin.Studio.World
             HmiWidget.Trend => "Trend",
             HmiWidget.Motor => "Motor",
             HmiWidget.Alarms => "Alarm listesi",
+            HmiWidget.Navigate => "Ekrana git",
             _ => "Yazı",
         };
 

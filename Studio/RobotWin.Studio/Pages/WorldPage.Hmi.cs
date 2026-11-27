@@ -28,6 +28,7 @@ namespace RobotWin.Studio.Pages
         private TextBlock? _hmiAlarmText;
         private HmiDesigner? _hmiDesigner;
         private bool _hmiFit;   // the panel scaled to the tab, or at its own size with scroll bars
+        private string _hmiScreenName = string.Empty;   // [hmi-screens] the screen shown ("": the first)
         private Border? _hmiScreen;   // the panel's screen as built last (the snapshot's picture)
         private bool _hmiQuiet;   // an HMI edit: the world changed, the 3D scene did not
         private bool _hmiScreenShot;   // --snapshot "…:hmi:screen": the screen alone is the picture, however often it is rebuilt
@@ -150,6 +151,23 @@ namespace RobotWin.Studio.Pages
             };
             DockPanel.SetDock(fit, Dock.Right);
             bar.Children.Add(fit);
+            var screens = (world.HmiPanel ?? new HmiPanelSettings()).ScreenNames;
+            string shown = screens.Contains(_hmiScreenName) ? _hmiScreenName : screens[0];
+            if (screens.Count > 1)
+            {
+                // [hmi-screens] which screen the operator sees (screen buttons switch it too)
+                var pick = new ComboBox { ItemsSource = screens, SelectedItem = shown, MinWidth = 130, Margin = new Thickness(0, 0, 8, 0), ToolTip = Shell.Lang.T("Gösterilen ekran") };
+                pick.SelectionChanged += (_, _) =>
+                {
+                    if (pick.SelectedItem is string s && s != _hmiScreenName)
+                    {
+                        _hmiScreenName = s;
+                        Dispatcher.BeginInvoke(new Action(BuildHmiPanel));
+                    }
+                };
+                DockPanel.SetDock(pick, Dock.Right);
+                bar.Children.Add(pick);
+            }
             _hmiAlarmText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, FontWeight = FontWeights.SemiBold };
             bar.Children.Add(_hmiAlarmText);
             DockPanel.SetDock(bar, Dock.Top);
@@ -179,8 +197,13 @@ namespace RobotWin.Studio.Pages
             {
                 Live = true, Read = HmiRead, Write = HmiWrite, Time = () => _session.Time, Alarms = _hmiAlarms,
                 PlcName = id => world.Find(id)?.Name ?? id,
+                ShowScreen = name =>
+                {
+                    _hmiScreenName = name;
+                    Dispatcher.BeginInvoke(new Action(BuildHmiPanel));
+                },
             };
-            foreach (var w in widgets)
+            foreach (var w in widgets.Where(w => panel.ScreenOf(w) == shown))
             {
                 var item = HmiElements.Build(w, ctx, _hmiRefresh);
                 Canvas.SetLeft(item, w.X);
@@ -216,6 +239,27 @@ namespace RobotWin.Studio.Pages
             if (World is not { } world || !(_snapshotModes.Contains("hmi") || _snapshotModes.Contains("hmi-designer") || _snapshotModes.Contains("plc"))) return;
             var plc = world.Objects.FirstOrDefault(o => o.PartId == CellParts.PlcId) ?? world.AddComponent(Lib, CellParts.PlcId, new WorldPose { X = 0.35, Y = 0.3, Z = 0 });
             plc.Name = "PLC";
+            if (_snapshotModes.Contains("ld"))
+            {
+                // [plc-workspace] a ladder PLC: start / stop with a seal-in, and a timer after it
+                var ld = new LdProgram { Declarations = "VAR\n    Start AT %IX0.0 : BOOL;\n    Stop AT %IX0.1 : BOOL;\n    Motor AT %QX0.0 : BOOL;\n    Lamba AT %QX0.1 : BOOL;\n    T1 : TON;\nEND_VAR" };
+                var seal = new LdRung { Comment = "Mühürlü start / stop" };
+                seal.Cells.Add(new LdCell { Row = 0, Col = 0, Kind = LdKind.Contact, Operand = "Start", LinkDown = true });
+                seal.Cells.Add(new LdCell { Row = 0, Col = 1, Kind = LdKind.ContactNot, Operand = "Stop" });
+                for (int c = 2; c < 7; c++) seal.Cells.Add(new LdCell { Row = 0, Col = c, Kind = LdKind.Wire });
+                seal.Cells.Add(new LdCell { Row = 0, Col = 7, Kind = LdKind.Coil, Operand = "Motor" });
+                seal.Cells.Add(new LdCell { Row = 1, Col = 0, Kind = LdKind.Contact, Operand = "Motor" });
+                var timer = new LdRung { Comment = "Motor 2 s çalışınca lamba" };
+                timer.Cells.Add(new LdCell { Row = 0, Col = 0, Kind = LdKind.Contact, Operand = "Motor" });
+                timer.Cells.Add(new LdCell { Row = 0, Col = 1, Kind = LdKind.Ton, Operand = "T1", Param = "T#2s" });
+                for (int c = 2; c < 7; c++) timer.Cells.Add(new LdCell { Row = 0, Col = c, Kind = LdKind.Wire });
+                timer.Cells.Add(new LdCell { Row = 0, Col = 7, Kind = LdKind.Coil, Operand = "Lamba" });
+                ld.Rungs.Add(seal);
+                ld.Rungs.Add(timer);
+                plc.Parameters["language"] = CellParts.PlcLadder;
+                plc.Parameters["ladder"] = ld.Save();
+            }
+
             if (world.Hmi != null) return;
             HmiWidget W(string kind, string variable, string label, double x, double y, double w, double h) =>
                 new HmiWidget { Kind = kind, Plc = plc.Id, Variable = variable, Label = label, X = x, Y = y, Width = w, Height = h, Max = kind == HmiWidget.Trend ? 1.2 : 10 };
@@ -237,7 +281,14 @@ namespace RobotWin.Studio.Pages
                 motor,
                 trend,
                 W(HmiWidget.Alarms, string.Empty, "Alarmlar", 576, 264, 208, 200),
+                new HmiWidget { Kind = HmiWidget.Navigate, Label = "Bakım →", Target = "Bakım", X = 16, Y = 344, Width = 160, Height = 56 },
+                // [hmi-screens] a second screen: the counter, the pusher, and the way back
+                new HmiWidget { Kind = HmiWidget.Text, Label = "Bakım", Screen = "Bakım", X = 16, Y = 12, Width = 300, Height = 40 },
+                new HmiWidget { Kind = HmiWidget.Number, Plc = plc.Id, Variable = "Sayi", Label = "Parça sayısı", Screen = "Bakım", X = 16, Y = 64, Width = 200, Height = 96 },
+                new HmiWidget { Kind = HmiWidget.Lamp, Plc = plc.Id, Variable = "Itici", Label = "İtici", Screen = "Bakım", X = 232, Y = 64, Width = 120, Height = 96 },
+                new HmiWidget { Kind = HmiWidget.Navigate, Label = "← Ana ekran", Target = "Ana ekran", Screen = "Bakım", X = 16, Y = 176, Width = 160, Height = 56 },
             };
+            world.HmiPanel = new HmiPanelSettings { Screens = new List<string> { "Ana ekran", "Bakım" } };
             world.HmiAlarms = new List<HmiAlarm>
             {
                 new HmiAlarm { Plc = plc.Id, Variable = "Flas", Level = HmiAlarm.Message, Condition = "=", Threshold = 1, Text = "Flaş yanıyor" },
@@ -252,7 +303,7 @@ namespace RobotWin.Studio.Pages
                 // [plc-workspace] "…:plc[:vars|:watch]": the PLC's workspace on that tab
                 var ws = OpenPlcWorkspace(plcObject);
                 if (ws == null) return;
-                ws.ShowForSnapshot(_snapshotModes.Contains("vars") ? "vars" : _snapshotModes.Contains("watch") ? "watch" : "program", new[] { "Flas", "Adim" });
+                ws.ShowForSnapshot(_snapshotModes.Contains("vars") ? "vars" : _snapshotModes.Contains("watch") ? "watch" : "program", _snapshotModes.Contains("ld") ? new[] { "Motor", "Lamba" } : new[] { "Flas", "Adim" });
                 ws.UpdateLayout();
                 App.SnapshotTarget = VisualTreeHelper.GetChildrenCount(ws) > 0 ? VisualTreeHelper.GetChild(ws, 0) as FrameworkElement : ws.Content as FrameworkElement;
                 return;

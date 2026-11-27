@@ -35,6 +35,8 @@ namespace RobotWin.Studio.World
         private readonly Rectangle[] _handles = Enumerable.Range(0, 4).Select(_ => new Rectangle { Width = 9, Height = 9, StrokeThickness = 1, IsHitTestVisible = false }).ToArray();
         private readonly Dictionary<HmiWidget, FrameworkElement> _items = new Dictionary<HmiWidget, FrameworkElement>();
         private HmiWidget? _selected;
+        private string _screen = string.Empty;   // [hmi-screens] the screen being designed ("": the first)
+        private readonly StackPanel _screens = new StackPanel();
 
         // a drag on the panel: moving the selection, or one of its corners (0 top-left, 1 top-right, 2 bottom-right, 3 bottom-left)
         private int _corner = -1;
@@ -45,6 +47,12 @@ namespace RobotWin.Studio.World
         private HmiPanelSettings Panel => _world.HmiPanel ?? new HmiPanelSettings();
 
         private List<HmiWidget> Widgets => _world.Hmi ?? new List<HmiWidget>();
+
+        /// <summary>The screen being designed, by name (the first when none is picked or it is gone).</summary>
+        private string Screen => Panel.ScreenNames.Contains(_screen) ? _screen : Panel.ScreenNames[0];
+
+        /// <summary>The widgets on the screen being designed.</summary>
+        private List<HmiWidget> OnScreen => Widgets.Where(w => Panel.ScreenOf(w) == Screen).ToList();
 
         private List<WorldObject> Plcs => _world.Objects.Where(o => o.PartId == CellParts.PlcId).ToList();
 
@@ -182,15 +190,17 @@ namespace RobotWin.Studio.World
         private UIElement Palette()
         {
             var stack = new StackPanel();
+            stack.Children.Add(Overline(Lang.T("Panel ekranları"), 0));
+            stack.Children.Add(_screens);   // [hmi-screens] filled by BuildScreens
             foreach (var (section, kinds) in new[]
                      {
                          ("Göstergeler", new[] { HmiWidget.Lamp, HmiWidget.Number, HmiWidget.Bar, HmiWidget.Gauge, HmiWidget.Trend }),
                          ("Kontroller", new[] { HmiWidget.Button, HmiWidget.Switch, HmiWidget.SetPoint, HmiWidget.Motor }),
                          ("Alarm", new[] { HmiWidget.Alarms }),
-                         ("Genel", new[] { HmiWidget.Text }),
+                         ("Genel", new[] { HmiWidget.Text, HmiWidget.Navigate }),
                      })
             {
-                stack.Children.Add(Overline(Lang.T(section), stack.Children.Count == 0 ? 0 : 14));
+                stack.Children.Add(Overline(Lang.T(section), 14));
                 var wrap = new WrapPanel();
                 foreach (string kind in kinds) wrap.Children.Add(Tile(kind));
                 stack.Children.Add(wrap);
@@ -232,6 +242,7 @@ namespace RobotWin.Studio.World
             HmiWidget.SetPoint => "M3,7 L21,7 L21,17 L3,17 Z M8,10 L8,14 M14,12 L18,12 M16,10 L16,14",
             HmiWidget.Motor => "M12,4 A8,8 0 1 1 11.99,4 M8,15 L8,9 L12,13 L16,9 L16,15",
             HmiWidget.Alarms => "M12,3 L21,19 L3,19 Z M12,9 L12,13 M12,15.5 L12,16.5",
+            HmiWidget.Navigate => "M3,7 L21,7 L21,17 L3,17 Z M8,12 L16,12 M13,9 L16,12 L13,15",
             _ => "M5,6 L19,6 M12,6 L12,19",
         };
 
@@ -246,7 +257,8 @@ namespace RobotWin.Studio.World
             }
 
             var (w, h) = HmiWidget.DefaultSize(kind);
-            var widget = new HmiWidget { Kind = kind, Plc = Plcs.FirstOrDefault()?.Id ?? string.Empty, Width = w, Height = h };
+            var widget = new HmiWidget { Kind = kind, Plc = Plcs.FirstOrDefault()?.Id ?? string.Empty, Width = w, Height = h, Screen = Screen == Panel.ScreenNames[0] ? string.Empty : Screen };
+            if (kind == HmiWidget.Navigate) widget.Target = Panel.ScreenNames.FirstOrDefault(n => n != Screen) ?? string.Empty;
             if (kind == HmiWidget.Text) widget.Label = Lang.T("Başlık");
             if (at is { } p)
             {
@@ -256,7 +268,7 @@ namespace RobotWin.Studio.World
             else
             {
                 widget.Width = widget.Height = 0;
-                HmiLayout.Place(Widgets.Concat(new[] { widget }).ToList(), Panel);
+                HmiLayout.Place(OnScreen.Concat(new[] { widget }).ToList(), Panel);
             }
 
             _edit($"HMI: {HmiElements.KindName(kind)} eklendi", () => (_world.Hmi ??= new List<HmiWidget>()).Add(widget));
@@ -305,8 +317,9 @@ namespace RobotWin.Studio.World
             _canvas.Background = GridBrush(p.Grid);
             _canvas.Children.Clear();
             _items.Clear();
+            BuildScreens();
             var ctx = new HmiContext { Live = false, PlcName = id => _world.Find(id)?.Name ?? id };
-            foreach (var w in Widgets)
+            foreach (var w in OnScreen)
             {
                 var item = HmiElements.Build(w, ctx, new List<Action>());
                 Canvas.SetLeft(item, w.X);
@@ -315,7 +328,7 @@ namespace RobotWin.Studio.World
                 _items[w] = item;
             }
 
-            if (_selected != null && !Widgets.Contains(_selected)) _selected = null;
+            if (_selected != null && !OnScreen.Contains(_selected)) _selected = null;
             _canvas.Children.Add(_outline);
             foreach (var h in _handles) _canvas.Children.Add(h);
             PlaceSelection();
@@ -375,7 +388,7 @@ namespace RobotWin.Studio.World
             if (_corner < 0)
             {
                 // the topmost element under the pointer (the last drawn)
-                var hit = Widgets.LastOrDefault(w => Bounds(w).Contains(p));
+                var hit = OnScreen.LastOrDefault(w => Bounds(w).Contains(p));
                 if (!ReferenceEquals(hit, _selected))
                 {
                     _selected = hit;
@@ -489,7 +502,36 @@ namespace RobotWin.Studio.World
             _props.Children.Clear();
             if (_selected == null)
             {
-                _props.Children.Add(Overline(Lang.T("Panel"), 0));
+                // [hmi-screens] the screen being designed: its name, removal
+                string screen = Screen;
+                var names = Panel.ScreenNames;
+                _props.Children.Add(Overline(Lang.T("Ekran"), 0));
+                _props.Children.Add(Row(Lang.T("Ad"), Text(screen, v =>
+                {
+                    string name = v.Trim();
+                    if (name.Length == 0 || names.Contains(name)) return;
+                    _edit($"HMI ekranı: {name}", () =>
+                    {
+                        var panel = _world.HmiPanel ??= new HmiPanelSettings();
+                        if (panel.Screens == null) panel.Screens = new List<string>(panel.ScreenNames);
+                        HmiLayout.RenameScreen(_world.Hmi ?? new List<HmiWidget>(), panel, screen, name);
+                    });
+                    _screen = name;
+                    Rebuild();
+                }), 160));
+                _props.Children.Add(Caption(Lang.T(names[0] == screen ? "Panel bu ekranla açılır." : "Ekran düğmeleri bu ekranı açar."), 0));
+                if (names.Count > 1)
+                {
+                    _props.Children.Add(Buttons(Button(Lang.T("Ekranı sil"), (_, _) =>
+                    {
+                        _edit($"HMI ekranı silindi: {screen}", () => HmiLayout.RenameScreen(_world.Hmi ?? new List<HmiWidget>(), _world.HmiPanel ??= new HmiPanelSettings(), screen, null));
+                        if (_world.Hmi is { Count: 0 }) _world.Hmi = null;
+                        _screen = string.Empty;
+                        Rebuild();
+                    }, tip: "Ekranı ve üstündeki öğeleri siler")));
+                }
+
+                _props.Children.Add(Overline(Lang.T("Panel")));
                 _props.Children.Add(Caption(Lang.T($"{Widgets.Count} öğe · {Panel.Width:0} × {Panel.Height:0} px · {_world.HmiAlarms?.Count ?? 0} alarm"), 0));
                 _props.Children.Add(Caption(Lang.T("Bir öğe seçin ya da paletten ekleyin. Çalışırken panel, dünyanın HMI sekmesinde canlıdır."), 8));
                 return;
@@ -504,6 +546,13 @@ namespace RobotWin.Studio.World
 
             _props.Children.Add(Overline(Lang.T(HmiElements.KindName(w.Kind)), 0));
             _props.Children.Add(Row(Lang.T("Etiket"), Text(w.Label, v => Set("etiket", () => w.Label = v.Trim())), 160));
+            if (w.Kind == HmiWidget.Navigate)
+            {
+                var targets = Panel.ScreenNames.Where(n => n != Screen).ToList();
+                if (targets.Count == 0) _props.Children.Add(Caption(Lang.T("Panelde başka ekran yok: soldan + Ekran ile ekleyin."), 0));
+                else _props.Children.Add(Row(Lang.T("Açtığı ekran"), Combo(targets, targets.Contains(w.Target) ? w.Target : targets[0], v => Set("ekran düğmesi", () => w.Target = v)), 160));
+            }
+
             var plcs = Plcs;
             if (HmiWidget.Bound(w.Kind) && plcs.Count > 0)
             {
@@ -549,6 +598,48 @@ namespace RobotWin.Studio.World
             _props.Children.Add(Buttons(
                 Button(Lang.T("Çoğalt"), (_, _) => Duplicate(w), tip: "Ctrl+D"),
                 Button(Lang.T("Sil"), (_, _) => Remove(w), tip: "Delete")));
+        }
+
+        /// <summary>[hmi-screens] The screens as chips (the one designed is checked) and "+ Ekran".</summary>
+        private void BuildScreens()
+        {
+            _screens.Children.Clear();
+            var wrap = new WrapPanel();
+            foreach (string name in Panel.ScreenNames)
+            {
+                string n = name;
+                var chip = new System.Windows.Controls.Primitives.ToggleButton
+                {
+                    Content = n, IsChecked = n == Screen, Style = R<Style>("Chip"), Margin = new Thickness(0, 0, 4, 4),
+                    ToolTip = Lang.T($"{Widgets.Count(w => Panel.ScreenOf(w) == n)} öğe"),
+                };
+                chip.Click += (_, _) =>
+                {
+                    _screen = n;
+                    _selected = null;
+                    Rebuild();
+                };
+                wrap.Children.Add(chip);
+            }
+
+            var add = new Button { Content = Lang.T("+ Ekran"), Style = R<Style>("Btn.Ghost"), Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(0, 0, 4, 4), ToolTip = Lang.T("Panele bir ekran ekler; ekran düğmeleriyle aralarında geçilir") };
+            add.Click += (_, _) =>
+            {
+                var names = Panel.ScreenNames;
+                int k = names.Count + 1;
+                string name = Lang.T($"Ekran {k}");
+                while (names.Contains(name)) name = Lang.T($"Ekran {++k}");
+                _edit($"HMI ekranı eklendi: {name}", () =>
+                {
+                    var panel = _world.HmiPanel ??= new HmiPanelSettings();
+                    panel.Screens = new List<string>(panel.ScreenNames) { name };
+                });
+                _screen = name;
+                _selected = null;
+                Rebuild();
+            };
+            wrap.Children.Add(add);
+            _screens.Children.Add(wrap);
         }
 
         /// <summary>A variable: one of the PLC's (its program compiled now) or an address typed in (%MW3).</summary>
@@ -684,7 +775,7 @@ namespace RobotWin.Studio.World
         /// <summary>--snapshot: the designer on the world's panel, the first element selected.</summary>
         internal void SelectFirstForSnapshot()
         {
-            _selected = Widgets.FirstOrDefault(w => w.Kind == HmiWidget.Gauge) ?? Widgets.FirstOrDefault();
+            _selected = OnScreen.FirstOrDefault(w => w.Kind == HmiWidget.Gauge) ?? OnScreen.FirstOrDefault();
             Rebuild();
         }
     }
