@@ -8657,6 +8657,8 @@
   "A deliği": "Hole A",
   "B deliği": "Hole B",
   "Aynala": "Mirror",
+  "ARIZALI (yandı / bozuldu)": "FAULTY (burnt out / broken)",
+  "Bu parça devrede simüle edilmiyor.": "This part is not simulated in the circuit.",
   "Elektriksel model": "Electrical model",
   "Firmware": "Firmware",
   "Simülasyonda devrenin bir parçası olarak çalışır": "Simulates as part of the circuit",
@@ -9385,6 +9387,13 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+    "ID {…} · VGS {…}": "ID {0} · VGS {1}",
+    "açı {…}° (hedef {…}) · {…}": "angle {0}° (target {1}) · {2}",
+    "{…} rpm · {…} · {…}": "{0} rpm · {1} · {2}",
+    "akım {…}": "current {0}",
+    "sıcaklık {…} °C": "temperature {0} °C",
+    "en yakın sınır: {…} {…} / {…} (%{…})": "closest rating: {0} {1} / {2} ({3} %)",
+    "ped {…} ({…}): {…}": "pad {0} ({1}): {2}",
   "{…} Ø{…} mm · merkez ({…}, {…}, {…}) · derinlik {…} mm": "{0} Ø{1} mm · centre ({2}, {3}, {4}) · depth {5} mm",
   "paralel yüzler, aralık {…} mm": "parallel faces, {0} mm apart",
   "yüzler arası açı {…}°": "angle between the faces {0}°",

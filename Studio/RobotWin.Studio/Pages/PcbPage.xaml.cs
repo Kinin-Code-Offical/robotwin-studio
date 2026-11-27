@@ -81,6 +81,7 @@ namespace RobotWin.Studio.Pages
             Angle45Toggle.IsChecked = Canvas.Constrain45;
             InitDock();   // [dock-min]
             Canvas.SelectionChanged += (_, _) => UpdateSelection();
+            HookLive();   // [crossprobe] the selected part's simulation values (Pages/PcbPage.Live.cs)
             // [crossprobe] one part picked here is picked in the circuit too; one picked there is picked here (the view stays)
             Canvas.SelectionChanged += (_, _) =>
             {
@@ -1168,6 +1169,11 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "live":
+                    // [crossprobe] the circuit run for a moment (MainWindow.PrepareSnapshot), the MOSFET picked: its live values in the panel
+                    if (board.Components.FirstOrDefault(x => x.RefDes == "Q1") is { } q1) Canvas.Select(q1);
+                    break;
+
                 case "select3d":
                 {
                     // [crossprobe] the board in 3D with R1 picked (framed in the accent colour)
@@ -2003,6 +2009,7 @@ namespace RobotWin.Studio.Pages
             var host = _selectionHost;
             if (host == null) return;
             host.Children.Clear();
+            _liveText = null;
             var board = Board;
             if (Canvas.SelectionItems.Count > 1)
             {
@@ -2036,6 +2043,7 @@ namespace RobotWin.Studio.Pages
                     host.Children.Add(new TextBlock { Text = $"{c.RefDes} · {c.Value}", Style = S("Text.Subtitle") });
                     host.Children.Add(Caption(fp?.Description ?? c.FootprintId, 2));
                     host.Children.Add(new TextBlock { Text = $"x {c.X:0.00}  y {c.Y:0.00} mm  {c.Rotation}°  {(c.Side == CopperLayer.Top ? "üst" : "alt")} yüz{(c.Locked ? "  · kilitli" : string.Empty)}", Style = S("Text.Mono"), Margin = new Thickness(0, 4, 0, 6) });
+                    LiveRows(host, c);   // [crossprobe] while it runs: current, temperature, closest rating, pad voltages
                     var ids = FootprintLibrary.AllIds.ToList();
                     if (!ids.Contains(c.FootprintId, StringComparer.OrdinalIgnoreCase)) ids.Insert(0, c.FootprintId);
                     host.Children.Add(Row("Footprint", Combo(ids, ids.First(i => string.Equals(i, c.FootprintId, StringComparison.OrdinalIgnoreCase)), id =>

@@ -953,7 +953,7 @@ namespace RobotWin.Studio
                 _pcb.Show3D(true);
             }
 
-            if (page == "pcb" && fault == "3d")
+            if (page == "pcb" && fault is "3d" or "live")
             {
                 if (simulate != null && double.TryParse(simulate, NumberStyles.Float, CultureInfo.InvariantCulture, out double s3) && W.Simulation.Start())
                 {
@@ -961,7 +961,8 @@ namespace RobotWin.Studio
                     for (int i = 0; i < Math.Max(1, (int)(s3 / 2e-3)); i++) W.Simulation.StepOnce(2e-3);
                 }
 
-                _pcb.Show3D(true);
+                if (fault == "3d") _pcb.Show3D(true);
+                else _pcb.RefreshLiveForSnapshot();
             }
 
             if (page == "code") _code.SnapshotBuildAndRun(fault);

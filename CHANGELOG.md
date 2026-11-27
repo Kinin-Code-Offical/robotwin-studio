@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Live values on the PCB:** while the circuit runs, a part selected on the PCB lists the current through it, its temperature, the rating it is closest to and its pads' voltages in the selection panel, from the same simulation as the circuit's inspector.
 - **The 3D board frames the selected part:** a part picked on the PCB, in the circuit or in the Montaj is boxed in the accent colour where it sits on the 3D board, and stays boxed when the board is rebuilt.
 - **Measure on the Part page reads faces and holes:** besides the distance it gives the angle between the two faces clicked, a parallel pair's gap, and on a hole's wall the hole's diameter, centre and depth.
 - **Servo torque in the live values:** a running servo shows the torque its motor pushes with, from its current by the same law the world's physics drives it with, against its model's stall torque (SG90 0.18 N·m, MG996 1.08 N·m …).
