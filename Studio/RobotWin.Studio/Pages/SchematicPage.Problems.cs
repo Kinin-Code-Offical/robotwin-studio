@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using RobotTwin.CoreSim.Design;
 using RobotWin.Studio.Shell;
@@ -22,10 +23,51 @@ namespace RobotWin.Studio.Pages
                     _ => ProblemLevel.Info
                 };
                 var marker = v;
-                r.Problems.Add(new Problem(ProblemsHub.Circuit, level, ErcRuleCatalog.Find(v.Code)?.Name ?? v.Code, v.Message, () => ShowErcMarker(marker)));
+                var (tip, fix) = ErcFix(marker);
+                r.Problems.Add(new Problem(ProblemsHub.Circuit, level, ErcRuleCatalog.Find(v.Code)?.Name ?? v.Code, v.Message, () => ShowErcMarker(marker)) { Fix = fix, FixTip = tip });
             }
 
             return r;
+        }
+
+        /// <summary>
+        /// [problems] The fix an ERC marker suggests, as KiCad's and VS Code's quick fixes: designators numbered, an unused pin
+        /// marked "no connection", a stray NC mark taken away; any other accepted as an exception (it stays in the report).
+        /// Each is one undo step.
+        /// </summary>
+        private (string Tip, Action Fix) ErcFix(ErcViolation v)
+        {
+            string name = ErcRuleCatalog.Find(v.Code)?.Name ?? v.Code;
+            switch (v.Code)
+            {
+                case "not-annotated":
+                case "duplicate-refdes":
+                    return ("Numaralandır: numarasız ve yinelenen tanımlayıcılar sıradaki boş numarayı alır", () => AnnotateNow(new AnnotationOptions()));
+                case "pin-unconnected":
+                    return ("Pine 'bağlantı yok' (NC) işareti koy", () =>
+                    {
+                        W.BeginChange();
+                        W.Schematic.NoConnects.Add(new NoConnectFlag { Position = v.Location, Sheet = v.Sheet });
+                        W.CommitChange("NC işareti kondu: " + (v.RefDes ?? v.Location.ToString()));
+                        BuildErcPanel();
+                    });
+                case "nc-floating":
+                    return ("Boştaki NC işaretini sil", () =>
+                    {
+                        W.BeginChange();
+                        int n = W.Schematic.NoConnects.RemoveAll(nc => nc.Position.Equals(v.Location) && Schematic.SameSheet(nc.Sheet, v.Sheet));
+                        if (n == 0)
+                        {
+                            W.CancelChange();
+                            return;
+                        }
+
+                        W.CommitChange("Boştaki NC işareti silindi");
+                        BuildErcPanel();
+                    });
+                default:
+                    return ("İstisna olarak işaretle: kabul edildi, raporda istisna olarak kalır", () => ErcPolicyEdit($"ERC istisnası: {name}", () => ErcPolicy.Exclude(W.Schematic, v, string.Empty)));
+            }
         }
 
         /// <summary>Goes to an ERC marker as a click on it in the ERC list does: the place, its part selected, its net highlighted.</summary>

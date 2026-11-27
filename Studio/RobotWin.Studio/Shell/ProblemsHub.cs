@@ -32,6 +32,12 @@ namespace RobotWin.Studio.Shell
 
         /// <summary>Opens the editor, selects the item and shows it; null when it has no place.</summary>
         public Action? Go { get; }
+
+        /// <summary>[problems] The suggested fix, run from the row's button (undoable where it edits the design); null: none.</summary>
+        public Action? Fix { get; init; }
+
+        /// <summary>What <see cref="Fix"/> does (the button's tooltip).</summary>
+        public string? FixTip { get; init; }
     }
 
     /// <summary>[problems] What one area's checks say now: their problems, or that they have not run (and how to run them).</summary>

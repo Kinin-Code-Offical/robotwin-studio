@@ -58,7 +58,11 @@ namespace RobotWin.Studio.Pages
             foreach (var v in _drc.Shown)
             {
                 var marker = v;
-                r.Problems.Add(new Problem(ProblemsHub.Pcb, v.Severity == DrcSeverity.Error ? ProblemLevel.Error : ProblemLevel.Warning, v.Rule, v.Message, () => ShowMarker(marker)));
+                // [problems] the suggested fix: accept it as an exception (it stays in the report, with its reason asked)
+                r.Problems.Add(new Problem(ProblemsHub.Pcb, v.Severity == DrcSeverity.Error ? ProblemLevel.Error : ProblemLevel.Warning, v.Rule, v.Message, () => ShowMarker(marker))
+                {
+                    Fix = () => Exclude(marker), FixTip = "İstisna olarak işaretle…: kabul edildi, raporda nedeniyle istisna olarak kalır"
+                });
             }
 
             return r;

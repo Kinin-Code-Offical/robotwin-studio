@@ -159,12 +159,27 @@ namespace RobotWin.Studio
             foreach (var issue in issues.Where(i => IsMontajIssue(i) == montaj))
             {
                 var level = issue.Level switch { IssueLevel.Error => ProblemLevel.Error, IssueLevel.Warning => ProblemLevel.Warning, _ => ProblemLevel.Info };
-                r.Problems.Add(new Problem(montaj ? ProblemsHub.Assembly : ProblemsHub.Project, level, issue.Area, issue.Subject + ": " + issue.Text,
-                    run == null ? null : () => ShowCheckWindow(what, run, issues)));
+                Action? window = run == null ? null : () => ShowCheckWindow(what, run, issues);
+                var (tip, fix) = IssueFixOf(issue, window);
+                r.Problems.Add(new Problem(montaj ? ProblemsHub.Assembly : ProblemsHub.Project, level, issue.Area, issue.Subject + ": " + issue.Text, window) { Fix = fix, FixTip = tip });
             }
 
             return r;
         }
+
+        /// <summary>
+        /// [problems] A project issue's fix on its row: what can be done at once is done (the PCB page, the Montaj brought
+        /// up to date, the ESP32 toolchain); an install that shows its progress opens the check window with its button.
+        /// </summary>
+        private (string? Tip, Action? Fix) IssueFixOf(ProjectIssue issue, Action? window) => issue.Fix switch
+        {
+            IssueFix.OpenPcb => ("PCB sayfasını aç: şemadaki değişiklikler karta gelir", () => Navigate("pcb")),
+            IssueFix.SyncMontaj => ("Montajı güncelle: eklenen parçalar gelir, silinenler kalkar; yerleşim ve bağlantılarınız korunur", UpdateMontajFromCheck),
+            IssueFix.Esp32Toolchain => ("Araç zincirini kur… (önce sorulur)", InstallEsp32Toolchain),
+            IssueFix.Part => ("Kütüphane sayfası: parçanın dosyasını içe aktarın", () => Navigate("library")),
+            IssueFix.ArduinoCompiler or IssueFix.Msvc or IssueFix.Library when window != null => ("Denetim penceresinde düzelt (kurulum ilerlemesiyle)", window),
+            _ => (null, null)
+        };
 
         private static bool IsMontajIssue(ProjectIssue i) => i.Fix == IssueFix.SyncMontaj || i.Subject.StartsWith("Montaj", StringComparison.Ordinal);
 

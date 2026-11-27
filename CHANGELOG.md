@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Workspaces:** task layouts as in Blender and Fusion, picked from the title bar, Window menu or command palette: Circuit design, Measuring, Code, PCB, Mechanics, World, World simulation; save the layout on screen as your own, update, rename or delete it; reset the panels to their defaults.
 - **Trust for code in files from elsewhere:** a project or world Windows marked as downloaded that carries code the PC runs directly (an FMU part, C# scripts) asks before its simulation starts, as VS Code's workspace trust does; trusting it unblocks the file.
+- **Quick fixes in the Problems panel:** a row with a fix gets a wrench button: annotate for unnumbered or duplicate designators, an NC mark on an unconnected pin, delete a stray NC mark, mark the other ERC and DRC markers as exceptions; on Project and Assembly rows open the PCB page, update the assembly, install the toolchain or open the Library page. Circuit fixes undo in one step.
 - **Technical highlight in the World:** the selected object's cables light up, its joints show their anchor and the axis they turn or slide along, its centre of mass shows as the drawing symbol where the physics puts it, all drawn over the view so nothing hides them; a label above it gives its name, mass, cables and joints (and speed while running). On or off from the scene's overlay menu.
 - **Workspaces set the tool strips and travel with the project:** the built-in workspaces open, fold or close the tool strips on the canvas edge for their task (folded while measuring and in World simulation, the grid strip closed there); a saved workspace keeps the strips' places and states with the panels; **Save the layout on screen in the project** writes it into the project's settings, and it comes back by itself whenever the project opens (as KiCad's project-local settings and Visual Studio's solution options do).
 - **Examples as cards on the start page:** each example shows a picture drawn from its own circuit, its level and the areas it uses (Circuit, PCB, Code, Assembly, World); a click opens a short info screen first (what it teaches, its parts, the tools it needs: prebuilt firmware or the Arduino compiler), then **Open**. Exported schematic sheets now grow to what was really drawn, so labels past the parts are no longer cut off.
@@ -39,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Problems panel:** an opened "info" fold no longer closes again whenever the list is redrawn (after a check or a fix).
 - **FMU blocks exchanged at every circuit step:** the FMU was stepped to each step the circuit took and asked for a restart every time, which held the circuit at its smallest steps (a million integrator steps for 0.1 s of a model-exchange FMU). The circuit and the FMU now meet only at the communication points (102 steps).
 
 ## [1.7.0] - 2026-11-26

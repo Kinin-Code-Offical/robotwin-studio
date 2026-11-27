@@ -899,7 +899,7 @@ namespace RobotWin.Studio
             if (page == "library") Library.PrepareSnapshot(fault);
             if (page == "settings" && fault != null) ((Pages.SettingsPage)_pages["settings"]).PrepareSnapshot(fault);   // [settings] // [libs] part creator / manager / import previews
             if (page == "pcb") _pcb.AutoLayoutForSnapshot(fault);
-            if (fault == "problems") SnapshotProblems();   // [problems] the status bar's counts and the list
+            if (fault is "problems" or "problems-notes") SnapshotProblems(fault == "problems-notes");   // [problems] the status bar's counts and the list (notes open)
             if (page == "pcb" && fault == "fpeditor")
             {
                 // The footprint editor is a dialog: render it instead of the main window.

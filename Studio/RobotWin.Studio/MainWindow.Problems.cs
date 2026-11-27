@@ -35,7 +35,7 @@ namespace RobotWin.Studio
                     {
                         Navigate(page);
                         Dispatcher.BeginInvoke(new Action(() => go?.Invoke()), DispatcherPriority.Loaded);
-                    }));
+                    }) { Fix = p.Fix, FixTip = p.FixTip });
                 }
 
                 return routed;
@@ -149,8 +149,12 @@ namespace RobotWin.Studio
         }
 
         /// <summary>[problems] Snapshot: the counts now and the list's window as the picture.</summary>
-        private void SnapshotProblems()
+        /// <summary>[problems] The areas whose "bilgi" fold is open.</summary>
+        private readonly HashSet<string> _openNotes = new HashSet<string>(StringComparer.Ordinal);
+
+        private void SnapshotProblems(bool openNotes = false)
         {
+            if (openNotes) foreach (var a in new[] { ProblemsHub.Circuit, ProblemsHub.Pcb, ProblemsHub.Code, ProblemsHub.Assembly, ProblemsHub.Project, ProblemsHub.ModelLimits }) _openNotes.Add(a);
             RefreshProblems();
             OnProblems(this, new RoutedEventArgs());
             if (_problemsWindow == null) return;
@@ -203,9 +207,12 @@ namespace RobotWin.Studio
                 foreach (var p in report.Problems.Where(p => p.Level is ProblemLevel.Error or ProblemLevel.Warning).OrderBy(p => p.Level)) _problemsList.Children.Add(ProblemRow(p));
                 var notes = report.Problems.Where(p => p.Level is ProblemLevel.Info or ProblemLevel.Unverified).ToList();
                 if (notes.Count == 0) continue;
-                var fold = new StackPanel { Visibility = Visibility.Collapsed };
+                // [problems] an opened fold stays open when the list is drawn again (after a fix, a check)
+                string foldKey = area;
+                bool opened = _openNotes.Contains(foldKey);
+                var fold = new StackPanel { Visibility = opened ? Visibility.Visible : Visibility.Collapsed };
                 foreach (var p in notes) fold.Children.Add(ProblemRow(p));
-                var label = new TextBlock { Text = "▸ " + Lang.T($"{notes.Count} bilgi"), FontSize = 12 };
+                var label = new TextBlock { Text = (opened ? "▾ " : "▸ ") + Lang.T($"{notes.Count} bilgi"), FontSize = 12 };
                 label.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
                 var toggle = new Button { Content = label, HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(6, 2, 6, 2), Margin = new Thickness(0, 0, 0, 2), ToolTip = Lang.T("Bilgi düzeyindekileri göster / gizle") };
                 toggle.SetResourceReference(StyleProperty, "Btn.Ghost");
@@ -214,6 +221,8 @@ namespace RobotWin.Studio
                     bool open = fold.Visibility != Visibility.Visible;
                     fold.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
                     label.Text = (open ? "▾ " : "▸ ") + Lang.T($"{notes.Count} bilgi");
+                    if (open) _openNotes.Add(foldKey);
+                    else _openNotes.Remove(foldKey);
                 };
                 _problemsList.Children.Add(toggle);
                 _problemsList.Children.Add(fold);
@@ -221,7 +230,7 @@ namespace RobotWin.Studio
         }
 
         /// <summary>One problem: its level's dot, the rule and the message; a click goes to its place.</summary>
-        private Button ProblemRow(Problem p)
+        private FrameworkElement ProblemRow(Problem p)
         {
             var row = new Grid();
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) });
@@ -240,7 +249,27 @@ namespace RobotWin.Studio
             b.SetResourceReference(StyleProperty, "Btn.Ghost");
             var go = p.Go;
             b.Click += (_, _) => go?.Invoke();
-            return b;
+            if (p.Fix is not { } fix) return b;
+
+            // [problems] the suggested fix beside the row (VS Code's quick fix): one click, then the areas check again
+            var line = new Grid();
+            line.ColumnDefinitions.Add(new ColumnDefinition());
+            line.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            line.Children.Add(b);
+            var mend = new Button
+            {
+                Content = new Theme.Icon { Data = TryFindResource("I.Fix") as Geometry, Size = 15 }, ToolTip = Lang.T(p.FixTip ?? "Düzelt"),
+                VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(2, 2, 0, 0), Padding = new Thickness(5)
+            };
+            mend.SetResourceReference(StyleProperty, "Btn.Ghost");
+            mend.Click += (_, _) =>
+            {
+                fix();
+                ProblemsHub.Notify();
+            };
+            Grid.SetColumn(mend, 1);
+            line.Children.Add(mend);
+            return line;
         }
     }
 }
