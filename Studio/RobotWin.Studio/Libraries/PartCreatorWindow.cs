@@ -318,6 +318,9 @@ namespace RobotWin.Studio.Libraries
             p.Children.Add(cat);
             Bound(p, "Açıklama", _part.Description, v => _part.Description = v);
             Bound(p, "Üretici", _part.Manufacturer, v => _part.Manufacturer = v);
+            Bound(p, "Parça numarası (üreticinin)", _part.PartNumber, v => _part.PartNumber = v);
+            Bound(p, "Kaynak (kütüphane, site, dosya)", _part.Source, v => _part.Source = v);
+            Bound(p, "Lisans", _part.License, v => _part.License = v, "CC-BY-SA 4.0, MIT …");
             var ds = Bound(p, "Veri sayfası (adres ya da dosya)", _part.Datasheet, v => _part.Datasheet = v, "https://… veya C:\\…\\datasheet.pdf");
             p.Children.Add(Row(Btn("Dosya seç…", () =>
             {
@@ -1135,6 +1138,9 @@ namespace RobotWin.Studio.Libraries
                 Author = string.IsNullOrWhiteSpace(_part.Author) ? Environment.UserName : _part.Author.Trim(),
                 Manufacturer = _part.Manufacturer.Trim(),
                 Datasheet = _part.Datasheet.Trim(),
+                PartNumber = _part.PartNumber.Trim(),
+                Source = _part.Source.Trim(),
+                License = _part.License.Trim(),
                 Definition = _spec.Clone(),
                 Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             };

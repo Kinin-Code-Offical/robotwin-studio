@@ -101,43 +101,62 @@ namespace RobotWin.Studio
             return p;
         }
 
-        // ------------------------------------------------------------------ [workspaces] the project's own layout
+        // ------------------------------------------------------------------ [workspaces] the open file's own layout
 
-        private bool ProjectOpen => W.ActiveDocument.Kind != DocumentKind.World;
+        // A project keeps it in its package's settings.json, a world or a Montaj in its .rwworld (WorldDocument.Settings).
 
-        private bool ProjectHasLayout => ProjectOpen && WorkspaceProfiles.FromProject(W.Project.Settings) != null;
+        private string? DocSettings
+        {
+            get => W.ActiveWorld is { } w ? w.Settings : W.Project.Settings;
+            set
+            {
+                if (W.ActiveWorld is { } w) w.Settings = value;
+                else W.Project.Settings = value;
+                W.MarkProjectChanged();
+            }
+        }
 
-        /// <summary>The layout on screen into the project: it comes back whenever the project opens (saved with it).</summary>
+        /// <summary>The words for the open file: (save to it, update it, remove it, its layout's tooltip, saved, opened, removed).</summary>
+        private (string Save, string Update, string Remove, string Tip, string Saved, string Opened, string Removed) DocWords =>
+            W.ActiveWorld is { } w
+                ? w.IsAssembly
+                    ? ("Ekrandaki düzeni Montaja kaydet", "Montajın düzenini ekrandakiyle güncelle", "Montajın düzenini kaldır", "Bu Montajla kaydedilen düzen",
+                       "Düzen Montaja eklendi: kaydedince Montajla birlikte saklanır, Montaj açılınca geri gelir", "Montajın düzeni açıldı", "Montajın düzeni kaldırıldı (ekrandaki düzen olduğu gibi kalır)")
+                    : ("Ekrandaki düzeni dünyaya kaydet", "Dünyanın düzenini ekrandakiyle güncelle", "Dünyanın düzenini kaldır", "Bu dünyayla kaydedilen düzen",
+                       "Düzen dünyaya eklendi: kaydedince dünyayla birlikte saklanır, dünya açılınca geri gelir", "Dünyanın düzeni açıldı", "Dünyanın düzeni kaldırıldı (ekrandaki düzen olduğu gibi kalır)")
+                : ("Ekrandaki düzeni projeye kaydet", "Projenin düzenini ekrandakiyle güncelle", "Projenin düzenini kaldır", "Bu projeyle kaydedilen düzen",
+                   "Düzen projeye eklendi: kaydedince projeyle birlikte saklanır, proje açılınca geri gelir", "Projenin düzeni açıldı", "Projenin düzeni kaldırıldı (ekrandaki düzen olduğu gibi kalır)");
+
+        private bool ProjectHasLayout => WorkspaceProfiles.FromProject(DocSettings) != null;
+
+        /// <summary>The layout on screen into the open file: it comes back whenever the file opens (saved with it).</summary>
         private void SaveLayoutToProject()
         {
-            if (!ProjectOpen) return;
-            W.Project.Settings = WorkspaceProfiles.WithProjectLayout(W.Project.Settings, CaptureWorkspace(WorkspaceProfiles.ProjectLayoutName));
-            W.MarkProjectChanged();
+            DocSettings = WorkspaceProfiles.WithProjectLayout(DocSettings, CaptureWorkspace(WorkspaceProfiles.ProjectLayoutName));
             WorkspaceProfiles.Active = WorkspaceProfiles.ProjectLayoutName;
             UpdateWorkspaceButton();
-            W.Status = "Düzen projeye eklendi: kaydedince projeyle birlikte saklanır, proje açılınca geri gelir";
+            W.Status = DocWords.Saved;
         }
 
         private void ApplyProjectLayout()
         {
-            if (!ProjectOpen || WorkspaceProfiles.FromProject(W.Project.Settings) is not { } p) return;
+            if (WorkspaceProfiles.FromProject(DocSettings) is not { } p) return;
             ApplyProfile(p);
             WorkspaceProfiles.Active = WorkspaceProfiles.ProjectLayoutName;
             UpdateWorkspaceButton();
-            W.Status = "Projenin düzeni açıldı";
+            W.Status = DocWords.Opened;
         }
 
         private void RemoveProjectLayout()
         {
             if (!ProjectHasLayout) return;
-            W.Project.Settings = WorkspaceProfiles.WithProjectLayout(W.Project.Settings, null);
-            W.MarkProjectChanged();
+            DocSettings = WorkspaceProfiles.WithProjectLayout(DocSettings, null);
             if (WorkspaceProfiles.Active == WorkspaceProfiles.ProjectLayoutName) WorkspaceProfiles.Active = null;
             UpdateWorkspaceButton();
-            W.Status = "Projenin düzeni kaldırıldı (ekrandaki düzen olduğu gibi kalır)";
+            W.Status = DocWords.Removed;
         }
 
-        /// <summary>A project opened from its file: its own layout, if it keeps one, once the page it opened on is up.</summary>
+        /// <summary>A project, world or Montaj opened from its file: its own layout, if it keeps one, once the page it opened on is up.</summary>
         private void OnProjectOpened()
         {
             if (!ProjectHasLayout)
@@ -233,8 +252,8 @@ namespace RobotWin.Studio
             if (ProjectHasLayout)
             {
                 m.Items.Add(new Separator());
-                var mine = Check(WorkspaceProfiles.ProjectLayoutName, null, active == WorkspaceProfiles.ProjectLayoutName, _ => ApplyProjectLayout());
-                mine.ToolTip = Lang.T("Bu projeyle kaydedilen düzen");
+                var mine = Check(DocLayoutName, null, active == WorkspaceProfiles.ProjectLayoutName, _ => ApplyProjectLayout());
+                mine.ToolTip = Lang.T(DocWords.Tip);
                 m.Items.Add(mine);
             }
 
@@ -245,8 +264,8 @@ namespace RobotWin.Studio
             m.Items.Add(Item("Yeniden adlandır…", null, RenameActiveWorkspace, own));
             m.Items.Add(Item("Sil", null, DeleteActiveWorkspace, own));
             m.Items.Add(new Separator());
-            m.Items.Add(Item(ProjectHasLayout ? "Projenin düzenini ekrandakiyle güncelle" : "Ekrandaki düzeni projeye kaydet", null, SaveLayoutToProject, ProjectOpen));
-            if (ProjectHasLayout) m.Items.Add(Item("Projenin düzenini kaldır", null, RemoveProjectLayout));
+            m.Items.Add(Item(ProjectHasLayout ? DocWords.Update : DocWords.Save, null, SaveLayoutToProject));
+            if (ProjectHasLayout) m.Items.Add(Item(DocWords.Remove, null, RemoveProjectLayout));
             m.Items.Add(new Separator());
             m.Items.Add(Item("Varsayılan düzene dön", null, ResetLayouts));
         }
@@ -258,7 +277,11 @@ namespace RobotWin.Studio
             menu.IsOpen = true;
         }
 
-        private void UpdateWorkspaceButton() => WorkspaceLabel.Text = Lang.T(WorkspaceProfiles.Active ?? "Çalışma alanı");
+        private void UpdateWorkspaceButton() =>
+            WorkspaceLabel.Text = Lang.T(WorkspaceProfiles.Active == WorkspaceProfiles.ProjectLayoutName ? DocLayoutName : WorkspaceProfiles.Active ?? "Çalışma alanı");
+
+        /// <summary>[workspaces] The open file's own layout, as it is called (a project's, a world's, a Montaj's).</summary>
+        private string DocLayoutName => W.ActiveWorld is { } w ? (w.IsAssembly ? "Montajın düzeni" : "Dünyanın düzeni") : WorkspaceProfiles.ProjectLayoutName;
 
         /// <summary>The palette's entries: every workspace, and saving the layout as one.</summary>
         private IEnumerable<PaletteCommand> WorkspaceCommands()
@@ -277,7 +300,7 @@ namespace RobotWin.Studio
             }
 
             yield return new PaletteCommand(group, "Ekrandaki düzeni çalışma alanı olarak kaydet…", SaveWorkspaceAs) { Keywords = "workspace save layout kaydet" };
-            yield return new PaletteCommand(group, "Ekrandaki düzeni projeye kaydet", SaveLayoutToProject) { Keywords = "workspace project layout proje düzen kaydet" };
+            yield return new PaletteCommand(group, "Ekrandaki düzeni açık dosyaya kaydet (proje, dünya ya da Montaj)", SaveLayoutToProject) { Keywords = "workspace project world layout proje dünya montaj düzen kaydet" };
             yield return new PaletteCommand(group, "Varsayılan düzene dön", ResetLayouts) { Keywords = "reset layout panel sıfırla" };
         }
     }

@@ -195,6 +195,8 @@ namespace RobotTwin.CoreSim.Libraries
                     Category = category,
                     Description = $"SPICE {kind} modeli ({card.Type})" + (card.Text.TryGetValue("MFG", out var mfg) ? ", " + mfg : string.Empty),
                     Manufacturer = card.Text.TryGetValue("MFG", out var m2) ? m2 : string.Empty,
+                    PartNumber = card.Name,   // a vendor's .model card is named by its part number
+                    Source = "SPICE modeli",
                     Author = "SPICE içe aktarımı",
                     Parameters = p
                 };

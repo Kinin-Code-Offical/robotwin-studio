@@ -15,6 +15,9 @@ namespace RobotTwin.CoreSim.Sandbox
         public Vec3 Max { get; set; }
         public double MassKg { get; set; } = 0.01;
 
+        /// <summary>[badges] A stand-in: the part's own size and mass are not known, a generic box is used.</summary>
+        public bool Assumed { get; set; }
+
         /// <summary>"box", "sphere", "cylinder-x/y/z" (rolls about that local axis), "hull" or "mesh".</summary>
         public string Shape { get; set; } = "box";
 

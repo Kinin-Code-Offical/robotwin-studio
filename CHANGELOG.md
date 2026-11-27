@@ -50,6 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Worlds and Montajes keep their own layout:** like a project, a world or a Montaj can save the layout on screen into its .rwworld file, and it comes back when the file opens.
+- **Library: mechanical model badge, maker, part number, source and licence:** a part's sheet says whether the world knows its body (its own size and mass, with a moving output such as a servo horn or a motor shaft, or a stand-in box) and, under the badges, its maker, part number, source and licence; the part creator edits them and the KiCad, Fritzing and SPICE importers fill them in.
 - **Scope and logic analyzer on one time axis:** the instant under the pointer in the oscilloscope is marked on the Code page's timeline and the other way round (a dashed accent line, an arrow at the edge when outside the window), and **Match the scope** brings the timeline to the seconds the scope shows.
 - **Run mode badge on the Code page:** beside the board picker, the target board's mode is always in sight (Fast simulation, Hardware-compatible, AVR emulation); clicking it on an ESP32 switches the mode, undoably. The status line under the editor now names the hardware-compatible build when that mode is set (it always said MSVC).
 - **Suggested mate:** the Align tool's menu puts the relation two picked faces or axes most likely mean first, marked as suggested, and Enter takes it: faces turned to each other mate, faces the same way are flush, axes in line are concentric, a shaft standing on a face is perpendicular to it.

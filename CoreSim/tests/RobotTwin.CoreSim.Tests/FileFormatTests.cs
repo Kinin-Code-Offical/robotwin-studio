@@ -97,6 +97,47 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void APartsMakerPartNumberSourceAndLicenceAreKept()
+        {
+            // [libs] the library sheet's maker, part number, source and licence survive the .rwpart file
+            var part = new CustomPart
+            {
+                Id = "user-meta-test", Name = "Meta", BasePartId = "resistor", Manufacturer = "Vishay", PartNumber = "CFR-25JB-52-4K7",
+                Source = "KiCad: Resistor_THT", License = "CC-BY-SA 4.0"
+            };
+            string path = Path.Combine(_dir, "meta.rwpart");
+            part.Save(path);
+            var loaded = CustomPart.Load(path);
+            Assert.Equal(("Vishay", "CFR-25JB-52-4K7", "KiCad: Resistor_THT", "CC-BY-SA 4.0"), (loaded.Manufacturer, loaded.PartNumber, loaded.Source, loaded.License));
+        }
+
+        [Fact]
+        public void AWorldKeepsItsOwnLayout()
+        {
+            // [workspaces] what the app keeps beside a world (its layout) is saved in the .rwworld and read back; none: not written
+            var w = new RobotTwin.CoreSim.Sandbox.WorldDocument { Title = "Düzenli", Settings = "{\"layout\":{\"Page\":\"world\"}}" };
+            string path = Path.Combine(_dir, "laid-out.rwworld");
+            w.Save(path);
+            Assert.Equal(w.Settings, RobotTwin.CoreSim.Sandbox.WorldDocument.Load(path).Settings);
+            var bare = new RobotTwin.CoreSim.Sandbox.WorldDocument { Title = "Yalın" };
+            string bpath = Path.Combine(_dir, "bare.rwworld");
+            bare.Save(bpath);
+            Assert.Null(RobotTwin.CoreSim.Sandbox.WorldDocument.Load(bpath).Settings);
+        }
+
+        [Fact]
+        public void APartTheWorldKnowsNothingOfIsAStandInBox()
+        {
+            // [badges] the mechanical model badge: a resistor has no body of its own in the world's tables, a servo has one and a horn
+            var g = new RobotTwin.CoreSim.Automation.ApproximateGeometry(new RobotTwin.CoreSim.Sandbox.WorldDocument(), PartLibrary.Default);
+            var res = g.GeometryOf(new RobotTwin.CoreSim.Sandbox.WorldObject { Kind = RobotTwin.CoreSim.Sandbox.WorldObjectKind.Component, PartId = "resistor" });
+            var servo = g.GeometryOf(new RobotTwin.CoreSim.Sandbox.WorldObject { Kind = RobotTwin.CoreSim.Sandbox.WorldObjectKind.Component, PartId = "servo", PresetId = "servo-sg90" });
+            Assert.True(res.Assumed);
+            Assert.False(servo.Assumed);
+            Assert.Equal("horn", servo.PortName);
+        }
+
+        [Fact]
         public void CustomPartWithFootprintRegistersAndBundles()
         {
             var part = new CustomPart

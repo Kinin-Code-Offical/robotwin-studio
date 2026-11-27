@@ -261,7 +261,8 @@ namespace RobotTwin.CoreSim.Libraries
         private static CustomPart Clone(CustomPart p) => new CustomPart
         {
             Id = p.Id, Name = p.Name, BasePartId = p.BasePartId, Category = p.Category, Description = p.Description, Author = p.Author,
-            Manufacturer = p.Manufacturer, Datasheet = p.Datasheet, Parameters = new Dictionary<string, string>(p.Parameters, StringComparer.OrdinalIgnoreCase),
+            Manufacturer = p.Manufacturer, Datasheet = p.Datasheet, PartNumber = p.PartNumber, Source = p.Source, License = p.License,
+            Parameters = new Dictionary<string, string>(p.Parameters, StringComparer.OrdinalIgnoreCase),
             Footprint = p.Footprint, Model3D = p.Model3D, Definition = p.Definition?.Clone()
         };
 
@@ -345,6 +346,8 @@ namespace RobotTwin.CoreSim.Libraries
                 Description = string.IsNullOrEmpty(sym.Description) ? "KiCad " + sym.FullName : sym.Description,
                 Datasheet = sym.Datasheet == "~" ? string.Empty : sym.Datasheet,
                 Manufacturer = sym.Property("Manufacturer") ?? sym.Property("MF") ?? string.Empty,
+                PartNumber = sym.Property("MPN") ?? sym.Property("Manufacturer_Part_Number") ?? sym.Property("MP") ?? string.Empty,   // [libs] the fields KiCad libraries name it by
+                Source = "KiCad" + (string.IsNullOrEmpty(sym.Library) ? string.Empty : ": " + sym.Library),
                 Author = "KiCad içe aktarımı",
                 Definition = spec,
                 Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

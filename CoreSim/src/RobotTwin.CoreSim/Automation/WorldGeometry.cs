@@ -247,7 +247,9 @@ namespace RobotTwin.CoreSim.Automation
                 if (id.Contains("pico")) return Box(0.051, 0.021, 0.004, 0.003);
                 return Box(0.0686, 0.0533, 0.012, 0.025);
             }
-            return Box(0.03, 0.02, 0.012, 0.01);
+            var standIn = Box(0.03, 0.02, 0.012, 0.01);
+            standIn.Assumed = true;   // [badges] nothing known of this part's body
+            return standIn;
         }
 
         public double CableLength(WorldCable cable)

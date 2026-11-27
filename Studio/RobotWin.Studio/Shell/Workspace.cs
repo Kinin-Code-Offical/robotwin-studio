@@ -595,13 +595,22 @@ namespace RobotWin.Studio.Shell
         /// <summary>Raised when a different document is loaded.</summary>
         public event EventHandler? DocumentReplaced;
 
-        /// <summary>[workspaces] Raised when a project was opened from a file (its own layout comes back with it).</summary>
+        /// <summary>[workspaces] Raised when a project, a world or a Montaj was opened from a file (its own layout comes back with it).</summary>
         public event EventHandler? ProjectOpened;
 
         /// <summary>[workspaces] The project changed in what it keeps beside the design (its layout): to be saved, no undo step.</summary>
         public void MarkProjectChanged()
         {
-            if (_active.Kind == DocumentKind.World) return;
+            if (_active.Kind == DocumentKind.World)
+            {
+                // [workspaces] a world's or a Montaj's own settings: the file is to be saved
+                _active.IsDirty = true;
+                if (_active.OwnerProject is { } owner) owner.IsDirty = true;
+                OnPropertyChanged(nameof(IsDirty));
+                OnPropertyChanged(nameof(Title));
+                return;
+            }
+
             SetDesignDirty(true);
         }
 
@@ -857,7 +866,9 @@ namespace RobotWin.Studio.Shell
 
             var world = WorldDocument.Load(path);
             RecentFiles.Add(path);
-            return NewWorld(world, path);
+            var doc = NewWorld(world, path);
+            ProjectOpened?.Invoke(this, EventArgs.Empty);   // [workspaces] a world brings its own layout back too
+            return doc;
         }
 
         public void SaveWorld(OpenDocument doc, string path)

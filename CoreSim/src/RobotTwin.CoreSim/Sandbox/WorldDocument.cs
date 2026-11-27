@@ -571,6 +571,13 @@ namespace RobotTwin.CoreSim.Sandbox
 
         /// <summary>[objs] Workshop lighting 0 (dark room) … 1 (bright); the world's own lights matter more in the dark.</summary>
         public double RoomLight { get; set; } = 1.0;
+        /// <summary>
+        /// [workspaces] What the app keeps beside the world (its own screen layout), as a project package's settings.json:
+        /// a JSON object the app reads and writes; null when there is none.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public string? Settings { get; set; }
+
         /// <summary>Atmosphere, wind, force fields, behaviours, scripts and plugins of the world (Sdk/WorldSdkSettings.cs).</summary>
         public RobotTwin.CoreSim.Sdk.WorldSdkSettings Sdk { get; set; } = new RobotTwin.CoreSim.Sdk.WorldSdkSettings();   // [sdk]
 

@@ -641,6 +641,16 @@ namespace RobotTwin.CoreSim.Formats
         public string Author { get; set; } = string.Empty;
         public string Manufacturer { get; set; } = string.Empty;
         public string Datasheet { get; set; } = string.Empty;
+
+        /// <summary>[libs] The maker's part number (MPN) the part stands for; empty for a generic one.</summary>
+        public string PartNumber { get; set; } = string.Empty;
+
+        /// <summary>[libs] Where it came from when it is not one's own (a KiCad library, a Fritzing part, a SPICE file, a site).</summary>
+        public string Source { get; set; } = string.Empty;
+
+        /// <summary>[libs] The licence its symbol, footprint and model come under (CC-BY-SA 4.0, MIT …); empty: not stated.</summary>
+        public string License { get; set; } = string.Empty;
+
         public Dictionary<string, string> Parameters { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         public CustomFootprint? Footprint { get; set; }
 

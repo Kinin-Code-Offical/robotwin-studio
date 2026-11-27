@@ -353,6 +353,8 @@ namespace RobotTwin.CoreSim.Libraries
                 Description = fz.Description.Length > 300 ? fz.Description.Substring(0, 300) + "…" : fz.Description,
                 Author = fz.Author.Length > 0 ? fz.Author : "Fritzing",
                 Manufacturer = fz.Properties.TryGetValue("manufacturer", out var mf) ? mf : string.Empty,
+                PartNumber = fz.Properties.TryGetValue("mpn", out var mpn) ? mpn : fz.Properties.TryGetValue("part number", out var pn) ? pn : string.Empty,
+                Source = "Fritzing",
                 Definition = spec,
                 Footprint = CustomFootprint.From(fp),
                 Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["footprint"] = fp.Id }
