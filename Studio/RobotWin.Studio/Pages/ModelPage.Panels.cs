@@ -45,6 +45,7 @@ namespace RobotWin.Studio.Pages
                 PrimitiveKind.Sweep => Icon("M.Sweep"),
                 PrimitiveKind.Helix => Icon("M.Helix"),
                 PrimitiveKind.Wrap => Icon("M.Wrap"),   // [wrap]
+                PrimitiveKind.Boundary => Icon("M.Boundary"),   // [boundary]
                 _ => Icon("I.Part")
             };
         }
@@ -442,6 +443,7 @@ namespace RobotWin.Studio.Pages
             }
             if (spec.Kind == PrimitiveKind.Revolve) RevolveSection(spec);
             if (spec.Kind == PrimitiveKind.Sweep) SweepSection(spec);   // [sweep] Pages/ModelPage.Sweep.cs
+            if (spec.Kind == PrimitiveKind.Boundary) BoundarySection(spec);   // [boundary] Pages/ModelPage.Boundary.cs
             if (spec.Kind == PrimitiveKind.Loft)   // [loft] the two profiles it passes between
             {
                 spec.Sketch ??= new Sketch2D();
@@ -1193,7 +1195,7 @@ namespace RobotWin.Studio.Pages
                          (PrimitiveKind.Box, "M.Box"), (PrimitiveKind.Cylinder, "M.Cylinder"), (PrimitiveKind.Cone, "M.Cone"), (PrimitiveKind.Sphere, "M.Sphere"),
                          (PrimitiveKind.Torus, "M.Torus"), (PrimitiveKind.Tube, "M.Tube"), (PrimitiveKind.Wedge, "M.Wedge"), (PrimitiveKind.Plate, "M.Plate"),
                          (PrimitiveKind.Extrude, "M.Extrude"), (PrimitiveKind.Revolve, "M.Revolve"), (PrimitiveKind.Loft, "M.Loft"), (PrimitiveKind.Sweep, "M.Sweep"),
-                         (PrimitiveKind.Helix, "M.Helix"), (PrimitiveKind.Wrap, "M.Wrap")
+                         (PrimitiveKind.Helix, "M.Helix"), (PrimitiveKind.Wrap, "M.Wrap"), (PrimitiveKind.Boundary, "M.Boundary")
                      })
             {
                 var k = kind;

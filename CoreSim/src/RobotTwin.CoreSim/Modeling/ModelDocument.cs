@@ -48,7 +48,14 @@ namespace RobotTwin.CoreSim.Modeling
         /// axis) laid round a cylinder, standing out of it (emboss) or sunk into it (deboss); joined to or cut from the
         /// cylinder by the feature history.
         /// </summary>
-        Wrap
+        Wrap,
+
+        /// <summary>
+        /// [boundary] SolidWorks' boundary boss: a solid through any number of profiles (<see cref="PrimitiveSpec.Sections"/>
+        /// at <see cref="PrimitiveSpec.Heights"/>), curving smoothly from one to the next rather than in straight runs, and
+        /// optionally leaving its end profiles square to them.
+        /// </summary>
+        Boundary
     }
 
     /// <summary>Object placement relative to its parent: position (mm), Euler XYZ rotation (degrees), scale.</summary>
@@ -318,6 +325,14 @@ namespace RobotTwin.CoreSim.Modeling
 
         public List<HoleSpec>? Holes { get; set; }
 
+        /// <summary>[boundary] The profiles a boundary solid passes through, bottom to top; null for every other kind.</summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public List<Sketch2D>? Sections { get; set; }
+
+        /// <summary>[boundary] The height (mm, Z) of each of <see cref="Sections"/>.</summary>
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public List<double>? Heights { get; set; }
+
         /// <summary>[param] Dimensions given by a formula of the model's parameters (key → formula); null when none.</summary>
         public Dictionary<string, string>? Expressions { get; set; }
 
@@ -340,6 +355,8 @@ namespace RobotTwin.CoreSim.Modeling
             Sketch2 = Sketch2?.Clone(),
             Path = Path == null ? null : new List<double>(Path),
             Holes = Holes?.Select(h => h.Clone()).ToList(),
+            Sections = Sections?.Select(x => x.Clone()).ToList(),
+            Heights = Heights == null ? null : new List<double>(Heights),
             Expressions = Expressions == null ? null : new Dictionary<string, string>(Expressions, StringComparer.Ordinal)
         };
 

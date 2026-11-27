@@ -493,6 +493,26 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "boundary":   // [boundary] the bottle, square to its ends, and the same profiles running on through them
+                {
+                    var bottle = ModelOps.AddPrimitive(doc, PrimitiveKind.Boundary, -30, 0);
+                    bottle.Name = "Şişe (uçlarda dik)";
+                    bottle.Color = "#3B82C4";
+                    var vase = ModelOps.AddPrimitive(doc, PrimitiveKind.Boundary, 30, 0);
+                    vase.Name = "Vazo (uçlar serbest)";
+                    vase.Primitive!.Set("normal", 0);
+                    vase.Primitive.Sections = new System.Collections.Generic.List<Sketch2D>
+                    {
+                        new Sketch2D { Outer = SketchShape.Circle(30) }, new Sketch2D { Outer = SketchShape.Circle(40) }, new Sketch2D { Outer = SketchShape.Circle(18) }, new Sketch2D { Outer = SketchShape.Circle(26) }
+                    };
+                    vase.Primitive.Heights = new System.Collections.Generic.List<double> { 0, 20, 45, 60 };
+                    vase.Color = "#E0A030";
+                    _ed.Load(doc, null);
+                    _ed.Select(bottle.Id);
+                    _vp.FrameAll();
+                    break;
+                }
+
                 case "wrap":   // [wrap] a nameplate embossed round a shaft, and the same plate debossed into another
                 {
                     ModelObject Shaft(double x, double depth, string name, string colour)

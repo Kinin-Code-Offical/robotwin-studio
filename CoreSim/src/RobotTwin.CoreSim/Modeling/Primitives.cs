@@ -100,6 +100,11 @@ namespace RobotTwin.CoreSim.Modeling
                 new ParamSpec("d", "Silindir çapı", "mm", 30, 0.1, Big), new ParamSpec("depth", "Kabartma (+) / oyma (−)", "mm", 1.5, -Big, Big),
                 new ParamSpec("step", "Bölüm açısı", "°", 4, 0.5, 30)
             },
+            [PrimitiveKind.Boundary] = new[]
+            {
+                new ParamSpec("steps", "Kesitler arası bölüm", "", 10, 1, 64, true), new ParamSpec("normal", "Uçlarda dik (0/1)", "", 1, 0, 1, true),
+                new ParamSpec("seg", "Bölüm sayısı", "", 64, 8, 512, true)
+            },
             [PrimitiveKind.Sweep] = new[]
             {
                 new ParamSpec("seg", "Bölüm sayısı", "", 32, 6, 256, true)
@@ -131,6 +136,7 @@ namespace RobotTwin.CoreSim.Modeling
             PrimitiveKind.Sweep => "Süpürme (sweep)",
             PrimitiveKind.Helix => "Helis (yay)",   // a profile turned about an axis (not "Döndürme": that is the rotation fields' word)
             PrimitiveKind.Wrap => "Sarma (wrap)",
+            PrimitiveKind.Boundary => "Sınır ile katı",
             _ => "Parça"
         };
 
@@ -158,6 +164,15 @@ namespace RobotTwin.CoreSim.Modeling
                 // [sweep] a 10 mm round bar bent into a handle: up, across, down
                 s.Sketch = new Sketch2D { Outer = SketchShape.Circle(10) };
                 s.Path = new List<double> { -30, 0, 0, -30, 0, 30, 30, 0, 30, 30, 0, 0 };
+            }
+            else if (kind == PrimitiveKind.Boundary)
+            {
+                // [boundary] a bottle: a square foot swelling into a round belly and closing to a neck
+                s.Sections = new List<Sketch2D>
+                {
+                    new Sketch2D { Outer = SketchShape.Rect(30, 30, 0, 0, 3) }, new Sketch2D { Outer = SketchShape.Circle(38) }, new Sketch2D { Outer = SketchShape.Circle(16) }
+                };
+                s.Heights = new List<double> { 0, 25, 50 };
             }
             else if (kind == PrimitiveKind.Wrap)
             {
@@ -229,6 +244,13 @@ namespace RobotTwin.CoreSim.Modeling
                     var pts = Enumerable.Range(0, path.Count / 3).Select(i => new Vec3(path[3 * i], path[3 * i + 1], path[3 * i + 2])).ToList();
                     return Sweep((s.Sketch ?? new Sketch2D()).Outer.ToPolygon(I("seg")), pts, Math.Max(6, I("seg")));
                 }
+                case PrimitiveKind.Boundary:   // [boundary]
+                {
+                    int seg = Math.Max(8, I("seg"));
+                    var sections = (s.Sections ?? new List<Sketch2D>()).Select(x => x.Outer.ToPolygon(seg)).ToList();
+                    return Boundary(sections, s.Heights ?? new List<double>(), Math.Max(1, I("steps")), I("normal") == 1, seg);
+                }
+
                 case PrimitiveKind.Wrap:   // [wrap]
                 {
                     var sk = s.Sketch ?? new Sketch2D();
@@ -700,6 +722,61 @@ namespace RobotTwin.CoreSim.Modeling
         }
 
         /// <summary>[loft] A solid from the bottom outline (z = −h/2) to the top one (z = +h/2), turned by <paramref name="twistDegrees"/>.</summary>
+        /// <summary>
+        /// [boundary] A solid through profiles at heights: each profile resampled to <paramref name="n"/> points from +X (as
+        /// the loft does), the points joined bottom to top by Catmull-Rom curves, <paramref name="steps"/> rows between two
+        /// profiles. With <paramref name="normalAtEnds"/> the curves leave the end profiles straight along Z (SolidWorks'
+        /// "normal to profile"), else they run on toward the next. Profiles at the same height keep the first; the solid is
+        /// centred on its height, as the other primitives are.
+        /// </summary>
+        public static PolyMesh Boundary(List<List<Vec2>> sections, List<double> heights, int steps, bool normalAtEnds, int n)
+        {
+            var m = new PolyMesh();
+            var rings = new List<List<Vec3>>();
+            foreach (int i in Enumerable.Range(0, Math.Min(sections.Count, heights.Count)).OrderBy(i => heights[i]))
+            {
+                if (sections[i].Count < 3 || rings.Count > 0 && Math.Abs(rings[rings.Count - 1][0].Z - heights[i]) < 1e-9) continue;
+                rings.Add(Resample(Ccw(sections[i], true), n).Select(p => new Vec3(p.X, p.Y, heights[i])).ToList());
+            }
+
+            int k = rings.Count;
+            if (k < 2) return m;
+            double mid = (rings[0][0].Z + rings[k - 1][0].Z) / 2;
+            int rows = (k - 1) * steps + 1;
+            var grid = new int[rows, n];
+            static Vec3 CatmullRom(Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3, double u) =>
+                (p1 * 2 + (p2 - p0) * u + (p0 * 2 - p1 * 5 + p2 * 4 - p3) * (u * u) + (p1 * 3 - p0 - p2 * 3 + p3) * (u * u * u)) * 0.5;
+            for (int i = 0; i < n; i++)
+            {
+                for (int s = 0; s < k - 1; s++)
+                {
+                    Vec3 p1 = rings[s][i], p2 = rings[s + 1][i];
+                    // the ends: square to the profile (a tangent straight up the axis) or running on as a straight line would
+                    Vec3 p0 = s > 0 ? rings[s - 1][i] : normalAtEnds ? new Vec3(p2.X, p2.Y, 2 * p1.Z - p2.Z) : p1 * 2 - p2;
+                    Vec3 p3 = s + 2 < k ? rings[s + 2][i] : normalAtEnds ? new Vec3(p1.X, p1.Y, 2 * p2.Z - p1.Z) : p2 * 2 - p1;
+                    for (int t = 0; t < steps; t++)
+                    {
+                        var q = CatmullRom(p0, p1, p2, p3, (double)t / steps);
+                        grid[s * steps + t, i] = m.AddVertex(new Vec3(q.X, q.Y, q.Z - mid));
+                    }
+                }
+
+                var top = rings[k - 1][i];
+                grid[rows - 1, i] = m.AddVertex(new Vec3(top.X, top.Y, top.Z - mid));
+            }
+
+            for (int r = 0; r + 1 < rows; r++)
+                for (int i = 0; i < n; i++)
+                {
+                    int j = (i + 1) % n;
+                    m.AddFace(grid[r, i], grid[r, j], grid[r + 1, j], grid[r + 1, i]);
+                }
+
+            m.AddFace(Enumerable.Range(0, n).Select(i => grid[rows - 1, i]).ToArray());
+            m.AddFace(Enumerable.Range(0, n).Reverse().Select(i => grid[0, i]).ToArray());
+            return m;
+        }
+
         public static PolyMesh Loft(List<Vec2> bottom, List<Vec2> top, double height, double twistDegrees, int n)
         {
             var m = new PolyMesh();

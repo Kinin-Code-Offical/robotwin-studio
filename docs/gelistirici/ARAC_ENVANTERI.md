@@ -155,7 +155,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | --- | --- | --- | --- |
 | Ekstrüzyon ile katı | Ekstrüzyon, yüz çıkarma | var | |
 | Döndürerek katı | Döner gövde | var | |
-| Süpürme, loft, sınır ile katı | Geçiş (loft): alt ve üst profil, burulma; Süpürme (sweep): kesit 3B yol boyunca, gönyeli köşeler; sınır ile katı sonra | kısmi | 3 |
+| Süpürme, loft, sınır ile katı | Geçiş (loft): alt ve üst profil, burulma; Süpürme (sweep): kesit 3B yol boyunca, gönyeli köşeler; sınır ile katı: istenen sayıda kesitten Catmull-Rom eğrileriyle, uçlarda dik ya da serbest | var | |
 | Ekstrüzyon ile kes, döndürerek kes | Boolean fark | var | |
 | Delik sihirbazı (havşa, vida, cıvata) | Delik sihirbazı (geçiş, silindir başlı, havşa, kılavuz, gömme somun; M2–M8, ISO ölçüleri; yüzeye tıkla) | var | |
 | Radyüs (kenar yuvarlatma) | Yuvarla (radyüs): iki yüze teğet dairesel yay, parça sayısı, küresel köşeler | var | |
