@@ -20,6 +20,8 @@ PAGES = ['home', 'settings', 'library', 'schematic', 'pcb', 'code', 'model', 'as
 
 def states(quick):
     pages = [['--page', p] for p in PAGES]
+    # with a design open too: the text the canvases draw themselves (designators, pad names, values) is judged as well
+    pages += [['--page', p, '--example', 'motor-driver'] for p in ('schematic', 'pcb')]
     if quick:
         return pages, []
     more = []

@@ -11,7 +11,6 @@
   "Pages/WorldPage.Sense.cs": 10,
   "Pages/WorldPage.Terrain.cs": 1,
   "Pages/WorldPage.xaml.cs": 3,
-  "Shell/ContrastAudit.cs": 1,
   "Shell/DockManager.cs": 1,
   "Shell/GuideHighlight.cs": 1,
   "Shell/Perf.cs": 5,
@@ -19,5 +18,5 @@
   "Shell/ThemeBrushes.cs": 2,
   "Simulation/SimulationSession.cs": 6
  },
- "total": 54
+ "total": 53
 }

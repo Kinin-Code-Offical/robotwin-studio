@@ -26,7 +26,7 @@ SCALE = {'12', '13', '14', '17', '20', '24', '30'}   # Theme/Tokens.xaml T.Capti
 # the drawing code: technical colours are its job
 DRAWING = ('Editor' + os.sep + 'SchematicCanvas', 'Editor' + os.sep + 'Symbol', 'Pcb' + os.sep, 'World' + os.sep, 'Render' + os.sep,
            'Models3D' + os.sep, 'Assembly3D' + os.sep, 'Modeling' + os.sep, 'Simulation' + os.sep + 'Scope', 'Firmware' + os.sep + 'Timeline',
-           'Analysis' + os.sep, 'Theme' + os.sep, 'Shell' + os.sep + 'Themes.cs', 'Shell' + os.sep + 'ViewCube.cs', 'Shell' + os.sep + 'StartupSplash',
+           'Analysis' + os.sep, 'Theme' + os.sep, 'Shell' + os.sep + 'Themes.cs', 'Shell' + os.sep + 'ContrastAudit', 'Shell' + os.sep + 'ViewCube.cs', 'Shell' + os.sep + 'StartupSplash',
            'Simulation' + os.sep + 'MultimeterView', 'Simulation' + os.sep + 'HistogramView', 'Input' + os.sep + 'VirtualGamepad', 'Branding' + os.sep,
            'Editor' + os.sep + 'SchematicEffects', 'Editor' + os.sep + 'CodeEditor', 'Shell' + os.sep + 'FileAssociations', 'Shell' + os.sep + 'FlowRail')
 

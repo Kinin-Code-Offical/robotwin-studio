@@ -21,6 +21,9 @@ namespace RobotWin.Studio.Shell
         /// <summary>Below this, text is hard to read even when large (WCAG's minimum for large text and controls).</summary>
         public const double Minimum = 3.0;
 
+        /// <summary>The ratio a text must reach this run (--contrast-min: 4.5 for WCAG AA's normal text).</summary>
+        public static double Threshold { get; set; } = Minimum;
+
         public sealed record Finding(string Text, double Ratio, Color Fore, Color Back, string Where);
 
         public static List<Finding> Find(DependencyObject root, Color fallback)
@@ -45,6 +48,9 @@ namespace RobotWin.Studio.Shell
                     break;
                 case TextBox box:
                     Check(box, box.Text, box.Foreground, fallback, found);
+                    break;
+                case FrameworkElement fe:
+                    CheckDrawn(fe, fallback, found);   // text an element draws itself (3D overlays, canvases, charts)
                     break;
             }
 
@@ -77,8 +83,103 @@ namespace RobotWin.Studio.Shell
             if (back == null) return;   // over a picture, a gradient or a 3D view: not judged
             var fc = Over(fs.Color, fs.Opacity, back.Value);
             double ratio = Ratio(fc, back.Value);
-            if (ratio >= Minimum) return;
+            if (ratio >= Threshold) return;
             found.Add(new Finding(text.Length > 60 ? text.Substring(0, 60) + "…" : text, ratio, fc, back.Value, Path(e)));
+        }
+
+        /// <summary>
+        /// [theme] Text an element draws in its own OnRender (a label over a 3D view, a canvas's designators, a chart's axis):
+        /// each run of glyphs in what it drew (<see cref="VisualTreeHelper.GetDrawing"/>) against what lies under its middle,
+        /// the element's own fills drawn before it over its ancestors' background. A picture or a gradient under it, or a
+        /// 3D view with nothing solid behind, leaves it unjudged.
+        /// </summary>
+        private static void CheckDrawn(FrameworkElement e, Color fallback, List<Finding> found)
+        {
+            if (!e.IsEnabled || e.ActualWidth < 1 || e.ActualHeight < 1 || Opacity(e) < 0.35) return;
+            DrawingGroup? drawing;
+            try
+            {
+                drawing = VisualTreeHelper.GetDrawing(e);
+            }
+            catch (InvalidOperationException)
+            {
+                return;
+            }
+
+            if (drawing == null) return;
+            // fills drawn so far (their shape, in the element's frame); A < 0: something not solid (a picture, a gradient)
+            var paints = new List<(Geometry? Shape, Matrix M, Rect Box, Color C, double A)>();
+            Color? behind = null;
+            bool behindKnown = false;
+
+            void Visit(Drawing d, Matrix m, double opacity)
+            {
+                switch (d)
+                {
+                    case DrawingGroup g:
+                        var gm = g.Transform is { } t ? t.Value * m : m;
+                        foreach (var c in g.Children) Visit(c, gm, opacity * g.Opacity);
+                        break;
+                    case GeometryDrawing gd when gd.Brush != null && gd.Geometry != null:
+                        var box = Rect.Transform(gd.Geometry.Bounds, m);
+                        if (gd.Brush is SolidColorBrush sb) paints.Add((gd.Geometry, m, box, sb.Color, sb.Color.A / 255.0 * sb.Opacity * opacity));
+                        else paints.Add((gd.Geometry, m, box, Colors.Transparent, -1));
+                        break;
+                    case ImageDrawing or VideoDrawing:
+                        paints.Add((null, m, Rect.Transform(d.Bounds, m), Colors.Transparent, -1));
+                        break;
+                    case GlyphRunDrawing gr when gr.ForegroundBrush is SolidColorBrush fore && gr.GlyphRun.Characters is { Count: > 0 } chars:
+                    {
+                        string text = new string(chars.ToArray());
+                        if (!text.Any(char.IsLetterOrDigit)) break;
+                        double fa = fore.Color.A / 255.0 * fore.Opacity * opacity;
+                        if (fa < 0.05) break;
+                        var r = Rect.Transform(gr.Bounds, m);
+                        var mid = new Point(r.X + r.Width / 2, r.Y + r.Height / 2);
+                        if (!behindKnown)
+                        {
+                            behind = Behind(e, fallback);
+                            behindKnown = true;
+                        }
+
+                        Color? under = behind;
+                        foreach (var (shape, pm, pbox, pc, pa) in paints)
+                        {
+                            if (!pbox.Contains(mid) || !Covers(shape, pm, mid)) continue;
+                            if (pa < 0) under = null;
+                            else if (pa >= 0.98) under = Color.FromRgb(pc.R, pc.G, pc.B);
+                            else if (under is { } u && pa > 0.02) under = Mix(pc, pa, u);
+                        }
+
+                        if (under is not { } back) break;
+                        var fc = Mix(fore.Color, fa, back);
+                        double ratio = Ratio(fc, back);
+                        if (ratio >= Threshold) break;
+                        string shown = text.Trim();
+                        found.Add(new Finding(shown.Length > 60 ? shown.Substring(0, 60) + "…" : shown, ratio, fc, back, Path(e) + " (çizim)"));
+                        break;
+                    }
+                }
+            }
+
+            Visit(drawing, Matrix.Identity, 1);
+        }
+
+        /// <summary>Whether a drawn shape really lies under the point (a grid of dots spans the sheet but covers little of it).</summary>
+        private static bool Covers(Geometry? shape, Matrix m, Point p)
+        {
+            if (shape == null) return true;   // a picture: its box
+            if (!m.HasInverse) return false;
+            var inv = m;
+            inv.Invert();
+            try
+            {
+                return shape.FillContains(inv.Transform(p));
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
         }
 
         private static double Opacity(DependencyObject d)
@@ -124,7 +225,7 @@ namespace RobotWin.Studio.Shell
             }
 
             var c = fallback;
-            for (int i = layers.Count - 1; i >= 0; i--) c = Over(layers[i].C, layers[i].A, c);
+            for (int i = layers.Count - 1; i >= 0; i--) c = Mix(layers[i].C, layers[i].A, c);   // A already holds the colour's own alpha
             return c;
         }
 
@@ -183,6 +284,14 @@ namespace RobotWin.Studio.Shell
 
         private static DependencyObject? Parent(DependencyObject d) =>
             d is Visual || d is System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(d) ?? LogicalTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d);
+
+        /// <summary><paramref name="top"/> over <paramref name="under"/> at exactly <paramref name="alpha"/> (the colour's own alpha already in it).</summary>
+        private static Color Mix(Color top, double alpha, Color under)
+        {
+            alpha = Math.Max(0, Math.Min(1, alpha));
+            byte M(byte t, byte u) => (byte)Math.Round(t * alpha + u * (1 - alpha));
+            return Color.FromRgb(M(top.R, under.R), M(top.G, under.G), M(top.B, under.B));
+        }
 
         private static Color Over(Color top, double alpha, Color under)
         {

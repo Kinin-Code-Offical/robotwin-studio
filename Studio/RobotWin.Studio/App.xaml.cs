@@ -430,6 +430,8 @@ namespace RobotWin.Studio
                 // popup), added to the file (one per line).
                 if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--contrast-report").Skip(1).FirstOrDefault() is { } contrastPath)
                 {
+                    if (double.TryParse(Environment.GetCommandLineArgs().SkipWhile(a => a != "--contrast-min").Skip(1).FirstOrDefault(), NumberStyles.Float, CultureInfo.InvariantCulture, out double cmin) && cmin > 1)
+                        Shell.ContrastAudit.Threshold = cmin;   // [theme] a stricter (or looser) bar this run
                     var under = (window.TryFindResource("B.Base") as SolidColorBrush)?.Color ?? Colors.Black;
                     var lines = new System.Collections.Generic.List<string>();
                     foreach (var source in PresentationSource.CurrentSources.OfType<PresentationSource>().ToList())

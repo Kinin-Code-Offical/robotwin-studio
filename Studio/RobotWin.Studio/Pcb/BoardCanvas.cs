@@ -760,6 +760,13 @@ namespace RobotWin.Studio.Pcb
             dc.DrawEllipse(SymbolRenderer.Brush(Back), null, c, via.Drill / 2 * _scale, via.Drill / 2 * _scale);
         }
 
+        /// <summary>[theme] Letters that read on <paramref name="ground"/>: near-black on a light one, near-white on a dark one.</summary>
+        private static (Color Strong, Color Soft) LabelOn(Color ground)
+        {
+            double l = (0.2126 * ground.R + 0.7152 * ground.G + 0.0722 * ground.B) / 255.0;
+            return l > 0.45 ? (Color.FromRgb(0x10, 0x10, 0x12), Color.FromRgb(0x20, 0x20, 0x24)) : (Color.FromRgb(0xF2, 0xF2, 0xF5), Color.FromRgb(0xD8, 0xD8, 0xDE));
+        }
+
         private void DrawPadNames(DrawingContext dc, List<PlacedPad> pads)
         {
             foreach (var p in pads)
@@ -768,13 +775,20 @@ namespace RobotWin.Studio.Pcb
                 double size = Math.Min(p.Width, p.Height) * _scale * 0.42;
                 if (size < 6) continue;
                 size = Math.Min(size, 13);
-                var name = Text(p.Pad.Name, size, Color.FromRgb(0x10, 0x10, 0x12));
                 var c = S(p.X, p.Y);
-                double dy = string.IsNullOrEmpty(p.Net) || size < 8 ? 0 : -name.Height * 0.45;
+                // [theme] each label on what lies under its middle: the drill hole (the page's own colour, dark in the dark
+                // themes) or the copper; dark letters on a light ground, light ones on a dark ground
+                double hole = p.Pad.IsThroughHole ? p.Pad.Drill / 2 * _scale : 0;
+                (Color Strong, Color Soft) Ink(double offset) => LabelOn(Math.Abs(offset) < hole * 0.8 ? Back : PadGold);
+                double probe = Text(p.Pad.Name, size, PadGold).Height;
+                double dy = string.IsNullOrEmpty(p.Net) || size < 8 ? 0 : -probe * 0.45;
+                var name = Text(p.Pad.Name, size, Ink(dy).Strong);
                 dc.DrawText(name, new Point(c.X - name.Width / 2, c.Y - name.Height / 2 + dy));
                 if (dy != 0)
                 {
-                    var net = Text(p.Net.Length > 8 ? p.Net.Substring(0, 8) : p.Net, size * 0.75, Color.FromRgb(0x20, 0x20, 0x24));
+                    string netText = p.Net.Length > 8 ? p.Net.Substring(0, 8) : p.Net;
+                    double netMid = name.Height * 0.05 + Text(netText, size * 0.75, PadGold).Height / 2;
+                    var net = Text(netText, size * 0.75, Ink(netMid).Soft);
                     if (net.Width < p.Width * _scale * 1.1) dc.DrawText(net, new Point(c.X - net.Width / 2, c.Y + name.Height * 0.05));
                 }
             }
