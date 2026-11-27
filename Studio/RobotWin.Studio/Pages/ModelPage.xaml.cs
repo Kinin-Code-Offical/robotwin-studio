@@ -526,6 +526,7 @@ namespace RobotWin.Studio.Pages
             menu.Items.Add(Item("Birleşim (∪)", null, () => _ed.Boolean(BooleanOp.Union), two));
             menu.Items.Add(Item("Fark (−) · etkin nesneden çıkar", null, () => _ed.Boolean(BooleanOp.Difference), two));
             menu.Items.Add(Item("Kesişim (∩)", null, () => _ed.Boolean(BooleanOp.Intersection), two));
+            menu.Items.Add(Item("Gövdeleri karşılaştır…", null, CompareBodies, _ed.SelectedObjects.Count(o => !o.IsReference) == 2));   // [compare]
             menu.Items.Add(Item("Tek ağda birleştir", "Ctrl+J", _ed.Join, two));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("Çoğalt", "Shift+D", () =>

@@ -89,6 +89,8 @@ Delik açmak, cep oymak veya parçaları birleştirmek için:
 
 Araç nesneleri sahneden kalkar ama kaybolmaz: her biri etkin nesnenin **Özellik geçmişi**ne bir özellik olarak girer (SolidWorks'teki özellik ağacı gibi). Sonuç yine kapalı (su geçirmez) bir gövdedir.
 
+**Gövdeleri karşılaştır** (SolidWorks'teki gövde karşılaştırma): iki gövde seçiliyken sağ tık ▸ **Gövdeleri karşılaştır…** her birinin hacmini, yüzey alanını ve boyutunu, durdukları yerde ortak hacmi ve yalnız birinde olan hacmi gösterir. Böylece bir parçanın yeni hâli eskisiyle karşılaştırılır; aynıysa "Aynı gövde" yazar.
+
 ### Özellik geçmişi
 
 Fark, birleşim, kesişim ve delik sihirbazının delikleri parçayı ağa çevirmez. Parçanın tabanı (örneğin kutu ve ölçüleri) olduğu gibi kalır, işlemler denetçide **Özellik geçmişi** altında sırayla listelenir ve parça her değişiklikte bunlardan yeniden kurulur. Bu yüzden kutuyu uzatınca yuva yine boydan boya keser.
@@ -97,6 +99,7 @@ Fark, birleşim, kesişim ve delik sihirbazının delikleri parçayı ağa çevi
 - **↑ / ↓** sırasını değiştirir (önce göbek eklenip sonra delinirse delik göbeği de deler).
 - **Düzenle** özelliği açar: aracın kendi ölçüleri (silindirin çapı, boyu) ve parçaya göre **Konum X / Y / Z**; deliklerde **Ölçü**, **Tür** ve **Derinlik**.
 - **Ayır** aracı yeniden ayrı bir nesne yapar; **Sil** özelliği geçmişten çıkarır.
+- **Kaburga…** (Kes, kırp, birleştir bölümü; SolidWorks'teki kaburga): parçanın kendi XZ, YZ ya da XY düzleminde bir çizginin iki ucunu, düzlemin yerini ve bir kalınlık verin. Kaburga çizgiden parçanın yakın olan tarafına doğru, parçanın sınırlarına kadar dolar ve düzlemin iki yanına eşit kalınlıkta olur. Bir L braketin iç köşesinde çizgiyle duvarlar arasındaki üçgeni doldurur (payanda). Geçmişe **Kaburga** olarak girer; uçları ve kalınlığı sonradan değişir.
 - **Geçmişi ağa uygula** tabanı ve özellikleri tek bir düzenlenebilir ağa çevirir. Düzenleme kipi (Tab) ve yuvarla, pah gibi ağ işlemleri de bunu yapar.
 
 Her değişiklik geri alınabilir.

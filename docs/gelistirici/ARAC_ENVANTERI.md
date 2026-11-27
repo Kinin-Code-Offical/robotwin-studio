@@ -161,7 +161,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Radyüs (kenar yuvarlatma) | Yuvarla (radyüs): iki yüze teğet dairesel yay, parça sayısı, küresel köşeler | var | |
 | Pah | Pah kır (Ctrl+B) | var | |
 | Kabuk (içini boşalt) | Kabuk (seçili yüzleri açar, içe eşit duvar) ve Kalınlık ver | var | |
-| Draft, kaburga (rib) | profil uzatmada koniklik (draft) açısı: duvarlar içe, delikler dışa; kaburga sonra | kısmi | 3 |
+| Draft, kaburga (rib) | profil uzatmada koniklik (draft) açısı: duvarlar içe, delikler dışa; Kaburga: parçanın düzleminde çizgi ve kalınlık, çizgiden parçaya dolar (geçmişte düzenlenir) | var | |
 | Doğrusal / dairesel çoğaltma | var | var | |
 | Aynala | Ayna kopyası | var | |
 | Referans düzlem, eksen, nokta | Ekle ▸ Referans düzlem (üç nokta, uzaklık, iki düzlemin ortası, eksene dik), eksen (iki nokta, yuvarlak parça, iki düzlemin kesişimi), nokta (seçili nokta, parçaların ortası); katısız, çizgisinden seçilir; ayna kopyası ve dairesel dizi kullanır | var | |
@@ -179,7 +179,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Kesit görünümü | Kesit (X/Y/Z, kaydırıcı, ters, kesit yüzü kendi renginde) | var | |
 | Geometri denetimi (kapalı ağ) | Durum: kapalı / açık ağ | var | |
 | Draft, eğrilik, simetri analizi | yok | yok | 3 |
-| Gövde karşılaştır | yok | yok | 3 |
+| Gövde karşılaştır | sağ tık ▸ Gövdeleri karşılaştır: iki gövdenin hacmi, alanı, boyutu; ortak hacim ve yalnız birinde olan hacim | var | |
 | SimulationXpress (gerilme) | FEM analizi (Analiz) | var | |
 | FloXpress (akış) | akış analizi | var | |
 

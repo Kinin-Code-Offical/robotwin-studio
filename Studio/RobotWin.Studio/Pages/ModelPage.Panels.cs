@@ -330,6 +330,20 @@ namespace RobotWin.Studio.Pages
             wrap.Children.Add(SmallButton("Fark (kırp)", () => _ed.Boolean(BooleanOp.Difference), "Hedeften, ona geçen araç nesnelerinin hacmini oyar (iç içe geçen kısım kırpılır)"));
             wrap.Children.Add(SmallButton("Birleşim", () => _ed.Boolean(BooleanOp.Union), "İç içe geçen nesneleri tek kapalı gövdede birleştirir"));
             wrap.Children.Add(SmallButton("Kesişim", () => _ed.Boolean(BooleanOp.Intersection), "Yalnız nesnelerin ortak hacmi kalır"));
+            Button? rib = null;
+            rib = SmallButton("Kaburga…", () =>   // [rib] SolidWorks' rib, in one of the part's own planes
+            {
+                var menu = new ContextMenu { PlacementTarget = rib, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+                foreach (var (name, plane) in RibPlanes)
+                {
+                    var mi = new MenuItem { Header = Shell.Lang.T($"{name} düzleminde…") };
+                    mi.Click += (_, _) => RibDialog(name, plane);
+                    menu.Items.Add(mi);
+                }
+
+                menu.IsOpen = true;
+            }, "SolidWorks'teki kaburga: parçanın bir düzlemindeki çizgiden parçaya doğru dolan, verilen kalınlıkta bir duvar (braket köşesine payanda); özellik geçmişine girer");
+            wrap.Children.Add(rib);
             wrap.Children.Add(SmallButton("Delik sihirbazı…", OpenHoleWizard, "Vida ölçüsüne göre delik: geçiş, silindir başlı, havşa başlı, kılavuz, ısıyla gömme somun (SolidWorks'teki gibi); yüzeye tıklayarak yerleştirin"));
             Props.Children.Add(wrap);
             Caption(objs.Count > 1

@@ -54,7 +54,7 @@ namespace RobotWin.Studio.Pages
                     _openFeature = open ? null : (o.Id, index);
                     BuildProperties();
                 }, "Özelliğin ölçülerini ve yerini değiştirin");
-                if (f.Kind != FeatureKind.Hole)
+                if (f.Kind is not (FeatureKind.Hole or FeatureKind.Rib))
                     Tool("Ayır", () => _ed.Do("Araç geri alındı", () =>
                     {
                         var t = ModelFeatures.Extract(_ed.Doc, o, index);
@@ -151,6 +151,20 @@ namespace RobotWin.Studio.Pages
                     drill.Depth = Math.Max(0, v);
                     f.Name = "Delik: " + HoleWizard.Describe(drill);
                 }, "Delik derinliği", true, 0.5, 2, 0, 1e5);
+            }
+
+            if (f.Rib is { Length: 9 } r)
+            {
+                // [rib] its line's two ends and its thickness, in the part's frame
+                string[] names = { "Başlangıç X", "Başlangıç Y", "Başlangıç Z", "Bitiş X", "Bitiş Y", "Bitiş Z" };
+                for (int i = 0; i < 6; i++)
+                {
+                    int k = i;
+                    Num(host, names[i], r[k], "mm", v => r[k] = v, "Kaburga değişti", true, 0.5, 3);
+                }
+
+                Num(host, "Kalınlık", f.Thickness, "mm", v => f.Thickness = Math.Max(0.01, v), "Kaburga kalınlığı", true, 0.5, 2, 0.01, 1e4);
+                return;
             }
 
             // its place in the part's frame

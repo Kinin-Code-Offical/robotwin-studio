@@ -21,7 +21,13 @@ namespace RobotTwin.CoreSim.Modeling
         Intersect,
 
         /// <summary>A hole of the hole wizard's kind, drilled at a point along a direction.</summary>
-        Hole
+        Hole,
+
+        /// <summary>
+        /// [rib] SolidWorks' rib: a wall of a thickness standing on a line in a plane through the part, filled from the
+        /// line to the part (a gusset in a bracket's corner).
+        /// </summary>
+        Rib
     }
 
     /// <summary>
@@ -50,6 +56,14 @@ namespace RobotTwin.CoreSim.Modeling
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public DrillSpec? Drill { get; set; }
 
+        /// <summary>[rib] The rib's line and plane in the part's frame: start x, y, z, end x, y, z, the plane's normal x, y, z.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public double[]? Rib { get; set; }
+
+        /// <summary>[rib] The rib's thickness (mm), half each side of its plane.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public double Thickness { get; set; }
+
         [JsonIgnore]
         public Affine Placement
         {
@@ -65,7 +79,9 @@ namespace RobotTwin.CoreSim.Modeling
             Primitive = Primitive?.Clone(),
             Mesh = Mesh == null ? null : new MeshData { VertexCount = Mesh.VertexCount, FaceCount = Mesh.FaceCount, Positions = Mesh.Positions, Faces = Mesh.Faces },
             Matrix = (double[]?)Matrix?.Clone(),
-            Drill = Drill == null ? null : new DrillSpec { Type = Drill.Type, Size = Drill.Size, Fit = Drill.Fit, Depth = Drill.Depth }
+            Drill = Drill == null ? null : new DrillSpec { Type = Drill.Type, Size = Drill.Size, Fit = Drill.Fit, Depth = Drill.Depth },
+            Rib = (double[]?)Rib?.Clone(),
+            Thickness = Thickness
         };
     }
 
@@ -85,6 +101,12 @@ namespace RobotTwin.CoreSim.Modeling
                 if (f.Kind == FeatureKind.Hole)
                 {
                     mesh = Drill(mesh, f);
+                    continue;
+                }
+
+                if (f.Kind == FeatureKind.Rib)
+                {
+                    mesh = AddRib(mesh, f);
                     continue;
                 }
 
@@ -116,6 +138,97 @@ namespace RobotTwin.CoreSim.Modeling
             return mesh;
         }
 
+        /// <summary>
+        /// [rib] The rib: a slab of its thickness on its plane, from its line (run on past its ends) towards the side of
+        /// the part that is nearer it, out to the part's bounds (kept a hair inside, so no face of it lies on one of the
+        /// part's), joined to the part. In a bracket's corner it fills the triangle between the line and the walls.
+        /// </summary>
+        private static PolyMesh AddRib(PolyMesh mesh, ModelFeature f)
+        {
+            if (f.Rib is not { Length: 9 } r || f.Thickness <= 0 || mesh.IsEmpty) return mesh;
+            var a = new Vec3(r[0], r[1], r[2]);
+            var b = new Vec3(r[3], r[4], r[5]);
+            var n = new Vec3(r[6], r[7], r[8]).Normalized();
+            var d = b - a;
+            if (d.Length < 1e-9 || n.Length < 0.5) return mesh;
+            d = d.Normalized();
+            var across = n.Cross(d).Normalized();   // in the plane, square to the line
+            var mid = (a + b) * 0.5;
+            double toPlus = Hit(mesh, mid, across), toMinus = Hit(mesh, mid, across * -1);
+            var side = toMinus < toPlus ? across * -1 : across;   // towards the part
+            var bounds = mesh.Bounds;
+            double reach = (bounds.Max - bounds.Min).Length * 2 + (b - a).Length;
+            var p0 = a - d * reach;
+            var p1 = b + d * reach;
+            var p2 = p1 + side * reach;
+            var p3 = p0 + side * reach;
+            var half = n * (f.Thickness / 2);
+            var slab = new PolyMesh();
+            var lo = new[] { p0 - half, p1 - half, p2 - half, p3 - half }.Select(slab.AddVertex).ToArray();
+            var hi = new[] { p0 + half, p1 + half, p2 + half, p3 + half }.Select(slab.AddVertex).ToArray();
+            slab.AddFace(lo[3], lo[2], lo[1], lo[0]);
+            slab.AddFace(hi[0], hi[1], hi[2], hi[3]);
+            for (int i = 0; i < 4; i++)
+            {
+                int j = (i + 1) % 4;
+                slab.AddFace(lo[i], lo[j], hi[j], hi[i]);
+            }
+
+            if (slab.Volume() < 0) slab.FlipAll();
+            const double inside = 1e-3;
+            var size = bounds.Max - bounds.Min;
+            var box = PrimitiveBuilder.Box(Math.Max(size.X - 2 * inside, 1e-3), Math.Max(size.Y - 2 * inside, 1e-3), Math.Max(size.Z - 2 * inside, 1e-3))
+                .Translate((bounds.Min + bounds.Max) * 0.5);
+            var rib = Csg.Apply(slab, box, BooleanOp.Intersection);
+            return rib.IsEmpty ? mesh : Csg.Apply(mesh, rib, BooleanOp.Union);
+        }
+
+        /// <summary>The distance along a ray to the first face of the mesh it meets (infinity when none).</summary>
+        private static double Hit(PolyMesh m, Vec3 origin, Vec3 dir)
+        {
+            double best = double.PositiveInfinity;
+            foreach (var face in m.Faces)
+            {
+                for (int k = 1; k + 1 < face.Length; k++)
+                {
+                    var v0 = m.Vertices[face[0]];
+                    var e1 = m.Vertices[face[k]] - v0;
+                    var e2 = m.Vertices[face[k + 1]] - v0;
+                    var pv = dir.Cross(e2);
+                    double det = e1.Dot(pv);
+                    if (Math.Abs(det) < 1e-12) continue;
+                    var tv = origin - v0;
+                    double u = tv.Dot(pv) / det;
+                    if (u < 0 || u > 1) continue;
+                    var qv = tv.Cross(e1);
+                    double v = dir.Dot(qv) / det;
+                    if (v < 0 || u + v > 1) continue;
+                    double t = e2.Dot(qv) / det;
+                    if (t > 1e-9 && t < best) best = t;
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>
+        /// [rib] A rib as a feature: its line from <paramref name="start"/> to <paramref name="end"/> in the plane square to
+        /// <paramref name="normal"/> (all in the part's own frame), <paramref name="thickness"/> mm thick.
+        /// </summary>
+        public static ModelFeature AddRib(ModelObject target, Vec3 start, Vec3 end, Vec3 normal, double thickness)
+        {
+            var f = new ModelFeature
+            {
+                Name = "Kaburga",
+                Kind = FeatureKind.Rib,
+                Rib = new[] { start.X, start.Y, start.Z, end.X, end.Y, end.Z, normal.X, normal.Y, normal.Z },
+                Thickness = thickness
+            };
+            (target.Features ??= new List<ModelFeature>()).Add(f);
+            target.Invalidate();
+            return f;
+        }
+
         /// <summary>A short text that changes whenever anything that shapes the features does (the part's cache key).</summary>
         public static string Stamp(IReadOnlyList<ModelFeature> features)
         {
@@ -128,6 +241,11 @@ namespace RobotTwin.CoreSim.Modeling
                 if (f.Drill != null) sb.Append('d').Append(f.Drill.Type).Append(f.Drill.Size).Append(f.Drill.Fit).Append(f.Drill.Depth.ToString("R", CultureInfo.InvariantCulture));
                 if (f.Matrix != null)
                     foreach (var v in f.Matrix) sb.Append(',').Append(v.ToString("R", CultureInfo.InvariantCulture));
+                if (f.Rib != null)
+                {
+                    sb.Append('r').Append(f.Thickness.ToString("R", CultureInfo.InvariantCulture));
+                    foreach (var v in f.Rib) sb.Append(',').Append(v.ToString("R", CultureInfo.InvariantCulture));
+                }
                 sb.Append(';');
             }
 
@@ -206,7 +324,7 @@ namespace RobotTwin.CoreSim.Modeling
         {
             if (o.Features == null || index < 0 || index >= o.Features.Count) return null;
             var f = o.Features[index];
-            if (f.Kind == FeatureKind.Hole) return null;
+            if (f.Kind is FeatureKind.Hole or FeatureKind.Rib) return null;   // no tool body to give back
             var t = new ModelObject { Name = f.Name.Contains(": ") ? f.Name.Substring(f.Name.IndexOf(": ", StringComparison.Ordinal) + 2) : f.Name };
             if (f.Primitive != null) t.Primitive = f.Primitive.Clone();
             else t.SetMesh(f.Mesh?.ToPolyMesh() ?? new PolyMesh());

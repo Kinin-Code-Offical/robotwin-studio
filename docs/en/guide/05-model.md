@@ -89,6 +89,8 @@ To drill holes, cut pockets or join parts:
 
 The tool objects leave the scene but are not lost: each becomes a feature in the active object's **Feature history** (like SolidWorks' feature tree). The result is again a closed (watertight) body.
 
+**Compare bodies** (SolidWorks' Compare Bodies): with two bodies selected, right-click ▸ **Compare bodies…** shows each one's volume, surface area and size, the volume they share where they stand and the volume only one of them has, so a revised part can be checked against the old one; the same body says "Same body".
+
 ### Feature history
 
 Difference, union, intersection and the hole wizard's holes do not turn the part into a mesh. The part's base (a box and its sizes, say) stays as it is, the operations are listed in order under **Feature history** in the inspector, and the part is rebuilt from them on every change. So a longer box is still cut through by its groove.
@@ -97,6 +99,7 @@ Difference, union, intersection and the hole wizard's holes do not turn the part
 - **↑ / ↓** changes the order (a boss joined before a hole is drilled gets drilled too).
 - **Edit** opens a feature: the tool's own sizes (a cylinder's diameter and height) and its **Position X / Y / Z** on the part; for a hole, **Size**, **Type** and **Depth**.
 - **Separate** gives the tool back as an object of its own; **Delete** takes the feature out of the history.
+- **Rib…** (Cut, trim, join section; SolidWorks' rib): give a line's two ends in one of the part's own XZ, YZ or XY planes, the plane's place and a thickness. The rib fills from the line towards the near side of the part, out to the part's bounds, equally thick either side of the plane. In an L bracket's inside corner it fills the triangle between the line and the walls (a gusset). It joins the history as **Rib**; its ends and thickness can change later.
 - **Apply history to mesh** turns the base and its features into one editable mesh. Edit mode (Tab) and mesh operations such as fillet and chamfer do the same.
 
 Every change can be undone.

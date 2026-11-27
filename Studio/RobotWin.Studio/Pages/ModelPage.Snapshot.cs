@@ -372,6 +372,23 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "rib":   // [rib] an L bracket standing up, a 4 mm rib in its corner from (5, 30) to (30, 5), open in its history
+                {
+                    var outline = new System.Collections.Generic.List<Vec2> { new Vec2(0, 0), new Vec2(40, 0), new Vec2(40, 5), new Vec2(5, 5), new Vec2(5, 40), new Vec2(0, 40) };
+                    var bracket = ModelOps.AddMesh(doc, PrimitiveBuilder.Extrude(outline, new System.Collections.Generic.List<System.Collections.Generic.List<Vec2>>(), 24), "L braket");
+                    bracket.Color = "#3B82C4";
+                    bracket.Transform.Rotation = new Vec3(90, 0, 0);
+                    var bz = bracket.LocalMesh().Bounds;
+                    double mz = (bz.Min.Z + bz.Max.Z) / 2;
+                    ModelFeatures.AddRib(bracket, new Vec3(5, 30, mz), new Vec3(30, 5, mz), Vec3.UnitZ, 4);
+                    _ed.Load(doc, null);
+                    _openFeature = (bracket.Id, 0);
+                    _ed.Select(bracket.Id);
+                    _vp.FrameAll();
+                    ScrollPropsTo("Özellik geçmişi");
+                    break;
+                }
+
                 case "history":   // [history] a block with a shaft groove cut, a boss joined and a counterbored hole: three editable features
                 {
                     var block = ModelOps.AddPrimitive(doc, PrimitiveKind.Box);
