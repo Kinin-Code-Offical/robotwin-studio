@@ -65,11 +65,11 @@ namespace RobotTwin.CoreSim.Design
                 switch (item)
                 {
                     case SchematicPart p: f.Parts.Add(Copy(p)); break;
-                    case SchematicWire w when w.Points.Count >= 2: f.Wires.Add(new SchematicWire { Points = new List<GridPoint>(w.Points) }); break;
-                    case NetLabel l: f.Labels.Add(new NetLabel { Name = l.Name, Position = l.Position, Global = l.Global }); break;
-                    case NoConnectFlag nc: f.NoConnects.Add(new NoConnectFlag { Position = nc.Position }); break;
-                    case SchematicNote n: f.Notes.Add(new SchematicNote { Text = n.Text, Position = n.Position, Size = n.Size, Boxed = n.Boxed, Bold = n.Bold }); break;
-                    case SchematicShape sh: f.Shapes.Add(new SchematicShape { Kind = sh.Kind, Points = new List<GridPoint>(sh.Points), Width = sh.Width, Filled = sh.Filled, Dashed = sh.Dashed }); break;   // [shapes]
+                    case SchematicWire w when w.Points.Count >= 2: f.Wires.Add(new SchematicWire { Points = new List<GridPoint>(w.Points), Group = w.Group }); break;
+                    case NetLabel l: f.Labels.Add(new NetLabel { Name = l.Name, Position = l.Position, Global = l.Global, Group = l.Group }); break;
+                    case NoConnectFlag nc: f.NoConnects.Add(new NoConnectFlag { Position = nc.Position, Group = nc.Group }); break;
+                    case SchematicNote n: f.Notes.Add(new SchematicNote { Text = n.Text, Position = n.Position, Size = n.Size, Boxed = n.Boxed, Bold = n.Bold, Group = n.Group }); break;
+                    case SchematicShape sh: f.Shapes.Add(new SchematicShape { Kind = sh.Kind, Points = new List<GridPoint>(sh.Points), Width = sh.Width, Filled = sh.Filled, Dashed = sh.Dashed, Group = sh.Group }); break;   // [shapes]
                 }
             }
 
@@ -86,6 +86,7 @@ namespace RobotTwin.CoreSim.Design
             Position = p.Position,
             Rotation = p.Rotation,
             Mirror = p.Mirror,
+            Group = p.Group,
             Parameters = new Dictionary<string, string>(p.Parameters, StringComparer.OrdinalIgnoreCase)
         };
 
@@ -189,6 +190,7 @@ namespace RobotTwin.CoreSim.Design
 
             result.Items.InsertRange(0, result.Parts);
             result.Renamed.AddRange(Annotator.ResolveConflicts(doc, library, result.Parts));
+            SchematicGroups.Renew(doc, result.Items);   // [group] a pasted group is a group of its own, not the original's
             return result;
         }
     }

@@ -491,6 +491,7 @@ namespace RobotWin.Studio.Editor
             DrawNoConnects(dc);
             DrawShapes(dc);   // [shapes] (Editor/SchematicCanvas.Shapes.cs)
             DrawNotes(dc);   // [notes]
+            if (!_exporting) DrawGroups(dc);   // [group] Editor/SchematicCanvas.Groups.cs
             DrawEditorOverlay(dc);
 
             if (_exporting) return;

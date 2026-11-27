@@ -102,6 +102,8 @@ Bir satır seçilince ilk parça seçilir, durum çubuğu çakışmanın hacmini
 
 **Boşluk doğrulama** düğmesi (komut paletinde "boşluk doğrula"), SolidWorks'teki gibi birbirine **En az boşluk**'tan (mm) yakın duran parça çiftlerini en kısa mesafeleriyle listeler: kablonun bükülme payı, fanın nefes alanı, tolerans. Mesafe parçaların dış şekilleri arasında kesin olarak ölçülür (GJK). Bir satır seçilince sahnede iki uç arasına boşluğu gösteren bir çizgi çizilir. Çakışan çiftler "çakışıyor" diye listelenir (kapatılabilir); eklemle bağlı parçalar ve yalnız seçili parça seçenekleri çakışma algılamadaki gibidir.
 
+**Delik hizası** düğmesi (komut paletinde "delik hizası"), SolidWorks'teki gibi iki parçada birbirinin devamı olan ama ekseni biraz kayık delikleri listeler: cıvatanın geçmeyeceği yerler. Delikler parçaların kendi şekillerinden bulunur (içe bakan yuvarlak duvarlar; dışa bakan pim ve mil delik sayılmaz). Eksenleri **En çok kayma**'dan (mm) fazla ayrık delikler ayrı delik sayılır, tam hizalı olanlar listelenmez; aralarında pul kadar (1 mm'ye kadar) boşluk olan delikler de birbirinin devamı sayılır. Bir satır seçilince deliklerin buluştuğu yerde iki eksen arasına kaymayı gösteren bir çizgi çizilir. Satırda iki deliğin çapı da yazar.
+
 ## Patlatılmış görünüm
 
 **Patlatılmış görünüm** düğmesi parçaları adım adım ayırır (montaj sırası, bakım, belgeler); yalnız görüntüdür, parçaların yeri değişmez.

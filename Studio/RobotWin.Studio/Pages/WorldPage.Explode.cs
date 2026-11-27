@@ -412,6 +412,22 @@ namespace RobotWin.Studio.Pages
                 OnClearance(this, new RoutedEventArgs());
             }
 
+            int ha = Array.IndexOf(args, "--holes");   // [holes] --holes [demo]: two stacked plates, one hole 0.4 mm out of line
+            if (ha >= 0 && World is { } hw)
+            {
+                if (ha + 1 < args.Length && args[ha + 1] == "demo")
+                {
+                    MeshModel Plate(double hx) => RobotTwin.CoreSim.Modeling.Csg.Difference(
+                        RobotTwin.CoreSim.Modeling.PrimitiveBuilder.Box(40, 30, 5),
+                        RobotTwin.CoreSim.Modeling.PrimitiveBuilder.Cylinder(1.6, 8, 32).Translate(new Vec3(hx, 0, 0))).ToMeshModel();
+                    hw.AddModel(Plate(12), "Taban plakası.stl", new WorldPose { X = 0.3, Y = 0.3 });
+                    hw.AddModel(Plate(12.4), "Kapak plakası.stl", new WorldPose { X = 0.3, Y = 0.3, Z = 0.005 });
+                    Scene.Rebuild();
+                }
+
+                OnHoleAlignment(this, new RoutedEventArgs());
+            }
+
             int gz = Array.IndexOf(args, "--gizmo");   // [gizmo] --gizmo move|rotate|scale|all [--gizmo-world] [--gizmo-center]
             if (gz >= 0 && gz + 1 < args.Length)
             {

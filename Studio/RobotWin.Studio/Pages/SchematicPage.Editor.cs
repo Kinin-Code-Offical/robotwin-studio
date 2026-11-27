@@ -494,6 +494,7 @@ namespace RobotWin.Studio.Pages
             if (parts > 0) summary.Add($"{parts} parça");
             if (wires > 0) summary.Add($"{wires} kablo");
             if (labels > 0) summary.Add($"{labels} etiket");
+            if (selection.Select(SchematicGroups.GroupOf).Distinct().ToList() is [{ } groupName]) summary.Add(groupName);   // [group]
             Inspector.Children.Add(new TextBlock { Text = string.Join(" · ", summary), Style = Res<Style>("Text.Body"), Margin = new Thickness(0, 4, 0, 10) });
             if (parts > 0)
             {
@@ -505,6 +506,26 @@ namespace RobotWin.Studio.Pages
             var copy = new Button { Content = "Kopyala  (Ctrl+C)", Margin = new Thickness(0, 0, 0, 6) };
             copy.Click += (_, _) => Canvas.CopySelection();
             Inspector.Children.Add(copy);
+
+            // [group] the selection's group, and grouping it or taking it apart (Editor/SchematicCanvas.Groups.cs)
+            var groups = selection.Select(SchematicGroups.GroupOf).Distinct().ToList();
+            if (!W.Simulation.IsActive)
+            {
+                if (groups.Count != 1 || groups[0] == null)
+                {
+                    var group = new Button { Content = "Grupla  (Ctrl+G)", Margin = new Thickness(0, 0, 0, 6) };
+                    group.Click += (_, _) => Canvas.GroupSelection();
+                    Inspector.Children.Add(group);
+                }
+
+                if (groups.Any(g => g != null))
+                {
+                    var ungroup = new Button { Content = "Grubu çöz  (Ctrl+Shift+G)", Margin = new Thickness(0, 0, 0, 6) };
+                    ungroup.Click += (_, _) => Canvas.UngroupSelection();
+                    Inspector.Children.Add(ungroup);
+                }
+            }
+
             Inspector.Children.Add(Hint("M taşı · G sürükle · R/Shift+R döndür · X/Y aynala · Ctrl+D çoğalt · oklar kaydır · Del sil. Tüm kısayollar: F1."));
         }
 
@@ -1072,6 +1093,16 @@ namespace RobotWin.Studio.Pages
             {
                 case "fields":   // [fields] the Symbol Fields Table, grouped, the window is the picture
                     ShowFieldsTable();
+                    return;
+                case "group":   // [group] the first part and what lies round it grouped and picked: the dashed frame and its name
+                    if (firstPart != null && SchematicEditing.Bounds(new object[] { firstPart }, W.Library) is { } groupBounds)
+                    {
+                        var around = SchematicEditing.ItemsInRect(sch, W.Library, new GridRect(groupBounds.MinX - 10, groupBounds.MinY - 8, groupBounds.MaxX + 10, groupBounds.MaxY + 8), false);
+                        SchematicGroups.Group(sch, around);
+                        Canvas.SelectItems(around);
+                    }
+
+                    Canvas.InvalidateVisual();
                     return;
                 case "erase-units":   // [erase] [units] the eraser chosen, the corner's coordinates in mm (not saved)
                     Canvas.Units = "mm";

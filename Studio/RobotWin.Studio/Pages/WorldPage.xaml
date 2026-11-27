@@ -94,6 +94,9 @@
                         <Button Style="{StaticResource Btn.Icon}" Click="OnClearance" ToolTip="Boşluk doğrulama: birbirine istenen boşluktan yakın duran parçalar (SolidWorks'teki gibi)">
                             <t:Icon Data="{StaticResource I.Clearance}" Size="16"/>
                         </Button>
+                        <Button Style="{StaticResource Btn.Icon}" Click="OnHoleAlignment" ToolTip="Delik hizası: birbirinin devamı olan ama ekseni kayık delikler (SolidWorks'teki gibi)">
+                            <t:Icon Data="{StaticResource I.HoleAlign}" Size="16"/>
+                        </Button>
                         <Button Style="{StaticResource Btn.Icon}" Click="OnExplode" ToolTip="Patlatılmış görünüm: parçaları adım adım ayır, oynat ve topla">
                             <t:Icon Data="{StaticResource I.Explode}" Size="16"/>
                         </Button>

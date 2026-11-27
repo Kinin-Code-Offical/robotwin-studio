@@ -68,6 +68,7 @@ namespace RobotWin.Studio.Editor
                 {
                     _selection.Clear();
                     _selection.Add(hit);
+                    WholeGroup(hit, false);   // [group]
                     NotifySelection();
                 }
 
@@ -221,6 +222,7 @@ namespace RobotWin.Studio.Editor
                 _selection.Add(target);
             }
 
+            WholeGroup(target, ctrl);   // [group] Editor/SchematicCanvas.Groups.cs
             NotifySelection();
             if (!_selection.Contains(target)) return;
 
@@ -525,6 +527,12 @@ namespace RobotWin.Studio.Editor
                 case Key.D when ctrl:
                 case Key.C when !ctrl:
                     DuplicateSelection();
+                    return true;
+                case Key.G when ctrl && shift:   // [group]
+                    UngroupSelection();
+                    return true;
+                case Key.G when ctrl:
+                    GroupSelection();
                     return true;
                 case Key.L when ctrl:
                     Tool = EditorTool.GlobalLabel;

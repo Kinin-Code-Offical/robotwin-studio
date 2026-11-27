@@ -38,6 +38,10 @@ namespace RobotTwin.CoreSim.Design
     /// <summary>A part placed on the schematic sheet.</summary>
     public sealed class SchematicPart
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         /// <summary>
         /// [integrity] The part's identity for its whole life: it stays when the designator changes, so the PCB and the
         /// Montaj follow a renamed part instead of dropping it and adding a new one. Empty in files saved before it existed
@@ -77,12 +81,20 @@ namespace RobotTwin.CoreSim.Design
 
     public sealed class SchematicWire
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         public List<GridPoint> Points { get; set; } = new List<GridPoint>();
     }
 
     /// <summary>A named label attached to a point; every label with the same text is one net.</summary>
     public sealed class NetLabel
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         public string Name { get; set; } = string.Empty;
         public GridPoint Position { get; set; }
 
@@ -97,6 +109,10 @@ namespace RobotTwin.CoreSim.Design
     /// <summary>A "no connection" flag (KiCad's X marker) on a pin that is deliberately left open.</summary>
     public sealed class NoConnectFlag
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         public GridPoint Position { get; set; }
     }
 
@@ -106,6 +122,10 @@ namespace RobotTwin.CoreSim.Design
     /// </summary>
     public sealed class SchematicNote
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         public string Text { get; set; } = string.Empty;
         public GridPoint Position { get; set; }
 
@@ -150,6 +170,10 @@ namespace RobotTwin.CoreSim.Design
     /// </summary>
     public sealed class SchematicShape
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         public SheetShapeKind Kind { get; set; }
 
         /// <summary>Line: its points; rectangle: two corners; circle: centre, then a point on it; arc: start, middle, end.</summary>

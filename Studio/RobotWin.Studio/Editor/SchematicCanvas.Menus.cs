@@ -197,6 +197,15 @@ namespace RobotWin.Studio.Editor
                     }
             }
 
+            // [group] Editor/SchematicCanvas.Groups.cs
+            bool grouped = _selection.Any(o => SchematicGroups.GroupOf(o) != null);
+            if (hit != null && (n >= 2 || grouped))
+            {
+                Sep();
+                if (n >= 2) Item("Grupla", "Ctrl+G", GroupSelection);
+                if (grouped) Item("Grubu çöz", "Ctrl+Shift+G", UngroupSelection);
+            }
+
             return menu;
         }
 

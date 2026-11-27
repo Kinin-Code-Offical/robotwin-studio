@@ -108,7 +108,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Yakınlaştırma düğmeleri | araç çubuğunda yakınlaştır, uzaklaştır, sığdır; tekerlek ve tuşlar | var | |
 | Hiyerarşide geri / yukarı / ileri | hiyerarşi yok | yok | 3 |
 | Döndür, aynala | var | var | |
-| Grupla | yok | yok | 3 |
+| Grupla | Ctrl+G / Ctrl+Shift+G, tık bütün grubu seçer, kesik çerçeve ve ad, kaydedilir; yapıştırılan grup yeni grup | var | |
 | Sembol düzenleyici, sembol tarayıcı | Parça oluşturucu, kütüphane | var | |
 | Numaralandır | var | var | |
 | ERC (önem, istisna) | var | var | |
@@ -207,7 +207,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Mekanik ilişkiler (dişli, kam, kremayer) | eşleme: dişli, kayış, kremayer-pinyon, kayışlı taşıyıcı, vidalı mil, kam ve itici (harmonik, tepe sayısı); boşluk, verim, kayış esnemesi | var | |
 | Çakışma algılama | Çakışma algılama (hacim, değenler, bağlı parçalar, yalnız seçili) | var | |
 | Boşluk doğrulama | Boşluk doğrulama (en az boşluk, GJK ile kesin mesafe, iki uç arası çizgi) | var | |
-| Delik hizası | yok | yok | 2 |
+| Delik hizası | Delik hizası: delikler parçaların ağlarından bulunur (içe bakan yuvarlak duvar, eksen, çap, derinlik), birbirinin devamı olup ekseni en çok kayma kadar ayrık çiftler, buluştukları yerde kayma çizgisi | var | |
 | Patlatılmış görünüm | Adımlar (yön, uzaklık, bağlı parçalar birlikte), otomatik (eksen / dışa doğru, zincir kat kat), kaydırıcı, oynat / topla | var | |
 | Bileşen çoğaltma | Çoğalt; Desenle çoğalt: doğrusal (adım) ve dairesel (eksen, merkez, açı), kopyalar aslının sabit olduğu yere takılı | var | |
 | BOM | var | var | |

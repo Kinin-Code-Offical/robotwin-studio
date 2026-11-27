@@ -359,6 +359,11 @@ namespace RobotWin.Studio
                 Navigate("world");
                 _world.CheckClearance();
             }) { Context = "world", Keywords = "clearance boşluk mesafe yakın aralık tolerans montaj gap distance", Ready = () => W.ActiveWorld?.Objects.Count > 1 };
+            yield return new PaletteCommand("Dünya", "Delik hizası", () =>   // [holes] SolidWorks' Hole Alignment
+            {
+                Navigate("world");
+                _world.CheckHoleAlignment();
+            }) { Context = "world", Keywords = "hole alignment delik hiza eksen kayık cıvata vida montaj misaligned bolt", Ready = () => W.ActiveWorld?.Objects.Count > 1 };
             yield return new PaletteCommand("Dünya", "Patlatılmış görünüm", () =>   // [explode]
             {
                 Navigate("world");

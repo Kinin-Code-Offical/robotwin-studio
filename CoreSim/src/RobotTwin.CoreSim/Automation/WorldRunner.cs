@@ -21,6 +21,9 @@ namespace RobotTwin.CoreSim.Automation
 
         /// <summary>[route] Where a cable's two plugs sit, each in its object's frame (the app's 3D model pins), or null.</summary>
         CablePins? PinsOf(WorldCable cable) => null;
+
+        /// <summary>[holes] The object's own surface in its frame (metres), for what needs its true shape (its holes); null: none.</summary>
+        MeshModel? MeshOf(WorldObject o) => GeometryOf(o).Mesh;
     }
 
     /// <summary>
