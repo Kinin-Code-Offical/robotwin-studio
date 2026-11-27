@@ -536,7 +536,7 @@ namespace RobotWin.Studio.Editor
                 if (wire.Points.Count < 2 || !Here(wire)) continue;   // [sheets] the shown sheet's
                 string? net = i < netlist.WireNets.Count ? netlist.WireNets[i] : null;
                 Color color = WireColor;
-                if (Simulating && net != null)
+                if (Simulating && net != null && AppSettings.Current.SimLayerVoltage)   // [layers] the voltage layer
                 {
                     double v = Sim.NetVoltage(net);
                     if (!double.IsNaN(v)) color = VoltageColor(v / vmax);
@@ -1140,6 +1140,9 @@ namespace RobotWin.Studio.Editor
 
         private void DrawSimulationOverlay(DrawingContext dc, Netlist netlist)
         {
+            if (AppSettings.Current.SimLayerStress) DrawStressLayer(dc);   // [layers] Editor/SchematicCanvas.Layers.cs
+            if (AppSettings.Current.SimLayerFaults) DrawFaultLayer(dc);
+
             // Current flow dots along two-terminal parts.
             foreach (var part in AppSettings.Current.ShowCurrentFlow ? SheetParts : Enumerable.Empty<SchematicPart>())
             {

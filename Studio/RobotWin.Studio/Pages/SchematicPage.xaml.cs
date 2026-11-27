@@ -1576,6 +1576,10 @@ namespace RobotWin.Studio.Pages
             var sch = W.Schematic;
             switch (fault)
             {
+                case "layers":
+                    // [layers] the LED's resistor much too small: the LED is driven far past its current and the resistor past its power
+                    foreach (var p in sch.Parts.Where(p => p.PartId == "resistor")) p.Parameters["resistance"] = "120";
+                    break;
                 case "burn":
                 case "diag":
                     foreach (var p in sch.Parts)

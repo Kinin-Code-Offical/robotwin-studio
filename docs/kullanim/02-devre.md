@@ -109,6 +109,7 @@ Sayfa açıkken sol üstte bir yol çubuğu belirir: **◀ Geri**, **▲ Üst sa
    - Butonlara ve anahtarlara tıklayın.
    - Potansiyometreleri fare tekerleğiyle çevirin.
    - Bir kabloya tıklayın: osiloskop o noktayı ölçmeye başlar.
+   - Üst çubuktaki **Simülasyon katmanları** düğmesi (katman simgesi) şemanın üstündekileri tek tek açıp kapatır: **Gerilim** (teller hattın gerilimine göre renklenir), **Akım akışı** (iki bacaklı parçalarda akan noktalar), **Zorlanma (güç, sıcaklık)** (bir sınırının %60'ından fazlasını kullanan parçanın çevresi sarıdan kırmızıya parlar, yanında hangi sınır ve yüzdesi yazar) ve **Arıza noktaları** (hasar gören parça kırmızı halka ve nedeniyle işaretlenir, uzaklaşınca da bulunur). Seçimler saklanır.
    - Bir parçayı seçin: Özellikler panelinin en üstünde **Canlı değerler** çıkar: pinlerinin gerilimi, içinden geçen akım (MOSFET'te VGS, ID ve güç kaybı; servoda hedef ve gerçek açı, akım) ve her sınırı (gerilim, akım, güç, sıcaklık) değeri ve sınırıyla; altındaki çubuk sınıra ne kadar yakın olduğunu gösterir (yeşil rahat, sarı yakın, kırmızı aşılmış). Saniyede birkaç kez yenilenir.
 3. **F5** tekrar basılınca duraklatır, **Shift+F5** durdurur. **1 ms ilerlet** düğmesi tek adım ilerletir.
 4. Hız seçimi: **0.01×**, **0.1×**, **Gerçek zaman**, **5×**, **20×**.

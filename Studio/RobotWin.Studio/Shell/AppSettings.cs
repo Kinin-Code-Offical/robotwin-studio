@@ -31,6 +31,13 @@ namespace RobotWin.Studio.Shell
 
         public bool ShowCurrentFlow { get; set; } = true;
 
+        /// <summary>[layers] The circuit's simulation layers: wires coloured by voltage, parts by how hard they work, faults marked.</summary>
+        public bool SimLayerVoltage { get; set; } = true;
+
+        public bool SimLayerStress { get; set; } = true;
+
+        public bool SimLayerFaults { get; set; } = true;
+
         /// <summary>Simulation speed at start (1 = real time).</summary>
         public double DefaultSpeed { get; set; } = 1.0;
 

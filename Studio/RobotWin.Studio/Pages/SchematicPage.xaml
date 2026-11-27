@@ -108,6 +108,8 @@
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock x:Name="SimStatus" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="0,0,10,0" MaxWidth="300" TextTrimming="CharacterEllipsis"/>
+                    <!-- [layers] the simulation's layers on the sheet (Pages/SchematicPage.Layers.cs) -->
+                    <Button x:Name="SimLayersButton" Style="{StaticResource Btn.Icon}" ToolTip="Simülasyon katmanları: gerilim renkleri, akım akışı, zorlanma (güç, sıcaklık), arıza noktaları" Click="OnSimLayers" Margin="0,0,6,0"><t:Icon Data="{StaticResource I.SimLayers}" Size="16"/></Button>
                     <!-- [zoom] KiCad's view toolbar: zoom in, out and fit -->
                     <Button Style="{StaticResource Btn.Icon}" ToolTip="Yakınlaştır (+, tekerlek)" Click="OnZoomIn"><t:Icon Data="{StaticResource I.ZoomIn}" Size="16"/></Button>
                     <Button Style="{StaticResource Btn.Icon}" ToolTip="Uzaklaştır (−, tekerlek)" Click="OnZoomOut"><t:Icon Data="{StaticResource I.ZoomOut}" Size="16"/></Button>
