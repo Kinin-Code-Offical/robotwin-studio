@@ -70,6 +70,17 @@ namespace RobotWin.Studio.Pages
             {
                 BuildInspector();
                 if (TabScene.IsChecked == true) BuildPalette();
+                // [crossprobe] a circuit part picked in the Montaj is picked in its circuit and on its PCB too
+                if (!_crossSelecting && Scene.World?.Find(Scene.Selected ?? string.Empty) is { } o && (o.PartUid != null || o.ProjectRef != null))
+                    CrossProbe.SelectPart(this, o.PartUid, RefDesOf(o));
+            };
+            CrossProbe.PartSelected += (sender, _) =>
+            {
+                if (!ReferenceEquals(sender, this)) FollowCrossSelection();
+            };
+            IsVisibleChanged += (_, _) =>
+            {
+                if (IsVisible) Dispatcher.BeginInvoke(new Action(FollowCrossSelection), System.Windows.Threading.DispatcherPriority.Background);
             };
             Scene.BeginEdit += () => W.BeginWorldChange();
             Scene.EditCommitted += msg => Commit(msg, rebuild: ResolveMates());   // [mate] a dragged part takes its mated parts along
@@ -109,6 +120,33 @@ namespace RobotWin.Studio.Pages
         private static Workspace W => Workspace.Current;
         private static PartLibrary Lib => PartLibrary.Default;
         private WorldDocument? World => W.ActiveWorld;
+
+        /// <summary>[crossprobe] Selecting what another page selected (it is not announced back).</summary>
+        private bool _crossSelecting;
+
+        /// <summary>[crossprobe] The designator a Montaj object stands for ("project id/RefDes" → RefDes).</summary>
+        private static string? RefDesOf(WorldObject o) =>
+            string.IsNullOrEmpty(o.ProjectRef) ? null : o.ProjectRef!.Substring(o.ProjectRef.LastIndexOf('/') + 1);
+
+        /// <summary>
+        /// [crossprobe] The part picked in the circuit or on the PCB, picked in the Montaj too when it is there as an object
+        /// of its own (by its identity; a part soldered on a board is in the board). The view stays where it is.
+        /// </summary>
+        private void FollowCrossSelection()
+        {
+            if (Scene.World is not { } world || (CrossProbe.SelectedUid == null && CrossProbe.SelectedRefDes == null)) return;
+            var o = world.Objects.FirstOrDefault(x => (x.PartUid != null || x.ProjectRef != null) && CrossProbe.IsSelected(x.PartUid, RefDesOf(x)));
+            if (o == null || string.Equals(Scene.Selected, o.Id, StringComparison.OrdinalIgnoreCase)) return;
+            _crossSelecting = true;
+            try
+            {
+                Scene.Select(o.Id);
+            }
+            finally
+            {
+                _crossSelecting = false;
+            }
+        }
 
         // ================================================================ document
 

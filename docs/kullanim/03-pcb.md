@@ -30,7 +30,7 @@ Kart kenarını sol araç çubuğundaki **kart kenarı** aracıyla çokgen olara
 
 - Parçaları fareyle sürükleyin. **R** döndürür, **F** parçayı alt / üst yüze çevirir, **L** kilitler.
 - **Yerleştir** düğmesi bağlantılara göre otomatik yerleşim yapar; kilitli parçalar yerinde kalır.
-- **Ortak seçim:** devrede seçtiğiniz parça PCB'de de seçili olur, PCB'de seçtiğiniz devrede (KiCad'in çapraz seçimi gibi); hiçbir sayfanın görünümü yerinden oynamaz, sayfaya geçtiğinizde parça seçili bekler. Parça kimliğiyle çalışır: yeniden adlandırılmış parça yine aynı parçadır. **Ayarlar → Dünya ve düzenleme → Ortak seçim** kapatır. Görünümü de o parçaya götürmek için sağ tıkta **Devrede göster** / devrede **PCB'de göster**.
+- **Ortak seçim:** devrede seçtiğiniz parça PCB'de de seçili olur, PCB'de seçtiğiniz devrede (KiCad'in çapraz seçimi gibi); Montajda ayrı nesne olarak duran parça (motor, sensör, batarya…) Montajda da seçilir, Montajda seçtiğiniz de devrede ve PCB'de; hiçbir sayfanın görünümü yerinden oynamaz, sayfaya geçtiğinizde parça seçili bekler. Parça kimliğiyle çalışır: yeniden adlandırılmış parça yine aynı parçadır. **Ayarlar → Dünya ve düzenleme → Ortak seçim** kapatır. Görünümü de o parçaya götürmek için sağ tıkta **Devrede göster** / devrede **PCB'de göster**.
 
 ## Yol çizimi
 
