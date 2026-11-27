@@ -176,6 +176,14 @@ namespace RobotWin.Studio.Editor
                         Item(Check(_gridStyle == GridStyle.Lines, "Izgara: çizgiler"), "", () => GridStyle = GridStyle.Lines);
                         Item(Check(_gridStyle == GridStyle.None, "Izgara: kapalı"), "", () => GridStyle = GridStyle.None);
                         Item(Check(_crosshair, "Artı imleç"), "Ctrl+Shift+X", () => Crosshair = !Crosshair);
+                        // [units] KiCad's units: the corner's coordinates in grid steps, mm, mil or inches
+                        Item("Birim: " + Units switch { "mm" => "mm", "mil" => "mil", "in" => "inç", _ => "ızgara adımı" }, "", () =>
+                        {
+                            Units = Units switch { "grid" => "mm", "mm" => "mil", "mil" => "in", _ => "grid" };
+                            Shell.AppSettings.Current.SchematicUnits = Units;
+                            Shell.AppSettings.Current.Save();
+                            InvalidateVisual();
+                        });
                         Item("Kablo modu: " + (_wireMode == WireMode.Orthogonal ? "90°" : _wireMode == WireMode.Diagonal45 ? "45°" : "serbest"), "Shift+Boşluk", () =>
                             WireMode = _wireMode switch { WireMode.Orthogonal => WireMode.Diagonal45, WireMode.Diagonal45 => WireMode.Free, _ => WireMode.Orthogonal });
                         Sep();

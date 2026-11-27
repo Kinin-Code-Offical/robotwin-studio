@@ -47,6 +47,9 @@
                             <ToggleButton x:Name="ToolJunction" Style="{StaticResource Toggle.Tool}" ToolTip="Bağlantı noktası (J): kesişen teller ancak burada birleşir; elle konmuş noktaya tıklayınca ayrılır" Click="OnToolClick" Tag="Junction" Margin="2,0,0,0">
                                 <t:Icon Data="{StaticResource I.Junction}" Size="15"/>
                             </ToggleButton>
+                            <ToggleButton x:Name="ToolErase" Style="{StaticResource Toggle.Tool}" ToolTip="Silici: her tıklama altındaki öğeyi siler (tel, parça, etiket, not, işaret)" Click="OnToolClick" Tag="Erase" Margin="2,0,0,0">
+                                <t:Icon Data="{StaticResource I.Eraser}" Size="15"/>
+                            </ToggleButton>
                             <ToggleButton x:Name="ToolText" Style="{StaticResource Toggle.Tool}" ToolTip="Metin (T): sayfaya not, başlık ya da açıklama; çift tıkla düzenlenir" Click="OnToolClick" Tag="Text" Margin="2,0,0,0">
                                 <t:Icon Data="{StaticResource I.Text}" Size="15"/>
                             </ToggleButton>

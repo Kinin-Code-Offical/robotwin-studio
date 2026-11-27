@@ -128,8 +128,8 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Metin, metin kutusu | Metin (T), çerçeveli = metin kutusu | var | |
 | Tablo | yok | yok | 3 |
 | Dikdörtgen, daire, yay, çizgi, Bezier, resim | Çiz: çizgi, dikdörtgen, daire, yay (seçilir, taşınır, döndürülür, kopyalanır; KiCad'e gider ve gelir; görüntüye çizilir); Bezier ve resim sonra | kısmi | 3 |
-| Silici | Del | kısmi | 3 |
-| Izgara, birim, imleç, gizli pinler | ızgara var | kısmi | 3 |
+| Silici | Del; araç çubuğunda Silici aracı (her tıklama altındakini siler) | var | |
+| Izgara, birim, imleç, gizli pinler | ızgara (nokta / çizgi / kapalı), artı imleç (Ctrl+Shift+X), göreli orijin, birim (ızgara adımı, mm, mil, inç); gizli pin yok: sembollerin bütün pinleri görünür | var | |
 | Kablo açı kipi (90° / 45° / serbest) | var | var | |
 | Ağ gezgini | Hatlar sekmesi | var | |
 | Özellikler paneli | var (taşınır, küçülür, ayrılır) | var | |

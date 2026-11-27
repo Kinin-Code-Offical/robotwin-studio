@@ -171,6 +171,7 @@ namespace RobotWin.Studio.Editor
                 EditorTool.GlobalLabel => "Global etiket · tıklayın",
                 EditorTool.NoConnect => "NC işareti · pin uçlarına tıklayın",
                 EditorTool.Junction => "Bağlantı noktası · tellerin kesiştiği yere tıklayın: birleşirler · elle konmuş noktaya tıklayınca ayrılırlar",
+                EditorTool.Erase => "Silici · tıklanan öğe silinir (tel, parça, etiket, not, işaret) · Esc seçime döner",   // [erase]
                 EditorTool.Highlight => "Hattı vurgula · pine, tele ya da etikete tıklayın · aynı hatta ya da boşa tıklayınca kalkar",
                 EditorTool.Line => "Çizgi · köşelere tıklayın · çift tık, Enter ya da Esc: bitir",
                 EditorTool.Rectangle => "Dikdörtgen · iki köşeye tıklayın",
@@ -983,13 +984,31 @@ namespace RobotWin.Studio.Editor
             }
         }
 
+        /// <summary>[units] The unit the corner's coordinates are in: the grid's steps, or mm, mil or inches (KiCad's choice).</summary>
+        public string Units { get; set; } = Shell.AppSettings.Current.SchematicUnits is { Length: > 0 } u ? u : "grid";
+
+        /// <summary>[units] A length in grid steps in the chosen unit, with its sign.</summary>
+        private string InUnits(double steps)
+        {
+            double mm = steps * RobotTwin.CoreSim.Pcb.KiCadExporter.SchematicGridMm;
+            return Units switch
+            {
+                "mm" => mm.ToString("0.00", CultureInfo.InvariantCulture),
+                "mil" => (mm / 0.0254).ToString("0", CultureInfo.InvariantCulture),
+                "in" => (mm / 25.4).ToString("0.000", CultureInfo.InvariantCulture),
+                _ => steps.ToString("0", CultureInfo.InvariantCulture)
+            };
+        }
+
+        private string UnitSuffix => Units switch { "mm" => " mm", "mil" => " mil", "in" => " in", _ => string.Empty };
+
         /// <summary>Status strip in the bottom-left corner: cursor coordinates, relative offset, zoom and mode.</summary>
         private void DrawHud(DrawingContext dc, Rect size)
         {
             if (size.Width < 200) return;
             var g = Snap(_mouseGrid);
-            string text = string.Format(CultureInfo.InvariantCulture, "X {0,4:0}  Y {1,4:0}", g.X, g.Y);
-            if (_relOrigin is { } o) text += string.Format(CultureInfo.InvariantCulture, "   dX {0:0}  dY {1:0}", g.X - o.X, g.Y - o.Y);
+            string text = $"X {InUnits(g.X),5}  Y {InUnits(g.Y),5}{UnitSuffix}";
+            if (_relOrigin is { } o) text += $"   dX {InUnits(g.X - o.X)}  dY {InUnits(g.Y - o.Y)}{UnitSuffix}";
             text += string.Format(CultureInfo.InvariantCulture, "   {0:0}%", _scale / 14.0 * 100);
             if (_selection.Count > 0) text += $"   · {_selection.Count} seçili";
             string mode = ModeText();

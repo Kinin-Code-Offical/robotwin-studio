@@ -8592,6 +8592,10 @@
   "Seçenekler": "Options",
   "Renkli (kapalıyken her şey siyah: toner transferi, film)": "In colour (off: everything black, for toner transfer and film)",
   "Aynala": "Mirror",
+  "Silici: her tıklama altındaki öğeyi siler (tel, parça, etiket, not, işaret)": "Eraser: every click deletes what is under it (a wire, a part, a label, a note, a flag)",
+  "Silici: silinecek bir öğeye tıklayın": "Eraser: click an item to delete",
+  "Silici · tıklanan öğe silinir (tel, parça, etiket, not, işaret) · Esc seçime döner": "Eraser · the clicked item is deleted (a wire, a part, a label, a note, a flag) · Esc goes back to select",
+  "inç": "inches",
   "Işık": "Light",
   "Görüş alanları": "Viewports",
   "Görüş alanı": "Viewport",
@@ -8951,6 +8955,7 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+  "Birim: {…}": "Units: {0}",
   "'{…}' görüş alanı silindi": "'{0}' viewport deleted",
   "'{…}' görüş alanı kaydedildi": "'{0}' viewport saved",
   "Görünüm {…}": "View {0}",

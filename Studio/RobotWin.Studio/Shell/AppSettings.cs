@@ -138,6 +138,9 @@ namespace RobotWin.Studio.Shell
         /// <summary>[crosshair] The PCB view's full-window crosshair; [polar] the cursor read as distance and angle from the origin.</summary>
         public bool PcbFullCrosshair { get; set; }
 
+        /// <summary>[units] The schematic's coordinate unit: "grid", "mm", "mil" or "in".</summary>
+        public string SchematicUnits { get; set; } = "grid";
+
         /// <summary>[proportional] Blender's proportional editing in the modeller, and its radius (mm).</summary>
         public bool ModelProportional { get; set; }
 

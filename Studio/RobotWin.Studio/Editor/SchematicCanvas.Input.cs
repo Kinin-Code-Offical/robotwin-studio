@@ -123,6 +123,23 @@ namespace RobotWin.Studio.Editor
                 case EditorTool.Junction:   // [junction]
                     ToggleJunctionAt(_mouseGrid);
                     return;
+                case EditorTool.Erase:   // [erase] whatever is under the click goes; the tool stays
+                {
+                    if (!GuardEditing()) return;
+                    if (HitObject(_mouseGrid) is not { } hit)
+                    {
+                        W.Status = Shell.Lang.T("Silici: silinecek bir öğeye tıklayın");
+                        return;
+                    }
+
+                    W.BeginChange();
+                    SchematicEditing.Delete(Doc, new[] { hit });
+                    _selection.Remove(hit);
+                    W.CommitChange(Shell.Lang.T("Silindi"));
+                    NotifySelection();
+                    InvalidateVisual();
+                    return;
+                }
                 case EditorTool.Line:   // [shapes]
                 case EditorTool.Rectangle:
                 case EditorTool.Circle:

@@ -249,6 +249,7 @@ namespace RobotWin.Studio.Pages
                 "Text" => EditorTool.Text,   // [notes]
                 "Highlight" => EditorTool.Highlight,   // [highlight]
                 "Junction" => EditorTool.Junction,   // [junction]
+                "Erase" => EditorTool.Erase,   // [erase]
                 _ => EditorTool.Select
             };
             Canvas.Tool = tool;
@@ -264,6 +265,7 @@ namespace RobotWin.Studio.Pages
             ToolText.IsChecked = Canvas.Tool == EditorTool.Text;   // [notes]
             ToolHighlight.IsChecked = Canvas.Tool == EditorTool.Highlight;   // [highlight]
             ToolJunction.IsChecked = Canvas.Tool == EditorTool.Junction;   // [junction]
+            ToolErase.IsChecked = Canvas.Tool == EditorTool.Erase;   // [erase]
             ToolDraw.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc;   // [shapes]
         }
 

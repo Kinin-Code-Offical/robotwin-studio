@@ -1069,6 +1069,12 @@ namespace RobotWin.Studio.Pages
                             ?? sch.Parts.FirstOrDefault();
             switch (fault)
             {
+                case "erase-units":   // [erase] [units] the eraser chosen, the corner's coordinates in mm (not saved)
+                    Canvas.Units = "mm";
+                    Canvas.Tool = EditorTool.Erase;
+                    SyncTools();
+                    Canvas.InvalidateVisual();
+                    return;
                 case "bom":   // [bom] the list with two lines sourced and costed, the window is the picture
                     ExportBom();
                     if (_bomWindow != null)
