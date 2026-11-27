@@ -20,8 +20,8 @@ namespace RobotWin.Studio.Shell
 
         public ViewCube()
         {
-            Width = 86;
-            Height = 86;
+            Width = 84;
+            Height = 84;
             Cursor = Cursors.Hand;
             System.Windows.Controls.ToolTipService.SetInitialShowDelay(this, 250);
             MouseMove += (_, e) => SetHot(HitTest(e.GetPosition(this)));
@@ -87,7 +87,7 @@ namespace RobotWin.Studio.Shell
 
         private Point Project(Vector3 v, (Vector3 Look, Vector3 Right, Vector3 Up) b)
         {
-            double s = Math.Min(ActualWidth, ActualHeight) * 0.27;
+            double s = Math.Min(ActualWidth, ActualHeight) * 0.29;
             return new Point(ActualWidth / 2 + v.Dot(b.Right) * s, ActualHeight / 2 - v.Dot(b.Up) * s);
         }
 
@@ -165,7 +165,8 @@ namespace RobotWin.Studio.Shell
         protected override void OnRender(DrawingContext dc)
         {
             var b = Basis();
-            dc.DrawEllipse(new SolidColorBrush(Color.FromArgb(0x26, 0x80, 0x80, 0x8A)), null, new Point(ActualWidth / 2, ActualHeight / 2), ActualWidth / 2 - 1, ActualHeight / 2 - 1);
+            // no backdrop: the cube stands on the view itself (a clear square only so the whole corner takes the cursor)
+            dc.DrawRectangle(Brushes.Transparent, null, new Rect(RenderSize));
             var edge = new Pen(new SolidColorBrush(Color.FromArgb(0xC0, 0x1E, 0x1E, 0x24)), 1);
             edge.Freeze();
             // far faces first, so the near ones lie over them

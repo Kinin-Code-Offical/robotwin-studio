@@ -120,6 +120,7 @@
                     <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                         <TextBlock x:Name="SimStatus" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <ToggleButton x:Name="FollowToggle" Style="{StaticResource Toggle.Tool}" ToolTip="Kamera seçili nesneyi takip etsin (Shift+F)" Click="OnFollow"><t:Icon Data="{StaticResource I.Eye}" Size="16"/></ToggleButton>
+                        <Button Style="{StaticResource Btn.Icon}" ToolTip="Hepsini sığdır (F)" Click="OnFit"><t:Icon Data="{StaticResource I.ZoomFit}" Size="16"/></Button>
                         <Button x:Name="OverlayButton" Style="{StaticResource Btn.Icon}" ToolTip="Kaplamalar: ipucu satırı, tutamaç, sensör kaplamaları, ızgara (`)" Click="OnOverlayMenu"><t:Icon Data="{StaticResource I.Grid}" Size="16"/></Button>
                         <!-- [dock] Pages/WorldPage.Layout.cs -->
                         <Button x:Name="LayoutButton" Style="{StaticResource Btn.Icon}" ToolTip="Panel düzeni: paneller solda, sağda, altta ya da ayrı pencerede; gizle, sıfırla" Click="OnLayoutMenu"><t:Icon Data="{StaticResource I.Panel}" Size="16"/></Button>

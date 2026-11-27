@@ -33,6 +33,7 @@ namespace RobotWin.Studio.Pages
             InitializeComponent();
             _vp = new ModelViewport(_ed);
             ViewHost.Children.Add(_vp);
+            InitToolStrip();
             _vp.ContextMenuRequested += p => ShowContextMenu();
             _vp.ViewChanged += () => { };
             _ed.Changed += OnEditorChanged;
@@ -57,6 +58,18 @@ namespace RobotWin.Studio.Pages
         }
 
         private bool _loadedOnce;
+
+        // [overlays] the tool shelf as the World view's tool strip: on the view's left edge, dragged by its handle (Shell/PageOverlays.cs)
+        private Shell.OverlayHost? _overlays;
+        private Shell.SceneOverlay? _toolsOverlay;
+
+        private void InitToolStrip()
+        {
+            var items = Shell.PageOverlays.ItemsOf((Panel)ToolShelf.Child);
+            ToolShelf.Visibility = Visibility.Collapsed;
+            _toolsOverlay = new Shell.SceneOverlay("tools", "Araçlar", (System.Windows.Media.Geometry)FindResource("I.Pointer"), o => Shell.PageOverlays.Strip(o, items));
+            _overlays = Shell.PageOverlays.Attach((Panel)ToolShelf.Parent, "model", "tools:Left:40:40:Vertical:0:1:Left", new[] { _toolsOverlay }, column: 0);
+        }
 
         /// <summary>The editor behind the page (document, selection, undo).</summary>
         public ModelEditor Editor => _ed;
@@ -164,8 +177,12 @@ namespace RobotWin.Studio.Pages
                     ToggleSidePane();
                     break;
                 case Key.T when !ctrl && !shift && !alt:   // [nt] Blender's T: the tool shelf
-                    ToolShelf.Visibility = ToolShelf.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
-                    _ed.Status(Lang.T(ToolShelf.Visibility == Visibility.Visible ? "Araç rafı açık (T)" : "Araç rafı gizli (T)"));
+                    if (_toolsOverlay != null && _overlays != null)
+                    {
+                        _toolsOverlay.Shown = !_toolsOverlay.Shown;
+                        _overlays.Changed();
+                        _ed.Status(Lang.T(_toolsOverlay.Shown ? "Araç rafı açık (T)" : "Araç rafı gizli (T)"));
+                    }
                     break;
                 case Key.A when shift:
                     ShowAddMenu();

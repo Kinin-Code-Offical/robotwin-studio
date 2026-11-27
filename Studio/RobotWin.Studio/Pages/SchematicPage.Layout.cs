@@ -14,7 +14,9 @@ namespace RobotWin.Studio.Pages
     {
         private DockManager? _dock;
 
-        private FloatingStrip? _drawToolsFloat;
+        // [overlays] the tools down the canvas' left edge and the drawing tools as a strip of their own (Shell/PageOverlays.cs)
+        private OverlayHost? _overlays;
+        private ToolPanel? _drawPanel;
 
         /// <summary>The bottom tabs in their original order (the code picks them by this index).</summary>
         private static readonly string[] DockKeys = { "scope", "meter", "diag", "mc", "pins", "serial", "log", "ac", "nets" };
@@ -55,8 +57,44 @@ namespace RobotWin.Studio.Pages
             _dock.StartFolded = true;   // [fold] the oscilloscope and the other instruments start closed: a tab opens them
             _dock.FoldEveryStart = true;
             _dock.Start();
-            // [floatbar] the drawing tools tear off into their own window (a palette beside the sheet, as SolidWorks' floating toolbars)
-            _drawToolsFloat = new FloatingStrip("schematic.tools", DrawToolsHost, DrawTools, docked => DrawToolsHost.Visibility = docked ? Visibility.Visible : Visibility.Collapsed);
+            InitToolStrips();
+        }
+
+        /// <summary>
+        /// [overlays] The World view's tool strip on the circuit page: the tools (select, wire, label, power, no-connect,
+        /// junction, eraser, text, sheets, drawing, highlight, meter leads) in a column on the canvas' left edge, the drawing
+        /// tools (line, rectangle, circle, arc, Bezier, rule area, table, picture) in a strip of their own the Çiz button opens.
+        /// </summary>
+        private void InitToolStrips()
+        {
+            var items = PageOverlays.ItemsOf(DrawTools);
+            DrawToolsHost.Visibility = Visibility.Collapsed;
+            ToolSep0.Visibility = Visibility.Collapsed;
+            _drawPanel = new ToolPanel("draw", "Çizim", "I.DrawRect", new[]
+            {
+                new Theme.ToolChoice(nameof(Editor.EditorTool.Line), "Çizgi", "I.DrawLine"), new Theme.ToolChoice(nameof(Editor.EditorTool.Rectangle), "Dikdörtgen", "I.DrawRect"),
+                new Theme.ToolChoice(nameof(Editor.EditorTool.Circle), "Daire", "I.DrawCircle"), new Theme.ToolChoice(nameof(Editor.EditorTool.Arc), "Yay", "I.DrawArc"),
+                new Theme.ToolChoice(nameof(Editor.EditorTool.Bezier), "Bezier eğrisi", "I.DrawBezier"),
+                new Theme.ToolChoice(nameof(Editor.EditorTool.RuleArea), "Kural alanı: iki köşe, sonra hat sınıfı", "I.RuleArea"),
+                new Theme.ToolChoice(nameof(Editor.EditorTool.Table), "Tablo: tıklanan yer sol üst köşesi olur", "I.Table"),
+                new Theme.ToolChoice("Image", "Resim…: imleçle gelir, tıklayınca yerleşir", "I.Picture")
+            }, tag => Canvas.Tool.ToString() == tag, PickDrawing);
+            var tools = new SceneOverlay("tools", "Araçlar", (System.Windows.Media.Geometry)FindResource("I.Pointer"), o => PageOverlays.Strip(o, items)) { CanHide = false };
+            _overlays = PageOverlays.Attach((Panel)Canvas.Parent, "schematic", "tools:Left:40:40:Vertical:0:1:Left;draw:Left:40:40:Vertical:0:0:Left", new[] { tools, _drawPanel.Overlay });
+            _drawPanel.Overlay.Shown = false;   // opens with the Çiz button
+            _overlays.Arrange();
+        }
+
+        private void PickDrawing(string tag)
+        {
+            if (tag == "Image")
+            {
+                // [image] a picture from a file: it follows the cursor until a click puts it down
+                if (RobotWin.Studio.Theme.Pictures.Pick(Window.GetWindow(this)) is { } data) Canvas.BeginImage(data);
+            }
+            else if (System.Enum.TryParse(tag, out Editor.EditorTool tool)) Canvas.Tool = tool;
+
+            Canvas.Focus();
         }
 
         /// <summary>Brings a bottom tab into view wherever the user put it (index into <see cref="DockKeys"/>).</summary>

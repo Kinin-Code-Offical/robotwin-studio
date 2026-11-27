@@ -55,24 +55,19 @@
 
                     <Border Background="{DynamicResource B.Surface}" CornerRadius="6" Padding="2" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
-                            <RadioButton x:Name="ModeObject" Style="{StaticResource Chip}" Content="Nesne" GroupName="mode" IsChecked="True" Click="OnModeObject" ToolTip="Nesne modu (Tab)"/>
-                            <RadioButton x:Name="ModeEdit" Style="{StaticResource Chip}" Content="Düzenle" GroupName="mode" Click="OnModeEdit" ToolTip="Düzenleme modu: nokta / kenar / yüz (Tab)"/>
+                            <RadioButton x:Name="ModeObject" Style="{StaticResource Toggle.Tool}" GroupName="mode" IsChecked="True" Click="OnModeObject" ToolTip="Nesne modu (Tab)"><t:Icon Data="{StaticResource I.Cube}" Size="16"/></RadioButton>
+                            <RadioButton x:Name="ModeEdit" Style="{StaticResource Toggle.Tool}" GroupName="mode" Click="OnModeEdit" ToolTip="Düzenleme modu: nokta / kenar / yüz (Tab)"><t:Icon Data="{StaticResource M.Edit}" Size="16"/></RadioButton>
                         </StackPanel>
                     </Border>
                     <Border x:Name="ElementBar" Background="{DynamicResource B.Surface}" CornerRadius="6" Padding="2" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
                         <StackPanel Orientation="Horizontal">
-                            <RadioButton x:Name="ElVertex" Style="{StaticResource Chip}" Content="Nokta" GroupName="el" IsChecked="True" Click="OnElement" Tag="0" ToolTip="Nokta seçimi (1)"/>
-                            <RadioButton x:Name="ElEdge" Style="{StaticResource Chip}" Content="Kenar" GroupName="el" Click="OnElement" Tag="1" ToolTip="Kenar seçimi (2)"/>
-                            <RadioButton x:Name="ElFace" Style="{StaticResource Chip}" Content="Yüz" GroupName="el" Click="OnElement" Tag="2" ToolTip="Yüz seçimi (3)"/>
+                            <RadioButton x:Name="ElVertex" Style="{StaticResource Toggle.Tool}" GroupName="el" IsChecked="True" Click="OnElement" Tag="0" ToolTip="Nokta seçimi (1)"><t:Icon Data="{StaticResource I.SelVertex}" Size="16"/></RadioButton>
+                            <RadioButton x:Name="ElEdge" Style="{StaticResource Toggle.Tool}" GroupName="el" Click="OnElement" Tag="1" ToolTip="Kenar seçimi (2)"><t:Icon Data="{StaticResource I.SelEdge}" Size="16"/></RadioButton>
+                            <RadioButton x:Name="ElFace" Style="{StaticResource Toggle.Tool}" GroupName="el" Click="OnElement" Tag="2" ToolTip="Yüz seçimi (3)"><t:Icon Data="{StaticResource I.SelFace}" Size="16"/></RadioButton>
                         </StackPanel>
                     </Border>
                     <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="8,0"/>
-                    <Button Style="{StaticResource Btn.Ghost}" Padding="8,0" MinHeight="28" Click="OnAddMenu" ToolTip="Ekle (Shift+A)">
-                        <StackPanel Orientation="Horizontal">
-                            <t:Icon Data="{StaticResource I.Plus}" Size="16"/>
-                            <TextBlock Text="Ekle" Margin="6,0,0,0" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+                    <Button Style="{StaticResource Btn.Icon}" Click="OnAddMenu" ToolTip="Ekle: temel şekiller, referans geometri, profilden katı (Shift+A)"><t:Icon Data="{StaticResource I.Plus}" Size="16"/></Button>
                     <Button Style="{StaticResource Btn.Icon}" ToolTip="Birleşim (Boolean ∪): seçili araçları etkin nesneyle birleştir" Click="OnUnion"><t:Icon Data="{StaticResource M.Union}" Size="16"/></Button>
                     <Button Style="{StaticResource Btn.Icon}" ToolTip="Fark (Boolean −): seçili araçları etkin nesneden çıkar (delik, cep)" Click="OnDifference"><t:Icon Data="{StaticResource M.Difference}" Size="16"/></Button>
                     <Button Style="{StaticResource Btn.Icon}" ToolTip="Kesişim (Boolean ∩)" Click="OnIntersect"><t:Icon Data="{StaticResource M.Intersect}" Size="16"/></Button>
@@ -81,16 +76,16 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <Border Background="{DynamicResource B.Surface}" CornerRadius="6" Padding="2" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
-                            <RadioButton x:Name="ShadeSolid" Style="{StaticResource Chip}" Content="Katı" GroupName="shade" IsChecked="True" Click="OnShading" Tag="0" ToolTip="Katı görünüm (Z)"/>
-                            <RadioButton x:Name="ShadeWire" Style="{StaticResource Chip}" Content="Tel" GroupName="shade" Click="OnShading" Tag="1" ToolTip="Tel kafes (Shift+Z)"/>
-                            <RadioButton x:Name="ShadeXray" Style="{StaticResource Chip}" Content="X-ray" GroupName="shade" Click="OnShading" Tag="2" ToolTip="Saydam / X-ray (Alt+Z)"/>
+                            <RadioButton x:Name="ShadeSolid" Style="{StaticResource Toggle.Tool}" GroupName="shade" IsChecked="True" Click="OnShading" Tag="0" ToolTip="Katı görünüm (Z)"><t:Icon Data="{StaticResource I.ShadeSolid}" Size="15" Filled="True"/></RadioButton>
+                            <RadioButton x:Name="ShadeWire" Style="{StaticResource Toggle.Tool}" GroupName="shade" Click="OnShading" Tag="1" ToolTip="Tel kafes (Shift+Z)"><t:Icon Data="{StaticResource I.SpaceWorld}" Size="16"/></RadioButton>
+                            <RadioButton x:Name="ShadeXray" Style="{StaticResource Toggle.Tool}" GroupName="shade" Click="OnShading" Tag="2" ToolTip="Saydam / X-ray (Alt+Z)"><t:Icon Data="{StaticResource I.ShadeXray}" Size="16"/></RadioButton>
                         </StackPanel>
                     </Border>
-                    <ToggleButton x:Name="WireToggle" Style="{StaticResource Chip}" Content="Kenarlar" Margin="6,0,0,0" Click="OnWireOverlay" ToolTip="Katı görünümün üzerinde tel kafes kenarları"/>
-                    <ToggleButton x:Name="SectionToggle" Style="{StaticResource Chip}" Content="Kesit" Margin="2,0,0,0" Click="OnSection" ToolTip="Kesit görünümü: modeli bir düzlemle kesip içini göster (yalnız görüntü)"/>
-                    <ToggleButton x:Name="AnalysisToggle" Style="{StaticResource Chip}" Content="Analiz" Margin="2,0,0,0" Click="OnAnalysis" ToolTip="Analiz: yüzleri draft açısına, eğriliğe ya da simetriye göre boya (SolidWorks'teki gibi; yalnız görüntü)"/>
-                    <ToggleButton x:Name="SnapToggle" Style="{StaticResource Chip}" Content="Yapış" Margin="2,0,0,0" Click="OnSnapToggle" ToolTip="Izgaraya yapış (açıkken Ctrl geçici kapatır)"/>
-                    <ComboBox x:Name="GridBox" Width="86" Margin="4,0,0,0" SelectionChanged="OnGridSize" ToolTip="Yapışma adımı">
+                    <ToggleButton x:Name="WireToggle" Style="{StaticResource Toggle.Tool}" Margin="6,0,0,0" Click="OnWireOverlay" ToolTip="Katı görünümün üzerinde tel kafes kenarları"><t:Icon Data="{StaticResource I.Edges}" Size="16"/></ToggleButton>
+                    <ToggleButton x:Name="SectionToggle" Style="{StaticResource Toggle.Tool}" Margin="2,0,0,0" Click="OnSection" ToolTip="Kesit görünümü: modeli bir düzlemle kesip içini göster (yalnız görüntü)"><t:Icon Data="{StaticResource I.Section}" Size="16"/></ToggleButton>
+                    <ToggleButton x:Name="AnalysisToggle" Style="{StaticResource Toggle.Tool}" Margin="2,0,0,0" Click="OnAnalysis" ToolTip="Analiz: yüzleri draft açısına, eğriliğe ya da simetriye göre boya (SolidWorks'teki gibi; yalnız görüntü)"><t:Icon Data="{StaticResource I.Analysis}" Size="16"/></ToggleButton>
+                    <ToggleButton x:Name="SnapToggle" Style="{StaticResource Toggle.Tool}" Margin="2,0,0,0" Click="OnSnapToggle" ToolTip="Izgaraya yapış (açıkken Ctrl geçici kapatır)"><t:Icon Data="{StaticResource I.Magnet}" Size="16"/></ToggleButton>
+                    <ComboBox x:Name="GridBox" Width="80" Margin="4,0,0,0" SelectionChanged="OnGridSize" ToolTip="Yapışma adımı">
                         <ComboBoxItem Content="0.1 mm" Tag="0.1"/>
                         <ComboBoxItem Content="0.5 mm" Tag="0.5"/>
                         <ComboBoxItem Content="1 mm" Tag="1" IsSelected="True"/>
@@ -99,11 +94,11 @@
                         <ComboBoxItem Content="10 mm" Tag="10"/>
                     </ComboBox>
                     <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="10,0"/>
-                    <Button x:Name="SendButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="28" Click="OnSendToAssembly"
+                    <Button x:Name="SendButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="28" MinWidth="44" Click="OnSendToAssembly"
                             ToolTip="Seçili parçaları (seçim yoksa hepsini) projenin Montaj'ına gönder: her parça ayrı bir gövde olur, modellendiği yerde durur. Daha önce gönderilen parça güncellenir, takılı olduğu yer korunur.">
                         <StackPanel Orientation="Horizontal">
                             <t:Icon Data="{StaticResource I.Assembly}" Size="13" Foreground="{DynamicResource B.OnPrimary}"/>
-                            <TextBlock Text="Montaja gönder" Margin="7,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource B.OnPrimary}"/>
+                            <TextBlock Text="Montaja gönder" Visibility="Collapsed" Margin="7,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource B.OnPrimary}"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>

@@ -26,6 +26,11 @@ namespace RobotWin.Studio.Pages
             yield return ("Tutamaç", "Seçili nesneyi taşıma, döndürme ve ölçekleme tutamacı", () => Scene.ShowGizmo, v => { Scene.ShowGizmo = v; AppSettings.Current.WorldShowGizmo = v; });
             yield return ("Sensör kaplamaları", "Mesafe sensörlerinin ışınları, kameraların ve lidarların görüş alanları", () => Scene.ShowSensorOverlays, v => { Scene.ShowSensorOverlays = v; AppSettings.Current.WorldShowSensorOverlays = v; });
             yield return ("Izgara", "Zemindeki ızgara çizgileri (yakalama değişmez)", () => AppSettings.Current.WorldGridShown, v => { AppSettings.Current.WorldGridShown = v; ApplyGridSettings(); });
+            yield return ("Görünüm küpü", "Sağ üstteki küp: bir yüzüne ya da köşesine tıklayınca o yönden bakılır", () => AppSettings.Current.WorldShowViewCube, v =>
+            {
+                AppSettings.Current.WorldShowViewCube = v;
+                if (_viewCube != null) _viewCube.Visibility = v ? Visibility.Visible : Visibility.Collapsed;
+            });
         }
 
         /// <summary>Puts the remembered choices on the scene (at start).</summary>
@@ -44,7 +49,7 @@ namespace RobotWin.Studio.Pages
         /// Unity's default arrangement: the tools down the left, the grid and snap along the top, the view cube in the top
         /// right; all without labels (icons only).
         /// </summary>
-        private const string DefaultOverlayLayout = "view:TopRight:40:40:Vertical:0:1;tools:Left:40:40:Vertical:0:1;grid:Top:40:40:Horizontal:0:1";
+        private const string DefaultOverlayLayout = "tools:Left:40:40:Vertical:0:1;grid:Top:40:40:Horizontal:0:1";
 
         private ViewCube? _viewCube;
 
@@ -52,7 +57,6 @@ namespace RobotWin.Studio.Pages
         {
             var host = Scene.OverlayPanels;
             Geometry Ic(string key) => (Geometry)FindResource(key);
-            host.Add(new SceneOverlay("view", "Görünüm", Ic("I.Eye"), ViewOverlay));
             host.Add(new SceneOverlay("tools", "Araçlar", Ic("I.Transform"), ToolsOverlay));
             host.Add(new SceneOverlay("grid", "Izgara ve yakalama", Ic("I.Grid"), GridOverlay));
             host.LoadLayout(DefaultOverlayLayout);
@@ -63,6 +67,13 @@ namespace RobotWin.Studio.Pages
                 AppSettings.Current.WorldOverlayLayout = host.SaveLayout();
                 AppSettings.Current.Save();
             };
+            // the view cube: on the view itself in the top right corner, no frame, no handle (SolidWorks' view selector)
+            _viewCube = new ViewCube { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 8, 12, 0) };
+            var (yaw0, pitch0) = Scene.CameraTurn;
+            _viewCube.SetCamera(yaw0, pitch0);
+            _viewCube.ViewRequested += (y, pt) => Scene.ViewFrom(y, pt);
+            _viewCube.Visibility = AppSettings.Current.WorldShowViewCube ? Visibility.Visible : Visibility.Collapsed;
+            Scene.Children.Add(_viewCube);
             Scene.CameraTurned += (yaw, pitch) => _viewCube?.SetCamera(yaw, pitch);
             InitToolGroups();
         }
@@ -162,25 +173,6 @@ namespace RobotWin.Studio.Pages
             b.SetResourceReference(StyleProperty, "Btn.Ghost");
             b.Click += (_, _) => click();
             return b;
-        }
-
-        /// <summary>The view overlay: SolidWorks' view selector cube (a face or a corner is a view) and frame-all.</summary>
-        private FrameworkElement ViewOverlay(Orientation orientation)
-        {
-            var p = new StackPanel { Orientation = orientation };
-            _viewCube = new ViewCube();
-            var (yaw, pitch) = Scene.CameraTurn;
-            _viewCube.SetCamera(yaw, pitch);
-            _viewCube.ViewRequested += (y, pt) => Scene.ViewFrom(y, pt);
-            p.Children.Add(_viewCube);
-            var fit = IconButton("I.ZoomFit", "Seçime ya da her şeye sığdır (F)", () =>
-            {
-                if (Scene.Selected != null) Scene.FrameSelected();
-                else Scene.FrameAll();
-            });
-            fit.HorizontalAlignment = HorizontalAlignment.Center;
-            p.Children.Add(fit);
-            return p;
         }
 
         /// <summary>The tools overlay (Unity's): Q W E R Y T, and where the handles stand and which axes they take.</summary>

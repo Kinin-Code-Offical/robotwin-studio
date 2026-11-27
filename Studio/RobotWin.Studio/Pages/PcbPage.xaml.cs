@@ -197,7 +197,7 @@ namespace RobotWin.Studio.Pages
         private IEnumerable<(Button Button, int Level)> Labelled() => new[]
         {
             (AddPartButton, 1), (SyncButton, 1), (PlaceButton, 1), (FillButton, 1), (SetupButton, 1), (FootprintButton, 1),
-            (ModuleButton, 1), (KiCadButton, 1), (AutoRouteButton, 2), (DrcButton, 2), (ExportButton, 2)
+            (ModuleButton, 1), (KiCadButton, 1), (AutoRouteButton, 2), (DrcButton, 2), (ExportButton, 2), (TeardropButton, 1), (KiCadInButton, 1)
         };
 
         private void ApplyToolbarLevel(int level)
@@ -206,8 +206,8 @@ namespace RobotWin.Studio.Pages
             _toolbarLevel = level;
             foreach (var (button, from) in Labelled())
             {
-                foreach (var tb in FindLabels(button)) tb.Visibility = level >= from ? Visibility.Collapsed : Visibility.Visible;
-                button.Padding = level >= from ? new Thickness(8, 5, 8, 5) : new Thickness(12, 5, 12, 5);
+                // [toolbar] icons only at every width (the user's ask): the name is in the tooltip
+                foreach (var tb in FindLabels(button)) tb.Visibility = Visibility.Collapsed;
             }
 
             ActiveLayerBox.Width = level >= 2 ? 92 : 118;
@@ -436,11 +436,14 @@ namespace RobotWin.Studio.Pages
 
         private void SyncTools()
         {
-            foreach (var tb in ToolStrip.Children.OfType<ToggleButton>())
+            foreach (var tb in _toolButtons)
             {
                 Theme.ToolFlyout.Select(tb, Canvas.Tool.ToString());   // [flyout] a group shows the tool picked by its key too
                 tb.IsChecked = Enum.TryParse<PcbTool>((string)tb.Tag, out var t) && t == Canvas.Tool;
             }
+
+            ToolDraw.IsChecked = DrawingTools.Contains(Canvas.Tool) || _drawPanel?.IsOpen == true;   // [overlays] the drawing strip open, or drawing
+            _drawPanel?.Sync();
 
             UpdateToolOptions();
 
@@ -1027,17 +1030,17 @@ namespace RobotWin.Studio.Pages
                     Canvas.Refresh();
                     Canvas.SetTool(PcbTool.Rectangle);
                     break;
-                case "float-tools":   // [floatbar] the tool strip in its own window, laid across; the picture is that window over the page
-                {
-                    var origin = PointToScreen(new Point(300, 200));
-                    if (_toolStripFloat?.TearOffAt(origin, across: true) is { } fw)
+                case "float-tools":   // [overlays] the tool strip floating over the board, laid across, and the drawing strip open beside it
+                    if (_toolsOverlay != null && _overlays != null)
                     {
-                        fw.UpdateLayout();
-                        W.Status = $"Araç şeridi ayrı pencerede: {fw.ActualWidth:0}×{fw.ActualHeight:0}, sütun {ContentGrid.ColumnDefinitions[0].Width.Value:0} px";
+                        _toolsOverlay.Dock = Shell.OverlayDock.Floating;
+                        _toolsOverlay.Layout = Shell.OverlayLayout.Horizontal;
+                        _toolsOverlay.FloatAt = new Point(120, 60);
+                        _drawPanel?.Toggle(true);
+                        _overlays.Changed();
                     }
 
                     break;
-                }
                 case "dock-min":   // [dock-min] the properties panel minimized to its strip
                     _dock?.Minimize(DockPlace.Right, true);
                     break;

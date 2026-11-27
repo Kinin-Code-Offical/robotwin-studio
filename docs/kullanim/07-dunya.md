@@ -56,7 +56,7 @@ Denetçi Unity'deki gibi bileşen kartlarından oluşur: **Konum ve yön**, **Fi
   - Solda: dünyanın ya da montajın simgesi, geri al / yinele ve üç gruplu düğme. **Bağla** grubunda kablo (K), eklem (B) ve hizala (H) vardır. **Değerlendir** grubunda çakışma, boşluk, delik hizası ve patlatılmış görünüm vardır. **Düzenle** grubunda döndürme adımı kadar çevir, çoğalt ve sil vardır. Bir gruba basılı tutunca ya da sağ tıklayınca öteki araçları açılır (KiCad'deki gibi).
   - Ortada: çalıştır / duraklat, 10 ms ilerlet, durdur ve başa dön, kayıt ve hız (1× gerçek zaman).
   - Sağda: sahne + oyun görünümü, kamera takibi, kaplamalar ve panel düzeni.
-- **Sahnenin üstündeki kaplamalar** (Unity'deki gibi): solda **Araçlar** (seç, taşı, döndür, ölçekle, hepsi, dikdörtgen; Pivot / Merkez ve Yerel / Dünya simgeleri), üstte **Izgara ve yakalama** (mıknatıs, ızgara, adım, tam pencere), sağ üstte **görünüm küpü**. Küpün bir yüzüne tıklamak o yöne (üst, ön, sağ…), bir köşesine tıklamak o köşeden izometrik bakışa geçer. Küp kamerayla birlikte döner, yüzleri eksen renklerindedir (X kırmızı, Y yeşil, Z mavi). Altındaki düğme hepsini sığdırır.
+- **Sahnenin üstündeki kaplamalar** (Unity'deki gibi): solda **Araçlar** (seç, taşı, döndür, ölçekle, hepsi, dikdörtgen; Pivot / Merkez ve Yerel / Dünya simgeleri), üstte **Izgara ve yakalama** (mıknatıs, ızgara, adım, tam pencere), sağ üst köşede çerçevesiz **görünüm küpü** (SolidWorks'teki gibi). Küpün bir yüzüne tıklamak o yöne (üst, ön, sağ…), bir köşesine tıklamak o köşeden izometrik bakışa geçer. Küp kamerayla birlikte döner, yüzleri eksen renklerindedir (X kırmızı, Y yeşil, Z mavi); kaplama menüsünden gizlenebilir. Hepsini sığdır (F) üst çubuğun sağındadır.
 - **Sol panel sekmeleri:** **Sahne**, **Kartlar**, **Parçalar**, **Mekanik**, **Ortam**.
 - **Ortada** 3D görünüm.
 - **Sağda** denetçi: seçili nesnenin adı, konumu, fiziği, kabloları ve bağlantıları.
@@ -776,11 +776,10 @@ Unity'deki kaplama menüsü gibi, sahnenin sağ üstündeki kaplama düğmesi ya
 
 Sahne görünümünün üstünde Unity'deki gibi **kaplama panelleri** durur:
 
-- **Görünüm:** görünüm küpü ve hepsini sığdır.
 - **Araçlar:** Q W E R Y T tutamaçları, Pivot / Merkez ve Yerel / Dünya.
 - **Izgara ve yakalama:** yakala (mıknatıs), ızgarayı göster, taşıma adımı ve tam pencere.
 
-Bir panel **≡** tutamağından sürüklenir; sürüklerken görünümün kenarlarında ve köşelerinde mavi bırakma bölgeleri belirir. Bir bölgede bırakılan panel oraya yerleşir: üst ve alt kenarda yatay bir satır, yanlarda dikey bir sütun olur. Köşede ya da bölge dışında bırakılan panel kendi düzeninde kalır; bölge dışındaki yüzer. Tutamağa sağ tıklayınca **Panel** (başlığıyla), **Yatay** ya da **Dikey** düzen seçilir; kenara yerleşmiş panel yalnız daraltılıp genişletilebilir. **Daralt** paneli simgesine ve bir ▾ işaretine indirir, ▾ içeriğini açar; **Gizle** onu kaldırır. Kaplama menüsünün **Paneller** bölümü her paneli gösterir ya da gizler. **Hazır düzenler** bölümünde şimdiki yerleşim bir adla kaydedilir, adına tıklanınca geri gelir, × ile silinir; **Varsayılan düzen** ilk hâline döndürür. Yerleşim ayarlarda saklanır. İlk açılışta araçlar solda dikey, ızgara üstte yatay ve görünüm küpü sağ üstte durur; hiçbirinde başlık yazısı yoktur.
+Bir panel **≡** tutamağından sürüklenir; sürüklerken görünümün kenarlarında ve köşelerinde mavi bırakma bölgeleri belirir. Bir bölgede bırakılan panel oraya yerleşir: üst ve alt kenarda yatay bir satır, yanlarda dikey bir sütun olur. Köşede ya da bölge dışında bırakılan panel kendi düzeninde kalır; bölge dışındaki yüzer. Tutamağa sağ tıklayınca **Panel** (başlığıyla), **Yatay** ya da **Dikey** düzen seçilir; kenara yerleşmiş panel yalnız daraltılıp genişletilebilir. **Daralt** paneli simgesine ve bir ▾ işaretine indirir, ▾ içeriğini açar; **Gizle** onu kaldırır. Kaplama menüsünün **Paneller** bölümü her paneli gösterir ya da gizler. **Hazır düzenler** bölümünde şimdiki yerleşim bir adla kaydedilir, adına tıklanınca geri gelir, × ile silinir; **Varsayılan düzen** ilk hâline döndürür. Yerleşim ayarlarda saklanır. Tutamağa çift tıklamak ya da sağ tık ▸ **Ayrı pencereye al** paneli küçük bir pencereye çıkarır; yine çift tık ya da **Yerine koy** geri yerleştirir. Aynı kenardaki paneller yan yana durur. İlk açılışta araçlar solda dikey, ızgara üstte yataydır; hiçbirinde başlık yazısı yoktur.
 
 ## Izgara ve yakalama
 

@@ -18,18 +18,21 @@ namespace RobotWin.Studio.Pages
     /// </summary>
     public partial class PcbPage
     {
-        private FloatingStrip? _toolStripFloat;
+        // [overlays] the tool strip on the board's left edge (the World view's), the drawing tools as a strip of their own
+        private OverlayHost? _overlays;
+        private SceneOverlay? _toolsOverlay;
+        private ToolPanel? _drawPanel;
+        private List<System.Windows.Controls.Primitives.ToggleButton> _toolButtons = new List<System.Windows.Controls.Primitives.ToggleButton>();
+
+        private static readonly PcbTool[] DrawingTools = { PcbTool.Line, PcbTool.Rectangle, PcbTool.Circle, PcbTool.Arc, PcbTool.Polygon, PcbTool.Bezier, PcbTool.Image, PcbTool.Table };
 
         private void InitToolGroups()
         {
-            // [floatbar] the tool strip tears off into its own window; its column gives the board the room meanwhile
-            _toolStripFloat = new FloatingStrip("pcb.tools", ToolStripHost, ToolStrip, docked =>
-            {
-                ContentGrid.ColumnDefinitions[0].Width = new GridLength(docked ? 44 : 0);
-                ToolStripHost.Visibility = docked ? Visibility.Visible : Visibility.Collapsed;
-            });
-            Canvas.KeepoutDrawn += OnKeepoutDrawn;   // [keepout]
-            ToolFlyout.Attach(ToolDraw, new[]
+            var items = PageOverlays.ItemsOf(ToolStrip);
+            _toolButtons = items.OfType<System.Windows.Controls.Primitives.ToggleButton>().ToList();
+            ContentGrid.ColumnDefinitions[0].Width = new GridLength(0);
+            ToolStripHost.Visibility = Visibility.Collapsed;
+            _drawPanel = new ToolPanel("draw", "Çizim", "I.DrawRect", new[]
             {
                 new ToolChoice(nameof(PcbTool.Line), "Çizgi", "I.DrawLine"),
                 new ToolChoice(nameof(PcbTool.Rectangle), "Dikdörtgen", "I.DrawRect"),
@@ -39,7 +42,19 @@ namespace RobotWin.Studio.Pages
                 new ToolChoice(nameof(PcbTool.Bezier), "Bezier eğrisi", "I.DrawBezier"),   // [bezier]
                 new ToolChoice(nameof(PcbTool.Image), "Resim…", "I.Picture"),   // [image]
                 new ToolChoice(nameof(PcbTool.Table), "Tablo", "I.Table")   // [table]
+            }, tag => Canvas.Tool.ToString() == tag, tag =>
+            {
+                if (!Enum.TryParse(tag, out PcbTool tool)) return;
+                Show3D(false);
+                Canvas.SetTool(tool);
+                Canvas.Focus();
+                SyncTools();
             });
+            _toolsOverlay = new SceneOverlay("tools", "Araçlar", (System.Windows.Media.Geometry)FindResource("I.Pointer"), o => PageOverlays.Strip(o, items)) { CanHide = false };
+            _overlays = PageOverlays.Attach(ContentGrid, "pcb", "tools:Left:40:40:Vertical:0:1:Left;draw:Left:40:40:Vertical:0:0:Left", new[] { _toolsOverlay, _drawPanel.Overlay }, column: 3);
+            _drawPanel.Overlay.Shown = false;   // opens with the drawing button
+            _overlays.Arrange();
+            Canvas.KeepoutDrawn += OnKeepoutDrawn;   // [keepout]
             ToolFlyout.Attach(ToolRoute, new[]
             {
                 new ToolChoice(nameof(PcbTool.Route), "Yol", "I.Wire", "X"),
@@ -56,6 +71,17 @@ namespace RobotWin.Studio.Pages
                 new ToolChoice(nameof(PcbTool.Hole), "Montaj deliği", "I.Hole"),
                 new ToolChoice(nameof(PcbTool.Via), "Via", "I.Via")
             });
+        }
+
+        /// <summary>[overlays] The drawing button opens or closes the drawing tools' own strip beside the tool strip.</summary>
+        private void OnDrawTool(object sender, RoutedEventArgs e)
+        {
+            if (_drawPanel == null) return;
+            bool open = !_drawPanel.IsOpen;
+            _drawPanel.Toggle(open);
+            if (!open && DrawingTools.Contains(Canvas.Tool)) Canvas.SetTool(PcbTool.Select);
+            SyncTools();
+            Canvas.Focus();
         }
 
         /// <summary>[tuning] The length tuner's options: target (the pair's or group's, or a length), amplitude, spacing, corners.</summary>

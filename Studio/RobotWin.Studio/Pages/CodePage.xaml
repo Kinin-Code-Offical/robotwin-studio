@@ -18,25 +18,18 @@
         <Border Background="{DynamicResource B.Base}" BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,0,1">
             <Grid Margin="12,0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Kart" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <ComboBox x:Name="TargetBox" Width="300" SelectionChanged="OnTargetChanged"
+                    <t:Icon Data="{StaticResource I.Chip}" Size="16" Foreground="{DynamicResource B.TextMuted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="TargetBox" Width="260" SelectionChanged="OnTargetChanged"
                               ToolTip="Kodun yükleneceği kart: projedeki ya da açık dünyadaki her Arduino Uno, Nano ve ESP32"/>
-                    <TextBlock Text="Örnek" Style="{StaticResource Text.Caption}" VerticalAlignment="Center" Margin="16,0,8,0"/>
-                    <ComboBox x:Name="TemplateBox" Width="190" SelectionChanged="OnTemplate"/>
+                    <t:Icon Data="{StaticResource I.Library}" Size="16" Foreground="{DynamicResource B.TextMuted}" VerticalAlignment="Center" Margin="14,0,8,0"/>
+                    <ComboBox x:Name="TemplateBox" Width="170" SelectionChanged="OnTemplate" ToolTip="Örnek kod: seçilen örnek bu klasöre yazılır"/>
                     <Border Width="1" Height="22" Background="{DynamicResource B.Border}" Margin="12,0"/>
-                    <Button x:Name="BuildButton" Click="OnBuild" ToolTip="Derle (F7)">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Chip}" Size="16"/><TextBlock Text="Derle" Margin="7,0,0,0"/></StackPanel>
+                    <Button x:Name="BuildButton" Style="{StaticResource Btn.Icon}" Click="OnBuild" ToolTip="Derle (F7)"><t:Icon Data="{StaticResource I.Build}" Size="16"/></Button>
+                    <Button x:Name="UploadButton" Style="{StaticResource Btn.Primary}" Padding="14,0" MinHeight="28" MinWidth="44" Margin="6,0,0,0" Click="OnUpload" ToolTip="Bu klasörü seçili karta yükle, derle ve çalıştır (F5)">
+                        <t:Icon Data="{StaticResource I.Play}" Size="13" Filled="True" Foreground="{DynamicResource B.OnPrimary}"/>
                     </Button>
-                    <Button x:Name="UploadButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="30" Margin="6,0,0,0" Click="OnUpload" ToolTip="Bu klasörü seçili karta yükle, derle ve çalıştır (F5)">
-                        <StackPanel Orientation="Horizontal">
-                            <t:Icon Data="{StaticResource I.Play}" Size="16" Foreground="{DynamicResource B.OnPrimary}"/>
-                            <TextBlock Text="Karta yükle ve çalıştır" Margin="7,0,0,0" Foreground="{DynamicResource B.OnPrimary}"/>
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="HardwareButton" Margin="6,0,0,0" Click="OnHardware" Visibility="Collapsed"
-                            ToolTip="Gerçek ESP32 için: Espressif'in araç zinciriyle derle, USB ile karta yükle ya da imajı dışa aktar">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Export}" Size="16"/><TextBlock Text="Gerçek kart" Margin="7,0,0,0"/></StackPanel>
-                    </Button>
+                    <Button x:Name="HardwareButton" Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" Click="OnHardware" Visibility="Collapsed"
+                            ToolTip="Gerçek ESP32 için: Espressif'in araç zinciriyle derle, USB ile karta yükle ya da imajı dışa aktar"><t:Icon Data="{StaticResource I.Export}" Size="16"/></Button>
                     <Button Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" ToolTip="Simülasyonu durdur" Click="OnStop"><t:Icon Data="{StaticResource I.Stop}" Size="16"/></Button>
                     <Button Style="{StaticResource Btn.Icon}" ToolTip="Kartı resetle" Click="OnReset"><t:Icon Data="{StaticResource I.Reset}" Size="16"/></Button>
                 </StackPanel>
@@ -86,19 +79,13 @@
                         BorderBrush="{DynamicResource B.Border}" BorderThickness="0,0,0,1" Padding="10,4">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <Button x:Name="DebugContinue" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugContinue" ToolTip="Programı (ve devreyi, dünyayı) sürdür (F5)">
-                                <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Play}" Size="12"/><TextBlock Text="Devam" Margin="5,0,0,0"/></StackPanel>
-                            </Button>
-                            <Button x:Name="DebugBreak" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugBreak" ToolTip="Kodunuzun bir sonraki satırında dur">
-                                <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Pause}" Size="12"/><TextBlock Text="Satırda dur" Margin="5,0,0,0"/></StackPanel>
-                            </Button>
-                            <Button x:Name="DebugOver" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugOver" ToolTip="Bir sonraki satıra geç; çağrılan fonksiyonlar içinde durmadan çalışır (F10)">
-                                <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Step}" Size="12"/><TextBlock Text="Adım" Margin="5,0,0,0"/></StackPanel>
-                            </Button>
-                            <Button x:Name="DebugInto" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugInto" Content="İçine" ToolTip="Çağrılan fonksiyonun içine gir (F11)"/>
-                            <Button x:Name="DebugOut" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugOut" Content="Dışına" ToolTip="İçinde bulunulan fonksiyon dönene kadar çalış (Shift+F11)"/>
+                            <Button x:Name="DebugContinue" Style="{StaticResource Btn.Icon}" Click="OnDebugContinue" ToolTip="Programı (ve devreyi, dünyayı) sürdür (F5)"><t:Icon Data="{StaticResource I.Play}" Size="14"/></Button>
+                            <Button x:Name="DebugBreak" Style="{StaticResource Btn.Icon}" Click="OnDebugBreak" ToolTip="Kodunuzun bir sonraki satırında dur"><t:Icon Data="{StaticResource I.Pause}" Size="14"/></Button>
+                            <Button x:Name="DebugOver" Style="{StaticResource Btn.Icon}" Click="OnDebugOver" ToolTip="Bir sonraki satıra geç; çağrılan fonksiyonlar içinde durmadan çalışır (F10)"><t:Icon Data="{StaticResource I.Step}" Size="14"/></Button>
+                            <Button x:Name="DebugInto" Style="{StaticResource Btn.Icon}" Click="OnDebugInto" ToolTip="Çağrılan fonksiyonun içine gir (F11)"><t:Icon Data="{StaticResource I.StepInto}" Size="16"/></Button>
+                            <Button x:Name="DebugOut" Style="{StaticResource Btn.Icon}" Click="OnDebugOut" ToolTip="İçinde bulunulan fonksiyon dönene kadar çalış (Shift+F11)"><t:Icon Data="{StaticResource I.StepOut}" Size="16"/></Button>
                             <Border Width="1" Height="18" Background="{DynamicResource B.Border}" Margin="8,0"/>
-                            <Button x:Name="DebugClear" Style="{StaticResource Btn.Ghost}" Padding="8,3" Click="OnDebugClear" Content="Kesme noktalarını kaldır" ToolTip="Bu kartın bütün kesme noktalarını kaldır"/>
+                            <Button x:Name="DebugClear" Style="{StaticResource Btn.Icon}" Click="OnDebugClear" ToolTip="Bu kartın bütün kesme noktalarını kaldır"><t:Icon Data="{StaticResource I.BreakClear}" Size="16"/></Button>
                         </StackPanel>
                         <Ellipse x:Name="DebugDot" Width="9" Height="9" Fill="{DynamicResource B.Danger}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock x:Name="DebugState" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>

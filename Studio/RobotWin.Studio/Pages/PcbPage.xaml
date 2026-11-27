@@ -21,8 +21,8 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel x:Name="ToolbarLeft" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="AddPartButton" Click="OnAddPart" ToolTip="Kütüphaneden doğrudan karta parça yerleştir (şemaya da eklenir)">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Plus}" Size="16"/><TextBlock Text="Parça ekle" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    <Button x:Name="AddPartButton" Style="{StaticResource Btn.Icon}" Click="OnAddPart" ToolTip="Kütüphaneden doğrudan karta parça yerleştir (şemaya da eklenir)">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Plus}" Size="16"/><TextBlock Text="Parça ekle" Margin="7,0,0,0" Tag="label" Visibility="Collapsed"/></StackPanel>
                     </Button>
                     <Popup x:Name="AddPartPopup" StaysOpen="False" Placement="Bottom" PlacementTarget="{Binding ElementName=AddPartButton}" AllowsTransparency="True">
                         <Border Background="{DynamicResource B.Overlay}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="8" Width="380">
@@ -32,46 +32,46 @@
                             </StackPanel>
                         </Border>
                     </Popup>
-                    <Button x:Name="SyncButton" Click="OnSync" Margin="6,0,0,0" ToolTip="Şematikteki değişiklikleri karta aktar (yerleşim korunur)">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Reset}" Size="16"/><TextBlock Text="Güncelle" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    <Button x:Name="SyncButton" Style="{StaticResource Btn.Icon}" Click="OnSync" Margin="6,0,0,0" ToolTip="Şematikteki değişiklikleri karta aktar (yerleşim korunur)">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Reset}" Size="16"/><TextBlock Text="Güncelle" Margin="7,0,0,0" Tag="label" Visibility="Collapsed"/></StackPanel>
                     </Button>
-                    <Button x:Name="PlaceButton" Click="OnPlace" Margin="6,0,0,0" ToolTip="Bağlantılara göre otomatik yerleşim (kilitli parçalar yerinde kalır)">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Place}" Size="16"/><TextBlock Text="Yerleştir" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    <Button x:Name="PlaceButton" Style="{StaticResource Btn.Icon}" Click="OnPlace" Margin="6,0,0,0" ToolTip="Bağlantılara göre otomatik yerleşim (kilitli parçalar yerinde kalır)">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Place}" Size="16"/><TextBlock Text="Yerleştir" Margin="7,0,0,0" Tag="label" Visibility="Collapsed"/></StackPanel>
                     </Button>
-                    <Button x:Name="AutoRouteButton" Click="OnRoute" Margin="6,0,0,0" ToolTip="Otomatik rota: tüm katmanlarda A* labirent, hat sınıfı genişlik ve boşlukları, iç düzlemlere via">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Route}" Size="16"/><TextBlock Text="Rota çiz" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    <Button x:Name="AutoRouteButton" Style="{StaticResource Btn.Icon}" Click="OnRoute" Margin="6,0,0,0" ToolTip="Otomatik rota: tüm katmanlarda A* labirent, hat sınıfı genişlik ve boşlukları, iç düzlemlere via">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Route}" Size="16"/><TextBlock Text="Rota çiz" Margin="7,0,0,0" Tag="label" Visibility="Collapsed"/></StackPanel>
                     </Button>
-                    <Button x:Name="DrcButton" Click="OnDrc" Margin="6,0,0,0" ToolTip="Tasarım kural denetimi (hat sınıfı boşlukları, halka, delik, kenar, serigrafi, bağlantı, dolgu, akım)">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Drc}" Size="16"/><TextBlock Text="DRC" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    <Button x:Name="DrcButton" Style="{StaticResource Btn.Icon}" Click="OnDrc" Margin="6,0,0,0" ToolTip="Tasarım kural denetimi (hat sınıfı boşlukları, halka, delik, kenar, serigrafi, bağlantı, dolgu, akım)">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Drc}" Size="16"/><TextBlock Text="DRC" Margin="7,0,0,0" Tag="label" Visibility="Collapsed"/></StackPanel>
                     </Button>
                     <Border x:Name="Sep1" Width="1" Height="22" Background="{DynamicResource B.Border}" Margin="10,0"/>
                     <Ellipse x:Name="ActiveLayerDot" Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <ComboBox x:Name="ActiveLayerBox" Width="118" SelectionChanged="OnActiveLayerPick" ToolTip="Etkin bakır katmanı (PgUp/PgDn)"/>
-                    <Button x:Name="FillButton" Click="OnFillZones" Margin="6,0,0,0" ToolTip="Tüm dolgu alanlarını yeniden doldur">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Fill}" Size="16"/><TextBlock Text="Doldur" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    <Button x:Name="FillButton" Style="{StaticResource Btn.Icon}" Click="OnFillZones" Margin="6,0,0,0" ToolTip="Tüm dolgu alanlarını yeniden doldur">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Fill}" Size="16"/><TextBlock Text="Doldur" Margin="7,0,0,0" Tag="label" Visibility="Collapsed"/></StackPanel>
                     </Button>
                     <!-- [teardrop] KiCad's teardrops: tracks flaring into pads and vias (Pages/PcbPage.Teardrops.cs) -->
-                    <Button x:Name="TeardropButton" Click="OnTeardrops" Margin="6,0,0,0" ToolTip="Damla: ince hattın ped ya da via'ya girdiği yerde bakırı genişletir (aç / kapa ve ayarlar)">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Via}" Size="16"/><TextBlock Text="Damla" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    <Button x:Name="TeardropButton" Style="{StaticResource Btn.Icon}" Click="OnTeardrops" Margin="6,0,0,0" ToolTip="Damla: ince hattın ped ya da via'ya girdiği yerde bakırı genişletir (aç / kapa ve ayarlar)">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Via}" Size="16"/><TextBlock Text="Damla" Margin="7,0,0,0" Tag="label" Visibility="Collapsed"/></StackPanel>
                     </Button>
-                    <ToggleButton x:Name="View3DToggle" Style="{StaticResource Chip}" Content="3D" Margin="8,0,0,0" Click="OnToggle3D" ToolTip="Kartı ve parçaları 3D gösterir; simülasyon sırasında LED'ler yanar, ısınan parçalar kızarır"/>
+                    <ToggleButton x:Name="View3DToggle" Style="{StaticResource Toggle.Tool}" Margin="8,0,0,0" Click="OnToggle3D" ToolTip="Kartı ve parçaları 3D gösterir; simülasyon sırasında LED'ler yanar, ısınan parçalar kızarır"><t:Icon Data="{StaticResource I.Cube}" Size="16"/></ToggleButton>
                 </StackPanel>
                 <StackPanel x:Name="ToolbarRight" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <Button Style="{StaticResource Btn.Icon}" ToolTip="Sığdır (F)" Click="OnFit"><t:Icon Data="{StaticResource I.ZoomFit}" Size="16"/></Button>
-                    <Button x:Name="SetupButton" Margin="6,0,0,0" Click="OnBoardSetup" ToolTip="Kart ayarları: katman sayısı (2/4/6), kalınlık, bakır ağırlıkları, dielektrik, kör/gömülü via, üretim kuralları">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Stackup}" Size="16"/><TextBlock Text="Kart ayarları" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    <Button x:Name="SetupButton" Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" Click="OnBoardSetup" ToolTip="Kart ayarları: katman sayısı (2/4/6), kalınlık, bakır ağırlıkları, dielektrik, kör/gömülü via, üretim kuralları">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Stackup}" Size="16"/><TextBlock Text="Kart ayarları" Margin="7,0,0,0" Tag="label" Visibility="Collapsed"/></StackPanel>
                     </Button>
-                    <Button x:Name="FootprintButton" Margin="6,0,0,0" Click="OnFootprintEditor" ToolTip="Footprint düzenleyici: SMD/THT pedler, serigrafi, courtyard, fab; kullanıcı kütüphanesine kaydet">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Chip}" Size="16"/><TextBlock Text="Footprint" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    <Button x:Name="FootprintButton" Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" Click="OnFootprintEditor" ToolTip="Footprint düzenleyici: SMD/THT pedler, serigrafi, courtyard, fab; kullanıcı kütüphanesine kaydet">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Chip}" Size="16"/><TextBlock Text="Footprint" Margin="7,0,0,0" Tag="label" Visibility="Collapsed"/></StackPanel>
                     </Button>
-                    <Button x:Name="ModuleButton" Margin="6,0,0,0" Click="OnSaveAsModule" ToolTip="Bu kartı kütüphaneye modül parça olarak kaydet: başka devrelere tek parça olarak eklenir, içi tam simüle edilir">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Part}" Size="16"/><TextBlock Text="Modül yap" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    <Button x:Name="ModuleButton" Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" Click="OnSaveAsModule" ToolTip="Bu kartı kütüphaneye modül parça olarak kaydet: başka devrelere tek parça olarak eklenir, içi tam simüle edilir">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Part}" Size="16"/><TextBlock Text="Modül yap" Margin="7,0,0,0" Tag="label" Visibility="Collapsed"/></StackPanel>
                     </Button>
-                    <Button x:Name="KiCadButton" Margin="6,0,0,0" Click="OnExportKiCad" ToolTip="KiCad 8 projesi: .kicad_pro (hat sınıfları), .kicad_sch, .kicad_pcb (tüm katmanlar, yığın, dolgular), netlist, kütüphaneler, SPICE ve Gerber">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Export}" Size="16"/><TextBlock Text="KiCad'e aktar" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    <Button x:Name="KiCadButton" Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" Click="OnExportKiCad" ToolTip="KiCad 8 projesi: .kicad_pro (hat sınıfları), .kicad_sch, .kicad_pcb (tüm katmanlar, yığın, dolgular), netlist, kütüphaneler, SPICE ve Gerber">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Export}" Size="16"/><TextBlock Text="KiCad'e aktar" Margin="7,0,0,0" Tag="label" Visibility="Collapsed"/></StackPanel>
                     </Button>
-                    <Button x:Name="KiCadInButton" Margin="6,0,0,0" Click="OnImportKiCadLayout" ToolTip="KiCad'de düzenlenen kartın yerleşimini ve yollarını geri al: önce neyin değiştiği listelenir (taşınan, döndürülen parçalar, hat hat yollar, dolgular, delikler), sonra istenirse uygulanır">
-                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Import}" Size="16"/><TextBlock Text="KiCad'den al" Margin="7,0,0,0" Tag="label"/></StackPanel>
+                    <Button x:Name="KiCadInButton" Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" Click="OnImportKiCadLayout" ToolTip="KiCad'de düzenlenen kartın yerleşimini ve yollarını geri al: önce neyin değiştiği listelenir (taşınan, döndürülen parçalar, hat hat yollar, dolgular, delikler), sonra istenirse uygulanır">
+                        <StackPanel Orientation="Horizontal"><t:Icon Data="{StaticResource I.Import}" Size="16"/><TextBlock Text="KiCad'den al" Margin="7,0,0,0" Tag="label" Visibility="Collapsed"/></StackPanel>
                     </Button>
                     <Button x:Name="OverflowButton" Style="{StaticResource Btn.Icon}" Margin="6,0,0,0" Click="OnOverflow" ToolTip="Diğer işlemler" Visibility="Collapsed"><t:Icon Data="{StaticResource I.More}" Size="16"/></Button>
                     <Popup x:Name="OverflowPopup" StaysOpen="False" Placement="Bottom" PlacementTarget="{Binding ElementName=OverflowButton}" AllowsTransparency="True">
@@ -79,10 +79,10 @@
                             <StackPanel x:Name="OverflowList"/>
                         </Border>
                     </Popup>
-                    <Button x:Name="ExportButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="32" Margin="8,0,0,0" Click="OnExport" ToolTip="Üretim dosyaları: tüm bakır katmanlarının Gerber'i, maske, pasta, serigrafi, kenar, PTH/NPTH/kör delikler, BOM ve dizgi (CPL)">
+                    <Button x:Name="ExportButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="30" MinWidth="44" Margin="8,0,0,0" Click="OnExport" ToolTip="Üretim dosyaları: tüm bakır katmanlarının Gerber'i, maske, pasta, serigrafi, kenar, PTH/NPTH/kör delikler, BOM ve dizgi (CPL)">
                         <StackPanel Orientation="Horizontal">
                             <t:Icon Data="{StaticResource I.Export}" Size="16" Foreground="{DynamicResource B.OnPrimary}"/>
-                            <TextBlock Text="Üretim" Margin="7,0,0,0" Foreground="{DynamicResource B.OnPrimary}" Tag="label"/>
+                            <TextBlock Text="Üretim" Margin="7,0,0,0" Foreground="{DynamicResource B.OnPrimary}" Tag="label" Visibility="Collapsed"/>
                         </StackPanel>
                     </Button>
                     <ToggleButton x:Name="PanelToggle" Style="{StaticResource Toggle.Tool}" Width="32" Height="30" Margin="6,0,0,0" Click="OnPanelToggle" ToolTip="Özellik panelini göster / gizle (başlığından küçültülür, taşınır ya da ayrı pencereye alınır)" IsChecked="True">
@@ -114,7 +114,7 @@
                     <ToggleButton x:Name="ToolErase" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Erase" Click="OnTool" ToolTip="Silici: tıklanan öğeyi siler (yol, via, parça, yazı, çizim …)"><t:Icon Data="{StaticResource I.Eraser}" Size="16"/></ToggleButton>
                     <Border Height="1" Background="{DynamicResource B.Border}" Margin="6,4,6,8"/>
                     <ToggleButton x:Name="ToolText" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Text" Click="OnTool" ToolTip="Serigrafi yazısı (T)"><t:Icon Data="{StaticResource I.Text}" Size="16"/></ToggleButton>
-                    <ToggleButton x:Name="ToolDraw" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Line" Click="OnTool" ToolTip="Çizim: çizgi, dikdörtgen, daire, yay, çokgen (serigrafi, montaj ya da çizim katmanına)"/>
+                    <ToggleButton x:Name="ToolDraw" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Draw" Click="OnDrawTool" ToolTip="Çizim araçları: yanında ayrı bir şerit açar ya da kapatır (çizgi, dikdörtgen, daire, yay, çokgen, Bezier, resim, tablo; serigrafi, montaj ya da çizim katmanına)"><t:Icon Data="{StaticResource I.DrawRect}" Size="16"/></ToggleButton>
                     <ToggleButton x:Name="ToolDimension" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Dimension" Click="OnTool" ToolTip="Ölçü çizgisi (Ctrl+Shift+H)"><t:Icon Data="{StaticResource I.Dimension}" Size="16"/></ToggleButton>
                     <ToggleButton x:Name="ToolOutline" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Outline" Click="OnTool" ToolTip="Kart kenarını çokgen olarak çiz"><t:Icon Data="{StaticResource I.Outline}" Size="16"/></ToggleButton>
                     <ToggleButton x:Name="ToolHole" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Hole" Click="OnTool" ToolTip="Delikler: montaj deliği, via"/>

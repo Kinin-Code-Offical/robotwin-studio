@@ -215,59 +215,18 @@ namespace RobotWin.Studio.Pages
 
         // ================================================================ toolbar
 
-        /// <summary>[shapes] The drawing tools: a menu of line, rectangle, circle and arc (KiCad's graphic tools).</summary>
+        /// <summary>[shapes] The drawing tools (KiCad's graphic tools) open as a strip of their own beside the tools, and close again.</summary>
         private void OnDrawTool(object sender, RoutedEventArgs e)
         {
-            var button = (System.Windows.Controls.Primitives.ToggleButton)sender;
-            button.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier or EditorTool.Table;
-            var menu = new ContextMenu { PlacementTarget = button, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
-            foreach (var (text, tool, icon) in new[]
-                     {
-                         ("Çizgi", EditorTool.Line, "I.DrawLine"), ("Dikdörtgen", EditorTool.Rectangle, "I.DrawRect"),
-                         ("Daire", EditorTool.Circle, "I.DrawCircle"), ("Yay", EditorTool.Arc, "I.DrawArc"), ("Bezier eğrisi", EditorTool.Bezier, "I.DrawBezier")
-                     })
-            {
-                var item = new MenuItem { Header = text, IsChecked = Canvas.Tool == tool, Icon = new RobotWin.Studio.Theme.Icon { Data = (System.Windows.Media.Geometry)FindResource(icon), Size = 14 } };
-                var chosen = tool;
-                item.Click += (_, _) =>
-                {
-                    Canvas.Tool = chosen;
-                    Canvas.Focus();
-                };
-                menu.Items.Add(item);
-            }
-
-            // [rule-area] a rule area: two corners, then its net class
-            var areaItem = new MenuItem { Header = "Kural alanı", IsChecked = Canvas.Tool == EditorTool.RuleArea, Icon = new RobotWin.Studio.Theme.Icon { Data = (System.Windows.Media.Geometry)FindResource("I.DrawRect"), Size = 14 } };
-            areaItem.Click += (_, _) =>
-            {
-                Canvas.Tool = EditorTool.RuleArea;
-                Canvas.Focus();
-            };
-            menu.Items.Add(areaItem);
-
-            // [table] a table: a click puts its top-left corner down
-            var tableItem = new MenuItem { Header = "Tablo", IsChecked = Canvas.Tool == EditorTool.Table, Icon = new RobotWin.Studio.Theme.Icon { Data = (System.Windows.Media.Geometry)FindResource("I.Table"), Size = 14 } };
-            tableItem.Click += (_, _) =>
-            {
-                Canvas.Tool = EditorTool.Table;
-                Canvas.Focus();
-            };
-            menu.Items.Add(tableItem);
-
-            // [image] a picture from a file: it follows the cursor until a click puts it down
-            var picture = new MenuItem { Header = "Resim…", Icon = new RobotWin.Studio.Theme.Icon { Data = (System.Windows.Media.Geometry)FindResource("I.Picture"), Size = 14 } };
-            picture.Click += (_, _) =>
-            {
-                if (RobotWin.Studio.Theme.Pictures.Pick(Window.GetWindow(this)) is { } data)
-                {
-                    Canvas.BeginImage(data);
-                    Canvas.Focus();
-                }
-            };
-            menu.Items.Add(picture);
-            menu.IsOpen = true;
+            if (_drawPanel == null) return;
+            bool open = !_drawPanel.IsOpen;
+            _drawPanel.Toggle(open);
+            if (!open && IsDrawing) Canvas.Tool = EditorTool.Select;
+            SyncTools();
+            Canvas.Focus();
         }
+
+        private bool IsDrawing => Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier or EditorTool.Table or EditorTool.RuleArea;
 
         private void OnToolClick(object sender, RoutedEventArgs e)
         {
@@ -297,7 +256,8 @@ namespace RobotWin.Studio.Pages
             ToolJunction.IsChecked = Canvas.Tool == EditorTool.Junction;   // [junction]
             ToolSheet.IsChecked = Canvas.Tool is EditorTool.Sheet or EditorTool.SheetPin or EditorTool.HierLabel or EditorTool.Bus or EditorTool.BusEntry;   // [sheets] [bus]
             ToolErase.IsChecked = Canvas.Tool == EditorTool.Erase;   // [erase]
-            ToolDraw.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier or EditorTool.Table;   // [shapes]
+            ToolDraw.IsChecked = IsDrawing || _drawPanel?.IsOpen == true;   // [shapes] the drawing strip open, or a drawing tool in use
+            _drawPanel?.Sync();
         }
 
         private void OnRotate(object sender, RoutedEventArgs e) => Canvas.RotateSelection();
@@ -1278,7 +1238,6 @@ namespace RobotWin.Studio.Pages
             // The toolbar and the instrument dock compress too.
             EditTools.Visibility = width < 820 ? Visibility.Collapsed : Visibility.Visible;
             EditorExtras.Visibility = width < 1150 ? Visibility.Collapsed : Visibility.Visible;
-            ToolSep0.Visibility = width < 820 ? Visibility.Collapsed : Visibility.Visible;
             SimStatus.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
             SpeedBox.Width = 76;   // [toolbar] "1×" and the like: no longer a word to make room for
             ScopePanelColumn.Width = new GridLength(narrow ? 262 : 318);

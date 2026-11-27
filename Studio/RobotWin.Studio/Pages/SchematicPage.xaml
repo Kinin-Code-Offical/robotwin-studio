@@ -56,7 +56,7 @@
                             <ToggleButton x:Name="ToolSheet" Style="{StaticResource Toggle.Tool}" ToolTip="Hiyerarşi ve bus: sayfa (S), sayfa pini, hiyerarşik etiket (H), bus (B), bus girişi (Z) · çift tıkla sayfaya gir, Alt+↑ çık" Click="OnSheetTool" Margin="2,0,0,0">
                                 <t:Icon Data="{StaticResource I.Sheet}" Size="15"/>
                             </ToggleButton>
-                            <ToggleButton x:Name="ToolDraw" Style="{StaticResource Toggle.Tool}" ToolTip="Çiz: çizgi, dikdörtgen, daire, yay (çerçeve, bölme, mekanik çizim; hattı yoktur)" Click="OnDrawTool" Margin="2,0,0,0">
+                            <ToggleButton x:Name="ToolDraw" Style="{StaticResource Toggle.Tool}" ToolTip="Çizim araçları: yanında ayrı bir şerit açar ya da kapatır (çizgi, dikdörtgen, daire, yay, Bezier, kural alanı, tablo, resim; hattı yoktur)" Click="OnDrawTool" Margin="2,0,0,0">
                                 <t:Icon Data="{StaticResource I.DrawRect}" Size="15"/>
                             </ToggleButton>
                             <ToggleButton x:Name="ToolHighlight" Style="{StaticResource Toggle.Tool}" ToolTip="Hattı vurgula: tıklanan pinin, telin ya da etiketin hattı şemada ve kartta öne çıkar; aynı hatta ya da boşa tıklayınca kalkar (` imleçtekini vurgular)" Click="OnToolClick" Tag="Highlight" Margin="2,0,0,0">
