@@ -59,6 +59,12 @@ namespace RobotTwin.CoreSim.Modeling
                         copy = sketch.AddCircle(M(e.Center), e.Radius, e.Construction);
                         sketch.Constrain(SketchConstraintKind.Equal, e.Id, copy.Id);
                         break;
+                    case SketchEntityKind.Ellipse:   // [curves]
+                        copy = sketch.AddEllipse(M(e.Center), M(e.Start), e.Radius, e.Construction);
+                        break;
+                    case SketchEntityKind.Spline:
+                        copy = sketch.AddSpline(e.Through!.Select(M).ToList(), e.Construction);
+                        break;
                     default:
                         // a mirror turns the arc's way round: its counter-clockwise run goes from the image of its end
                         copy = sketch.AddArc(M(e.Center), M(e.End), M(e.Start), e.Construction);

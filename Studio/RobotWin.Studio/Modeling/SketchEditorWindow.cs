@@ -28,6 +28,12 @@ namespace RobotWin.Studio.Modeling
             Circle,
             Arc,
 
+            /// <summary>[curves] Centre, the end of the major axis, then the minor axis.</summary>
+            Ellipse,
+
+            /// <summary>[curves] A smooth curve through the clicked points.</summary>
+            Spline,
+
             /// <summary>[sketch-trim] Power trim: the clicked piece of a line, between the crossings either side, goes.</summary>
             Trim,
 
@@ -121,6 +127,8 @@ namespace RobotWin.Studio.Modeling
                 (Tool.Rectangle, "Dikdörtgen", "İki köşe"),
                 (Tool.Circle, "Daire", "Merkez, sonra çevre"),
                 (Tool.Arc, "Yay", "Merkez, başlangıç, bitiş (saat yönünün tersine)"),
+                (Tool.Ellipse, "Elips", "Merkez, büyük eksenin ucu, sonra küçük eksen"),
+                (Tool.Spline, "Spline", "Geçeceği noktalara tıklayın; çift tık, Enter, Esc ya da sağ tık bitirir; ilk noktaya tıklamak kapatır"),
                 (Tool.Trim, "Buda", "Çizginin, dairenin ya da yayın tıklanan parçasını kesiştiği öğeler arasında siler; hiçbir şey kesmiyorsa tamamını"),
                 (Tool.Extend, "Uzat", "Çizginin tıklanan yakınındaki serbest ucunu ilk kesiştiği öğeye uzatır")
             })
@@ -225,7 +233,16 @@ namespace RobotWin.Studio.Modeling
                 maxX = _sk.Points.Max(p => p.X);
                 minY = _sk.Points.Min(p => p.Y);
                 maxY = _sk.Points.Max(p => p.Y);
-                foreach (var e in _sk.Entities.Where(e => e.Kind != SketchEntityKind.Line))
+                foreach (var q in _sk.Entities.Where(e => e.Kind is SketchEntityKind.Ellipse or SketchEntityKind.Spline).SelectMany(e => _sk.Curve(e, 32)))
+                {
+                    // [curves] what a curve reaches beyond its points
+                    minX = Math.Min(minX, q.X);
+                    maxX = Math.Max(maxX, q.X);
+                    minY = Math.Min(minY, q.Y);
+                    maxY = Math.Max(maxY, q.Y);
+                }
+
+                foreach (var e in _sk.Entities.Where(e => e.Kind is SketchEntityKind.Circle or SketchEntityKind.Arc))
                 {
                     var c = _sk.Point(e.Center);
                     if (c == null) continue;
@@ -266,6 +283,8 @@ namespace RobotWin.Studio.Modeling
                 Tool.Rectangle => "Dikdörtgen: bir köşeye, sonra karşı köşeye tıklayın.",
                 Tool.Circle => "Daire: merkeze, sonra çevresinde bir yere tıklayın.",
                 Tool.Arc => "Yay: merkez, başlangıç ve bitiş (saat yönünün tersine).",
+                Tool.Ellipse => "Elips: merkeze, büyük eksenin ucuna, sonra küçük eksenin genişliğine tıklayın.",
+                Tool.Spline => "Spline: geçeceği noktalara sırayla tıklayın. Çift tık, Enter, Esc ya da sağ tık bitirir; ilk noktaya tıklamak eğriyi kapatır.",
                 _ => "Seçin: noktalar ve çizgiler; sürükleyerek noktayı taşıyın. Sağ tuşla sürükleme görünümü kaydırır, tekerlek yakınlaştırır."
             };
             Redraw();
@@ -273,13 +292,34 @@ namespace RobotWin.Studio.Modeling
 
         private void EndTool()
         {
+            // [curves] a spline is made when its points are all given
+            if (_tool == Tool.Spline && _clicks.Count >= 2) MakeSpline(false);
             _clicks.Clear();
             Redraw();
+        }
+
+        /// <summary>[curves] The spline through the clicked points (closed: back to the first).</summary>
+        private void MakeSpline(bool closed)
+        {
+            var pts = _clicks.Select(_sk.Point).Where(q => q != null).Select(q => q!).ToList();
+            if (closed) pts.Add(pts[0]);
+            if (pts.Count < (closed ? 4 : 2)) return;
+            var before = _sk.Clone();
+            _sk.AddSpline(pts, _construction.IsChecked == true);
+            _clicks.Clear();
+            Commit(before, "Spline");
         }
 
         private void OnKey(object sender, KeyEventArgs e)
         {
             if (e.OriginalSource is TextBox) return;
+            if (e.Key == Key.Enter && _tool == Tool.Spline && _clicks.Count >= 2)   // [curves]
+            {
+                EndTool();
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.Escape)
             {
                 if (_clicks.Count > 0) EndTool();
@@ -338,6 +378,17 @@ namespace RobotWin.Studio.Modeling
                     double t = l2 < 1e-12 ? 0 : Math.Max(0, Math.Min(1, ((x - a.X) * dx + (y - a.Y) * dy) / l2));
                     d = Math.Sqrt(Math.Pow(a.X + t * dx - x, 2) + Math.Pow(a.Y + t * dy - y, 2));
                 }
+                else if (e.Kind is SketchEntityKind.Ellipse or SketchEntityKind.Spline)
+                {
+                    // [curves] the nearest piece of the curve
+                    var pts = _sk.Curve(e, 96);
+                    for (int i = 0; i + 1 < pts.Count; i++)
+                    {
+                        double dx = pts[i + 1].X - pts[i].X, dy = pts[i + 1].Y - pts[i].Y, l2 = dx * dx + dy * dy;
+                        double t = l2 < 1e-12 ? 0 : Math.Max(0, Math.Min(1, ((x - pts[i].X) * dx + (y - pts[i].Y) * dy) / l2));
+                        d = Math.Min(d, Math.Sqrt(Math.Pow(pts[i].X + t * dx - x, 2) + Math.Pow(pts[i].Y + t * dy - y, 2)));
+                    }
+                }
                 else if (_sk.Point(e.Center) is { } c)
                 {
                     double r = Math.Sqrt((x - c.X) * (x - c.X) + (y - c.Y) * (y - c.Y));
@@ -391,6 +442,12 @@ namespace RobotWin.Studio.Modeling
         private void OnDown(object sender, MouseButtonEventArgs e)
         {
             _canvasHost.Focus();
+            if (e.ClickCount >= 2 && _tool == Tool.Spline && _clicks.Count >= 2)   // [curves] a double click ends the spline
+            {
+                EndTool();
+                return;
+            }
+
             Press(e.GetPosition(_canvas), Keyboard.Modifiers.HasFlag(ModifierKeys.Control) || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
         }
 
@@ -414,6 +471,8 @@ namespace RobotWin.Studio.Modeling
                     case "rect": Use(Tool.Rectangle); break;
                     case "circle": Use(Tool.Circle); break;
                     case "arc": Use(Tool.Arc); break;
+                    case "ellipse": Use(Tool.Ellipse); break;   // [curves]
+                    case "spline": Use(Tool.Spline); break;
                     case "trim": Use(Tool.Trim); break;   // [sketch-trim]
                     case "extend": Use(Tool.Extend); break;
                     case "select": Use(Tool.Select); break;
@@ -567,6 +626,40 @@ namespace RobotWin.Studio.Modeling
                     return;
                 }
 
+                case Tool.Ellipse:   // [curves]
+                {
+                    if (_clicks.Count < 2)
+                    {
+                        var q = Pick(p);
+                        if (_clicks.Count == 1 && (q.Id == _clicks[0] || Distance(_sk.Point(_clicks[0])!, q) * _scale < 4)) break;
+                        _clicks.Add(q.Id);
+                        break;
+                    }
+
+                    var c = _sk.Point(_clicks[0])!;
+                    var m = _sk.Point(_clicks[1])!;
+                    double minor = MinorAxis(c, m, Model(p));
+                    if (minor * _scale < 3) break;
+                    _sk.AddEllipse(c, m, Round(minor), construction);
+                    _clicks.Clear();
+                    Commit(before, "Elips");
+                    return;
+                }
+
+                case Tool.Spline:   // [curves]
+                {
+                    var q = Pick(p);
+                    if (_clicks.Count >= 3 && q.Id == _clicks[0])
+                    {
+                        MakeSpline(true);   // back to the first point: closed
+                        return;
+                    }
+
+                    if (_clicks.Count > 0 && q.Id == _clicks[^1]) break;
+                    _clicks.Add(q.Id);
+                    break;
+                }
+
                 case Tool.Arc:
                 {
                     if (_clicks.Count < 2)
@@ -598,6 +691,23 @@ namespace RobotWin.Studio.Modeling
         }
 
         private string? _chainStart;
+
+        private static double Distance(SketchPoint a, SketchPoint b) => Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
+
+        /// <summary>[curves] The half minor axis an ellipse gets from a point: its distance from the major axis' line.</summary>
+        private static double MinorAxis(SketchPoint c, SketchPoint m, (double X, double Y) at)
+        {
+            double ax = m.X - c.X, ay = m.Y - c.Y, len = Math.Sqrt(ax * ax + ay * ay);
+            return len < 1e-12 ? 0 : Math.Abs((at.X - c.X) * ay - (at.Y - c.Y) * ax) / len;
+        }
+
+        /// <summary>[curves] A curve as a polyline on the canvas.</summary>
+        private Polyline CurveLine(IEnumerable<Vec2> pts, Brush stroke, double thick, DoubleCollection? dash)
+        {
+            var line = new Polyline { Stroke = stroke, StrokeThickness = thick, StrokeDashArray = dash, StrokeLineJoin = PenLineJoin.Round };
+            foreach (var q in pts) line.Points.Add(Screen(q.X, q.Y));
+            return line;
+        }
 
         private double Round(double v)
         {
@@ -835,7 +945,7 @@ namespace RobotWin.Studio.Modeling
             var pts = SelPoints;
             var ents = SelEntities;
             var lines = ents.Where(e => e.Kind == SketchEntityKind.Line).ToList();
-            var rounds = ents.Where(e => e.Kind != SketchEntityKind.Line).ToList();
+            var rounds = ents.Where(e => e.Kind is SketchEntityKind.Circle or SketchEntityKind.Arc).ToList();   // [curves] an ellipse's or a spline's relations are not a circle's
             var wrap = new WrapPanel();
             void Rel(string name, string tip, Action add)
             {
@@ -1168,6 +1278,12 @@ namespace RobotWin.Studio.Modeling
                     var pb = Screen(b.X, b.Y);
                     Add(new Line { X1 = pa.X, Y1 = pa.Y, X2 = pb.X, Y2 = pb.Y, Stroke = stroke, StrokeThickness = thick, StrokeDashArray = dash });
                 }
+                else if (e.Kind is SketchEntityKind.Ellipse or SketchEntityKind.Spline)
+                {
+                    // [curves]
+                    Add(CurveLine(_sk.Curve(e, 96), stroke, thick, dash));
+                    if (e.Kind == SketchEntityKind.Ellipse && _sk.Point(e.Center) is { } ec) Cross(Screen(ec.X, ec.Y), stroke);
+                }
                 else if (_sk.Point(e.Center) is { } c)
                 {
                     var pc = Screen(c.X, c.Y);
@@ -1229,6 +1345,26 @@ namespace RobotWin.Studio.Modeling
                         Canvas.SetTop(r, Math.Min(pf.Y, _mouse.Y));
                         _canvas.Children.Add(r);
                         Label(new Point(Math.Max(pf.X, _mouse.X) + 6, Math.Max(pf.Y, _mouse.Y) + 4), $"{F(Math.Round(Math.Abs(_mouse.X - pf.X) / _scale, 2))} × {F(Math.Round(Math.Abs(_mouse.Y - pf.Y) / _scale, 2))} mm", "B.Accent");
+                        break;
+                    }
+
+                    case Tool.Ellipse when _clicks.Count >= 2 && _sk.Point(_clicks[0]) is { } ec && _sk.Point(_clicks[1]) is { } em:
+                    {
+                        // [curves] the ellipse as it would be with the cursor's minor axis
+                        var probe = new ConstrainedSketch();
+                        var shape = probe.AddEllipse(probe.AddPoint(ec.X, ec.Y), probe.AddPoint(em.X, em.Y), MinorAxis(ec, em, Model(_mouse)));
+                        Add(CurveLine(probe.Curve(shape, 96), rubber, 1.2, new DoubleCollection { 3, 3 }));
+                        break;
+                    }
+
+                    case Tool.Ellipse:
+                        Add(new Line { X1 = pf.X, Y1 = pf.Y, X2 = _mouse.X, Y2 = _mouse.Y, Stroke = rubber, StrokeThickness = 1.2, StrokeDashArray = new DoubleCollection { 3, 3 } });
+                        break;
+                    case Tool.Spline:
+                    {
+                        var (mx, my) = Model(_mouse);
+                        var through = _clicks.Select(_sk.Point).Where(q => q != null).Select(q => new Vec2(q!.X, q.Y)).Append(new Vec2(mx, my)).ToList();
+                        Add(CurveLine(ConstrainedSketch.SplineCurve(through, false, 16), rubber, 1.2, new DoubleCollection { 3, 3 }));
                         break;
                     }
 

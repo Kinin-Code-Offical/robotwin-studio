@@ -24,7 +24,7 @@ namespace RobotTwin.CoreSim.Modeling
             var hits = new List<(double, SketchEntity)>();
             foreach (var e in s.Entities)
             {
-                if (e.Id == line.Id) continue;
+                if (e.Id == line.Id || e.Kind is SketchEntityKind.Ellipse or SketchEntityKind.Spline) continue;   // [curves] they do not cut
                 if (e.Kind == SketchEntityKind.Line)
                 {
                     var c = s.Point(e.Start)!;
@@ -151,7 +151,7 @@ namespace RobotTwin.CoreSim.Modeling
 
             foreach (var e in s.Entities)
             {
-                if (e.Id == round.Id) continue;
+                if (e.Id == round.Id || e.Kind is SketchEntityKind.Ellipse or SketchEntityKind.Spline) continue;   // [curves] they do not cut
                 if (e.Kind == SketchEntityKind.Line)
                 {
                     var a = s.Point(e.Start)!;

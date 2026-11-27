@@ -15,7 +15,13 @@ namespace RobotTwin.CoreSim.Modeling
         Circle,
 
         /// <summary>An arc counter-clockwise from its start to its end point round its centre (both at the same radius).</summary>
-        Arc
+        Arc,
+
+        /// <summary>[curves] A full ellipse: its centre, the end of its major axis (<see cref="SketchEntity.Start"/>) and its half minor axis (<see cref="SketchEntity.Radius"/>).</summary>
+        Ellipse,
+
+        /// <summary>[curves] A smooth curve through its points in order (<see cref="SketchEntity.Through"/>), closed when it ends where it began.</summary>
+        Spline
     }
 
     /// <summary>[sketch] The rules a sketch keeps: geometric relations and driving dimensions (mm, degrees).</summary>
@@ -108,7 +114,15 @@ namespace RobotTwin.CoreSim.Modeling
         /// <summary>Construction geometry: it guides other entities and makes no edge of the profile.</summary>
         public bool Construction { get; set; }
 
-        public SketchEntity Clone() => (SketchEntity)MemberwiseClone();
+        /// <summary>[curves] A spline's points in order (its start is the first, its end the last).</summary>
+        public List<string>? Through { get; set; }
+
+        public SketchEntity Clone()
+        {
+            var c = (SketchEntity)MemberwiseClone();
+            c.Through = Through?.ToList();
+            return c;
+        }
     }
 
     public sealed class SketchConstraint
@@ -233,6 +247,26 @@ namespace RobotTwin.CoreSim.Modeling
         {
             var e = new SketchEntity { Id = Next("Y", Entities.Select(q => q.Id)), Kind = SketchEntityKind.Arc, Center = centre.Id, Start = start.Id, End = end.Id, Construction = construction };
             e.Radius = Math.Sqrt((start.X - centre.X) * (start.X - centre.X) + (start.Y - centre.Y) * (start.Y - centre.Y));
+            Entities.Add(e);
+            return e;
+        }
+
+        /// <summary>[curves] An ellipse round <paramref name="centre"/>, its major axis out to <paramref name="majorEnd"/>, its half minor axis <paramref name="minorRadius"/>.</summary>
+        public SketchEntity AddEllipse(SketchPoint centre, SketchPoint majorEnd, double minorRadius, bool construction = false)
+        {
+            var e = new SketchEntity { Id = Next("E", Entities.Select(q => q.Id)), Kind = SketchEntityKind.Ellipse, Center = centre.Id, Start = majorEnd.Id, Radius = Math.Abs(minorRadius), Construction = construction };
+            Entities.Add(e);
+            return e;
+        }
+
+        /// <summary>[curves] A spline through the points in order; closed when the last is the first.</summary>
+        public SketchEntity AddSpline(IReadOnlyList<SketchPoint> through, bool construction = false)
+        {
+            var e = new SketchEntity
+            {
+                Id = Next("S", Entities.Select(q => q.Id)), Kind = SketchEntityKind.Spline, Through = through.Select(p => p.Id).ToList(), Start = through[0].Id, End = through[through.Count - 1].Id,
+                Construction = construction
+            };
             Entities.Add(e);
             return e;
         }
@@ -362,7 +396,7 @@ namespace RobotTwin.CoreSim.Modeling
         {
             var gone = new HashSet<string>(StringComparer.Ordinal) { id };
             foreach (var e in Entities)
-                if (gone.Contains(e.Start ?? "") || gone.Contains(e.End ?? "") || gone.Contains(e.Center ?? ""))
+                if (gone.Contains(e.Start ?? "") || gone.Contains(e.End ?? "") || gone.Contains(e.Center ?? "") || (e.Through?.Any(gone.Contains) ?? false))
                     gone.Add(e.Id);
             Entities.RemoveAll(e => gone.Contains(e.Id));
             Points.RemoveAll(p => gone.Contains(p.Id));
@@ -391,7 +425,7 @@ namespace RobotTwin.CoreSim.Modeling
             foreach (var e in Entities)
             {
                 l.Entities[e.Id] = e;
-                if (e.Kind == SketchEntityKind.Circle) l.RadiusIndex[e.Id] = l.Count++;
+                if (e.Kind is SketchEntityKind.Circle or SketchEntityKind.Ellipse) l.RadiusIndex[e.Id] = l.Count++;   // [curves] an ellipse's half minor axis is free like a radius
             }
 
             return l;
@@ -739,20 +773,23 @@ namespace RobotTwin.CoreSim.Modeling
         {
             bool Pt(string? id) => Point(id) != null;
             bool Ln(string? id) => Entity(id) is { Kind: SketchEntityKind.Line } e && Pt(e.Start) && Pt(e.End);
-            bool Rd(string? id) => Entity(id) is { } e && e.Kind != SketchEntityKind.Line && Pt(e.Center) && (e.Kind == SketchEntityKind.Circle || (Pt(e.Start) && Pt(e.End)));
+            bool Rd(string? id) => Entity(id) is { Kind: SketchEntityKind.Circle or SketchEntityKind.Arc } e && Pt(e.Center) && (e.Kind == SketchEntityKind.Circle || (Pt(e.Start) && Pt(e.End)));
+            // [curves] an ellipse's half minor axis takes a radius, a diameter or an equal, and its centre a concentric;
+            // a point on it or a tangent are a circle's equations, not its
+            bool Ov(string? id) => Rd(id) || Entity(id) is { Kind: SketchEntityKind.Ellipse } e && Pt(e.Center) && Pt(e.Start);
             bool Any(string? id) => Ln(id) || Rd(id);
             return c.Kind switch
             {
                 SketchConstraintKind.Coincident or SketchConstraintKind.Distance or SketchConstraintKind.HorizontalDistance or SketchConstraintKind.VerticalDistance => Pt(c.A) && Pt(c.B),
                 SketchConstraintKind.Fix => Pt(c.A),
                 SketchConstraintKind.Horizontal or SketchConstraintKind.Vertical or SketchConstraintKind.Length => Ln(c.A),
-                SketchConstraintKind.Radius or SketchConstraintKind.Diameter => Rd(c.A),
+                SketchConstraintKind.Radius or SketchConstraintKind.Diameter => Ov(c.A),
                 SketchConstraintKind.Angle or SketchConstraintKind.Parallel or SketchConstraintKind.Perpendicular => Ln(c.A) && Ln(c.B),
-                SketchConstraintKind.Equal => (Ln(c.A) && Ln(c.B)) || (Rd(c.A) && Rd(c.B)),
+                SketchConstraintKind.Equal => (Ln(c.A) && Ln(c.B)) || (Ov(c.A) && Ov(c.B)),
                 SketchConstraintKind.PointOnLine or SketchConstraintKind.Midpoint => Pt(c.A) && Ln(c.B),
                 SketchConstraintKind.PointOnCircle => Pt(c.A) && Rd(c.B),
                 SketchConstraintKind.Tangent => Any(c.A) && Rd(c.B) || Rd(c.A) && Any(c.B),
-                SketchConstraintKind.Concentric => Rd(c.A) && Rd(c.B),
+                SketchConstraintKind.Concentric => Ov(c.A) && Ov(c.B),
                 SketchConstraintKind.Symmetric => Pt(c.A) && Pt(c.B) && Ln(c.C),
                 _ => false
             };
@@ -843,6 +880,17 @@ namespace RobotTwin.CoreSim.Modeling
                     continue;
                 }
 
+                if (e.Kind == SketchEntityKind.Ellipse || (e.Kind == SketchEntityKind.Spline && e.Through is { Count: >= 4 } && e.Through[0] == e.Through[e.Through.Count - 1]))
+                {
+                    // [curves] a closed curve is a loop of its own
+                    var ring = Curve(e, segmentsPerCircle);
+                    if (ring.Count < 4) continue;
+                    ring.RemoveAt(ring.Count - 1);
+                    if (Triangulator.SignedArea(ring) < 0) ring.Reverse();
+                    loops.Add(ring);
+                    continue;
+                }
+
                 if (e.Start == null || e.End == null || Point(e.Start) == null || Point(e.End) == null) continue;
                 int a = KeyOf(e.Start), b = KeyOf(e.End);
                 if (a != b) edges.Add((a, b, e));
@@ -914,6 +962,7 @@ namespace RobotTwin.CoreSim.Modeling
 
         private List<Vec2> EdgePoints(SketchEntity e, int segmentsPerCircle)
         {
+            if (e.Kind == SketchEntityKind.Spline) return Curve(e, segmentsPerCircle);   // [curves]
             var s = Point(e.Start)!;
             var t = Point(e.End)!;
             if (e.Kind == SketchEntityKind.Line) return new List<Vec2> { new Vec2(s.X, s.Y), new Vec2(t.X, t.Y) };
@@ -931,6 +980,91 @@ namespace RobotTwin.CoreSim.Modeling
             }
 
             return pts;
+        }
+
+        /// <summary>
+        /// [curves] Any entity as points along it, ends included (a circle's or an ellipse's last point repeats its first): what
+        /// draws it, picks it and makes it an edge of the profile.
+        /// </summary>
+        public List<Vec2> Curve(SketchEntity e, int segmentsPerCircle = 64)
+        {
+            switch (e.Kind)
+            {
+                case SketchEntityKind.Line when Point(e.Start) is { } a && Point(e.End) is { } b:
+                    return new List<Vec2> { new Vec2(a.X, a.Y), new Vec2(b.X, b.Y) };
+                case SketchEntityKind.Circle when Point(e.Center) is { } c:
+                    return Enumerable.Range(0, segmentsPerCircle + 1).Select(i => new Vec2(c.X + e.Radius * Math.Cos(2 * Math.PI * i / segmentsPerCircle),
+                        c.Y + e.Radius * Math.Sin(2 * Math.PI * i / segmentsPerCircle))).ToList();
+                case SketchEntityKind.Arc when Point(e.Center) != null && Point(e.Start) != null && Point(e.End) != null:
+                    return EdgePoints(e, segmentsPerCircle);
+                case SketchEntityKind.Ellipse when Point(e.Center) is { } c && Point(e.Start) is { } m:
+                {
+                    double ax = m.X - c.X, ay = m.Y - c.Y, major = Math.Sqrt(ax * ax + ay * ay);
+                    if (major < 1e-12) return new List<Vec2>();
+                    double ux = ax / major, uy = ay / major, minor = e.Radius;
+                    return Enumerable.Range(0, segmentsPerCircle + 1).Select(i =>
+                    {
+                        double t = 2 * Math.PI * i / segmentsPerCircle, p = major * Math.Cos(t), q = minor * Math.Sin(t);
+                        return new Vec2(c.X + p * ux - q * uy, c.Y + p * uy + q * ux);
+                    }).ToList();
+                }
+
+                case SketchEntityKind.Spline when e.Through is { Count: >= 2 }:
+                {
+                    var pts = e.Through.Select(Point).Where(p => p != null).Select(p => new Vec2(p!.X, p.Y)).ToList();
+                    bool closed = e.Through.Count >= 4 && e.Through[0] == e.Through[e.Through.Count - 1];
+                    if (closed) pts.RemoveAt(pts.Count - 1);
+                    return SplineCurve(pts, closed, Math.Max(6, segmentsPerCircle / 6));
+                }
+
+                default:
+                    return new List<Vec2>();
+            }
+        }
+
+        /// <summary>
+        /// [curves] A centripetal Catmull–Rom curve through the points (no loops or cusps where they bunch up, unlike the
+        /// uniform kind), <paramref name="perSpan"/> pieces between each two; open ones run on straight past their ends.
+        /// </summary>
+        public static List<Vec2> SplineCurve(IReadOnlyList<Vec2> pts, bool closed, int perSpan = 12)
+        {
+            var result = new List<Vec2>();
+            int n = pts.Count;
+            if (n == 0) return result;
+            if (n == 1)
+            {
+                result.Add(pts[0]);
+                return result;
+            }
+
+            Vec2 P(int i)
+            {
+                if (closed) return pts[((i % n) + n) % n];
+                if (i < 0) return pts[0] * 2 - pts[1];
+                if (i >= n) return pts[n - 1] * 2 - pts[n - 2];
+                return pts[i];
+            }
+
+            int spans = closed ? n : n - 1;
+            for (int i = 0; i < spans; i++)
+            {
+                Vec2 p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2);
+                double Knot(Vec2 a, Vec2 b) => Math.Max(1e-9, Math.Sqrt((b - a).Length));
+                double t0 = 0, t1 = t0 + Knot(p0, p1), t2 = t1 + Knot(p1, p2), t3 = t2 + Knot(p2, p3);
+                for (int k = 0; k < perSpan; k++)
+                {
+                    double t = t1 + (t2 - t1) * k / perSpan;
+                    var a1 = p0 * ((t1 - t) / (t1 - t0)) + p1 * ((t - t0) / (t1 - t0));
+                    var a2 = p1 * ((t2 - t) / (t2 - t1)) + p2 * ((t - t1) / (t2 - t1));
+                    var a3 = p2 * ((t3 - t) / (t3 - t2)) + p3 * ((t - t2) / (t3 - t2));
+                    var b1 = a1 * ((t2 - t) / (t2 - t0)) + a2 * ((t - t0) / (t2 - t0));
+                    var b2 = a2 * ((t3 - t) / (t3 - t1)) + a3 * ((t - t1) / (t3 - t1));
+                    result.Add(b1 * ((t2 - t) / (t2 - t1)) + b2 * ((t - t1) / (t2 - t1)));
+                }
+            }
+
+            result.Add(closed ? pts[0] : pts[n - 1]);
+            return result;
         }
 
         /// <summary>The sketch as an extrusion profile: its largest loop the outline, loops inside it holes.</summary>

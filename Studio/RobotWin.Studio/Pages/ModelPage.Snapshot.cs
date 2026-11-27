@@ -91,7 +91,7 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            if (demo is "sketch" or "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim" or "sketch-pattern")
+            if (demo is "sketch" or "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim" or "sketch-pattern" or "sketch-curves")
             {
                 // [sketch] A motor bracket drawn as a dimensioned sketch: a 50 × 40 plate with a round end tangent to its
                 // sides, a bolt hole and a bearing seat round the end's centre, fully constrained; extruded 6 mm.
@@ -106,11 +106,29 @@ namespace RobotWin.Studio.Pages
                 _ed.Load(bracket, null);
                 _ed.Select(plate.Id);
                 _vp.FrameAll();
-                if (demo is "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim" or "sketch-pattern")
+                if (demo is "sketch-editor" or "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim" or "sketch-pattern" or "sketch-curves")
                 {
-                    var start = demo is "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim" or "sketch-pattern" ? new ConstrainedSketch() : plate.Primitive.Sketch.Constrained;
+                    var start = demo is "sketch-draw" or "sketch-fillet" or "sketch-mirror" or "sketch-trim" or "sketch-pattern" or "sketch-curves" ? new ConstrainedSketch() : plate.Primitive.Sketch.Constrained;
                     var editor = new SketchEditorWindow(Window.GetWindow(this), start, _ => { });
                     editor.Show();
+                    if (demo == "sketch-curves")
+                    {
+                        // [curves] a cam-like outline: a spline over three points closed by a line, an ellipse window in it,
+                        // and a closed spline beside it
+                        editor.UpdateLayout();
+                        editor.Script(new (string, double, double, string?)[]
+                        {
+                            ("spline", -30, 0, null), ("spline", -15, 18, null), ("spline", 10, 22, null), ("spline", 30, 0, null), ("end", 0, 0, null),
+                            ("line", 30, 0, null), ("line", -30, 0, null), ("end", 0, 0, null),
+                            ("ellipse", 0, 8, null), ("ellipse", 10, 8, null), ("ellipse", 0, 12, null),
+                            ("spline", 40, -5, null), ("spline", 55, -2, null), ("spline", 52, 12, null), ("spline", 40, 10, null), ("spline", 40, -5, null),
+                            ("select", 60, 30, null)
+                        });
+                        editor.UpdateLayout();
+                        App.SnapshotTarget = editor.Content as FrameworkElement;
+                        return;
+                    }
+
                     if (demo == "sketch-trim")
                     {
                         // [sketch-trim] a hash of lines: the middle of the top one trimmed out, the left stub run on to the right post

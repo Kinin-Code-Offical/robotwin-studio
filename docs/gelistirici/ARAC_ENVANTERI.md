@@ -141,7 +141,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Araç | Bizde | Durum | Öncelik |
 | --- | --- | --- | --- |
 | Çizgi, dikdörtgen, daire, yay | eskiz düzenleyici | var | |
-| Çokgen, kanal (slot), elips, spline | düzgün ve serbest çokgen, kanal (profil şekilleri); ölçülü eskizde çizgi, daire, yay; elips ve spline yok | kısmi | 3 |
+| Çokgen, kanal (slot), elips, spline | düzgün ve serbest çokgen, kanal (profil şekilleri); ölçülü eskizde çizgi, daire, yay, elips (merkez, büyük eksen ucu, küçük yarı eksen ölçülür), spline (noktalardan geçen merkezcil Catmull-Rom, açık ya da kapalı); profil olur, aynalanır, çoğaltılır | var | |
 | Eskiz radyüsü, eskiz pahı | köşe noktası seçilince Köşe radyüsü ve Pah (teğet yay / düz kenar, sanal sivri, uzunluk ölçüleri korunur) | var | |
 | Ofset | var | var | |
 | Budama (trim), uzatma | Buda (güçlü budama, kesen öğeye tutulur): çizgi, daire (kalan yaya döner), yay (kısalır ya da ikiye ayrılır); Uzat çizgiler için | var | |

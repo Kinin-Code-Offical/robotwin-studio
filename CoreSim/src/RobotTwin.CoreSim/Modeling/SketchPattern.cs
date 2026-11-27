@@ -93,6 +93,12 @@ namespace RobotTwin.CoreSim.Modeling
                             copy = s.AddCircle(M(e.Center), e.Radius, e.Construction);
                             s.Constrain(SketchConstraintKind.Equal, e.Id, copy.Id);
                             break;
+                        case SketchEntityKind.Ellipse:   // [curves]
+                            copy = s.AddEllipse(M(e.Center), M(e.Start), e.Radius, e.Construction);
+                            break;
+                        case SketchEntityKind.Spline:
+                            copy = s.AddSpline(e.Through!.Select(M).ToList(), e.Construction);
+                            break;
                         default:
                             copy = s.AddArc(M(e.Center), M(e.Start), M(e.End), e.Construction);
                             break;

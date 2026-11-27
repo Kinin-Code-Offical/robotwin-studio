@@ -535,7 +535,10 @@ namespace RobotWin.Studio.Pages
             int lines = c.Entities.Count(e => e.Kind == SketchEntityKind.Line && !e.Construction);
             int circles = c.Entities.Count(e => e.Kind == SketchEntityKind.Circle && !e.Construction);
             int arcs = c.Entities.Count(e => e.Kind == SketchEntityKind.Arc && !e.Construction);
-            Caption($"{lines} çizgi, {circles} daire, {arcs} yay; {c.Constraints.Count} kısıt. Kapalı döngüler profil olur: en büyüğü dış şekil, içindekiler delik.");
+            int curves = c.Entities.Count(e => e.Kind is SketchEntityKind.Ellipse or SketchEntityKind.Spline && !e.Construction);   // [curves]
+            Caption(curves > 0
+                ? $"{lines} çizgi, {circles} daire, {arcs} yay, {curves} eğri; {c.Constraints.Count} kısıt. Kapalı döngüler profil olur: en büyüğü dış şekil, içindekiler delik."
+                : $"{lines} çizgi, {circles} daire, {arcs} yay; {c.Constraints.Count} kısıt. Kapalı döngüler profil olur: en büyüğü dış şekil, içindekiler delik.");
             var dims = c.Dimensions.ToList();
             if (dims.Count > 0)
             {
