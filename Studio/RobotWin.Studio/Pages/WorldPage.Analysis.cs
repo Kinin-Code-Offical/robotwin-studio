@@ -63,6 +63,7 @@ namespace RobotWin.Studio.Pages
 
             RecordButton.IsChecked = _recording;
             RecordText.Text = _recording ? "Kaydı bitir" : "Kayıt";
+            RecordButton.ToolTip = RobotWin.Studio.Shell.Lang.T(_recording ? "Kaydı bitir (Ctrl+R)" : "Kayıt al: dünyayı baştan çalıştırır; durdurunca bu süre render modunda tam fizikle yeniden hesaplanır ve video gibi oynatılır (Ctrl+R)");
         }
 
         /// <summary>Opens the render window on a private copy of the world (later edits do not affect it).</summary>

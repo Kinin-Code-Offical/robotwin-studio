@@ -52,7 +52,11 @@ The inspector is made of component cards as in Unity: **Position and orientation
 
 ## The parts of the screen
 
-- **Top toolbar:** select and move, **Draw cable** (K), **Attach** (B), rotate, duplicate, delete, undo / redo; **Run the world**, **Step 10 ms**, **Stop and rewind**, speed; camera follow, top view, fit all.
+- **Top toolbar** (icons only; their names are in the tooltips):
+  - On the left: the world's or the assembly's icon, undo / redo and three group buttons. **Connect** holds cable (K), joint (B) and mate (H). **Evaluate** holds interference, clearance, hole alignment and the exploded view. **Edit** holds turn by the rotate step, duplicate and delete. Hold a group or right-click it for its other tools (as in KiCad).
+  - In the middle: run / pause, step 10 ms, stop and rewind, record and the speed (1× real time).
+  - On the right: scene + game view, camera follow, the overlays and the panel layout.
+- **Overlays over the scene** (as in Unity): **Tools** on the left (select, move, rotate, scale, all, rect; Pivot / Center and Local / World icons), **Grid and snap** along the top (magnet, grid, step, the full window), and the **view cube** in the top right. Click one of the cube's faces to look from that side (top, front, right…), or a corner for the isometric view from it. The cube turns with the camera and its faces carry the axis colours (X red, Y green, Z blue). The button under it frames everything.
 - **Left panel tabs:** **Scene**, **Boards**, **Parts**, **Mechanical**, **Environment**.
 - **Centre:** the 3D view.
 - **Right:** the inspector: the selected object's name, position, physics, cables and joints.
@@ -770,6 +774,14 @@ The box left of the object's name in the inspector is Unity's **active** switch 
 ## Overlays
 
 Like Unity's overlay menu, the overlay button at the scene's top right, or the key left of 1, lists the scene view's overlays: **Hint line**, **Handle**, **Sensor overlays** (distance sensors' beams, cameras' and lidars' fields of view) and **Grid**. Each switches on and off on its own; **Hide all** gives a clean view. The choices are kept.
+
+Over the scene view stand **overlay panels**, as in Unity:
+
+- **View:** the view cube and frame all.
+- **Tools:** the Q W E R Y T handles, Pivot / Center and Local / World.
+- **Grid and snap:** snap (magnet), show the grid, the move step and the full window.
+
+Drag a panel by its **≡** handle; while you drag, blue drop zones show along the view's edges and in its corners. Let go on a zone and the panel settles there: a row along the top or bottom edge, a column down either side. In a corner, or off the zones, it keeps its own layout; off the zones it floats. Right-click the handle to pick its layout: **Panel** (with its label), **Horizontal** or **Vertical**; on an edge a panel can only be collapsed or expanded. **Collapse** folds the panel to its icon and a ▾, which opens its content; **Hide** puts it away. The **Panels** part of the overlay menu shows or hides each one. Under **Presets**, save the current arrangement under a name, click a name to go back to it, or delete it with ×; **Default layout** brings the first arrangement back. The arrangement is kept in the settings. At first the tools stand down the left, the grid along the top and the view cube in the top right, none of them with a title.
 
 ## Grid and snap
 

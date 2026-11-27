@@ -87,6 +87,11 @@
     <Geometry x:Key="I.Window">M4,8 H16 V20 H4 Z M8,8 V4 H20 V16 H16</Geometry>
     <Geometry x:Key="I.Sidebar">M4,5 H20 V19 H4 Z M9,5 V19</Geometry>
     <Geometry x:Key="I.Scale">M4,20 L20,4 M14,4 H20 V10 M10,20 H4 V14</Geometry>
+    <Geometry x:Key="I.Magnet">M6,4 V12 A6,6 0 0 0 18,12 V4 H14 V12 A2,2 0 0 1 10,12 V4 Z M6,8 H10 M14,8 H18</Geometry>
+    <Geometry x:Key="I.PivotPoint">M12,3 V9 M12,15 V21 M3,12 H9 M15,12 H21 M12,10 A2,2 0 1 1 11.99,10</Geometry>
+    <Geometry x:Key="I.PivotCenter">M4,4 H20 V20 H4 Z M12,10 A2,2 0 1 1 11.99,10</Geometry>
+    <Geometry x:Key="I.SpaceLocal">M6,18 L18,11 M18,11 L15,10 M18,11 L16.5,13.6 M6,18 L9,6 M9,6 L7,8 M9,6 L10.6,8.4</Geometry>
+    <Geometry x:Key="I.SpaceWorld">M12,3 A9,9 0 1 1 11.99,3 M3,12 H21 M12,3 C7.5,7 7.5,17 12,21 M12,3 C16.5,7 16.5,17 12,21</Geometry>
     <Geometry x:Key="I.Sheet">M6,4 H18 V20 H6 Z M3,8 H6 M3,12 H6 M18,10 H21 M18,15 H21 M9,8 H14 M9,11 H12</Geometry>
     <Geometry x:Key="I.RectTool">M7,5 H17 M7,19 H17 M5,7 V17 M19,7 V17 M3.5,3.5 H6.5 V6.5 H3.5 Z M17.5,3.5 H20.5 V6.5 H17.5 Z M17.5,17.5 H20.5 V20.5 H17.5 Z M3.5,17.5 H6.5 V20.5 H3.5 Z M10.5,12 A1.5,1.5 0 1 1 13.5,12 A1.5,1.5 0 1 1 10.5,12</Geometry>
     <Geometry x:Key="I.Transform">M12,4 V20 M4,12 H20 M12,7 A5,5 0 1 1 11.99,7 M10,6 L12,4 L14,6 M18,10 L20,12 L18,14</Geometry>

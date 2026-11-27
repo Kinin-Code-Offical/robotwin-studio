@@ -60,6 +60,7 @@ namespace RobotWin.Studio.Pages
             Scene.MassOf = o => W.ActiveWorld is { } w ? EstimateMass(w, o) / 1000.0 : 0.01;
             ApplyGridSettings();   // [grid] steps, snapping and the floor grid (Pages/WorldPage.GridSnap.cs)
             ApplyOverlaySettings();   // [overlays] Pages/WorldPage.Overlays.cs
+            InitOverlayPanels();
             Scene.CableSelectionChanged += _ =>
             {
                 BuildInspector();
@@ -1504,9 +1505,8 @@ namespace RobotWin.Studio.Pages
         {
             Scene.Tool = tool;
             ToolSelect.IsChecked = tool == WorldTool.Select;
-            ToolCable.IsChecked = tool == WorldTool.Cable;
-            ToolJoint.IsChecked = tool == WorldTool.Joint;
-            ToolMate.IsChecked = tool == WorldTool.Mate;
+            ToolCable.IsChecked = tool is WorldTool.Cable or WorldTool.Joint or WorldTool.Mate;   // [toolbar] the connect group
+            if (tool is WorldTool.Cable or WorldTool.Joint or WorldTool.Mate) Theme.ToolFlyout.Select(ToolCable, tool.ToString());
             if (tool != WorldTool.Mate)
             {
                 _mateFirst = null;   // [mate] a half-made pair is dropped
@@ -1845,6 +1845,7 @@ namespace RobotWin.Studio.Pages
             bool running = _session.State == SimState.Running;
             RunIcon.Data = (Geometry)FindResource(running ? "I.Pause" : "I.Play");
             RunText.Text = running ? "Duraklat" : _session.State == SimState.Paused ? "Devam" : World?.IsAssembly == true ? "Montajı çalıştır" : "Dünyayı çalıştır";
+            RunButton.ToolTip = RobotWin.Studio.Shell.Lang.T(RunText.Text) + " (F5)";   // [toolbar] an icon: its word is the tooltip
             SimStatus.Text = _session.State == SimState.Stopped ? string.Empty : $"t = {SiValue.Format(_session.Time, "s")}";
             ArmRunStateChanged();   // [kin]
         }

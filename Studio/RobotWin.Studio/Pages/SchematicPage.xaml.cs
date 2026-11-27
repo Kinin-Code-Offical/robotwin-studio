@@ -97,7 +97,7 @@ namespace RobotWin.Studio.Pages
             W.Simulation.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName == nameof(SimulationSession.State)) OnSimStateChanged();
-                if (e.PropertyName == nameof(SimulationSession.StatusText)) SimStatus.Text = W.Simulation.StatusText;
+                if (e.PropertyName == nameof(SimulationSession.StatusText)) SimStatus.Text = W.Simulation.State == SimState.Stopped ? string.Empty : W.Simulation.StatusText;
             };
             W.Simulation.Updated += (_, _) => OnSimFrame();
             W.Simulation.SerialReceived += (_, text) =>
@@ -440,10 +440,11 @@ namespace RobotWin.Studio.Pages
             EmptyHint.Visibility = !W.Schematic.Parts.Any(p => Schematic.SameSheet(p.Sheet, Canvas.CurrentSheet)) && !W.Schematic.SheetsOn(Canvas.CurrentSheet).Any() ? Visibility.Visible : Visibility.Collapsed;   // [sheets] the shown sheet   // a circuit being simulated is never an empty sheet
             var state = W.Simulation.State;
             RunText.Text = state == SimState.Running ? "Duraklat" : state == SimState.Paused ? "Devam" : "Simüle et";
+            RunButton.ToolTip = RobotWin.Studio.Shell.Lang.T(RunText.Text) + " (F5)";   // [toolbar] an icon: its word is the tooltip
             RunIcon.Data = (Geometry)FindResource(state == SimState.Running ? "I.Pause" : "I.Play");
             RunIcon.Filled = state != SimState.Running;
             StopButton.IsEnabled = state != SimState.Stopped;
-            SimStatus.Text = W.Simulation.StatusText;
+            SimStatus.Text = state == SimState.Stopped ? string.Empty : W.Simulation.StatusText;   // [toolbar] nothing to say while it is off
             BuildPinPanel();
             BuildInspector();
             if (state == SimState.Running && W.Simulation.Time == 0) SerialOutput.Clear();
@@ -1279,7 +1280,7 @@ namespace RobotWin.Studio.Pages
             EditorExtras.Visibility = width < 1150 ? Visibility.Collapsed : Visibility.Visible;
             ToolSep0.Visibility = width < 820 ? Visibility.Collapsed : Visibility.Visible;
             SimStatus.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
-            SpeedBox.Width = narrow ? 118 : 124;
+            SpeedBox.Width = 76;   // [toolbar] "1×" and the like: no longer a word to make room for
             ScopePanelColumn.Width = new GridLength(narrow ? 262 : 318);
             MeterColumn.Width = new GridLength(width < 900 ? 300 : 470);
         }

@@ -83,6 +83,7 @@ namespace RobotWin.Studio.World
             _hint.HorizontalAlignment = HorizontalAlignment.Left;
             _hint.IsHitTestVisible = false;
             Children.Add(_hint);
+            Children.Add(OverlayPanels);   // [overlays] the view's overlay panels (Shell/SceneOverlays.cs)
             InitRadio();   // [radio] World/WorldScene.Radio.cs
             InitSdk();   // [sdk] World/WorldScene.Sdk.cs
             Focusable = true;
@@ -435,6 +436,22 @@ namespace RobotWin.Studio.World
             if (b.IsEmpty) return;
             _target = new Point3D(b.X + b.SizeX / 2, b.Y + b.SizeY / 2, b.Z + b.SizeZ / 3);
             _distance = Math.Max(0.25, Math.Max(b.SizeX, Math.Max(b.SizeY, b.SizeZ)) * 1.9);
+            UpdateCamera();
+        }
+
+        /// <summary>[overlays] The view's overlay panels (Unity's Scene view overlays): docked, floating, collapsed.</summary>
+        public Shell.OverlayHost OverlayPanels { get; } = new Shell.OverlayHost();
+
+        /// <summary>[viewcube] Raised with the camera's yaw and pitch whenever it moves.</summary>
+        public event Action<double, double>? CameraTurned;
+
+        public (double Yaw, double Pitch) CameraTurn => (_yaw, _pitch);
+
+        /// <summary>[overlays] The camera turned to look from a direction (yaw about Z, pitch down), its target and distance kept.</summary>
+        public void ViewFrom(double yaw, double pitch)
+        {
+            _yaw = yaw;
+            _pitch = pitch;
             UpdateCamera();
         }
 
@@ -1227,6 +1244,7 @@ namespace RobotWin.Studio.World
             _camera.LookDirection = dir * _distance;
             _camera.UpDirection = new Vector3D(0, 0, 1);
             _gizmoLayer?.InvalidateVisual();   // [gizmo] the handles follow the camera
+            CameraTurned?.Invoke(_yaw, _pitch);   // [viewcube] the view cube turns with it
         }
 
         private (Point Screen, double Depth, bool Visible) Project(Point3D p)

@@ -51,9 +51,12 @@ namespace RobotWin.Studio.Pages
             GizmoScale.IsChecked = Scene.Gizmo == GizmoMode.Scale;
             GizmoAll.IsChecked = Scene.Gizmo == GizmoMode.All;
             GizmoRect.IsChecked = Scene.Gizmo == GizmoMode.Rect;   // [rect]
-            GizmoPlace.Content = RobotWin.Studio.Shell.Lang.T(Scene.GizmoCenter ? "Merkez" : "Pivot");
+            // [toolbar] icons, not words: the pivot point or the shape's centre; the part's own axes or the world's
+            GizmoPlace.Content = new Theme.Icon { Data = (System.Windows.Media.Geometry)FindResource(Scene.GizmoCenter ? "I.PivotCenter" : "I.PivotPoint"), Size = 16 };
+            GizmoPlace.ToolTip = RobotWin.Studio.Shell.Lang.T(Scene.GizmoCenter ? "Tutamaç şeklin ortasında (Merkez); tıklayınca pivotta" : "Tutamaç parçanın pivotunda; tıklayınca şeklin ortasında (Merkez)");
             GizmoPlace.IsChecked = Scene.GizmoCenter;
-            GizmoSpace.Content = RobotWin.Studio.Shell.Lang.T(Scene.GizmoLocal ? "Yerel" : "Dünya");
+            GizmoSpace.Content = new Theme.Icon { Data = (System.Windows.Media.Geometry)FindResource(Scene.GizmoLocal ? "I.SpaceLocal" : "I.SpaceWorld"), Size = 16 };
+            GizmoSpace.ToolTip = RobotWin.Studio.Shell.Lang.T(Scene.GizmoLocal ? "Eksenler parçanın kendi eksenleri (Yerel); tıklayınca dünyanınki" : "Eksenler dünyanınki; tıklayınca parçanın kendi eksenleri (Yerel)");
             GizmoSpace.IsChecked = !Scene.GizmoLocal;
         }
 

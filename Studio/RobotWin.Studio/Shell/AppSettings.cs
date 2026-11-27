@@ -152,6 +152,12 @@ namespace RobotWin.Studio.Shell
         public bool WorldShowGizmo { get; set; } = true;
         public bool WorldShowSensorOverlays { get; set; } = true;
 
+        /// <summary>[overlays] Where the World view's overlay panels stand (Shell/SceneOverlays.cs: OverlayHost.SaveLayout).</summary>
+        public string WorldOverlayLayout { get; set; } = string.Empty;
+
+        /// <summary>[overlays] Unity's overlay presets: saved arrangements of the World view's overlays, by name.</summary>
+        public Dictionary<string, string> WorldOverlayPresets { get; set; } = new Dictionary<string, string>();
+
         /// <summary>[crosshair] The PCB view's full-window crosshair; [polar] the cursor read as distance and angle from the origin.</summary>
         public bool PcbFullCrosshair { get; set; }
 

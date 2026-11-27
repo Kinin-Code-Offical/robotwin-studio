@@ -276,6 +276,7 @@ namespace RobotWin.Studio.Shell
         {
             if (Persist) Load();
             else if (StartFolded) _bottomHidden = true;
+            if (FoldEveryStart) _bottomHidden = true;   // [fold] the page opens with its bottom as its tabs, whatever was left open last time
             _started = true;
             Apply();
             OnOwnerVisible();
@@ -1204,6 +1205,9 @@ namespace RobotWin.Studio.Shell
 
         /// <summary>[fold] With no saved layout the bottom pane starts folded to its tabs (a page whose bottom is empty at first).</summary>
         public bool StartFolded { get; set; }
+
+        /// <summary>[fold] The bottom pane starts folded to its tabs every time the program opens (a click on a tab opens it).</summary>
+        public bool FoldEveryStart { get; set; }
 
         /// <summary>[fold] A folded bottom pane's height: its tab strip.</summary>
         private const double FoldedHeight = 34;

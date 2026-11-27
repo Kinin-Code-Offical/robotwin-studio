@@ -52,6 +52,8 @@ namespace RobotWin.Studio.Pages
                 else if (key == "ac") RefreshAcChoices();
                 else if (key == "nets") RefreshNets();
             };
+            _dock.StartFolded = true;   // [fold] the oscilloscope and the other instruments start closed: a tab opens them
+            _dock.FoldEveryStart = true;
             _dock.Start();
             // [floatbar] the drawing tools tear off into their own window (a palette beside the sheet, as SolidWorks' floating toolbars)
             _drawToolsFloat = new FloatingStrip("schematic.tools", DrawToolsHost, DrawTools, docked => DrawToolsHost.Visibility = docked ? Visibility.Visible : Visibility.Collapsed);

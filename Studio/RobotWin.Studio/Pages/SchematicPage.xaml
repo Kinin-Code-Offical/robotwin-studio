@@ -88,18 +88,18 @@
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0">
                     <ComboBox x:Name="VariantBox" Width="160" Margin="0,0,8,0" Visibility="Collapsed" SelectionChanged="OnVariantPicked" ToolTip="Tasarım alternatifi: simüle edilen, BOM'a ve montaja giren"/>
-                    <Button x:Name="RunButton" Style="{StaticResource Btn.Primary}" Padding="12,0" MinHeight="28" Click="OnRun" ToolTip="Başlat / duraklat  (F5)">
+                    <Button x:Name="RunButton" Style="{StaticResource Btn.Primary}" Padding="14,0" MinHeight="28" MinWidth="44" Click="OnRun" ToolTip="Başlat / duraklat  (F5)">
                         <StackPanel Orientation="Horizontal">
                             <t:Icon x:Name="RunIcon" Data="{StaticResource I.Play}" Size="13" Filled="True" Foreground="{DynamicResource B.OnPrimary}"/>
-                            <TextBlock x:Name="RunText" Text="Simüle et" Margin="7,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource B.OnPrimary}"/>
+                            <TextBlock x:Name="RunText" Text="Simüle et" Visibility="Collapsed" Margin="7,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource B.OnPrimary}"/>
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource Btn.Icon}" ToolTip="1 ms ilerlet" Click="OnStep" Margin="6,0,0,0"><t:Icon Data="{StaticResource I.Step}" Size="14"/></Button>
                     <Button x:Name="StopButton" Style="{StaticResource Btn.Icon}" ToolTip="Durdur  (Shift+F5)" Click="OnStop"><t:Icon Data="{StaticResource I.Stop}" Size="14"/></Button>
-                    <ComboBox x:Name="SpeedBox" Width="124" Margin="6,0,0,0" SelectionChanged="OnSpeedChanged" ToolTip="Simülasyon hızı">
+                    <ComboBox x:Name="SpeedBox" Width="76" Margin="6,0,0,0" SelectionChanged="OnSpeedChanged" ToolTip="Simülasyon hızı">
                         <ComboBoxItem Content="0.01×" Tag="0.01"/>
                         <ComboBoxItem Content="0.1×" Tag="0.1"/>
-                        <ComboBoxItem Content="Gerçek zaman" Tag="1" IsSelected="True"/>
+                        <ComboBoxItem Content="1×" Tag="1" IsSelected="True" ToolTip="Gerçek zaman"/>
                         <ComboBoxItem Content="5×" Tag="5"/>
                         <ComboBoxItem Content="20×" Tag="20"/>
                     </ComboBox>

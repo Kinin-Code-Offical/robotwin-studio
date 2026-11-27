@@ -54,6 +54,16 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void TheBaseCarriesNoArmAndTheArmStandsOnIt()
+        {
+            // The free plywood base is what everything is mounted on: picked, it is the arm's base, not a tip of it.
+            var (w, g) = ServoArm();
+            Assert.Null(WorldArm.Build(w, g, Named(w, "Taban (18 mm kontrplak)").Id));
+            var arm = WorldArm.Build(w, g, Named(w, "Kol 2").Id)!;
+            Assert.Equal(Named(w, "Taban (18 mm kontrplak)").Id, arm.Path[0]);
+        }
+
+        [Fact]
         public void ForwardKinematicsIsThePlanarTwoLinkArm()
         {
             var (w, g) = ServoArm();

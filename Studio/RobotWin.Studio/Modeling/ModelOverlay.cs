@@ -190,14 +190,25 @@ namespace RobotWin.Studio.Modeling
             var r2 = FrameButton;
             dc.DrawRoundedRectangle(PanelBrush, PanelPen, r1, 4, 4);
             dc.DrawRoundedRectangle(PanelBrush, PanelPen, r2, 4, 4);
-            var t1 = Text(Cam.Ortho ? "Orto" : "Persp", 10.5, MutedBrush);
-            dc.DrawText(t1, new Point(r1.X + (r1.Width - t1.Width) / 2, r1.Y + (r1.Height - t1.Height) / 2));
-            var t2 = Text("Sığdır", 10.5, MutedBrush);
-            dc.DrawText(t2, new Point(r2.X + (r2.Width - t2.Width) / 2, r2.Y + (r2.Height - t2.Height) / 2));
+            // [toolbar] icons, not words: a frustum (perspective) or a square (orthographic); the frame-all corners
+            DrawGlyph(dc, Cam.Ortho ? "M5,5 H19 V19 H5 Z" : "M3,8 L21,4 V20 L3,16 Z M9,7 V17 M15,5.6 V18.4", r1);
+            DrawGlyph(dc, "M4,9 V4 H9 M15,4 H20 V9 M20,15 V20 H15 M9,20 H4 V15", r2);
         }
 
-        private Rect OrthoButton => new Rect(NavCenter.X - 46, NavCenter.Y + NavRadius + 14, 44, 20);
-        private Rect FrameButton => new Rect(NavCenter.X + 2, NavCenter.Y + NavRadius + 14, 44, 20);
+        private void DrawGlyph(DrawingContext dc, string path, Rect r)
+        {
+            var g = Geometry.Parse(path);
+            double k = 14.0 / 24;
+            dc.PushTransform(new TranslateTransform(r.X + (r.Width - 14) / 2, r.Y + (r.Height - 14) / 2));
+            dc.PushTransform(new ScaleTransform(k, k));
+            var pen = new Pen(MutedBrush, 1.6 / k) { LineJoin = PenLineJoin.Round, StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
+            dc.DrawGeometry(null, pen, g);
+            dc.Pop();
+            dc.Pop();
+        }
+
+        private Rect OrthoButton => new Rect(NavCenter.X - 28, NavCenter.Y + NavRadius + 14, 26, 22);
+        private Rect FrameButton => new Rect(NavCenter.X + 2, NavCenter.Y + NavRadius + 14, 26, 22);
 
         /// <summary>0 = none, 1 = axis bubble (axis returned), 2 = navigator background (orbit), 3 = ortho toggle, 4 = frame all.</summary>
         public int HitNavigator(Point p, out Vec3 axis)

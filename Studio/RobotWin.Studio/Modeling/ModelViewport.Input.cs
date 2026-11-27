@@ -227,6 +227,10 @@ namespace RobotWin.Studio.Modeling
         private void OnMouseMove(object sender, MouseEventArgs e)
         {
             var p = e.GetPosition(this);
+            // [toolbar] the navigator's icon buttons say what they do in a tooltip
+            int navHover = _overlay.HitNavigator(p, out _);
+            object? tip = navHover == 3 ? Shell.Lang.T("Perspektif / ortografik (5)") : navHover == 4 ? Shell.Lang.T("Hepsini sığdır (Home)") : null;
+            if (!Equals(ToolTip, tip)) ToolTip = tip;
             if (_nav != Nav.None)
             {
                 var d = p - _navLast;

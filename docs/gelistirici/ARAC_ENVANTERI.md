@@ -237,7 +237,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Köşe yakalama (V): köşeden köşeye, köşeden yüzeye, pivotu köşeye | V ile serbest sürüklemede ve taşı tutamacının ortasında köşeden köşeye (şekil kutusunun 8 köşesi); yakında köşe yoksa köşeden yüzeye; V basılıyken tutamaçlar imlece en yakın köşede (taşı, döndür, ölçekle o köşe çevresinde) | var | |
 | Yüzeye yakalama (Ctrl+Shift) | Ctrl+Shift ile serbest sürüklemede ve taşı tutamacının ortasında: parçanın tabanı imlecin altındaki parça, arazi ya da zemin yüzeyine (kendisi ve takılıları atlanır) | var | |
 | Bakışla döndürme (bir yüzeye çevir) | döndürme tutamacıyla Ctrl+Shift+tık: parçanın +X ekseni tıklanan yüzey noktasına döner, yan yatmaz; takılılar birlikte | var | |
-| Kaplama menüsü: araçlar, araç seçenekleri, ızgara ve yakalama, çizim kipleri, görünüm seçenekleri, arama, yön, kameralar | Kaplamalar (` ve sahne çubuğu): ipucu satırı, tutamaç, sensör kaplamaları, ızgara, hepsini gizle (saklanır); kaplamaların taşınması sonra | kısmi | 3 |
+| Kaplama menüsü: araçlar, araç seçenekleri, ızgara ve yakalama, çizim kipleri, görünüm seçenekleri, arama, yön, kameralar | Kaplamalar (` ve sahne çubuğu): ipucu satırı, tutamaç, sensör kaplamaları, ızgara, hepsini gizle; kaplama panelleri (Görünüm, Araçlar, Izgara ve yakalama): ≡ ile sürüklenir, kenar ve köşelere yerleşir (mavi bırakma bölgeleri), Panel / Yatay / Dikey, daralt / genişlet, gizle, hazır düzenler, yerleşim saklanır | var | |
 
 ### Sahne ağacı (Hierarchy)
 

@@ -217,9 +217,16 @@ namespace RobotTwin.CoreSim.Robotics
             }
             else
             {
-                var objects = hops.Keys.Select(world.Find).Where(o => o != null && o.Id != tipId).Select(o => o!).ToList();
-                if (objects.Count == 0) return null;
-                root = objects.OrderByDescending(o => o.MassKg ?? G(o).MassKg).ThenByDescending(o => hops[o.Id]).First().Id;
+                // Free-standing: the base is what everything else is mounted on (a part no joint hangs on anything here),
+                // the heaviest such one; the selected part itself when it is that base (then it carries no arm).
+                var objects = hops.Keys.Select(world.Find).Where(o => o != null).Select(o => o!).ToList();
+                if (objects.Count < 2) return null;
+                bool Mounted(WorldObject o) => world.Joints.Any(j => string.Equals(j.ObjectA, o.Id, StringComparison.OrdinalIgnoreCase) &&
+                                                                     j.ObjectB != null && hops.ContainsKey(j.ObjectB));
+                var bases = objects.Where(o => !Mounted(o)).ToList();
+                if (bases.Count == 0) bases = objects;
+                root = bases.OrderByDescending(o => o.MassKg ?? G(o).MassKg).ThenByDescending(o => hops[o.Id]).First().Id;
+                if (string.Equals(root, tipId, StringComparison.OrdinalIgnoreCase)) return null;
             }
 
             // The path from the base to the tip.

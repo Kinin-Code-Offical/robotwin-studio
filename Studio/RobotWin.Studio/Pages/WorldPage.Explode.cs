@@ -516,6 +516,22 @@ namespace RobotWin.Studio.Pages
             }
 
             if (args.Contains("--pattern")) ShowPatternDialog();   // [pattern] the dialog open
+            int op = Array.IndexOf(args, "--overlay-panels");   // [overlays] --overlay-panels demo|drag: the panels placed round the view (not saved)
+            if (op >= 0 && op + 1 < args.Length)
+            {
+                var host = Scene.OverlayPanels;
+                host.LoadLayout("view:TopRight:40:40:Panel:0:1;tools:Left:40:40:Vertical:0:1;grid:Top:40:40:Panel:0:1");
+                host.Arrange();
+                if (args[op + 1] == "drag" && host.Find("view") is { } carried)
+                {
+                    // the view panel picked up by its handle and carried to the bottom-left corner: the drop zones show
+                    host.UpdateLayout();
+                    var start = carried.TranslatePoint(new Point(10, 10), host);
+                    host.BeginDragForSnapshot(carried, start);
+                    host.DragToForSnapshot(new Point(60, host.ActualHeight - 60));
+                }
+            }
+
             if (args.Contains("--overlays")) ShowOverlayMenu(OverlayButton);   // [overlays] the menu open
             if (args.Contains("--cam") && World is { } cw)   // [cam] a camshaft and its follower, coupled, the shaft picked
             {
