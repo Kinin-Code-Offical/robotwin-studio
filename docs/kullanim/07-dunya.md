@@ -772,7 +772,9 @@ Denetçide nesnenin adının solundaki kutu Unity'deki **etkin** anahtarıdır (
 
 ## Kaplamalar
 
-Unity'deki kaplama menüsü gibi, sahnenin sağ üstündeki kaplama düğmesi ya da 1 tuşunun solundaki tuş sahne görünümünün kaplamalarını listeler: **İpucu satırı**, **Tutamaç**, **Sensör kaplamaları** (mesafe sensörlerinin ışınları, kameraların ve lidarların görüş alanları) ve **Izgara**. Her biri ayrı açılıp kapanır; **Hepsini gizle** temiz bir görünüm verir. Seçimler saklanır.
+Unity'deki kaplama menüsü gibi, sahnenin sağ üstündeki kaplama düğmesi ya da 1 tuşunun solundaki tuş sahne görünümünün kaplamalarını listeler: **İpucu satırı**, **Tutamaç**, **Teknik vurgu**, **Sensör kaplamaları** (mesafe sensörlerinin ışınları, kameraların ve lidarların görüş alanları) ve **Izgara**. Her biri ayrı açılıp kapanır; **Hepsini gizle** temiz bir görünüm verir. Seçimler saklanır.
+
+**Teknik vurgu** seçtiğiniz nesnenin neye bağlı olduğunu üstünde gösterir (SolidWorks'ün seçimde ilişkileri ve ağırlık merkezini göstermesi gibi): kabloları vurgu renginde ve biraz kalın, her bağlantısı turuncu bir noktayla (bağlantı noktası) ve menteşe ya da kızakta döndüğü veya kaydığı eksenle, ağırlık merkezi teknik çizimdeki simgesiyle (iki çeyreği koyu daire; fiziğin hesapladığı yerde). Nesnenin hemen üstündeki küçük etiket adını, kütlesini, kablo ve bağlantı sayısını, dünya çalışırken de hızını yazar. İşaretler her zaman görünür: parçanın içinde ya da tutamacın arkasında kalmaz.
 
 Sahne görünümünün üstünde Unity'deki gibi **kaplama panelleri** durur:
 

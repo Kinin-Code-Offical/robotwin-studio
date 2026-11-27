@@ -773,7 +773,9 @@ The box left of the object's name in the inspector is Unity's **active** switch 
 
 ## Overlays
 
-Like Unity's overlay menu, the overlay button at the scene's top right, or the key left of 1, lists the scene view's overlays: **Hint line**, **Handle**, **Sensor overlays** (distance sensors' beams, cameras' and lidars' fields of view) and **Grid**. Each switches on and off on its own; **Hide all** gives a clean view. The choices are kept.
+Like Unity's overlay menu, the overlay button at the scene's top right, or the key left of 1, lists the scene view's overlays: **Hint line**, **Handle**, **Technical highlight**, **Sensor overlays** (distance sensors' beams, cameras' and lidars' fields of view) and **Grid**. Each switches on and off on its own; **Hide all** gives a clean view. The choices are kept.
+
+**Technical highlight** shows what the selected object is tied to, on it (as SolidWorks shows mates and the centre of mass on selection): its cables in the accent colour and a little thicker, each joint as an orange dot (its anchor) with the axis a hinge turns about or a slider runs along, and its centre of mass as the drawing symbol (a circle with two dark quarters, where the physics puts it). A small label just above the object gives its name, mass, cables and joints, and its speed while the world runs. The marks are always in sight: never hidden inside the part or behind the handle.
 
 Over the scene view stand **overlay panels**, as in Unity:
 

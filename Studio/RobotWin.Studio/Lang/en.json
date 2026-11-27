@@ -8614,6 +8614,8 @@
   "Düzen projeye eklendi: kaydedince projeyle birlikte saklanır, proje açılınca geri gelir": "Layout added to the project: saved with it, it comes back when the project opens",
   "Projenin düzeni açıldı": "Project layout opened",
   "Projenin düzeni kaldırıldı (ekrandaki düzen olduğu gibi kalır)": "Project layout removed (the layout on screen stays as it is)",
+  "Teknik vurgu": "Technical highlight",
+  "Seçili nesnenin kabloları, bağlantıları (bağlantı noktası ve ekseni), ağırlık merkezi ve yanında kütlesi": "The selected object's cables, joints (anchor and axis), centre of mass, and its mass beside it",
   "Aynala": "Mirror",
   "Elektriksel model": "Electrical model",
   "Firmware": "Firmware",

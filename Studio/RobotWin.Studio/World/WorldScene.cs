@@ -74,6 +74,7 @@ namespace RobotWin.Studio.World
             _effects.Project = Project;
             _effects.IsHitTestVisible = false;
             Children.Add(_effects);
+            InitTechnical();   // [technical] the selection's label (World/WorldScene.Technical.cs)
             AddGizmoLayer();   // [gizmo] the handles, drawn over the view (World/WorldScene.Gizmo.cs)
             _hint.Foreground = new SolidColorBrush(Color.FromRgb(0x8E, 0x8E, 0x97));   // TextMuted: 5.9:1 on the canvas
             _hint.FontSize = 12;
@@ -335,6 +336,7 @@ namespace RobotWin.Studio.World
             if (Selected == id) return;
             Selected = id;
             RebuildOverlay();
+            if (_showTechnical && World?.Cables.Count > 0) RebuildCables();   // [technical] its cables lit, the last one's not
             SelectionChanged?.Invoke(id);
         }
 
@@ -638,6 +640,7 @@ namespace RobotWin.Studio.World
             }
 
             AppendGap(g);   // [clearance] World/WorldScene.Explode.cs
+            AppendTechnical(g);   // [technical] World/WorldScene.Technical.cs
             AppendGizmo(g); // [terrain] move/rotate/scale gizmo
             _overlay.Content = g;
 
@@ -797,6 +800,11 @@ namespace RobotWin.Studio.World
 
                 bool selected = c.Id == SelectedCable;
                 if (selected) r *= 1.8;   // selected: thicker and lit in the accent colour
+                else if (TiedToSelection(c))
+                {
+                    selected = true;   // [technical] a cable of the selected object: lit with it
+                    r *= 1.4;
+                }
 
                 // [phys] along the rope (drapes over parts, pulled-out plugs hang free)
                 var path = ExplodedCable(a, b, ref pa, ref pb, out var apart) ? apart : RopePath(c, pa, pb, out pa, out pb, out _, out _);   // [explode] a moved end: a slack line
@@ -1043,6 +1051,7 @@ namespace RobotWin.Studio.World
             }
 
             GpuFrame();   // [render] our GPU renderer draws what the frame built (World/WorldScene.Gpu.cs)
+            PlaceTechLabel();   // [technical] the label follows the camera
         }
 
         private long _sceneStart;     // [perf] when the last frame began building the scene (Stopwatch ticks)

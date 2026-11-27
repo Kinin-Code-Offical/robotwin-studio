@@ -24,6 +24,7 @@ namespace RobotWin.Studio.Pages
         {
             yield return ("İpucu satırı", "Sahnenin altındaki fare ve tuş ipuçları", () => Scene.ShowHint, v => { Scene.ShowHint = v; AppSettings.Current.WorldShowHint = v; });
             yield return ("Tutamaç", "Seçili nesneyi taşıma, döndürme ve ölçekleme tutamacı", () => Scene.ShowGizmo, v => { Scene.ShowGizmo = v; AppSettings.Current.WorldShowGizmo = v; });
+            yield return ("Teknik vurgu", "Seçili nesnenin kabloları, bağlantıları (bağlantı noktası ve ekseni), ağırlık merkezi ve yanında kütlesi", () => Scene.ShowTechnical, v => { Scene.ShowTechnical = v; AppSettings.Current.WorldShowTechnical = v; });
             yield return ("Sensör kaplamaları", "Mesafe sensörlerinin ışınları, kameraların ve lidarların görüş alanları", () => Scene.ShowSensorOverlays, v => { Scene.ShowSensorOverlays = v; AppSettings.Current.WorldShowSensorOverlays = v; });
             yield return ("Izgara", "Zemindeki ızgara çizgileri (yakalama değişmez)", () => AppSettings.Current.WorldGridShown, v => { AppSettings.Current.WorldGridShown = v; ApplyGridSettings(); });
             yield return ("Görünüm küpü", "Sağ üstteki küp: bir yüzüne ya da köşesine tıklayınca o yönden bakılır", () => AppSettings.Current.WorldShowViewCube, v =>
@@ -39,6 +40,8 @@ namespace RobotWin.Studio.Pages
             Scene.ShowHint = AppSettings.Current.WorldShowHint;
             Scene.ShowGizmo = AppSettings.Current.WorldShowGizmo;
             Scene.ShowSensorOverlays = AppSettings.Current.WorldShowSensorOverlays;
+            Scene.ShowTechnical = AppSettings.Current.WorldShowTechnical;   // [technical]
+            Scene.EstimatedMassGrams = o => Scene.World is { } w ? EstimateMass(w, o) : 0;
         }
 
         private void OnOverlayMenu(object sender, RoutedEventArgs e) => ShowOverlayMenu(sender as UIElement ?? Scene);
