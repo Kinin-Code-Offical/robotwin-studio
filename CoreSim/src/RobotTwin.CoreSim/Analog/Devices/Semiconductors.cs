@@ -562,12 +562,21 @@ namespace RobotTwin.CoreSim.Analog.Devices
         public double Vds { get; private set; }
         public double Power { get; private set; }
 
-        /// <summary>Derives K from the datasheet on-resistance measured at a given gate drive.</summary>
-        public void SetOnResistance(double rdsOn, double atGateVoltage)
+        /// <summary>
+        /// Derives K from the datasheet on-resistance measured at a given gate drive and, when given, drain current: at
+        /// that current the drain sits at V_ds = R·I, and the triode equation I = K·(V_ov·V_ds − V_ds²/2)·(1 + λ·V_ds) gives
+        /// K (a datasheet's R_ds(on) is at its test current: tens of amperes for a power part, where V_ds is no longer
+        /// small). Without a current (or past the triode region) the small-signal value K = 1 / (R·V_ov).
+        /// </summary>
+        public void SetOnResistance(double rdsOn, double atGateVoltage, double atCurrent = 0.0)
         {
             double overdrive = Math.Abs(atGateVoltage) - Threshold;
             if (overdrive <= 0.0) throw new ArgumentException("Kapı gerilimi eşik geriliminden büyük olmalı.");
-            Transconductance = 1.0 / (rdsOn * overdrive);
+            double i = Math.Abs(atCurrent), vds = rdsOn * i;
+            if (i > 0.0 && vds < 0.5 * overdrive)
+                Transconductance = i / ((overdrive * vds - 0.5 * vds * vds) * (1.0 + ChannelModulation * vds));
+            else
+                Transconductance = 1.0 / (rdsOn * overdrive);
         }
 
         public override bool IsNonlinear => true;

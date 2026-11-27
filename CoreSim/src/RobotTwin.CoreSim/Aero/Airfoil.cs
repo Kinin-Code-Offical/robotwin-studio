@@ -53,6 +53,36 @@ namespace RobotTwin.CoreSim.Aero
     /// </list>
     /// Section data of the presets are approximations of published wind-tunnel results (sources per preset).
     /// </summary>
+    /// <summary>
+    /// [aero] A thin section's leading-edge stall, its numbers fitted to NACA 0012's published table (Sheldahl &amp; Klimas
+    /// 1981, SAND80-2114, Table 2, Re 8·10⁴…2·10⁶): the lift line rounds off from 0.8·C_l,max to its peak; past it the
+    /// separated flow's lift rises ≈ 0.054 per degree from an angle that moves ≈ 1° earlier per e-fold of Re (8.7° at
+    /// Re 3.6·10⁵); the fall onto it is ≈ 1.35° wide at Re 3.6·10⁵, ≈ 1.3° wider per e-fold, and abrupt below ~2·10⁵.
+    /// </summary>
+    public sealed class LeadingEdgeStall
+    {
+        /// <summary>Where the lift line starts to round off, as a fraction of C_l,max.</summary>
+        public double Rounding { get; init; } = 0.8;
+
+        /// <summary>The separated branch's lift slope (1/rad).</summary>
+        public double SeparatedSlope { get; init; } = 0.054 * 180 / Math.PI;
+
+        /// <summary>The angle (rad from zero lift) the separated branch starts from, at <see cref="ReferenceReynolds"/>.</summary>
+        public double SeparatedOffset { get; init; } = 8.7 * Math.PI / 180;
+
+        /// <summary>How much earlier (rad) the branch starts per e-fold of Re.</summary>
+        public double SeparatedOffsetPerLnRe { get; init; } = 1.0 * Math.PI / 180;
+
+        /// <summary>The fall's width (rad) at <see cref="ReferenceReynolds"/>, its growth per e-fold of Re and its least.</summary>
+        public double Width { get; init; } = 1.35 * Math.PI / 180;
+
+        public double WidthPerLnRe { get; init; } = 1.3 * Math.PI / 180;
+
+        public double MinimumWidth { get; init; } = 0.3 * Math.PI / 180;
+
+        public double ReferenceReynolds { get; init; } = 3.6e5;
+    }
+
     public sealed class ParametricAirfoil : IAirfoilPolar
     {
         public string Name { get; init; } = "Airfoil";
@@ -92,17 +122,25 @@ namespace RobotTwin.CoreSim.Aero
 
         public double ThicknessRatio { get; init; } = 0.12;
 
+        /// <summary>
+        /// [aero] A thin section's leading-edge stall (null: the linear lift line straight into the Viterna post-stall):
+        /// the lift line rounds off before its peak, then the lift falls onto the separated flow's branch, sharply at low
+        /// Reynolds numbers and over a few degrees at high ones, as published section data show.
+        /// </summary>
+        public LeadingEdgeStall? LeadingEdgeStall { get; init; }
+
         /// <summary>Aspect ratio used for the post-stall C_D,max (set by the wing; 2-D sections use a large value).</summary>
         public double AspectRatio { get; init; } = 10;
 
-        public double StallAngle => ZeroLiftAngle + ClMax / LiftSlope;
+        public double StallAngle => ZeroLiftAngle + (LeadingEdgeStall is { } les ? 2 - les.Rounding : 1) * ClMax / LiftSlope;
 
         public double CdMax => 1.11 + 0.018 * Math.Min(50, Math.Max(0, AspectRatio));
 
         public ParametricAirfoil WithAspectRatio(double ar) => new ParametricAirfoil
         {
             Name = Name, LiftSlope = LiftSlope, ZeroLiftAngle = ZeroLiftAngle, ClMax = ClMax, ClMin = ClMin, Cd0 = Cd0, ClMinDrag = ClMinDrag,
-            DragFactor = DragFactor, Cm0 = Cm0, ReferenceReynolds = ReferenceReynolds, ClMaxReynoldsSlope = ClMaxReynoldsSlope, ThicknessRatio = ThicknessRatio, AspectRatio = ar
+            DragFactor = DragFactor, Cm0 = Cm0, ReferenceReynolds = ReferenceReynolds, ClMaxReynoldsSlope = ClMaxReynoldsSlope, ThicknessRatio = ThicknessRatio, AspectRatio = ar,
+            LeadingEdgeStall = LeadingEdgeStall
         };
 
         public SectionCoefficients Evaluate(double alpha, double flapEffect, double reynolds)
@@ -124,6 +162,8 @@ namespace RobotTwin.CoreSim.Aero
             double aEff = a + flapEffect;
             double clLin = LiftSlope * (aEff - ZeroLiftAngle);
             double cmFlap = FlapMoment(flapEffect);
+            if (LeadingEdgeStall is { } les && Math.Abs(a) < Math.PI / 2)
+                return ThinSectionStall(les, a, flapEffect, re, cd0, clMax, clMin, clLin, cmFlap);
             double alphaStall = ZeroLiftAngle - flapEffect + clMax / LiftSlope;      // geometric α at positive stall
             double alphaNeg = ZeroLiftAngle - flapEffect + clMin / LiftSlope;        // geometric α at negative stall
             if (a <= alphaStall && a >= alphaNeg)
@@ -174,6 +214,50 @@ namespace RobotTwin.CoreSim.Aero
             return new SectionCoefficients(cl, cd, cm);
         }
 
+        /// <summary>
+        /// [aero] Lift and drag up to ±90° with a thin section's leading-edge stall: the lift line, rounded from
+        /// <see cref="LeadingEdgeStall.Rounding"/>·C_l,max to its peak; past the peak a fall (Gaussian in the angle, its
+        /// width growing with ln Re) onto the lower of the separated branch (a line rising from near zero) and the Viterna
+        /// flat-plate curve; the drag goes from the attached polar to Viterna's with the same fall.
+        /// </summary>
+        private SectionCoefficients ThinSectionStall(LeadingEdgeStall les, double a, double flapEffect, double re, double cd0, double clMax, double clMin, double clLin, double cmFlap)
+        {
+            bool positive = clLin >= 0;
+            double peak = Math.Max(0.05, positive ? clMax : -clMin);
+            double l = Math.Abs(clLin);
+            double c1 = les.Rounding * peak, lPeak = 2 * peak - c1;
+            double CdAttached(double cl) => cd0 + DragFactor * (cl - ClMinDrag) * (cl - ClMinDrag);
+            if (l <= lPeak)
+            {
+                // the lift line, then its rounding: zero slope at the peak
+                double m = l <= c1 ? l : l - (l - c1) * (l - c1) / (4 * (peak - c1));
+                double cl = positive ? m : -m;
+                return new SectionCoefficients(cl, CdAttached(cl), Cm0 + cmFlap);
+            }
+
+            // past the peak: angles towards the stalled side, from the zero-lift line
+            double x = Math.Abs(a + flapEffect - ZeroLiftAngle);
+            double xPeak = lPeak / LiftSlope;
+            double lnRe = Math.Log(re / les.ReferenceReynolds);
+            double offset = les.SeparatedOffset - les.SeparatedOffsetPerLnRe * lnRe;
+            double width = Math.Max(les.MinimumWidth, les.Width + les.WidthPerLnRe * lnRe);
+            double separated = Math.Max(0, les.SeparatedSlope * (x - offset));
+            double sStall = Math.Min(Math.PI / 2 - 0.05, Math.Max(1e-3, xPeak));
+            double cdPeak = CdAttached(peak);
+            var (vCl, vCd) = Viterna(Math.Max(sStall, x), sStall, peak, cdPeak);
+            double target = Math.Min(separated, vCl);
+            double g = Math.Exp(-((x - xPeak) / width) * ((x - xPeak) / width));
+            double clMag = target + (peak - target) * g;
+            double cd = Math.Max(cd0, cdPeak * g + vCd * (1 - g));
+            double clOut = positive ? clMag : -clMag;
+            // pitching moment as in the post-stall: the normal force's centre of pressure moving aft
+            double cn = clOut * Math.Cos(a) + cd * Math.Sin(a);
+            double xcp = 0.25 + 0.25 * (x - sStall) / Math.Max(1e-3, Math.PI / 2 - sStall);
+            double w = 1 - g;
+            double cmv = (Cm0 + cmFlap) * (1 - w) - cn * (xcp - 0.25) * w;
+            return new SectionCoefficients(clOut, cd, cmv);
+        }
+
         private (double Cl, double Cd) Viterna(double x, double stall, double clS, double cdS)
         {
             double b1 = CdMax;
@@ -203,7 +287,8 @@ namespace RobotTwin.CoreSim.Aero
         public static ParametricAirfoil Naca0012 => new ParametricAirfoil
         {
             Name = "NACA 0012", LiftSlope = 0.11 * 180 / Math.PI, ZeroLiftAngle = 0, ClMax = 0.98, ClMin = -0.98, Cd0 = 0.0080, ClMinDrag = 0,
-            DragFactor = 0.008, Cm0 = 0, ReferenceReynolds = 3.6e5, ClMaxReynoldsSlope = 0.153, ThicknessRatio = 0.12
+            DragFactor = 0.008, Cm0 = 0, ReferenceReynolds = 3.6e5, ClMaxReynoldsSlope = 0.153, ThicknessRatio = 0.12,
+            LeadingEdgeStall = new LeadingEdgeStall()
         };
 
         /// <summary>

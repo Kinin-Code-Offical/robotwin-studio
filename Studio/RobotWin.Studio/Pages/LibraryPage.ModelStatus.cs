@@ -18,7 +18,7 @@ namespace RobotWin.Studio.Pages
     public partial class LibraryPage
     {
         /// <summary>The part's model status as (badge, state, what it means); state: 2 there, 1 partial, 0 not.</summary>
-        internal static List<(string Name, int State, string Tip)> ModelStatus(PartDefinition def, IReadOnlyDictionary<string, string> parameters)
+        internal static List<(string Name, int State, string Tip)> ModelStatus(PartDefinition def, IReadOnlyDictionary<string, string> parameters, string? presetId = null)
         {
             var list = new List<(string, int, string)>();
             bool electrical = def.Build != null;
@@ -39,6 +39,15 @@ namespace RobotWin.Studio.Pages
             if (Mechanical(def, parameters, model3d) is { } mech) list.Add(mech);
             if (Firmware.ArduinoCompiler.FqbnFor(def.Id) != null)
                 list.Add(("Firmware", 2, "Programlanabilir kart: Kod sayfasında yazılır, derlenir ve simülasyonda çalışır"));
+            // [datasheet] the part number's figures from its maker's datasheet, the model simulated against them
+            if (presetId != null && DatasheetChecks.Results(presetId) is { Count: > 0 } checks)
+            {
+                int pass = checks.Count(r => r.Pass);
+                list.Add(("Veri sayfası", pass == checks.Count ? 2 : 1, pass == checks.Count
+                    ? $"Model veri sayfasının {checks.Count} değerinin hepsini tutturuyor (aşağıda)"
+                    : $"Model veri sayfasının {checks.Count} değerinden {checks.Count - pass} tanesinin dışında (aşağıda)"));
+            }
+
             var limits = ModelLimits.Of(def.Id);
             list.Add(("Model sınırları", limits.Count == 0 ? 2 : 1, limits.Count == 0 ? "Modelin bilinen bir eksiği not edilmedi" : $"Modelin {limits.Count} bilinen eksiği var (aşağıda)"));
             return list;
@@ -124,11 +133,65 @@ namespace RobotWin.Studio.Pages
             Detail.Children.Add(grid);
         }
 
+        /// <summary>
+        /// [datasheet] The part number against its datasheet (only when it has checks): each figure with its conditions,
+        /// the model's value, the datasheet's typical value and range, and whether it falls in; the source under them.
+        /// </summary>
+        private void AddDatasheetTable(string presetId)
+        {
+            var results = DatasheetChecks.Results(presetId);
+            if (results.Count == 0) return;
+            Detail.Children.Add(new TextBlock { Text = Lang.T("Veri sayfasıyla karşılaştırma"), Style = (Style)FindResource("Text.Overline"), Margin = new Thickness(0, 0, 0, 6) });
+            var grid = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+            foreach (double w in new[] { 0.0, 70, 110, 16 }) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = w > 0 ? new GridLength(w) : new GridLength(1, GridUnitType.Star) });
+            int row = 0;
+            void Cell(UIElement e, int col)
+            {
+                Grid.SetRow(e, row);
+                Grid.SetColumn(e, col);
+                grid.Children.Add(e);
+            }
+
+            TextBlock Text(string s, bool head = false, bool wrap = false) => new TextBlock
+            {
+                Text = s, FontSize = 12, Margin = new Thickness(0, 2, 8, 2), TextWrapping = wrap ? TextWrapping.Wrap : TextWrapping.NoWrap,
+                TextTrimming = TextTrimming.CharacterEllipsis, FontWeight = head ? FontWeights.SemiBold : FontWeights.Normal,
+            };
+
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Cell(Text(string.Empty, true), 0);
+            Cell(Text(Lang.T("Model"), true), 1);
+            Cell(Text(Lang.T("Veri sayfası"), true), 2);
+            foreach (var r in results)
+            {
+                row++;
+                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                var c = r.Check;
+                string F(double v) => (v / c.Scale).ToString(Math.Abs(v / c.Scale) >= 100 ? "0" : "0.###", System.Globalization.CultureInfo.CurrentCulture);
+                string range = double.IsNegativeInfinity(c.Low) || c.Low == 0 ? Lang.T("en çok") + " " + F(c.High) : double.IsPositiveInfinity(c.High) ? Lang.T("en az") + " " + F(c.Low) : F(c.Low) + " … " + F(c.High);
+                string sheet = double.IsNaN(c.Typical) ? range : Lang.T("tipik") + " " + F(c.Typical) + " (" + range + ")";
+                var q = Text(Lang.T(c.Quantity), wrap: true);
+                q.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
+                Cell(q, 0);
+                Cell(Text(double.IsFinite(r.Value) ? F(r.Value) + " " + c.Unit : "—"), 1);
+                var s = Text(sheet + " " + c.Unit, wrap: true);
+                s.SetResourceReference(TextBlock.ForegroundProperty, "B.TextSecondary");
+                Cell(s, 2);
+                var dot = new System.Windows.Shapes.Ellipse { Width = 7, Height = 7, VerticalAlignment = VerticalAlignment.Center, ToolTip = Lang.T(r.Pass ? "Aralıkta" : "Aralığın dışında") };
+                dot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, r.Pass ? "B.Success" : "B.Danger");
+                Cell(dot, 3);
+            }
+
+            Detail.Children.Add(grid);
+            var source = new TextBlock { Text = string.Join(" · ", results.Select(x => x.Check.Source).Distinct()), Style = (Style)FindResource("Text.Caption"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 14) };
+            Detail.Children.Add(source);
+        }
+
         /// <summary>The badges in the part's detail, under its title.</summary>
-        private void AddModelStatus(PartDefinition def, IReadOnlyDictionary<string, string> parameters)
+        private void AddModelStatus(PartDefinition def, IReadOnlyDictionary<string, string> parameters, string? presetId = null)
         {
             var row = new WrapPanel { Margin = new Thickness(0, 0, 0, 14) };
-            foreach (var (name, state, tip) in ModelStatus(def, parameters))
+            foreach (var (name, state, tip) in ModelStatus(def, parameters, presetId))
             {
                 var dot = new System.Windows.Shapes.Ellipse { Width = 7, Height = 7, Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center };
                 dot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, state == 2 ? "B.Success" : state == 1 ? "B.Warning" : "B.TextMuted");

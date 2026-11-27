@@ -97,7 +97,9 @@ Yığında bloklar ikide bir 2 mm kaydırılmıştır, hiçbir arayüz simetrik 
 | Derin stall 45° / 60° / 90° (Re 3,6·10⁵): C_l | 1,085 / 0,875 / 0,070 | 1,080 / 0,901 / 0,000 | −0,005 / +0,026 / −0,07 | ±0,1 |
 | Aynı, C_d | 1,075 / 1,470 / 1,800 | 0,982 / 1,491 / 2,010 | −9 / +1 / +12 % | ±15 % |
 
-Stall'ın hemen ardından tablo kaldırmanın keskin düştüğünü gösterir (Re 3,6·10⁵'te 12°'de 0,48, 14°'de 0,29, sonra 30°'ye doğru düz levhanın 0,9'una yükselir); model bu aralıkta kaldırmayı 0,9 civarında tutar. Yani düşük hızda stall'a giren bir model uçak, modelde gerçekte olduğundan daha az kaldırma kaybeder. Bilinen bir sınırdır; test bu satırları yazar ama denetlemez.
+| Aynı tablo, stall'ın hemen ardı (11–25°, Re 1,6·10⁵ / 3,6·10⁵ / 7·10⁵ / 10⁶ / 2·10⁶; 30 nokta): kaldırmanın ayrılmış akışa düşüşü | örn. Re 3,6·10⁵: 12° 0,483, 14° 0,289, 20° 0,612 | 0,491 / 0,288 / 0,610 | ortalama \|ΔC_l\| 0,022, en çok 0,073 | ortalama 0,04, en çok 0,12 |
+
+Stall'dan sonra kaldırma, Re'den neredeyse bağımsız bir doğruya (ayrılmış akış, derece başına ≈ 0,054) düşer; düşüş Re 1,6·10⁵'te bir dereceden kısa sürer, 10⁶'da birkaç dereceye yayılır. Model bu ikisini tablodan alır (`LeadingEdgeStall`); düşük hızda stall'a giren model uçak kaldırmanın çoğunu gerçekteki gibi birden kaybeder.
 
 | Dört çubuk bağlantısı, 45° kol → yüzey | 20,7° | 20,69° | −0,05 % | ±0,5° |
 | Model roket Cd (OpenRocket sınıfı) | 0,5–0,7 | 0,64 | aralıkta | 0,4–0,8 |

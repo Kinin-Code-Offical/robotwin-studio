@@ -28,7 +28,7 @@ namespace RobotTwin.CoreSim.Design
             ["nmos"] = new[] { "Seviye 1 (Shichman–Hodges): kısa kanal etkileri, eşik altı iletim ve eşiğin sıcaklıkla kayması yok." },
             ["pmos"] = new[] { "Seviye 1 (Shichman–Hodges): kısa kanal etkileri, eşik altı iletim ve eşiğin sıcaklıkla kayması yok." },
             ["opamp"] = new[] { "Makro model: giriş kutuplama akımı, gürültü ve ikinci kutup yok." },
-            ["regulator"] = new[] { "Doğrusal regülatörün geçici tepkisi ve besleme bastırması (PSRR) frekansla değişmez." },
+            ["regulator"] = new[] { "Doğrusal regülatörün besleme bastırması (PSRR) frekansla değişmez; çıkış empedansı (yük geçici tepkisi) LM7805'te veri sayfasının eğrisinden, AMS1117 ve LD1117'de sonsuz hızlı döngüyle." },
             ["buck-module"] = new[]
             {
                 "Anahtarlama periyodu üzerinden ortalamalı model: çıkış dalgalanması (ripple) ve EMI yok.",

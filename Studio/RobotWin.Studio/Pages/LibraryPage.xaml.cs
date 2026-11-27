@@ -68,7 +68,7 @@ namespace RobotWin.Studio.Pages
             {
                 // The sub-categories of the picked one, on a line of their own.
                 Categories.Children.Add(new Border { Width = 4000, Height = 0 });
-                Categories.Children.Add(new TextBlock { Text = main + " ›", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2, 0, 8, 4), Foreground = (Brush)FindResource("B.TextMuted") });
+                Categories.Children.Add(new TextBlock { Text = Lang.T(main) + " ›", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2, 0, 8, 4), Foreground = (Brush)FindResource("B.TextMuted") });
                 foreach (var (s, n) in subs)
                 {
                     string tag = main + RobotTwin.CoreSim.Design.PartCategories.Separator + s;
@@ -179,8 +179,9 @@ namespace RobotWin.Studio.Pages
             Detail.Children.Add(new TextBlock { Text = RobotTwin.CoreSim.Design.PartCategories.PathOf(preset), Style = (Style)FindResource("Text.Overline") });
             Detail.Children.Add(new TextBlock { Text = preset.Name, Style = (Style)FindResource("Text.Title"), TextWrapping = TextWrapping.Wrap });
             Detail.Children.Add(new TextBlock { Text = preset.Description, Style = (Style)FindResource("Text.Body"), Margin = new Thickness(0, 6, 0, 12), TextWrapping = TextWrapping.Wrap });
-            AddModelStatus(def, parameters);   // [badges] Pages/LibraryPage.ModelStatus.cs
+            AddModelStatus(def, parameters, preset.Id);   // [badges] Pages/LibraryPage.ModelStatus.cs
             AddSourceInfo(preset, parameters);   // [libs] maker, part number, source, licence
+            AddDatasheetTable(preset.Id);   // [datasheet] the model against its datasheet, when it has checks
             AddSpecTable(def, parameters);
 
             var place = new Button { Style = (Style)FindResource("Btn.Primary"), Content = "Devreye ekle", Margin = new Thickness(0, 0, 8, 8) };   // [align] the same height and spacing as its neighbours

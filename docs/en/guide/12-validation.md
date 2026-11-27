@@ -97,7 +97,9 @@ Every other block of the stack is 2 mm off centre, so no interface is symmetric.
 | Deep stall 45° / 60° / 90° (Re 3.6·10⁵): C_l | 1.085 / 0.875 / 0.070 | 1.080 / 0.901 / 0.000 | −0.005 / +0.026 / −0.07 | ±0.1 |
 | Same, C_d | 1.075 / 1.470 / 1.800 | 0.982 / 1.491 / 2.010 | −9 / +1 / +12 % | ±15 % |
 
-Just past the stall the table shows the lift falling sharply (at Re 3.6·10⁵: 0.48 at 12°, 0.29 at 14°, then rising toward the flat plate's 0.9 by 30°); the model keeps the lift near 0.9 there. A model plane stalling at low speed therefore loses less lift in the model than it really would. This is a known limit; the test prints these rows but does not check them.
+| Same table, just past the stall (11–25°, Re 1.6·10⁵ / 3.6·10⁵ / 7·10⁵ / 10⁶ / 2·10⁶; 30 points): the lift falling onto the separated flow's | e.g. Re 3.6·10⁵: 12° 0.483, 14° 0.289, 20° 0.612 | 0.491 / 0.288 / 0.610 | mean \|ΔC_l\| 0.022, largest 0.073 | mean 0.04, largest 0.12 |
+
+Past the stall the lift falls onto a line almost independent of Re (the separated flow's, ≈ 0.054 per degree); the fall takes less than a degree at Re 1.6·10⁵ and spreads over a few degrees at 10⁶. The model takes both from the table (`LeadingEdgeStall`), so a model plane stalling at low speed loses most of its lift at once, as a real one does.
 
 | Four-bar linkage, 45° horn → surface | 20.7° | 20.69° | −0.05 % | ±0.5° |
 | Model rocket Cd (OpenRocket class) | 0.5–0.7 | 0.64 | in range | 0.4–0.8 |

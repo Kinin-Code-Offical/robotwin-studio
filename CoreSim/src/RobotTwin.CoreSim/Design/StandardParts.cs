@@ -481,13 +481,13 @@ namespace RobotTwin.CoreSim.Design
                     GateSourceCapacitance = c.Num("cgs", 0),
                     GateDrainCapacitance = c.Num("cgd", 0)
                 });
-                m.SetOnResistance(c.Num("rdson", 0.1), c.Num("vgsrdson", 10));
+                m.SetOnResistance(c.Num("rdson", 0.1), c.Num("vgsrdson", 10), c.Num("idrdson", 0));   // [datasheet] at its test current
             };
 
             ParameterDefinition[] fetParams =
             {
                 P("model", "Model", "IRLZ44N"), P("vth", "Eşik gerilimi", "1.5", "V"), P("rdson", "Rds(on)", "0.022", "Ω"),
-                P("vgsrdson", "Rds(on) Vgs", "5", "V"), P("vds", "Maks. Vds", "55", "V"), P("vgsmax", "Maks. Vgs", "16", "V"),
+                P("vgsrdson", "Rds(on) Vgs", "5", "V"), P("idrdson", "Rds(on) Id", "0", "A"), P("vds", "Maks. Vds", "55", "V"), P("vgsmax", "Maks. Vgs", "16", "V"),
                 P("rth", "Rth", "62", "K/W"), P("cgs", "Cgs", "1.5n", "F"), P("cgd", "Cgd", "0.2n", "F"), P("pinout", "Bacak sırası", "GDS"),
                 P("vthspread", "Vth dağılımı", "25", "%")
             };
@@ -497,19 +497,20 @@ namespace RobotTwin.CoreSim.Design
             Def(lib, "pmos", "P-Kanal MOSFET", Semiconductor, "Q", SymbolKind.Pmos, "TO220", "model", Fet(Polarity.P), fetParams)
                 .Pin("G", "1", -3, 0).Pin("S", "3", 1, -3).Pin("D", "2", 1, 3).Size(2, 2);
 
-            Preset(lib, "irlz44n", "IRLZ44N", "nmos", Semiconductor, "Lojik seviye N-MOSFET, 55 V 47 A (Arduino ile sürülebilir)");
+            // [datasheet] R_ds(on) at the datasheet's own test current (idrdson): DatasheetChecks compares them
+            Preset(lib, "irlz44n", "IRLZ44N", "nmos", Semiconductor, "Lojik seviye N-MOSFET, 55 V 47 A (Arduino ile sürülebilir)", "model=IRLZ44N;idrdson=25");
             Preset(lib, "irfz44n", "IRFZ44N", "nmos", Semiconductor, "N-MOSFET, 55 V 49 A (10 V kapı gerekir)",
-                "model=IRFZ44N;vth=3;rdson=0.0175;vgsrdson=10;vgsmax=20;cgs=1.3n;cgd=0.2n");
+                "model=IRFZ44N;vth=3;rdson=0.0175;vgsrdson=10;idrdson=25;vgsmax=20;cgs=1.3n;cgd=0.2n");
             Preset(lib, "irf540n", "IRF540N", "nmos", Semiconductor, "N-MOSFET, 100 V 33 A",
-                "model=IRF540N;vth=3;rdson=0.044;vgsrdson=10;vds=100;vgsmax=20;cgs=1.8n;cgd=0.15n");
+                "model=IRF540N;vth=3;rdson=0.044;vgsrdson=10;idrdson=16;vds=100;vgsmax=20;cgs=1.8n;cgd=0.15n");
             Preset(lib, "2n7000", "2N7000", "nmos", Semiconductor, "Küçük sinyal N-MOSFET, 60 V 200 mA (TO-92)",
-                "model=2N7000;vth=2.1;rdson=1.8;vgsrdson=10;vds=60;vgsmax=20;rth=312;cgs=20p;cgd=5p;pinout=SGD;footprint=TO92");
+                "model=2N7000;vth=2.1;rdson=1.8;vgsrdson=10;idrdson=0.5;vds=60;vgsmax=20;rth=312;cgs=20p;cgd=5p;pinout=SGD;footprint=TO92");
             Preset(lib, "bs170", "BS170", "nmos", Semiconductor, "Küçük sinyal N-MOSFET, 60 V 500 mA (TO-92)",
-                "model=BS170;vth=2.1;rdson=1.2;vgsrdson=10;vds=60;vgsmax=20;rth=312;cgs=24p;cgd=5p;pinout=DGS;footprint=TO92");
+                "model=BS170;vth=2.1;rdson=1.2;vgsrdson=10;idrdson=0.2;vds=60;vgsmax=20;rth=312;cgs=24p;cgd=5p;pinout=DGS;footprint=TO92");
             Preset(lib, "ao3400", "AO3400 (SOT-23)", "nmos", Semiconductor, "Lojik seviye N-MOSFET, 30 V 5.7 A",
                 "model=AO3400;vth=1.05;rdson=0.033;vgsrdson=4.5;vds=30;vgsmax=12;rth=125;cgs=0.6n;cgd=0.08n;pinout=GSD;footprint=SOT23");
             Preset(lib, "irf9540n", "IRF9540N", "pmos", Semiconductor, "P-MOSFET, -100 V -23 A",
-                "model=IRF9540N;vth=3;rdson=0.117;vgsrdson=10;vds=100;vgsmax=20;cgs=1.2n;cgd=0.15n");
+                "model=IRF9540N;vth=3;rdson=0.117;vgsrdson=10;idrdson=11;vds=100;vgsmax=20;cgs=1.2n;cgd=0.15n");
             Preset(lib, "ao3401", "AO3401 (SOT-23)", "pmos", Semiconductor, "Lojik seviye P-MOSFET, -30 V -4 A",
                 "model=AO3401;vth=0.9;rdson=0.06;vgsrdson=4.5;vds=30;vgsmax=12;rth=125;cgs=0.6n;cgd=0.08n;pinout=GSD;footprint=SOT23");
         }
@@ -608,7 +609,7 @@ namespace RobotTwin.CoreSim.Design
 
             // [regulator] TI SNOSBT0L: output resistance 8 mΩ at 1 kHz; Figure 7 (no output capacitor) rises like 0.5 µH above
             // ~2 kHz and levels near 1 Ω toward 1 MHz
-            Preset(lib, "lm7805", "LM7805", "regulator", Power, "5 V 1.5 A lineer regülatör (TO-220)", "model=LM7805;rout=0.008;lout=0.5u;rol=1.2");
+            Preset(lib, "lm7805", "LM7805", "regulator", Power, "5 V 1.5 A lineer regülatör (TO-220)");   // the regulator part's defaults are the LM7805's
             Preset(lib, "lm7809", "LM7809", "regulator", Power, "9 V 1.5 A lineer regülatör (TO-220)", "model=LM7809;vout=9");
             Preset(lib, "lm7812", "LM7812", "regulator", Power, "12 V 1.5 A lineer regülatör (TO-220)", "model=LM7812;vout=12");
             Preset(lib, "ams1117-3v3", "AMS1117-3.3", "regulator", Power, "3.3 V 1 A LDO (SOT-223)",

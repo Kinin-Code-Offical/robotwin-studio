@@ -11,8 +11,8 @@ namespace RobotTwin.CoreSim.Tests
     /// "Aerodynamic Characteristics of Seven Symmetrical Airfoil Sections Through 180-Degree Angle of Attack" (Sandia
     /// SAND80-2114, 1981), Table 2: the attached flow and the drag at Re = 360 000, the stall (C_l,max and its angle) at
     /// six Reynolds numbers from 8·10⁴ to 2·10⁶, and the deep stall to 90° (a 2-D section: the Viterna model at its
-    /// flat-plate limit, aspect ratio 50). Just past the stall the table's lift falls sharply (0.29 at 14° for Re 3.6·10⁵)
-    /// while the model keeps it up: that range is printed, not asserted, and the guide says so.
+    /// flat-plate limit, aspect ratio 50), and the fall just past the stall onto the separated flow's lift at five
+    /// Reynolds numbers (sharp at 1.6·10⁵, over a few degrees at 10⁶).
     /// </summary>
     public class AirfoilValidationTests
     {
@@ -83,8 +83,40 @@ namespace RobotTwin.CoreSim.Tests
                 var (cl, at) = Peak(re);
                 _out.WriteLine($"Re {re,9:0}: C_l,max {cl:0.000} at {at:0.0}° (table {clMax:0.000} at {alpha:0}°, {(cl / clMax - 1) * 100:+0.0;-0.0} %)");
                 Assert.InRange(cl / clMax, 0.94, 1.06);
-                Assert.InRange(at - alpha, -2.0, 1.0);
+                Assert.InRange(at - alpha, -1.0, 1.5);
             }
+        }
+
+        // Table 2 past the stall (C_l at whole degrees)
+        private static readonly (double Re, (double Alpha, double Cl)[] Rows)[] PastStall =
+        {
+            (160_000, new[] { (11.0, 0.1095), (12.0, 0.1533), (13.0, 0.2030), (14.0, 0.2546), (16.0, 0.3620), (18.0, 0.4768), (20.0, 0.5870), (25.0, 0.8572) }),
+            (360_000, new[] { (12.0, 0.4832), (13.0, 0.2759), (14.0, 0.2893), (16.0, 0.3792), (18.0, 0.5047), (20.0, 0.6120), (25.0, 0.8780) }),
+            (700_000, new[] { (14.0, 0.6284), (15.0, 0.4907), (16.0, 0.4696), (17.0, 0.5195), (18.0, 0.5584), (20.0, 0.6474) }),
+            (1_000_000, new[] { (14.0, 0.8846), (15.0, 0.7108), (16.0, 0.6060), (17.0, 0.5906), (18.0, 0.6030), (20.0, 0.6716) }),
+            (2_000_000, new[] { (14.0, 1.1614), (15.0, 1.0478), (16.0, 0.9221) }),
+        };
+
+        [Fact]
+        public void PastTheStallTheLiftFallsOntoTheSeparatedFlowsAsInTheTable()
+        {
+            double worst = 0, sum = 0;
+            int n = 0;
+            foreach (var (re, rows) in PastStall)
+            {
+                foreach (var (a, cl) in rows)
+                {
+                    double m = Foil.Evaluate(a * Math.PI / 180, 0, re).Cl;
+                    _out.WriteLine($"Re {re,9:0} {a,4:0}°: C_l {m:0.000} (table {cl:0.000}, {m - cl:+0.000;-0.000})");
+                    worst = Math.Max(worst, Math.Abs(m - cl));
+                    sum += Math.Abs(m - cl);
+                    n++;
+                }
+            }
+
+            _out.WriteLine($"past the stall: mean |ΔC_l| {sum / n:0.000}, largest {worst:0.000} over {n} points");
+            Assert.True(sum / n < 0.04, $"mean {sum / n:0.000}");
+            Assert.True(worst < 0.12, $"largest {worst:0.000}");
         }
     }
 }
