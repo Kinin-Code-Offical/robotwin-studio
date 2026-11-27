@@ -160,6 +160,12 @@ namespace RobotTwin.CoreSim.Sdk
 
         bool IsStatic { get; }
 
+        /// <summary>
+        /// [rigidbody] Unity's isKinematic: moved only by <see cref="SetVelocity"/> (never by forces, contacts or joints) and
+        /// pushing what it meets. A part fixed in the world cannot be made kinematic.
+        /// </summary>
+        bool IsKinematic { get; set; }
+
         double Mass { get; }
 
         /// <summary>Principal moments of inertia (kg·m²).</summary>

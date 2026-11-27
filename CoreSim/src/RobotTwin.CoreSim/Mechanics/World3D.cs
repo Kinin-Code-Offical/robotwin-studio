@@ -167,6 +167,13 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Static bodies never move (infinite mass).</summary>
         public bool IsStatic { get; set; }
 
+        /// <summary>
+        /// [rigidbody] Unity's Is Kinematic: the body moves only with its own <see cref="Velocity"/> and
+        /// <see cref="AngularVelocity"/> (what a behaviour sets), never by gravity, forces, contacts or joints, and pushes
+        /// what it meets as an infinitely heavy body. It is a static body that moves: <see cref="IsStatic"/> is set with it.
+        /// </summary>
+        public bool IsKinematic { get; set; }
+
         /// <summary>[rigidbody] Unity's Linear Damping: the share of its speed a body loses each second (1/s): grease, a viscous fluid, a brake.</summary>
         public double LinearDamping { get; set; }
 
@@ -379,7 +386,7 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Velocities → pose.</summary>
         internal void IntegratePosition(double dt)
         {
-            if (IsStatic) return;
+            if (IsStatic && !IsKinematic) return;
             var w = AngularVelocity;
             var dq = new Quat(0, w.X, w.Y, w.Z) * Orientation;
             Orientation = new Quat(

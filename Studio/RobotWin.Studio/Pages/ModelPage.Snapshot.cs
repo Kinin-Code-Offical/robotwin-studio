@@ -566,6 +566,32 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "draft":   // [analysis] a moulded cover: tapered boss, straight walls, an off-centre hole, coloured by each analysis
+                case "curvature":
+                case "symmetry":
+                {
+                    var cover = ModelOps.AddMesh(doc, PrimitiveBuilder.Box(60, 40, 8), "Kapak");
+                    cover.Transform.Position = new Vec3(0, 0, 4);
+                    cover.Color = "#9AA4B2";
+                    var boss = ModelOps.AddMesh(doc, PrimitiveBuilder.Cone(9, 7, 12, 48), "Konik çıkıntı");
+                    boss.Transform.Position = new Vec3(14, 0, 14);
+                    boss.Color = "#9AA4B2";
+                    var knob = ModelOps.AddMesh(doc, PrimitiveBuilder.Sphere(5, 32, 16), "Topuz");
+                    knob.Transform.Position = new Vec3(-16, -8, 10);
+                    knob.Color = "#9AA4B2";
+                    HoleWizard.Drill(doc, cover, new Vec3(-18, 10, 8), Vec3.UnitZ, new DrillSpec { Type = HoleType.Clearance, Size = "M4" });
+                    _ed.Load(doc, null);
+                    _ed.Notify(ModelChange.All);
+                    ShowAnalysis(demo == "draft" ? AnalysisMode.Draft : demo == "curvature" ? AnalysisMode.Curvature : AnalysisMode.Symmetry);
+                    if (demo == "symmetry")
+                    {
+                        AnalysisX.IsChecked = true;
+                        UpdateAnalysis();
+                    }
+
+                    break;
+                }
+
                 case "holes":   // [holes] a motor plate with four wizard holes, cut through them by the section view
                 case "holes-dialog":
                 {

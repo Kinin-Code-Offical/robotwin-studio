@@ -517,12 +517,30 @@ namespace RobotWin.Studio.Pages
                 }
             }
 
-            if (args.Contains("--rigidbody"))
+            int rbArg = Array.IndexOf(args, "--rigidbody");
+            if (rbArg >= 0)
             {
-                _rigidbodyOpen = true;   // [rigidbody] the Fizik card's damping and constraints, open, as the picture
+                if (rbArg + 1 < args.Length && args[rbArg + 1] == "demo" && World is { } rw)
+                {
+                    // [rigidbody] a kinematic table with its velocity, and a centre of mass and inertia given by hand
+                    var table = new WorldObject
+                    {
+                        Id = rw.NextId("O"), Name = "Taşıyıcı tabla", Kind = WorldObjectKind.Body, Shape = "box", SizeX = 0.2, SizeY = 0.12, SizeZ = 0.02, MassKg = 0.4,
+                        Pose = new WorldPose { X = 0.3, Y = 0.3, Z = 0.05 }
+                    };
+                    table.Parameters[WorldPhysics.KinematicKey] = "1";
+                    table.Parameters[WorldPhysics.KinematicVelocityKey] = "0.05,0,0";
+                    table.Parameters[WorldPhysics.RigidbodyCentreKey] = "0.02,0,-0.004";
+                    table.Parameters[WorldPhysics.RigidbodyInertiaKey] = "0.0005,0.0014,0.0019";
+                    rw.Objects.Add(table);
+                    Scene.Rebuild();
+                    Scene.Select(table.Id);
+                }
+
+                _rigidbodyOpen = true;   // [rigidbody] the Fizik card's advanced settings, open, as the picture
                 BuildInspector();
                 Inspector.UpdateLayout();
-                DependencyObject? card = FindButton(Inspector, "▾ Kısıtlar ve sönüm");
+                DependencyObject? card = FindButton(Inspector, "▾ Gelişmiş fizik");
                 while (card != null && System.Windows.Media.VisualTreeHelper.GetParent(card) != Inspector)
                     card = System.Windows.Media.VisualTreeHelper.GetParent(card);
                 if (card is FrameworkElement fe) fe.BringIntoView();

@@ -178,7 +178,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Kesit özellikleri | Kesit çubuğunda Özellikler…: alan, çevre, ağırlık merkezi, atalet momentleri, asal eksenler, J, atalet yarıçapları, kesit modülleri | var | |
 | Kesit görünümü | Kesit (X/Y/Z, kaydırıcı, ters, kesit yüzü kendi renginde) | var | |
 | Geometri denetimi (kapalı ağ) | Durum: kapalı / açık ağ | var | |
-| Draft, eğrilik, simetri analizi | yok | yok | 3 |
+| Draft, eğrilik, simetri analizi | Analiz: Draft (çekme yönü, en az açı; pozitif / negatif / draft gerekli), Eğrilik (yarıçap bantları, keskin kenarlar hariç), Simetri (gövdelerin ortasından geçen düzlemde aynası olmayan yüzler); renk başına alan ve pay | var | |
 | Gövde karşılaştır | sağ tık ▸ Gövdeleri karşılaştır: iki gövdenin hacmi, alanı, boyutu; ortak hacim ve yalnız birinde olan hacim | var | |
 | SimulationXpress (gerilme) | FEM analizi (Analiz) | var | |
 | FloXpress (akış) | akış analizi | var | |
@@ -263,7 +263,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Bileşen ekle: aranabilir, kategorili liste | Bileşen ekle: arama, kategoriler, Enter, alt kısımda açıklama; eklenen bileşen kendi kartında açık gelir, görünüme kayar, vurgulanır; Kaldır ve ⋮ → Bileşeni kaldır (bileşenler: kabuk, kap, paraşüt, hava, arıza, eşleme, yay, rulman, davranış) | var | |
 | Bileşen ⋮: sıfırla, kaldır, yukarı / aşağı, kopyala, değerleri yapıştır, yeni olarak yapıştır | kaldır, kopyala, değerleri yapıştır, yeni bileşen olarak yapıştır (kabuk, kap, paraşüt, arıza); Fizik'te sıfırla ve değerleri kopyala / yapıştır; Konum'da kopyala / yapıştır / sıfırla (yukarı / aşağı yok: kartların sırası sabit) | var | |
 | Dönüşüm ⋮: konum / dönüş / ölçek / dünya dönüşümü kopyala ve yapıştır, özelliği sıfırla | konum / dönüş kopyala, yapıştır; dönüşü sıfırla; zemine indir | var | |
-| Fizik gövdesi: kütle, doğrusal / açısal sönüm, kütle merkezi ve eylemsizlik otomatik ya da elle, yerçekimi, kinematik, ara değerleme, çarpışma algılama, konum / dönüş kilitleri (X/Y/Z) | kütle, sabit, doğrusal / açısal sönüm, konum / dönüş kilitleri (Kısıtlar ve sönüm); kütle merkezi, kinematik sonra | kısmi | 2 |
+| Fizik gövdesi: kütle, doğrusal / açısal sönüm, kütle merkezi ve eylemsizlik otomatik ya da elle, yerçekimi, kinematik, ara değerleme, çarpışma algılama, konum / dönüş kilitleri (X/Y/Z) | kütle, sabit, kinematik (kendi hızı ve dönüşü, önündekini iter, uyuyanı uyandırır; betikte IsKinematic), kütle merkezi ve eylemsizlik otomatik ya da elle (şekil yerinde kalır), doğrusal / açısal sönüm, konum / dönüş kilitleri (Gelişmiş fizik); çarpışma algılama sürekli (CCD); ara değerleme (interpolation) sonra | kısmi | 3 |
 | Çarpışma şekilleri: kutu, küre, kapsül, ağ, tekerlek, arazi; tetik | çarpışma şekilleri; Tetik bölgesi bileşeni (giriş / çıkış olayları, içindekiler, taşıyıcıyla gider) | var | |
 | Eklemler: menteşe, sabit, yay, karakter, yapılandırılabilir; sınırlar, yaylar, kırılma kuvveti ve torku | menteşe, kızak, sabit, yay ve sönüm, rulman; sınırlar, kırılma kuvveti ve torku (denetçide eklem başına); karakter ve yapılandırılabilir sonra | kısmi | 3 |
 | Kısıtlar: hedefe bak, üst nesne, konum, dönüş, ölçek | Kısıtlar bileşenleri: hedefe bak (bakan eksen, yan yatmaz), konum (izlenen eksenler, uzaklık), dönüş (açı farkı), üst nesne; kaynak seçilince fark korunur, takılı parçalar birlikte gelir; düzenlerken tutar, çalışırken fizik yürütür; ölçek yok (boy gerçek boydur) | var | |

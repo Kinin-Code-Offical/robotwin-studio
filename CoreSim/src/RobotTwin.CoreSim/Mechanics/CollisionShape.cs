@@ -195,6 +195,72 @@ namespace RobotTwin.CoreSim.Mechanics
             return s;
         }
 
+        /// <summary>
+        /// [rigidbody] The same solid moved by <paramref name="d"/> in the body frame (a body whose centre of mass was set
+        /// by hand moves its solid the other way): boxes, hulls and point clouds exactly (their corners and faces moved);
+        /// a sphere or a cylinder, whose round test needs it on the origin, as a fine hull of its surface.
+        /// </summary>
+        public CollisionShape Translated(Vec3 d)
+        {
+            if (d.LengthSquared < 1e-24) return this;
+            switch (Kind)
+            {
+                case ShapeKind.Box:
+                case ShapeKind.ConvexHull:
+                case ShapeKind.Points:
+                    {
+                        var s = new CollisionShape(Kind == ShapeKind.Points ? ShapeKind.Points : ShapeKind.ConvexHull)
+                        {
+                            Verts = new Vec3[Verts.Length],
+                            Planes = new HullPlane[Planes.Length],
+                            FloorPlane = (bool[])FloorPlane.Clone(),
+                            Caster = (bool[])Caster.Clone(),
+                            Volume = Volume,
+                            BoundingRadius = BoundingRadius + d.Length,
+                            LocalCentre = LocalCentre + d,
+                            _localRadius = LocalRadius
+                        };
+                        for (int i = 0; i < Verts.Length; i++) s.Verts[i] = Verts[i] + d;
+                        for (int i = 0; i < Planes.Length; i++) s.Planes[i] = new HullPlane(Planes[i].Normal, Planes[i].Offset + Planes[i].Normal.Dot(d));
+                        return s;
+                    }
+
+                case ShapeKind.Sphere:
+                    {
+                        var pts = new List<Vec3>();
+                        const int rings = 8, segs = 16;   // every corner on the sphere, the poles too
+                        for (int i = 0; i <= rings; i++)
+                        {
+                            double th = Math.PI * i / rings;
+                            for (int j = 0; j < (i == 0 || i == rings ? 1 : segs); j++)
+                            {
+                                double ph = 2 * Math.PI * j / segs;
+                                pts.Add(new Vec3(Radius * Math.Sin(th) * Math.Cos(ph), Radius * Math.Sin(th) * Math.Sin(ph), Radius * Math.Cos(th)) + d);
+                            }
+                        }
+
+                        return ConvexHull(pts, pts.Count);
+                    }
+
+                case ShapeKind.Cylinder:
+                    {
+                        var pts = new List<Vec3>();
+                        const int segs = 48;
+                        for (int j = 0; j < segs; j++)
+                        {
+                            double ph = 2 * Math.PI * j / segs;
+                            pts.Add(new Vec3(Radius * Math.Cos(ph), Radius * Math.Sin(ph), -HalfHeight) + d);
+                            pts.Add(new Vec3(Radius * Math.Cos(ph), Radius * Math.Sin(ph), HalfHeight) + d);
+                        }
+
+                        return ConvexHull(pts, 96);
+                    }
+
+                default:
+                    return this;   // a triangle mesh is static: it has no centre of mass to move
+            }
+        }
+
         /// <summary>Contact point cloud (e.g. chassis corners) plus low-friction caster points.</summary>
         public static CollisionShape Points(IReadOnlyList<Vec3> points, IReadOnlyList<Vec3>? casters = null)
         {

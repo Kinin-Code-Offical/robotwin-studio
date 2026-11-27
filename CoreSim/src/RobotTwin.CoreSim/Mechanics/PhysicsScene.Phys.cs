@@ -167,7 +167,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = 0; i < Bodies.Count; i++)
             {
                 var b = Bodies[i];
-                if (b.IsStatic || !b.Collides) continue;
+                if ((b.IsStatic && !b.IsKinematic) || !b.Collides) continue;   // [rigidbody] a kinematic body can be fast too
                 var s = b.EffectiveShape;
                 if (s == null || s.Kind == ShapeKind.Mesh) continue;
                 // Linear speed only: a body spinning in place (propeller, wheel, rotor) does not tunnel,
@@ -316,7 +316,7 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = 0; i < count; i++)
             {
                 var a = Bodies[i];
-                if (a.IsStatic || IsAsleep(a)) continue;
+                if ((a.IsStatic && !a.IsKinematic) || IsAsleep(a)) continue;   // [rigidbody] a moving kinematic body wakes what it reaches
                 var sa = a.EffectiveShape;
                 if (sa == null || !a.Collides) continue;
                 double va = a.Velocity.Length + a.AngularVelocity.Length * sa.BoundingRadius;

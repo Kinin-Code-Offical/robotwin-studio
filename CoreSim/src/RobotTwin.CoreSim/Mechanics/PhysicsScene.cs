@@ -110,6 +110,24 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Surface speed of a static body (a conveyor belt): contacts feel it through friction.</summary>
         public Vec3 SurfaceVelocity { get; set; }   // [arm]
 
+        /// <summary>
+        /// [rigidbody] Unity's centre of mass set by hand: the body's origin (its centre of mass) moves by
+        /// <paramref name="d"/> (body frame) while its solid, contact points and model stay where they are in the world. The
+        /// inertia about the new centre is kept (set it by hand too when the hidden mass changes it).
+        /// </summary>
+        public void ShiftCentreOfMass(Vec3 d)
+        {
+            if (d.LengthSquared < 1e-24) return;
+            Shape = Shape?.Translated(-d);
+            if (Pieces != null)
+                for (int i = 0; i < Pieces.Length; i++)
+                    Pieces[i] = Pieces[i].Translated(-d);
+            for (int i = 0; i < ContactPoints.Count; i++) ContactPoints[i] -= d;
+            for (int i = 0; i < CasterPoints.Count; i++) CasterPoints[i] -= d;
+            ModelOffset += d;
+            Position += Orientation.Rotate(d);
+        }
+
         /// <summary>Places the source model's origin at <paramref name="modelOrigin"/> with the given orientation.</summary>
         public void PlaceModel(Vec3 modelOrigin, Quat orientation)
         {
@@ -838,10 +856,11 @@ namespace RobotTwin.CoreSim.Mechanics
                 st.DTheta = Vec3.Zero;
                 if (b.IsStatic || Asleep(i)) // [phys]
                 {
-                    st.V = b.IsStatic ? b.SurfaceVelocity : Vec3.Zero;   // [arm] conveyor belts; zero for ordinary static bodies
-                    st.W = Vec3.Zero;
+                    // [arm] conveyor belts; zero for ordinary static bodies; [rigidbody] a kinematic body's own motion
+                    st.V = b.IsKinematic ? b.Velocity : b.IsStatic ? b.SurfaceVelocity : Vec3.Zero;
+                    st.W = b.IsKinematic ? b.AngularVelocity : Vec3.Zero;
                     st.V0 = st.V;
-                    st.W0 = Vec3.Zero;
+                    st.W0 = st.W;
                     st.InvMass = 0;
                     st.InvI = Mat3.Zero;
                 }
@@ -882,6 +901,16 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int i = 0; i < count; i++)
             {
                 var b = Bodies[i];
+                if (b.IsKinematic && b.IsStatic)
+                {
+                    // [rigidbody] a kinematic body goes where its own velocity takes it, whatever it meets
+                    var k0 = b.Position;
+                    b.IntegratePosition(h);
+                    _state[i].DX = b.Position - k0;
+                    _state[i].DTheta = b.AngularVelocity * h;
+                    continue;
+                }
+
                 if (b.IsStatic || Asleep(i) || InWeldGroup(i)) continue; // [phys] [weld]
                 ref var st = ref _state[i];
                 st.V = RigidBody.Unlocked(st.V, b.LockPosition);   // [rigidbody] what the contacts and joints pushed along a frozen axis
@@ -997,6 +1026,14 @@ namespace RobotTwin.CoreSim.Mechanics
 
                     _lo[i] = b.CachedBounds.Min;
                     _hi[i] = b.CachedBounds.Max;
+                    if (b.IsKinematic)
+                    {
+                        // [rigidbody] the way it moves this substep
+                        double sweep = (b.Velocity.Length + b.AngularVelocity.Length * shape.BoundingRadius) * h * 2;
+                        var e = new Vec3(sweep, sweep, sweep);
+                        _lo[i] -= e;
+                        _hi[i] += e;
+                    }
                 }
                 else
                 {

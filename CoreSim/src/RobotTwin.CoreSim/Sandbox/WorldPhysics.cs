@@ -222,10 +222,33 @@ namespace RobotTwin.CoreSim.Sandbox
                 it.SonarAxis = g.SensorAxis.Normalized();
             }
 
+            // [rigidbody] Unity's centre of mass and inertia set by hand ("rb.com": the part's frame, m; "rb.inertia": kg·m² about
+            // the part's axes through that centre): a battery low in a chassis, a counterweight, a part's measured values
+            if (!IsShell(o) && ParamText(o, RigidbodyCentreKey) is { } comText && TryVector(comText, out var com))
+            {
+                body.ShiftCentreOfMass(it.ShapeTurn.Conjugate.Rotate(com - it.Centre));
+                it.Centre = com;
+            }
+
+            if (ParamText(o, RigidbodyInertiaKey) is { } inText && TryVector(inText, out var inertia) && inertia.X > 0 && inertia.Y > 0 && inertia.Z > 0)
+            {
+                body.Inertia = inertia;
+                body.PrincipalAxes = it.ShapeTurn.Conjugate;   // the part's axes in the body's frame
+            }
+
             var q = o.Pose.Orientation;
             body.Orientation = q * it.ShapeTurn;
             body.Position = o.Pose.Position + q.Rotate(it.Centre);
-            body.IsStatic = o.IsStatic;
+            // [rigidbody] Unity's Is Kinematic: moved only by its own velocity (a behaviour's), pushing what it meets
+            bool kinematic = !o.IsStatic && Param(o, KinematicKey, 0) > 0;
+            body.IsStatic = o.IsStatic || kinematic;
+            body.IsKinematic = kinematic;
+            if (kinematic)
+            {
+                body.Velocity = ParamVec(o, KinematicVelocityKey);   // world axes, m/s
+                body.AngularVelocity = ParamVec(o, KinematicSpinKey) * (Math.PI / 180);   // world axes, °/s
+            }
+
             // [rigidbody] Unity's damping and frozen axes, from the part's parameters
             body.LinearDamping = Math.Max(0, Param(o, "rb.damping", 0));
             body.AngularDamping = Math.Max(0, Param(o, "rb.angdamping", 0));

@@ -43,6 +43,22 @@ namespace RobotTwin.CoreSim.Sandbox
             return true;
         }
 
+        /// <summary>[rigidbody] The centre of mass set by hand ("x,y,z", the part's frame, m) and the inertia set by hand ("x,y,z", kg·m²).</summary>
+        public const string RigidbodyCentreKey = "rb.com";
+
+        public const string RigidbodyInertiaKey = "rb.inertia";
+
+        /// <summary>[rigidbody] Unity's Is Kinematic ("1"), with its velocity ("x,y,z", world, m/s) and spin ("x,y,z", world, °/s).</summary>
+        public const string KinematicKey = "rb.kinematic";
+
+        public const string KinematicVelocityKey = "rb.kinvel";
+        public const string KinematicSpinKey = "rb.kinspin";
+
+        private static string? ParamText(WorldObject o, string key) => o.Parameters.TryGetValue(key, out var s) ? s : null;
+
+        /// <summary>A vector parameter ("x,y,z"), zero when missing or unreadable.</summary>
+        private static Vec3 ParamVec(WorldObject o, string key) => o.Parameters.TryGetValue(key, out var s) && TryVector(s, out var v) ? v : Vec3.Zero;
+
         /// <summary>Writes a vector as the parameter text ("x,y,z").</summary>
         public static string VectorText(Vec3 v) =>
             string.Join(",", v.X.ToString("0.######", CultureInfo.InvariantCulture), v.Y.ToString("0.######", CultureInfo.InvariantCulture), v.Z.ToString("0.######", CultureInfo.InvariantCulture));

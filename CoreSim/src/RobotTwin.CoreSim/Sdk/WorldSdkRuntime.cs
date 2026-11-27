@@ -1055,6 +1055,17 @@ namespace RobotTwin.CoreSim.Sdk
             public string Name { get; }
             public WorldObject? Object { get; }
             public bool IsStatic => Raw.IsStatic;
+
+            public bool IsKinematic
+            {
+                get => Raw.IsKinematic;
+                set
+                {
+                    if (Raw.IsStatic && !Raw.IsKinematic) return;   // fixed in the world
+                    Raw.IsKinematic = value;
+                    Raw.IsStatic = value;
+                }
+            }
             public double Mass => Raw.IsStatic ? double.PositiveInfinity : Raw.Mass;
             public Vec3 Inertia => Raw.Inertia;
             public Vec3 Position => Raw.Position;
@@ -1117,7 +1128,7 @@ namespace RobotTwin.CoreSim.Sdk
 
             public void SetVelocity(Vec3 linear, Vec3 angular)
             {
-                if (Raw.IsStatic) return;
+                if (Raw.IsStatic && !Raw.IsKinematic) return;
                 Raw.Velocity = linear;
                 Raw.AngularVelocity = angular;
             }

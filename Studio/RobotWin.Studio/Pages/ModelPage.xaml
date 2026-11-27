@@ -86,6 +86,7 @@
                     </Border>
                     <ToggleButton x:Name="WireToggle" Style="{StaticResource Chip}" Content="Kenarlar" Margin="6,0,0,0" Click="OnWireOverlay" ToolTip="Katı görünümün üzerinde tel kafes kenarları"/>
                     <ToggleButton x:Name="SectionToggle" Style="{StaticResource Chip}" Content="Kesit" Margin="2,0,0,0" Click="OnSection" ToolTip="Kesit görünümü: modeli bir düzlemle kesip içini göster (yalnız görüntü)"/>
+                    <ToggleButton x:Name="AnalysisToggle" Style="{StaticResource Chip}" Content="Analiz" Margin="2,0,0,0" Click="OnAnalysis" ToolTip="Analiz: yüzleri draft açısına, eğriliğe ya da simetriye göre boya (SolidWorks'teki gibi; yalnız görüntü)"/>
                     <ToggleButton x:Name="SnapToggle" Style="{StaticResource Chip}" Content="Yapış" Margin="2,0,0,0" Click="OnSnapToggle" ToolTip="Izgaraya yapış (açıkken Ctrl geçici kapatır)"/>
                     <ComboBox x:Name="GridBox" Width="86" Margin="4,0,0,0" SelectionChanged="OnGridSize" ToolTip="Yapışma adımı">
                         <ComboBoxItem Content="0.1 mm" Tag="0.1"/>
@@ -130,6 +131,33 @@
                     <ToggleButton x:Name="SectionFlip" Style="{StaticResource Chip}" Content="Ters" Margin="8,0,0,0" Click="OnSectionFlip" ToolTip="Öbür yarıyı göster"/>
                     <Button Style="{StaticResource Btn.Ghost}" Content="Özellikler…" Margin="6,0,0,0" Padding="8,2" Click="OnSectionProps" ToolTip="Kesit özellikleri: alan, çevre, ağırlık merkezi, atalet ve kutupsal momentler, asal eksenler, kesit modülleri (seçili nesnelerin; seçim yoksa görünenlerin)"/>
                     <Button Style="{StaticResource Btn.Icon}" Width="26" Height="26" Margin="4,0,0,0" Click="OnSectionClose" ToolTip="Kesiti kapat"><t:Icon Data="{StaticResource I.Close}" Size="12"/></Button>
+                </StackPanel>
+            </Border>
+
+            <!-- [analysis] faces coloured by draft, curvature or symmetry, with the legend's areas -->
+            <Border x:Name="AnalysisBar" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,40" Visibility="Collapsed"
+                    Background="{DynamicResource B.Raised}" BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="8" Padding="10,4,4,6">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Analiz" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <RadioButton x:Name="AnalysisDraft" Style="{StaticResource Chip}" Content="Draft" GroupName="analysis" IsChecked="True" Tag="Draft" Click="OnAnalysisMode" ToolTip="Draft analizi: yüzler çekme yönüne göre kalıptan çıkar mı (pozitif, negatif, draft gerekli)"/>
+                        <RadioButton x:Name="AnalysisCurvature" Style="{StaticResource Chip}" Content="Eğrilik" GroupName="analysis" Tag="Curvature" Click="OnAnalysisMode" ToolTip="Eğrilik analizi: yüzler eğrilik yarıçapına göre (düz, geniş, dar)"/>
+                        <RadioButton x:Name="AnalysisSymmetry" Style="{StaticResource Chip}" Content="Simetri" GroupName="analysis" Tag="Symmetry" Click="OnAnalysisMode" ToolTip="Simetri denetimi: gövdelerin ortasından geçen düzlemde aynası olmayan yüzler"/>
+                        <Border Width="1" Height="16" Background="{DynamicResource B.Border}" Margin="8,0"/>
+                        <StackPanel x:Name="AnalysisAxisPanel" Orientation="Horizontal">
+                            <TextBlock x:Name="AnalysisAxisLabel" Text="Çekme yönü" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <RadioButton x:Name="AnalysisX" Style="{StaticResource Chip}" Content="X" GroupName="analysisaxis" Tag="X" Click="OnAnalysisAxis"/>
+                            <RadioButton x:Name="AnalysisY" Style="{StaticResource Chip}" Content="Y" GroupName="analysisaxis" Tag="Y" Click="OnAnalysisAxis"/>
+                            <RadioButton x:Name="AnalysisZ" Style="{StaticResource Chip}" Content="Z" GroupName="analysisaxis" IsChecked="True" Tag="Z" Click="OnAnalysisAxis"/>
+                            <ToggleButton x:Name="AnalysisFlip" Style="{StaticResource Chip}" Content="Ters" Margin="6,0,0,0" Click="OnAnalysisAxis" ToolTip="Çekme yönünü ters çevir"/>
+                        </StackPanel>
+                        <StackPanel x:Name="AnalysisAnglePanel" Orientation="Horizontal" Margin="10,0,0,0">
+                            <TextBlock Text="En az açı (°)" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBox x:Name="AnalysisAngle" Width="52" Text="1" TextAlignment="Right" VerticalAlignment="Center" KeyDown="OnAnalysisAngleKey" LostKeyboardFocus="OnAnalysisAngleLost" ToolTip="Bundan az draft açısı olan yüzler draft gerektirir: yazıp Enter"/>
+                        </StackPanel>
+                        <Button Style="{StaticResource Btn.Icon}" Width="26" Height="26" Margin="6,0,0,0" Click="OnAnalysisClose" ToolTip="Analizi kapat"><t:Icon Data="{StaticResource I.Close}" Size="12"/></Button>
+                    </StackPanel>
+                    <WrapPanel x:Name="AnalysisLegend" Margin="0,6,0,0"/>
                 </StackPanel>
             </Border>
 

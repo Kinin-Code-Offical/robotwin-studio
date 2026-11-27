@@ -4,14 +4,16 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
+using RobotTwin.CoreSim.Mechanics;
 using RobotTwin.CoreSim.Sandbox;
 
 namespace RobotWin.Studio.Pages
 {
     /// <summary>
-    /// [rigidbody] Unity's Rigidbody settings on the Fizik card: linear and angular damping, and its Constraints
-    /// (frozen position and rotation axes). They live in the part's parameters (rb.damping, rb.angdamping,
-    /// rb.lockpos, rb.lockrot) and reach the solver through WorldPhysics.
+    /// [rigidbody] Unity's Rigidbody settings on the Fizik card: Is Kinematic (with its velocity and spin), the centre of
+    /// mass and inertia given by hand, linear and angular damping, and its Constraints (frozen position and rotation
+    /// axes). They live in the part's parameters (rb.kinematic, rb.kinvel, rb.kinspin, rb.com, rb.inertia, rb.damping,
+    /// rb.angdamping, rb.lockpos, rb.lockrot) and reach the solver through WorldPhysics.
     /// </summary>
     public partial class WorldPage
     {
@@ -21,16 +23,16 @@ namespace RobotWin.Studio.Pages
         private void RigidbodyFields(WorldObject o)
         {
             if (o.IsStatic) return;   // a fixed part does not move: nothing to damp or freeze
-            bool used = new[] { "rb.damping", "rb.angdamping", "rb.lockpos", "rb.lockrot" }.Any(k => o.Parameters.TryGetValue(k, out var v) && !string.IsNullOrEmpty(v) && v != "0");
+            bool used = new[] { "rb.damping", "rb.angdamping", "rb.lockpos", "rb.lockrot", WorldPhysics.KinematicKey, WorldPhysics.RigidbodyCentreKey, WorldPhysics.RigidbodyInertiaKey }.Any(k => o.Parameters.TryGetValue(k, out var v) && !string.IsNullOrEmpty(v) && v != "0");
             bool open = _rigidbodyOpen || used;
 
             var head = new Button
             {
-                Content = (open ? "▾ " : "▸ ") + "Kısıtlar ve sönüm",
+                Content = (open ? "▾ " : "▸ ") + "Gelişmiş fizik",
                 Style = (Style)FindResource("Btn.Ghost"),
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Margin = new Thickness(0, 2, 0, 4),
-                ToolTip = "Unity'deki Rigidbody ayarları: hızın ve dönüşün saniyede ne kadarının söndüğü (yağ, sıvı, fren) ve parçanın hareket edemeyeceği ya da dönemeyeceği dünya eksenleri"
+                ToolTip = "Unity'deki Rigidbody ayarları: kinematik, elle kütle merkezi ve eylemsizlik, hızın ve dönüşün saniyede ne kadarının söndüğü (yağ, sıvı, fren) ve parçanın hareket edemeyeceği ya da dönemeyeceği dünya eksenleri"
             };
             head.Click += (_, _) =>
             {
@@ -40,10 +42,101 @@ namespace RobotWin.Studio.Pages
             Inspector.Children.Add(head);
             if (!open) return;
 
+            KinematicFields(o);
+            MassFields(o);
             Inspector.Children.Add(NumberField("Doğrusal sönüm (1/s)", Param(o, "rb.damping"), v => Edit("Sönüm değişti", () => SetParam(o, "rb.damping", v)), 0, 1000, "0.###"));
             Inspector.Children.Add(NumberField("Açısal sönüm (1/s)", Param(o, "rb.angdamping"), v => Edit("Sönüm değişti", () => SetParam(o, "rb.angdamping", v)), 0, 1000, "0.###"));
             Inspector.Children.Add(Labeled("Konumu dondur", AxisChips(o, "rb.lockpos", "Bu dünya ekseni boyunca hareket etmez")));
             Inspector.Children.Add(Labeled("Dönüşü dondur", AxisChips(o, "rb.lockrot", "Bu dünya ekseni çevresinde dönmez")));
+        }
+
+        /// <summary>[rigidbody] Unity's Is Kinematic: the part goes only with the velocity given here (or a behaviour's) and pushes what it meets.</summary>
+        private void KinematicFields(WorldObject o)
+        {
+            bool kinematic = Param(o, WorldPhysics.KinematicKey) > 0;
+            var box = new CheckBox
+            {
+                Content = "Kinematik (yalnız kendi hızıyla gider)", IsChecked = kinematic, Margin = new Thickness(0, 0, 0, 6),
+                ToolTip = "Unity'deki Is Kinematic: yerçekimi, kuvvetler, çarpmalar ve eklemler onu itmez; aşağıdaki hızla (ya da bir davranışın verdiğiyle) gider ve önündekini sonsuz ağırmış gibi iter: asansör, piston, taşıyıcı tabla"
+            };
+            box.Click += (_, _) => Edit("Kinematik değişti", () =>
+            {
+                if (box.IsChecked == true) o.Parameters[WorldPhysics.KinematicKey] = "1";
+                else
+                    foreach (var k in new[] { WorldPhysics.KinematicKey, WorldPhysics.KinematicVelocityKey, WorldPhysics.KinematicSpinKey })
+                        o.Parameters.Remove(k);
+            });
+            Inspector.Children.Add(box);
+            if (!kinematic) return;
+            VectorParam(o, WorldPhysics.KinematicVelocityKey, "Hız (m/s) X · Y · Z", "Kinematik hız değişti");
+            VectorParam(o, WorldPhysics.KinematicSpinKey, "Dönüş (°/s) X · Y · Z", "Kinematik dönüş değişti");
+        }
+
+        /// <summary>
+        /// [rigidbody] Unity's Automatic Center Of Mass / Automatic Tensor turned off: the centre of mass (the part's frame, mm)
+        /// and the moments of inertia (about the part's axes through that centre, g·cm²) given by hand, starting from the
+        /// values the part's shape gives.
+        /// </summary>
+        private void MassFields(WorldObject o)
+        {
+            bool manualCentre = o.Parameters.ContainsKey(WorldPhysics.RigidbodyCentreKey);
+            var centre = new CheckBox
+            {
+                Content = "Kütle merkezini elle ver", IsChecked = manualCentre, Margin = new Thickness(0, 4, 0, 6),
+                ToolTip = "Unity'deki Automatic Center Of Mass kapalı: kütle merkezi parçanın kendi çerçevesinde (mm). Gizli bir ağırlık (pil, karşı ağırlık) parçayı dengeler ya da devirir; parçanın şekli yerinde kalır."
+            };
+            centre.Click += (_, _) => Edit("Kütle merkezi değişti", () =>
+            {
+                if (centre.IsChecked == true && AutomaticMass(o) is { } auto) o.Parameters[WorldPhysics.RigidbodyCentreKey] = WorldPhysics.VectorText(auto.Centre);
+                else o.Parameters.Remove(WorldPhysics.RigidbodyCentreKey);
+            });
+            Inspector.Children.Add(centre);
+            if (manualCentre && WorldPhysics.TryVector(o.Parameters[WorldPhysics.RigidbodyCentreKey], out var c))
+                Inspector.Children.Add(Vector3Row("Kütle merkezi (mm) X · Y · Z", c.X * 1000, c.Y * 1000, c.Z * 1000, (x, y, z) => Edit("Kütle merkezi değişti", () =>
+                    o.Parameters[WorldPhysics.RigidbodyCentreKey] = WorldPhysics.VectorText(new Vec3(x, y, z) / 1000)), "0.##"));
+
+            bool manualInertia = o.Parameters.ContainsKey(WorldPhysics.RigidbodyInertiaKey);
+            var inertia = new CheckBox
+            {
+                Content = "Eylemsizliği elle ver", IsChecked = manualInertia, Margin = new Thickness(0, 4, 0, 6),
+                ToolTip = "Unity'deki Automatic Tensor kapalı: parçanın eksenleri çevresindeki eylemsizlik momentleri (g·cm²), kütle merkezinden geçen eksenlere göre. Ölçülmüş ya da CAD'den alınmış değerler için."
+            };
+            inertia.Click += (_, _) => Edit("Eylemsizlik değişti", () =>
+            {
+                if (inertia.IsChecked == true && AutomaticMass(o) is { } auto) o.Parameters[WorldPhysics.RigidbodyInertiaKey] = WorldPhysics.VectorText(auto.Inertia);
+                else o.Parameters.Remove(WorldPhysics.RigidbodyInertiaKey);
+            });
+            Inspector.Children.Add(inertia);
+            if (manualInertia && WorldPhysics.TryVector(o.Parameters[WorldPhysics.RigidbodyInertiaKey], out var i))
+                Inspector.Children.Add(Vector3Row("Eylemsizlik (g·cm²) X · Y · Z", i.X * 1e7, i.Y * 1e7, i.Z * 1e7, (x, y, z) => Edit("Eylemsizlik değişti", () =>
+                {
+                    if (x > 0 && y > 0 && z > 0) o.Parameters[WorldPhysics.RigidbodyInertiaKey] = WorldPhysics.VectorText(new Vec3(x, y, z) * 1e-7);
+                }), "0.###"));
+        }
+
+        /// <summary>The centre of mass (the part's frame, m) and the moments of inertia about its axes (kg·m²) its shape and mass give.</summary>
+        private (Vec3 Centre, Vec3 Inertia)? AutomaticMass(WorldObject o)
+        {
+            var keep = new[] { WorldPhysics.RigidbodyCentreKey, WorldPhysics.RigidbodyInertiaKey, WorldPhysics.KinematicKey }
+                .Where(o.Parameters.ContainsKey).ToDictionary(k => k, k => o.Parameters[k]);
+            foreach (var k in keep.Keys) o.Parameters.Remove(k);
+            try
+            {
+                var alone = new WorldDocument();
+                alone.Objects.Add(o);
+                var physics = WorldPhysics.Build(alone, Scene.GeometryOf, null);
+                var body = physics.Scene.Bodies.FirstOrDefault(b => ReferenceEquals(b.Tag, o));
+                if (body == null) return null;
+                var q = o.Pose.Orientation;
+                var centre = q.Conjugate.Rotate(body.Position - o.Pose.Position);
+                var turn = q.Conjugate * body.Orientation;   // the body's axes in the part's frame
+                var tensor = body.InertiaTensor().Rotated(turn);
+                return (centre, new Vec3(tensor.M00, tensor.M11, tensor.M22));
+            }
+            finally
+            {
+                foreach (var (k, v) in keep) o.Parameters[k] = v;
+            }
         }
 
         private static double Param(WorldObject o, string key) =>

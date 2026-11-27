@@ -290,6 +290,14 @@ namespace RobotWin.Studio.Modeling
         /// <summary>[section] The section view's plane (every object cut along it, the front taken away); null: whole objects.</summary>
         public SectionPlane? Section { get; set; }
 
+        /// <summary>
+        /// [analysis] Faces coloured by an analysis (Pages/ModelPage.Analysis.cs): each face's class for a body (its mesh,
+        /// its placement), coloured by <see cref="AnalysisColors"/>; null: the bodies' own colours.
+        /// </summary>
+        public Func<ModelObject, PolyMesh, Affine, FaceClasses>? Analysis { get; set; }
+
+        public Color[] AnalysisColors { get; set; } = Array.Empty<Color>();
+
         /// <summary>[section] The colour of the cut faces: flat, apart from every body colour.</summary>
         internal static readonly Color CapColor = Color.FromRgb(0xE2, 0x6D, 0x5A);
 
@@ -359,10 +367,31 @@ namespace RobotWin.Studio.Modeling
 
             var color = ModelGeometry.ParseColor(o.Color, Color.FromRgb(0xB9, 0xBF, 0xC9));
             var caps = e.Caps;
-            var geo = ModelGeometry.BuildSolid(e.Mesh, e.Tri, e.TriFace, o.SmoothShading, o.AutoSmoothAngle, caps == null ? null : f => !caps.Contains(f));
             var mat = ModelGeometry.Solid(color, xray);
             var back = xray ? mat : ModelGeometry.Solid(Color.FromRgb(0x60, 0x30, 0x30), false);
-            var body = new GeometryModel3D(geo, mat) { BackMaterial = back };
+            Model3D body;
+            if (Analysis != null && e.Mesh.Faces.Count > 0)
+            {
+                // [analysis] one surface per class, each in its colour (the cut faces keep theirs)
+                var classes = Analysis(o, e.Mesh, e.World).Class;
+                var parts = new Model3DGroup();
+                for (int k = -1; k < AnalysisColors.Length; k++)
+                {
+                    int kk = k;
+                    bool Pick(int f) => (caps == null || !caps.Contains(f)) && f < classes.Length && classes[f] == kk;
+                    if (!Enumerable.Range(0, classes.Length).Any(Pick)) continue;
+                    var km = k < 0 ? mat : ModelGeometry.Solid(AnalysisColors[k], xray);
+                    parts.Children.Add(new GeometryModel3D(ModelGeometry.BuildSolid(e.Mesh, e.Tri, e.TriFace, o.SmoothShading, o.AutoSmoothAngle, Pick), km) { BackMaterial = back });
+                }
+
+                body = parts;
+            }
+            else
+            {
+                var geo = ModelGeometry.BuildSolid(e.Mesh, e.Tri, e.TriFace, o.SmoothShading, o.AutoSmoothAngle, caps == null ? null : f => !caps.Contains(f));
+                body = new GeometryModel3D(geo, mat) { BackMaterial = back };
+            }
+
             if (caps == null) return body;
             // [section] the cut faces in their own flat colour, lit from both sides
             var capMat = ModelGeometry.Solid(CapColor, xray);
