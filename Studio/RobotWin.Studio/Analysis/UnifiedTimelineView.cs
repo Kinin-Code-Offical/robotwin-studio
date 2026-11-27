@@ -60,7 +60,7 @@ namespace RobotWin.Studio.Analysis
         public int LaneCount => _lanes.Count;
 
         /// <summary>The playback's moment; the view follows it when it leaves the window.</summary>
-        public double Cursor
+        public new double Cursor   // the playback's moment (not the mouse pointer)
         {
             get => _cursor;
             set
@@ -78,7 +78,7 @@ namespace RobotWin.Studio.Analysis
 
         private double T(double x) => _viewStart + (x - LabelWidth) / PlotWidth * _viewSpan;
 
-        private static double Height(TimelineLane l) => l.Kind switch
+        private static double LaneHeight(TimelineLane l) => l.Kind switch
         {
             TimelineLaneKind.Analog when l.Binary => 18,
             TimelineLaneKind.Analog => 34,
@@ -93,7 +93,7 @@ namespace RobotWin.Studio.Analysis
             {
                 h += HeaderHeight;
                 if (_folded.Contains(g.Key)) continue;
-                foreach (var l in g) if (l.Default || _full.Contains(g.Key)) h += Height(l);
+                foreach (var l in g) if (l.Default || _full.Contains(g.Key)) h += LaneHeight(l);
             }
 
             return h;
@@ -169,7 +169,7 @@ namespace RobotWin.Studio.Analysis
                 foreach (var lane in g)
                 {
                     if (!lane.Default && !full) continue;
-                    double lh = Height(lane);
+                    double lh = LaneHeight(lane);
                     _rows.Add((y, lh, g.Key, lane, Rect.Empty));
                     if (y + lh > AxisHeight && y < h)
                     {

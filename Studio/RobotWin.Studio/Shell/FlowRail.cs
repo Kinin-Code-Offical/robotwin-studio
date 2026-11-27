@@ -85,7 +85,7 @@ namespace RobotWin.Studio.Shell
             {
                 // [theme] the stage pads mix the canvas with their colour: painted again from the new tokens
                 foreach (var st in _stages) Paint(st, st.Key == _active, false);
-                _trace.InvalidateVisual();
+                _trace?.InvalidateVisual();
             };
             ClipToBounds = true;
             RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });

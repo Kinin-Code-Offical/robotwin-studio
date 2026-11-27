@@ -893,7 +893,7 @@ namespace RobotWin.Studio.Shell
         /// <summary>The header or tab was dragged: the panel becomes a window under the cursor and the drag carries on moving it.</summary>
         private void TearOff(DockItem it)
         {
-            var cursor = DockWindow.Cursor();
+            var cursor = DockWindow.CursorPosition();
             if (double.IsNaN(cursor.X)) return;
             var size = SizeFor(it);
             var at = DockWindow.ToDip(_owner, cursor);
@@ -1087,7 +1087,7 @@ namespace RobotWin.Studio.Shell
         private void DragOver(DockItem it)
         {
             if (!_overlayHost.IsVisible || PresentationSource.FromVisual(_overlayHost) == null) return;
-            var cursor = DockWindow.Cursor();
+            var cursor = DockWindow.CursorPosition();
             if (double.IsNaN(cursor.X)) return;
             var p = _overlayHost.PointFromScreen(cursor);
             var targets = Targets(it);

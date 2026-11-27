@@ -47,7 +47,7 @@ namespace RobotWin.Studio.Analysis
         public Func<double, string>? XTickLabel { get; set; }
 
         /// <summary>Time cursor (vertical line), or null.</summary>
-        public double? Cursor { get; set; }
+        public new double? Cursor { get; set; }   // the time line on the plot (not the mouse pointer)
 
         /// <summary>The user clicked / dragged on the plot at this x value (replay: jump to that second).</summary>
         public event Action<double>? Seek;

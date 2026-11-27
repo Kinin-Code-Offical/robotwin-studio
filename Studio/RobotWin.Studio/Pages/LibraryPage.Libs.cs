@@ -62,7 +62,7 @@ namespace RobotWin.Studio.Pages
                 }
                 catch (Exception ex) when (ex is NotSupportedException || ex is System.IO.InvalidDataException || ex is FormatException || ex is System.IO.IOException || ex is UnauthorizedAccessException)
                 {
-                    Dialog.Show(Owner, "FMU içe aktarılamadı", System.IO.Path.GetFileName(path) + ": " + ex.Message, "Tamam");
+                    Dialog.Show(Owner ?? Application.Current.MainWindow, "FMU içe aktarılamadı", System.IO.Path.GetFileName(path) + ": " + ex.Message, "Tamam");
                 }
             }
 

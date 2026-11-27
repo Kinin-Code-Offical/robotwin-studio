@@ -428,6 +428,10 @@ namespace RobotWin.Studio
                     Workspace.Current.Save(Path.GetFullPath(saveAs));
                 // [theme] --contrast-report file: text that cannot be read on this page in this theme (every window and open
                 // popup), added to the file (one per line).
+                // [a11y] --keyboard-report file: the controls a mouse can use that the Tab order of the window never reaches
+                if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--keyboard-report").Skip(1).FirstOrDefault() is { } keyboardPath)
+                    File.AppendAllLines(keyboardPath, Shell.KeyboardAudit.Find(window).Select(f => Shell.KeyboardAudit.Line(f, page + (fault != null ? ":" + fault : string.Empty))).Distinct());
+
                 if (Environment.GetCommandLineArgs().SkipWhile(a => a != "--contrast-report").Skip(1).FirstOrDefault() is { } contrastPath)
                 {
                     if (double.TryParse(Environment.GetCommandLineArgs().SkipWhile(a => a != "--contrast-min").Skip(1).FirstOrDefault(), NumberStyles.Float, CultureInfo.InvariantCulture, out double cmin) && cmin > 1)

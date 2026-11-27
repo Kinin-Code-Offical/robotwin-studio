@@ -37,7 +37,7 @@ namespace RobotWin.Studio.Render
         public Color Clear { get; set; } = Colors.Transparent;
 
         /// <summary>How far ahead the view's camera looks (its orbit distance), when the view knows; the sun's shadow is sharpest there.</summary>
-        public Func<double>? Focus { get; set; }
+        public Func<double>? FocusDistance { get; set; }
 
         /// <summary>Things drawn last frame (for the performance overlay).</summary>
         public int LastItems { get; private set; }
@@ -73,7 +73,7 @@ namespace RobotWin.Studio.Render
             {
                 bool changed = _target.Resize(w, h);
                 var cam = Camera(camera);
-                if (Focus?.Invoke() is double focus && focus > 0) cam = cam with { Focus = (float)focus };
+                if (FocusDistance?.Invoke() is double focus && focus > 0) cam = cam with { Focus = (float)focus };
                 renderer.Render(_target, _mirror, cam, Clear);
                 if (changed || _setBuffer)
                 {

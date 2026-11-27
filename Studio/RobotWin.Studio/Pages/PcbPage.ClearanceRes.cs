@@ -53,8 +53,8 @@ namespace RobotWin.Studio.Pages
             }
 
             panel.Children.Add(Overline(Lang.T("Öğeler"), 10));
-            Line("Birinci", $"{Name(items[0])} · {r.NetA} · {r.ClassA} ({Mm(r.ClearanceA)})");
-            Line("İkinci", $"{Name(items[1])} · {r.NetB} · {r.ClassB} ({Mm(r.ClearanceB)})");
+            Line("Birinci", $"{ItemName(items[0])} · {r.NetA} · {r.ClassA} ({Mm(r.ClearanceA)})");
+            Line("İkinci", $"{ItemName(items[1])} · {r.NetB} · {r.ClassB} ({Mm(r.ClearanceB)})");
             panel.Children.Add(Overline(Lang.T("Kural"), 10));
             Line("Gereken aralık", r.SameNet ? Lang.T("yok (aynı ağ)") : Mm(r.Required));
             Line("Nereden", Lang.T(r.Source));
@@ -82,7 +82,7 @@ namespace RobotWin.Studio.Pages
             dlg.ShowDialog();
         }
 
-        private static string Name(object o) => o switch
+        private static string ItemName(object o) => o switch
         {
             Track t => "Hat " + t.Width.ToString("0.##", CultureInfo.InvariantCulture) + " mm",
             Via v => "Via Ø" + v.Diameter.ToString("0.##", CultureInfo.InvariantCulture) + " mm",

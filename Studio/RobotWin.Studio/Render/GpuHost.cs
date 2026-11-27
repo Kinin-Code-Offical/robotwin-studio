@@ -25,7 +25,7 @@ namespace RobotWin.Studio.Render
         {
             _view = view;
             _auto = auto;
-            _gpu = new GpuViewport(view) { Opacity = 0, Clear = Colors.Transparent, Focus = focus };
+            _gpu = new GpuViewport(view) { Opacity = 0, Clear = Colors.Transparent, FocusDistance = focus };
             _gpu.Failed += reason =>
             {
                 _failed = true;

@@ -89,7 +89,7 @@ namespace RobotWin.Studio.Shell
         }
 
         /// <summary>The cursor in physical screen pixels.</summary>
-        public static Point Cursor()
+        public static Point CursorPosition()
         {
             return GetCursorPos(out var p) ? new Point(p.X, p.Y) : new Point(double.NaN, double.NaN);
         }

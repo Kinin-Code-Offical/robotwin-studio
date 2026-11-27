@@ -69,7 +69,7 @@ namespace RobotWin.Studio.World
             int n = Sensing.Cameras.Count;
             if (n > 0) AddLog(new SimLogEntry(0, "kamera", $"{n} kamera: dünya kendi çözünürlük ve kare hızlarıyla çiziliyor", AnalogEventKind.StateChange));
             _rosLink?.AttachSensors(Sensing?.Sensors);   // [ros-sense]
-            SensingStarted?.Invoke(Sensing);
+            if (Sensing != null) SensingStarted?.Invoke(Sensing);
         }
 
         private void AdvanceSense(double dt)

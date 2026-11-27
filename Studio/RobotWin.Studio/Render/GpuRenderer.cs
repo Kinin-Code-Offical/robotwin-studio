@@ -431,7 +431,7 @@ namespace RobotWin.Studio.Render
             float shadowFov = camera.Orthographic ? 0 : 2 * MathF.Atan(MathF.Tan(camera.HorizontalFov / 2) / aspect);
             int cascades = FitCascades(items, camera, aspect, shadowFov, sun.Direction, ref frame);
             frame.ShadowsOn = cascades > 0 ? 1 : 0;
-            _ctx.UpdateSubresource(ref frame, _frameCb);
+            _ctx.UpdateSubresource(in frame, _frameCb);
 
             // ---- lamps: the nearest (to what the camera looks at) and brightest first
             var lamps = scene.Lamps;
