@@ -8762,7 +8762,18 @@
   "İmleç kutupsal (uzaklık ve açı)": "Cursor in polar (distance and angle)",
   "Silici: tıklanan öğeyi siler (yol, via, parça, yazı, çizim …)": "Eraser: deletes the item clicked (track, via, part, text, drawing …)",
   "Silici: tıklanan öğe silinir (seçim süzgecinin izin verdikleri) · Ctrl+Z geri alır · Esc: çık": "Eraser: the clicked item is deleted (as the selection filter allows) · Ctrl+Z undoes · Esc: leave",
-  "Silici: burada silinecek bir şey yok": "Eraser: nothing to delete here"
+  "Silici: burada silinecek bir şey yok": "Eraser: nothing to delete here",
+  "Yan panel gizli (N)": "Side panel hidden (N)",
+  "Yan panel açık (N)": "Side panel shown (N)",
+  "Araç rafı açık (T)": "Tool shelf shown (T)",
+  "Araç rafı gizli (T)": "Tool shelf hidden (T)",
+  "Koniklik (draft)": "Draft",
+  "Grupla": "Group",
+  "Grubu çöz": "Ungroup",
+  "Gruplamak için en az iki öğe seçin": "Select at least two items to group",
+  "Seçimde grup yok": "No group in the selection",
+  "Görünümle hizala": "Align with view",
+  "Görünümü seçime hizala": "Align view to selected"
  },
  "patterns": {
   "\n\nAçık projede bu kütüphaneden {…} parça yerleştirilmiş; proje bu parçalar olmadan simüle edilemez.": "\n\n{0} parts from this library are placed in the open project; the project can't be simulated without them.",
@@ -9447,7 +9458,6 @@
   "GitHub şu anda yanıt veremiyor ({…}); daha sonra yeniden deneyin.": "GitHub can't respond right now ({0}); try again later.",
   "GitHub'da sürüm bilgisi bulunamadı ({…}).": "No version information found on GitHub ({0}).",
   "GitHub'ın saatlik istek sınırı doldu; biraz sonra yeniden deneyin{…}": "GitHub's hourly request limit has been reached; try again a bit later{0}",
-  "Grup {…}": "Group {0}",
   "Grupta {mates} nesne daha var; sürüklerken birlikte taşınırlar.": "The group has {0} more objects; they move together when dragged.",
   "Grupta {…} nesne daha var; sürüklerken birlikte taşınırlar.": "The group has {0} more objects; they move together when dragged.",
   "Gömülü model değil ('{…}').": "Not an embedded model ('{0}').",
@@ -12241,6 +12251,10 @@
   "Mesafe sınırı: şimdiki {…} mm ± 10 mm": "Limit distance: now {0} mm ± 10 mm",
   "Açı sınırı: şimdiki {…}° ± 15°": "Limit angle: now {0}° ± 15°",
   "r {…} mm  θ {…}°": "r {0} mm  θ {1}°",
-  "r {…} mil  θ {…}°": "r {0} mil  θ {1}°"
+  "r {…} mil  θ {…}°": "r {0} mil  θ {1}°",
+  "{…} öğe gruplandı: {…}": "{0} items grouped: {1}",
+  "Grup çözüldü ({…} öğe)": "Ungrouped ({0} items)",
+  "{…} görünümle hizalandı": "{0} aligned with the view",
+  "Görünüm {…} nesnesinin gözünden": "The view from {0}"
  }
 }

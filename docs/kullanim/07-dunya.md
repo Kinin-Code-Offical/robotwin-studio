@@ -880,6 +880,7 @@ Seri monitör çıktısını `.csv` olarak kaydedip içe aktarın. Aynı çizimi
 | Ctrl+Shift+V | Seçilinin üstüne takılı olarak yapıştır |
 | F2 | Yeniden adlandır |
 | Ctrl+Alt+F | Görünüme taşı |
+| Ctrl+Shift+F | Görünümle hizala: seçili parça kameranın yerine ve yönüne gelir (önü, +X, kameranın baktığı yöne) |
 | Ctrl+E / Ctrl+Shift+E | 15° döndür / ters yönde |
 | Ctrl+D | Çoğalt |
 | Del | Sil |
@@ -892,7 +893,7 @@ Nesneler yalnızca simülasyon dururken taşınabilir. Konumu ve açıyı denet�
 
 ### Sahne ağacının menüsü
 
-**Sahne** sekmesindeki bir satıra sağ tıklayınca (Unity'deki gibi): **Kes**, **Kopyala**, **Yapıştır**, **Bunun üstüne takılı olarak yapıştır**, **Yeniden adlandır** (F2, ad satırda kutuya döner), **Çoğalt**, **Sil**, **Yalnız bunu sil**, **Odakla**, **Görünüme taşı**, **Sahnede referansları bul** ve **Oluştur ▸** (boş nesneler, gövde şekilleri, kütüphanenin her hazır parçası kategorisine göre **Parça ▸** altında, ayrıca kart, parça, mekanik ve ortam sekmeleri). Kopyalama, çoğaltma ve silme parçaya takılı olan her şeyi, aralarındaki bağlantıları, kabloları ve ilişkileri birlikte alır; kopyalanan bir kol başka bir dünyaya da bütün olarak yapıştırılır. Boş yere sağ tık yapıştırma ve oluşturmayı açar.
+**Sahne** sekmesindeki bir satıra sağ tıklayınca (Unity'deki gibi): **Kes**, **Kopyala**, **Yapıştır**, **Bunun üstüne takılı olarak yapıştır**, **Yeniden adlandır** (F2, ad satırda kutuya döner), **Çoğalt**, **Sil**, **Yalnız bunu sil**, **Odakla**, **Görünüme taşı**, **Görünümle hizala**, **Görünümü seçime hizala** (kamera parçanın gözünden, +X yönüne bakar: bir kamera parçasının ne göreceği), **Sahnede referansları bul** ve **Oluştur ▸** (boş nesneler, gövde şekilleri, kütüphanenin her hazır parçası kategorisine göre **Parça ▸** altında, ayrıca kart, parça, mekanik ve ortam sekmeleri). Kopyalama, çoğaltma ve silme parçaya takılı olan her şeyi, aralarındaki bağlantıları, kabloları ve ilişkileri birlikte alır; kopyalanan bir kol başka bir dünyaya da bütün olarak yapıştırılır. Boş yere sağ tık yapıştırma ve oluşturmayı açar.
 
 ### Taşı, döndür, ölçekle tutamaçları
 

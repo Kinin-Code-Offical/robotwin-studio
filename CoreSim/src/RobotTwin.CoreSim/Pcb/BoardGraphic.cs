@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -22,6 +23,10 @@ namespace RobotTwin.CoreSim.Pcb
     /// </summary>
     public sealed class BoardGraphic
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         public GraphicShape Shape { get; set; }
         public GraphicLayer Layer { get; set; } = GraphicLayer.SilkTop;
         public List<PcbPoint> Points { get; set; } = new List<PcbPoint>();

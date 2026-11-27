@@ -105,8 +105,8 @@
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="1"/>
-                <ColumnDefinition Width="318" MinWidth="240"/>
+                <ColumnDefinition x:Name="SideLineColumn" Width="1"/>
+                <ColumnDefinition x:Name="SideColumn" Width="318" MinWidth="240"/>
             </Grid.ColumnDefinitions>
 
             <Grid x:Name="ViewHost" Grid.Column="0"/>
@@ -128,7 +128,7 @@
             </Border>
 
             <!-- tool strip -->
-            <Border Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,12,0,0" Background="{DynamicResource B.Raised}"
+            <Border x:Name="ToolShelf" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,12,0,0" Background="{DynamicResource B.Raised}"
                     BorderBrush="{DynamicResource B.BorderStrong}" BorderThickness="1" CornerRadius="8" Padding="3">
                 <StackPanel>
                     <RadioButton x:Name="ToolSelect" Style="{StaticResource Toggle.Tool}" GroupName="tool" IsChecked="True" Tag="Select" Click="OnTool" ToolTip="Seç: tıkla / kutu seçimi (W)"><t:Icon Data="{StaticResource I.Pointer}" Size="16"/></RadioButton>
@@ -143,7 +143,7 @@
             <Border Grid.Column="1" Background="{DynamicResource B.Border}"/>
 
             <!-- right column: outliner + properties / library -->
-            <Grid Grid.Column="2" Background="{DynamicResource B.Base}">
+            <Grid x:Name="SidePane" Grid.Column="2" Background="{DynamicResource B.Base}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="230" MinHeight="90"/>
                     <RowDefinition Height="1"/>

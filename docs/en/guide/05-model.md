@@ -26,7 +26,7 @@ One file holds as many parts as you like:
 With **Add** or **Shift+A**:
 
 - **Basic shapes**: box, cylinder, cone, sphere, torus, tube, wedge, perforated plate.
-- **Profile**: extrude a rectangle, circle, polygon, channel or a free sketch to a thickness.
+- **Profile**: extrude a rectangle, circle, polygon, channel or a free sketch to a thickness. A **Draft** angle (SolidWorks' draft) leans the walls inwards going up and opens the holes, for parts that come out of a mould or print easily; a negative angle widens instead.
 - **Revolve**: turn a profile around an axis into a solid.
 - **Robot parts**: 2WD chassis plate, SG90 servo bracket, L bracket, wheel hub, enclosure + lid. Their dimensions can be changed later.
 
@@ -96,6 +96,8 @@ To split an object in two, select it and press **K** (or **Slice**). Click the s
 ![A sliced tube, a bevelled block and a solidified tray](../../images/en/modeler-cut.png)
 
 Other object operations: **Ctrl+J** join, mirror copy (X / Y / Z), linear and circular array, **Ctrl+P** set parent, **Alt+P** clear parent, **Shift+D** duplicate, **H** hide, **Alt+H** show all.
+
+As in Blender, **N** hides and brings back the side panel on the right (parts and properties), **T** the tool shelf on the left; **Ctrl+Space** clears everything round the view.
 
 ## Edit mode
 

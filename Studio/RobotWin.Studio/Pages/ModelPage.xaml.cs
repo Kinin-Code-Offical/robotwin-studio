@@ -157,6 +157,13 @@ namespace RobotWin.Studio.Pages
                 case Key.Tab when !ctrl:
                     _ed.ToggleEditMode();
                     break;
+                case Key.N when !ctrl && !shift && !alt:   // [nt] Blender's N: the side panel (outliner, properties) in and out
+                    ToggleSidePane();
+                    break;
+                case Key.T when !ctrl && !shift && !alt:   // [nt] Blender's T: the tool shelf
+                    ToolShelf.Visibility = ToolShelf.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+                    _ed.Status(Lang.T(ToolShelf.Visibility == Visibility.Visible ? "Araç rafı açık (T)" : "Araç rafı gizli (T)"));
+                    break;
                 case Key.A when shift:
                     ShowAddMenu();
                     break;

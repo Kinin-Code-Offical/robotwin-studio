@@ -45,6 +45,10 @@ namespace RobotTwin.CoreSim.Pcb
 
     public sealed class BoardComponent
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         public string RefDes { get; set; } = string.Empty;
 
         /// <summary>
@@ -95,6 +99,10 @@ namespace RobotTwin.CoreSim.Pcb
 
     public sealed class Track
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         public string Net { get; set; } = string.Empty;
         public CopperLayer Layer { get; set; }
         public double X1 { get; set; }
@@ -114,6 +122,10 @@ namespace RobotTwin.CoreSim.Pcb
 
     public sealed class Via
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         public string Net { get; set; } = string.Empty;
         public double X { get; set; }
         public double Y { get; set; }
@@ -213,6 +225,10 @@ namespace RobotTwin.CoreSim.Pcb
     /// </summary>
     public sealed class Zone
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         private List<ZoneFillIsland> _fill = new List<ZoneFillIsland>();
         private List<PolyRegion>? _regions;
 
@@ -344,6 +360,10 @@ namespace RobotTwin.CoreSim.Pcb
     /// <summary>A drilled mounting hole; with <see cref="PadDiameter"/> larger than the drill it is plated with a copper ring.</summary>
     public sealed class MountingHole
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         public double X { get; set; }
         public double Y { get; set; }
         public double Drill { get; set; } = 3.2;
@@ -357,6 +377,10 @@ namespace RobotTwin.CoreSim.Pcb
     /// <summary>Free text on a graphic layer (silkscreen, fab, drawings).</summary>
     public sealed class BoardText
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         public string Text { get; set; } = string.Empty;
         public double X { get; set; }
         public double Y { get; set; }
@@ -397,6 +421,10 @@ namespace RobotTwin.CoreSim.Pcb
     /// </summary>
     public sealed class BoardDimension
     {
+        /// <summary>[group] KiCad's group: items with the same name are picked and moved together; null when ungrouped.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Group { get; set; }
+
         public double X1 { get; set; }
         public double Y1 { get; set; }
         public double X2 { get; set; }

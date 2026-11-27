@@ -60,6 +60,8 @@ namespace RobotWin.Studio.Pages
                     Scene.FrameSelected();
                 }));
                 menu.Items.Add(MenuEntry("Görünüme taşı", "Ctrl+Alt+F", () => { Scene.Select(o.Id); MoveToView(); }));
+                menu.Items.Add(MenuEntry("Görünümle hizala", "Ctrl+Shift+F", () => { Scene.Select(o.Id); AlignWithView(); }));   // [align-view]
+                menu.Items.Add(MenuEntry("Görünümü seçime hizala", string.Empty, () => { Scene.Select(o.Id); AlignViewToSelected(); }));
                 menu.Items.Add(MenuEntry("Sahnede referansları bul", null, () => FindReferences(o)));
             }
 
@@ -234,6 +236,30 @@ namespace RobotWin.Studio.Pages
         }
 
         /// <summary>Unity's Move To View: the part (with what is mounted on it) to where the view looks, on its own height.</summary>
+        /// <summary>[align-view] Unity's Align With View (Ctrl+Shift+F): the part where the camera stands, looking where it looks (its +X ahead).</summary>
+        private void AlignWithView()
+        {
+            var world = World;
+            if (world == null || world.Find(Scene.Selected) is not { } o) return;
+            var (eye, yaw, pitch) = Scene.ViewPose;
+            Edit(Shell.Lang.T($"{o.Name} görünümle hizalandı"), () =>
+            {
+                world.MoveAssembly(o, eye.X - o.Pose.X, eye.Y - o.Pose.Y, Math.Max(0, eye.Z) - o.Pose.Z);
+                TurnTo(world, o, 0, pitch * 180 / Math.PI, (yaw * 180 / Math.PI + 360) % 360);
+            });
+        }
+
+        /// <summary>[align-view] Unity's Align View to Selected: the camera looks out of the part, along its +X (a camera part's view).</summary>
+        private void AlignViewToSelected()
+        {
+            if (World?.Find(Scene.Selected) is not { } o) return;
+            var q = o.Pose.Orientation;
+            var ahead = q.Rotate(new RobotTwin.CoreSim.Mechanics.Vec3(1, 0, 0));
+            var at = o.Pose.Position + q.Rotate(new RobotTwin.CoreSim.Mechanics.Vec3(0, 0, o.SizeZ / 2));
+            Scene.LookFrom(new System.Windows.Media.Media3D.Point3D(at.X, at.Y, at.Z), new System.Windows.Media.Media3D.Vector3D(ahead.X, ahead.Y, ahead.Z));
+            W.Status = Shell.Lang.T($"Görünüm {o.Name} nesnesinin gözünden");
+        }
+
         private void MoveToView()
         {
             var world = World;

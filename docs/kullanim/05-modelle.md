@@ -26,7 +26,7 @@ Bir dosyada istediğiniz kadar parça olur:
 **Ekle** düğmesi veya **Shift+A** ile:
 
 - **Temel şekiller:** Kutu, Silindir, Koni, Küre, Simit, Boru, Kama, Delikli plaka.
-- **Profil:** dikdörtgen, daire, çokgen, kanal veya serbest bir çizimi kalınlık vererek uzatın (ekstrüzyon).
+- **Profil:** dikdörtgen, daire, çokgen, kanal veya serbest bir çizimi kalınlık vererek uzatın (ekstrüzyon). **Koniklik (draft)** açısı (SolidWorks'teki draft) duvarları yukarı doğru içe eğer, delikleri genişletir: kalıptan çıkacak ya da kolay basılacak parçalar için. Eksi açı tersine genişletir.
 - **Döndürme:** bir profili eksen etrafında döndürerek gövde oluşturun.
 - **Robot parçaları:** 2WD şasi plakası, SG90 servo braketi, L braket, Tekerlek göbeği, Muhafaza kutusu + kapak. Bunların ölçüleri sonradan değiştirilebilir.
 
@@ -96,6 +96,8 @@ Bir nesneyi iki parçaya ayırmak için nesneyi seçin ve **K**'ye (ya da **Dili
 ![Dilimlenmiş boru, pah kırılmış blok, kalınlık verilmiş tepsi](../images/modeler-cut.png)
 
 Diğer nesne işlemleri: **Ctrl+J** birleştir, ayna kopya (X / Y / Z), doğrusal ve dairesel dizi, **Ctrl+P** ebeveyn yap, **Alt+P** ebeveyni kaldır, **Shift+D** çoğalt, **H** gizle, **Alt+H** hepsini göster.
+
+Blender'daki gibi **N** sağdaki yan paneli (parçalar ve özellikler), **T** soldaki araç rafını gizler ve geri getirir; **Ctrl+Space** görünümün çevresindeki her şeyi kaldırır.
 
 ## Düzenleme modu
 

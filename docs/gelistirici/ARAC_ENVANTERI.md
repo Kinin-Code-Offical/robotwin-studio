@@ -29,7 +29,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Bul (parça, hat, yazı) | Bul (Ctrl+F), görünüm çubuğunda | var | |
 | Yakınlaştır, uzaklaştır, sığdır, nesnelere sığdır, seçime sığdır | görünüm çubuğu (kartın sağ üstü) | var | |
 | Döndür, çevir (alt/üst), aynala | görünüm çubuğu, R, F | var | |
-| Grupla, grubu çöz | yok | yok | 2 |
+| Grupla, grubu çöz | Ctrl+G / Ctrl+Shift+G ve sağ tık; gruptaki öğeye tıklamak bütün grubu seçer; grup adı dosyada saklanır | var | |
 | Kilitle, kilidi aç | görünüm çubuğu, L | var | |
 | Şemadan güncelle | Güncelle | var | |
 | Ayak izi kütüphanesi, ayak izi düzenleyici | ayak izi seçici, Footprint düzenleyici | var | |
@@ -161,7 +161,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Radyüs (kenar yuvarlatma) | Yuvarla (radyüs): iki yüze teğet dairesel yay, parça sayısı, küresel köşeler | var | |
 | Pah | Pah kır (Ctrl+B) | var | |
 | Kabuk (içini boşalt) | Kabuk (seçili yüzleri açar, içe eşit duvar) ve Kalınlık ver | var | |
-| Draft, kaburga (rib) | yok | yok | 2 |
+| Draft, kaburga (rib) | profil uzatmada koniklik (draft) açısı: duvarlar içe, delikler dışa; kaburga sonra | kısmi | 3 |
 | Doğrusal / dairesel çoğaltma | var | var | |
 | Aynala | Ayna kopyası | var | |
 | Referans düzlem, eksen, nokta | yok | yok | 2 |
@@ -195,7 +195,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Birleştir (merge), yüz oluştur | var | var | |
 | Orantılı düzenleme | yok | yok | 3 |
 | Yapışma, görünüş kipleri, tel kafes, X-ray | var | var | |
-| Tam görünüm (Ctrl+Space), N/T panelleri | Ctrl+Space var; N/T kısmi | kısmi | 2 |
+| Tam görünüm (Ctrl+Space), N/T panelleri | Ctrl+Space; N yan paneli, T araç rafını gizler / getirir | var | |
 
 ## Montaj (SolidWorks montaj)
 
@@ -249,7 +249,7 @@ Unity 6000.6 yerinde incelendi (26 Kasım 2026): sahne araçları, kaplamalar, s
 | Boş nesne, boş alt nesne, boş üst nesne (grup) | Boş nesne (Ctrl+Alt+N), boş alt (Alt+Shift+N), boş üst (Ctrl+Shift+G); düzenleyicide grup, çalıştırmada yok (altındakiler onun takılı olduğu yere geçer) | var | |
 | Sağ tıkta Oluştur ▸ türler (gövde şekilleri, ışık, kamera, ses, sensör, kart …) | Oluştur ▸ boş nesneler, gövde şekilleri, Parça ▸ kategoriler (kütüphanenin her hazır parçası: sensör, kamera, motor …) ve palet sekmeleri; ışık ve ses türü sonra | kısmi | 3 |
 | Etkin / devre dışı (Alt+Shift+A) | adın solunda kutu, Alt+Shift+A, ağaç menüsü; kapalı nesne ve üstündekiler sahneden ve çalıştırmadan çıkar (fizik, devre, sensörler), ağaçta soluk | var | |
-| Görünüme taşı, görünümle hizala, görünümü seçime hizala | Görünüme taşı, Odakla | kısmi | 3 |
+| Görünüme taşı, görünümle hizala, görünümü seçime hizala | Görünüme taşı (Ctrl+Alt+F), Görünümle hizala (Ctrl+Shift+F), Görünümü seçime hizala, Odakla | var | |
 | Sürükleyerek üst nesne değiştirme | ağaçta satırı satıra bırak: sabit bağlantı; boş yere bırak: ayır; mekanik bağlantılar korunur | var | |
 | Sahnede referansları bul | kablolar, bağlantılar, ilişkiler | var | |
 | Varsayılan üst nesne | yok | yok | 3 |

@@ -1625,6 +1625,9 @@ namespace RobotWin.Studio.Pages
                 case Key.F when ctrl && mods.HasFlag(ModifierKeys.Alt):
                     MoveToView();
                     break;
+                case Key.F when ctrl && mods.HasFlag(ModifierKeys.Shift):   // [align-view] Unity's Align With View
+                    AlignWithView();
+                    break;
                 case Key.Z when ctrl:
                     W.Undo();
                     break;

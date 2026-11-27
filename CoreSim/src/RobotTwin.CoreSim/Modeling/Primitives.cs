@@ -81,7 +81,8 @@ namespace RobotTwin.CoreSim.Modeling
             },
             [PrimitiveKind.Extrude] = new[]
             {
-                new ParamSpec("h", "Kalınlık (Z)", "mm", 5, 0.01, Big), new ParamSpec("seg", "Bölüm sayısı", "", 48, 8, 256, true)
+                new ParamSpec("h", "Kalınlık (Z)", "mm", 5, 0.01, Big), new ParamSpec("draft", "Koniklik (draft)", "°", 0, -30, 30),
+                new ParamSpec("seg", "Bölüm sayısı", "", 48, 8, 256, true)
             },
             [PrimitiveKind.Revolve] = new[]
             {
@@ -167,7 +168,7 @@ namespace RobotTwin.CoreSim.Modeling
                 {
                     var sk = s.Sketch ?? new Sketch2D();
                     int seg = I("seg");
-                    return Extrude(sk.Outer.ToPolygon(seg), sk.Holes.Select(h => h.ToPolygon(seg)).ToList(), G("h"));
+                    return Extrude(sk.Outer.ToPolygon(seg), sk.Holes.Select(h => h.ToPolygon(seg)).ToList(), G("h"), G("draft"));
                 }
 
                 case PrimitiveKind.Revolve:
@@ -442,7 +443,44 @@ namespace RobotTwin.CoreSim.Modeling
         }
 
         /// <summary>Extrudes an outline with holes from z = −h/2 to +h/2.</summary>
-        public static PolyMesh Extrude(List<Vec2> outer, List<List<Vec2>> holes, double height)
+        /// <summary>
+        /// [draft] A loop moved sideways by <paramref name="by"/> (mm) to its left: inwards for a counter-clockwise outline,
+        /// into the material for a clockwise hole, so a positive draft shrinks the solid upwards as a moulded part's walls
+        /// do. Corners move along their bisector (a mitre, held to four times the distance at sharp ones).
+        /// </summary>
+        public static List<Vec2> OffsetLeft(IReadOnlyList<Vec2> loop, double by)
+        {
+            int n = loop.Count;
+            var result = new List<Vec2>(n);
+            for (int i = 0; i < n; i++)
+            {
+                Vec2 prev = loop[(i + n - 1) % n], at = loop[i], next = loop[(i + 1) % n];
+                double ax = at.X - prev.X, ay = at.Y - prev.Y, bx = next.X - at.X, by2 = next.Y - at.Y;
+                double la = Math.Sqrt(ax * ax + ay * ay), lb = Math.Sqrt(bx * bx + by2 * by2);
+                if (la < 1e-12 || lb < 1e-12)
+                {
+                    result.Add(at);
+                    continue;
+                }
+
+                double n1x = -ay / la, n1y = ax / la, n2x = -by2 / lb, n2y = bx / lb;   // left normals
+                double sx = n1x + n2x, sy = n1y + n2y, sl = Math.Sqrt(sx * sx + sy * sy);
+                if (sl < 1e-9)
+                {
+                    result.Add(new Vec2(at.X + n1x * by, at.Y + n1y * by));
+                    continue;
+                }
+
+                sx /= sl;
+                sy /= sl;
+                double cos = Math.Max(0.25, sx * n1x + sy * n1y);   // the mitre, no longer than 4×
+                result.Add(new Vec2(at.X + sx * by / cos, at.Y + sy * by / cos));
+            }
+
+            return result;
+        }
+
+        public static PolyMesh Extrude(List<Vec2> outer, List<List<Vec2>> holes, double height, double draftDegrees = 0)
         {
             var m = new PolyMesh();
             if (outer.Count < 3) return m;
@@ -457,10 +495,12 @@ namespace RobotTwin.CoreSim.Modeling
             {
                 var b = new int[loop.Count];
                 var t = new int[loop.Count];
+                // [draft] the top of every wall set in (or out, for a negative draft) by height × tan(angle)
+                var top = Math.Abs(draftDegrees) > 1e-9 ? OffsetLeft(loop, height * Math.Tan(draftDegrees * Math.PI / 180)) : loop;
                 for (int i = 0; i < loop.Count; i++)
                 {
                     b[i] = m.AddVertex(new Vec3(loop[i].X, loop[i].Y, z0));
-                    t[i] = m.AddVertex(new Vec3(loop[i].X, loop[i].Y, z1));
+                    t[i] = m.AddVertex(new Vec3(top[i].X, top[i].Y, z1));
                 }
 
                 for (int i = 0; i < loop.Count; i++)

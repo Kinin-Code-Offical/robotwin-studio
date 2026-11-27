@@ -209,6 +209,7 @@ Tuvalin sağ üstündeki araç kutusundaki ızgara düğmesi ızgarayı gösteri
 | 1 tuşunun solundaki tuş | İmleçteki hattı vurgula (sol şeritteki göz biçimli **Hattı vurgula** aracı tıklananı vurgular; aynı hatta ya da boşa tıklamak kaldırır) |
 | Ctrl+Shift+M | Ölç |
 | Ctrl+Shift+H | Ölçü |
+| Ctrl+G / Ctrl+Shift+G | Grupla / grubu çöz (KiCad'deki gibi: gruptaki bir öğeye tıklamak bütün grubu seçer, birlikte taşınır) |
 | T | Serigrafi yazısı |
 | F1 veya ? | Tüm PCB kısayolları |
 | F8 / Shift+F8 | Sonraki / önceki DRC işareti |

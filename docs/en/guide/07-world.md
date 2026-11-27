@@ -881,6 +881,7 @@ Save the serial monitor output as `.csv` and import it. Load the same sketch int
 | Ctrl+Shift+V | Paste mounted on the selected part |
 | F2 | Rename |
 | Ctrl+Alt+F | Move to view |
+| Ctrl+Shift+F | Align with view: the selected part takes the camera's place and direction (its front, +X, where the camera looks) |
 | Ctrl+E / Ctrl+Shift+E | Rotate 15° / the other way |
 | Ctrl+D | Duplicate |
 | Del | Delete |
@@ -893,7 +894,7 @@ Objects can only be moved while the simulation is stopped. You can also type pos
 
 ### The scene tree's menu
 
-A right click on a row of the **Scene** tab (as in Unity): **Cut**, **Copy**, **Paste**, **Paste mounted on this**, **Rename** (F2, the name turns into a box in the row), **Duplicate**, **Delete**, **Delete only this**, **Focus**, **Move to view**, **Find references in the scene** and **Create ▸** (empty objects, body shapes, every ready part of the library by its category under **Part ▸**, and the board, part, mechanical and environment tabs). Copying, duplicating and deleting take everything mounted on the part, with the joints, cables and mates among them; a copied arm pastes whole into another world too. A right click on empty room opens paste and create.
+A right click on a row of the **Scene** tab (as in Unity): **Cut**, **Copy**, **Paste**, **Paste mounted on this**, **Rename** (F2, the name turns into a box in the row), **Duplicate**, **Delete**, **Delete only this**, **Focus**, **Move to view**, **Align with view**, **Align view to selected** (the camera looks out of the part along its +X: what a camera part will see), **Find references in the scene** and **Create ▸** (empty objects, body shapes, every ready part of the library by its category under **Part ▸**, and the board, part, mechanical and environment tabs). Copying, duplicating and deleting take everything mounted on the part, with the joints, cables and mates among them; a copied arm pastes whole into another world too. A right click on empty room opens paste and create.
 
 ### Move, rotate and scale handles
 

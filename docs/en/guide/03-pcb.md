@@ -209,6 +209,7 @@ The **Opacity** sliders in the **Katmanlar** tab (like KiCad's Objects tab) fade
 | The key left of 1 | Highlight the net under the cursor (the eye-shaped **Highlight net** tool in the left strip highlights the clicked one; clicking the same net or empty space clears it) |
 | Ctrl+Shift+M | Measure |
 | Ctrl+Shift+H | Dimension |
+| Ctrl+G / Ctrl+Shift+G | Group / ungroup (as in KiCad: clicking an item of a group selects the whole group, and it moves together) |
 | T | Silkscreen text |
 | F1 or ? | All PCB shortcuts |
 | F8 / Shift+F8 | Next / previous DRC marker |

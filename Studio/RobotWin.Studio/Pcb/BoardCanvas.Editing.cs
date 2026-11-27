@@ -295,6 +295,7 @@ namespace RobotWin.Studio.Pcb
                 _sel.Insert(0, hit);
             }
 
+            WholeGroup(hit, add);   // [group] a grouped item brings its group
             SelectionChanged?.Invoke(this, EventArgs.Empty);
             if (!add)
             {
@@ -1234,6 +1235,12 @@ namespace RobotWin.Studio.Pcb
                     case Key.D:
                         Duplicate();
                         return;
+                    case Key.G when shift:   // [group] KiCad's Ungroup
+                        UngroupSelection();
+                        return;
+                    case Key.G:   // [group] KiCad's Group
+                        GroupSelection();
+                        return;
                     case Key.B:
                         UnfillRequested?.Invoke(this, EventArgs.Empty);
                         return;
@@ -1625,6 +1632,8 @@ namespace RobotWin.Studio.Pcb
             if (_sel.Count > 1)
             {
                 Add(new MenuItem { Header = $"{_sel.Count} öğe seçili", IsEnabled = false });
+                Add(Item("Grupla", "Ctrl+G", GroupSelection));   // [group]
+                if (_sel.Any(o => BoardGroups.GroupOf(o) != null)) Add(Item("Grubu çöz", "Ctrl+Shift+G", UngroupSelection));
                 Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, Snap(x), Snap(y))));
                 Add(Item("Sürükle (yollarla)", "G", () => BeginMove(MoveKind.Drag, false, Snap(x), Snap(y))));
                 if (_sel.OfType<BoardComponent>().Any())
