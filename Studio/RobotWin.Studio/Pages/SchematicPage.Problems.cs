@@ -35,6 +35,44 @@ namespace RobotWin.Studio.Pages
         /// marked "no connection", a stray NC mark taken away; any other accepted as an exception (it stays in the report).
         /// Each is one undo step.
         /// </summary>
+        /// <summary>[problems] One undo step that removes what <paramref name="remove"/> finds (nothing: no step).</summary>
+        private void RemoveAt(string status, Func<Schematic, int> remove)
+        {
+            W.BeginChange();
+            if (remove(W.Schematic) == 0)
+            {
+                W.CancelChange();
+                return;
+            }
+
+            W.CommitChange(status);
+            BuildErcPanel();
+        }
+
+        /// <summary>
+        /// [problems] The dangling end at the marker: the last segment of the wire that ends there goes (the whole wire when it
+        /// is a single segment), so the part of it that joins something stays.
+        /// </summary>
+        internal static int TrimDangling(Schematic s, ErcViolation v)
+        {
+            foreach (var w in s.Wires)
+            {
+                if (!Schematic.SameSheet(w.Sheet, v.Sheet) || w.Points.Count < 2) continue;
+                bool atStart = w.Points[0].Equals(v.Location), atEnd = w.Points[^1].Equals(v.Location);
+                if (!atStart && !atEnd) continue;
+                if (w.Points.Count == 2)
+                {
+                    s.Wires.Remove(w);
+                    return 1;
+                }
+
+                w.Points.RemoveAt(atEnd ? w.Points.Count - 1 : 0);
+                return 1;
+            }
+
+            return 0;
+        }
+
         private (string Tip, Action Fix) ErcFix(ErcViolation v)
         {
             string name = ErcRuleCatalog.Find(v.Code)?.Name ?? v.Code;
@@ -52,19 +90,15 @@ namespace RobotWin.Studio.Pages
                         BuildErcPanel();
                     });
                 case "nc-floating":
-                    return ("Boştaki NC işaretini sil", () =>
-                    {
-                        W.BeginChange();
-                        int n = W.Schematic.NoConnects.RemoveAll(nc => nc.Position.Equals(v.Location) && Schematic.SameSheet(nc.Sheet, v.Sheet));
-                        if (n == 0)
-                        {
-                            W.CancelChange();
-                            return;
-                        }
-
-                        W.CommitChange("Boştaki NC işareti silindi");
-                        BuildErcPanel();
-                    });
+                    return ("Boştaki NC işaretini sil", () => RemoveAt("Boştaki NC işareti silindi", s => s.NoConnects.RemoveAll(nc => nc.Position.Equals(v.Location) && Schematic.SameSheet(nc.Sheet, v.Sheet))));
+                case "nc-connected":
+                    // the pin is wired after all: the mark that says it is not goes
+                    return ("NC işaretini kaldır: pin bir hatta bağlı", () => RemoveAt("NC işareti kaldırıldı", s => s.NoConnects.RemoveAll(nc => nc.Position.Equals(v.Location) && Schematic.SameSheet(nc.Sheet, v.Sheet))));
+                case "wire-dangling":
+                    // a stub drawn past its pin or left over after a part moved: the segment ending there goes
+                    return ("Boştaki kablo parçasını sil", () => RemoveAt("Boştaki kablo parçası silindi", s => TrimDangling(s, v)));
+                case "label-unconnected" when v.Net != null:
+                    return ("Hiçbir şeye değmeyen etiketi sil", () => RemoveAt("Bağlanmamış etiket silindi", s => s.Labels.RemoveAll(l => l.Position.Equals(v.Location) && Schematic.SameSheet(l.Sheet, v.Sheet))));
                 default:
                     return ("İstisna olarak işaretle: kabul edildi, raporda istisna olarak kalır", () => ErcPolicyEdit($"ERC istisnası: {name}", () => ErcPolicy.Exclude(W.Schematic, v, string.Empty)));
             }
