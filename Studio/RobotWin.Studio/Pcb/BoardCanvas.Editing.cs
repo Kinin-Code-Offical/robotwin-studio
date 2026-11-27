@@ -1395,12 +1395,71 @@ namespace RobotWin.Studio.Pcb
         {
             var parts = _sel.OfType<BoardComponent>().Where(c => !Held(c)).ToList();
             var texts = _sel.OfType<BoardText>().ToList();
+            var drawings = Drawings();
+            if (parts.Count == 0 && texts.Count == 0 && drawings.Count > 0)
+            {
+                // [rotate] drawings alone: a quarter turn about the middle of what is picked (KiCad's R on graphics)
+                var (cx, cy) = Middle(drawings, texts);
+                BeforeEdit?.Invoke(this, EventArgs.Empty);
+                foreach (var g in drawings) g.RotateQuarter(cx, cy, counterClockwise);
+                Edited(drawings.Count == 1 ? "Çizim döndürüldü" : $"{drawings.Count} çizim döndürüldü");
+                return;
+            }
+
             if (parts.Count == 0 && texts.Count == 0) return;
             TransformComponents(parts, () =>
             {
                 foreach (var c in parts) c.Rotation = (c.Rotation + (counterClockwise ? 270 : 90)) % 360;
                 foreach (var t in texts) t.Rotation = (t.Rotation + (counterClockwise ? 270 : 90)) % 360;
             }, parts.Count == 1 && texts.Count == 0 ? $"{parts[0].RefDes} döndürüldü" : $"{parts.Count + texts.Count} öğe döndürüldü", false);
+        }
+
+        /// <summary>[mirror] The picked drawings (not tables or pictures, which keep their reading way round).</summary>
+        private List<BoardGraphic> Drawings() => _sel.OfType<BoardGraphic>().Where(g => g.Shape is not (GraphicShape.Table or GraphicShape.Image)).ToList();
+
+        private static (double X, double Y) Middle(List<BoardGraphic> drawings, List<BoardText> texts)
+        {
+            double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
+            foreach (var g in drawings)
+            {
+                var b = g.Bounds();
+                minX = Math.Min(minX, b.MinX);
+                minY = Math.Min(minY, b.MinY);
+                maxX = Math.Max(maxX, b.MaxX);
+                maxY = Math.Max(maxY, b.MaxY);
+            }
+
+            foreach (var t in texts)
+            {
+                minX = Math.Min(minX, t.X);
+                maxX = Math.Max(maxX, t.X);
+                minY = Math.Min(minY, t.Y);
+                maxY = Math.Max(maxY, t.Y);
+            }
+
+            return ((minX + maxX) / 2, (minY + maxY) / 2);
+        }
+
+        /// <summary>
+        /// [mirror] KiCad's Mirror: the picked drawings and texts reflected left to right about their middle (a logo, an
+        /// outline, an arrow); parts go to the other side with F instead. Texts keep reading the right way: their place mirrors.
+        /// </summary>
+        public void MirrorSelection()
+        {
+            var drawings = Drawings();
+            var texts = _sel.OfType<BoardText>().ToList();
+            if (drawings.Count == 0 && texts.Count == 0)
+            {
+                Say("Aynalanacak çizim ya da yazı seçili değil (parçalar F ile öbür yüze çevrilir)");
+                return;
+            }
+
+            var (axis, _) = Middle(drawings, texts);
+            BeforeEdit?.Invoke(this, EventArgs.Empty);
+            foreach (var g in drawings) g.MirrorX(axis);
+            foreach (var t in texts) t.X = 2 * axis - t.X;
+            int n = drawings.Count + texts.Count;
+            Edited(n == 1 ? "Aynalandı" : $"{n} öğe aynalandı");
         }
 
         public void FlipSelection()
@@ -1648,6 +1707,11 @@ namespace RobotWin.Studio.Pcb
                     Add(Item("Alt/üst yüze çevir", "F", FlipSelection));
                     Add(Item("Kilitle / kilidi aç", "L", ToggleLock));
                 }
+                else if (_sel.Any(o => o is BoardGraphic or BoardText))
+                {
+                    Add(Item("Döndür", "R", () => RotateSelection()));   // [rotate] drawings and texts
+                    Add(Item("Aynala", null, MirrorSelection));   // [mirror]
+                }
 
                 var tracks = _sel.OfType<Track>().ToList();
                 if (tracks.Count > 0) Add(Sub("Yol genişliği", TrackWidthSteps().Select(w => Item(Length(w), null, () => SetTrackWidth(tracks, w)))));
@@ -1764,12 +1828,25 @@ namespace RobotWin.Studio.Pcb
                         Add(null);
                         Add(Item("Sil", "Del", DeleteSelection));
                         break;
+                    case BoardGraphic { Shape: not GraphicShape.Image }:   // [mirror] [rotate] a drawing
+                        Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, SnapX(x), SnapY(y))));
+                        Add(Item("Döndür", "R", () => RotateSelection()));
+                        Add(Item("Aynala", null, MirrorSelection));
+                        Add(null);
+                        Add(Item("Kopyala", "Ctrl+C", CopySelection));
+                        Add(Item("Çoğalt", "Ctrl+D", Duplicate));
+                        Add(Item("Sil", "Del", DeleteSelection));
+                        break;
                     case BoardText or MountingHole or BoardDimension:
                     {
                         var item = _selected!;
                         Add(Item("Özellikler…", "E", () => EditRequested?.Invoke(this, item)));
                         Add(Item("Taşı", "M", () => BeginMove(MoveKind.Move, false, SnapX(x), SnapY(y))));
-                        if (item is BoardText) Add(Item("Döndür", "R", () => RotateSelection()));
+                        if (item is BoardText)
+                        {
+                            Add(Item("Döndür", "R", () => RotateSelection()));
+                            Add(Item("Aynala", null, MirrorSelection));   // [mirror] its place
+                        }
                         Add(null);
                         Add(Item("Kopyala", "Ctrl+C", CopySelection));
                         Add(Item("Çoğalt", "Ctrl+D", Duplicate));

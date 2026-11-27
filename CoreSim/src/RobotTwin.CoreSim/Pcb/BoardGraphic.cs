@@ -264,6 +264,29 @@ namespace RobotTwin.CoreSim.Pcb
             for (int i = 0; i < Points.Count; i++) Points[i] = new PcbPoint(Points[i].X + dx, Points[i].Y + dy);
         }
 
+        /// <summary>
+        /// [mirror] KiCad's Mirror: the shape reflected across the vertical line x = <paramref name="axis"/>. An arc swaps
+        /// its start and end, so it still runs counter-clockwise and covers the mirrored stretch of its circle.
+        /// </summary>
+        public void MirrorX(double axis)
+        {
+            for (int i = 0; i < Points.Count; i++) Points[i] = new PcbPoint(2 * axis - Points[i].X, Points[i].Y);
+            if (Shape == GraphicShape.Arc && Points.Count >= 3) (Points[1], Points[2]) = (Points[2], Points[1]);
+        }
+
+        /// <summary>
+        /// [rotate] A quarter turn about (cx, cy): clockwise on screen (the board's y runs down), or counter-clockwise.
+        /// An arc keeps its sense; a rectangle's two corners stay opposite corners.
+        /// </summary>
+        public void RotateQuarter(double cx, double cy, bool counterClockwise)
+        {
+            for (int i = 0; i < Points.Count; i++)
+            {
+                double dx = Points[i].X - cx, dy = Points[i].Y - cy;
+                Points[i] = counterClockwise ? new PcbPoint(cx + dy, cy - dx) : new PcbPoint(cx - dy, cy + dx);
+            }
+        }
+
         /// <summary>Distance from a point to the shape's line (0 inside a filled shape).</summary>
         public double DistanceTo(double x, double y)
         {

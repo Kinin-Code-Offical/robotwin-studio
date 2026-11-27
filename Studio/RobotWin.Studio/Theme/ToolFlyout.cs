@@ -91,6 +91,14 @@ namespace RobotWin.Studio.Theme
             return true;
         }
 
+        /// <summary>--snapshot: the group's list opened, its content returned for the picture (null when the button is no group).</summary>
+        public static FrameworkElement? OpenForSnapshot(ButtonBase button)
+        {
+            if (!States.TryGetValue(button, out var state)) return null;
+            Open(button, state);
+            return state.Popup?.Child as FrameworkElement;
+        }
+
         public static bool Contains(ButtonBase button, string tag) => States.TryGetValue(button, out var s) && s.Choices.Any(c => c.Tag == tag);
 
         private static void Show(ButtonBase button, ToolChoice c)

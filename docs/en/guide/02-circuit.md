@@ -75,6 +75,7 @@ The connection rules are KiCad's:
 
 - A sub-sheet's local labels are its own and are named by the sheet path in the netlist, such as `/Motor/IN1`; a label of the same name on another sheet is a separate net.
 - Global labels and power symbols (GND, +5V) are the same net on every sheet.
+- The label button in the tool strip is a group: press and hold or right-click to list **Net label** (L), **Global label** (Ctrl+L) and **Hierarchical label** (H); the one picked becomes the button's face.
 - Parts standing at the same place on different sheets do not touch.
 
 With a sheet open, a path bar appears at the top left: **◀ Back**, **▲ Up** and **▶ Forward**, then every step from the root to the sheet (each one clickable); **▾** lists the sheets below. Shortcuts: Alt+↑ or Alt+Backspace goes up, Alt+← back, Alt+→ forward. Find, ERC and Show in PCB reach a part on another sheet by opening that sheet. ERC warns about a hierarchical label with no pin on its sheet symbol and a sheet pin with no label inside. All the sheets are one design: the PCB, the simulation, the bill of materials and the netlist see them together. Exported to KiCad, every sub-sheet becomes its own `.kicad_sch` file, standing on the root sheet as a KiCad sheet symbol.
@@ -108,6 +109,7 @@ With a sheet open, a path bar appears at the top left: **◀ Back**, **▲ Up** 
    - Click buttons and switches.
    - Turn potentiometers with the mouse wheel.
    - Click a wire: the oscilloscope starts measuring there.
+   - Select a part: **Live values** appear at the top of the Properties panel: its pins' voltages, the current through it (a MOSFET's VGS, ID and power loss; a servo's target and actual angle and current) and every rating it is held to (voltage, current, power, temperature) with its value and limit; the bar under each shows how close it is (green comfortable, amber near, red over). It refreshes a few times a second.
 3. **F5** again pauses, **Shift+F5** stops. **Step 1 ms** advances one step.
 4. Speed: **0.01×**, **0.1×**, **Real time**, **5×**, **20×**.
 

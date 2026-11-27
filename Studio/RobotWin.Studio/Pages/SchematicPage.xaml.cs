@@ -234,6 +234,8 @@ namespace RobotWin.Studio.Pages
             {
                 "Wire" => EditorTool.Wire,
                 "Label" => EditorTool.Label,
+                "GlobalLabel" => EditorTool.GlobalLabel,   // [flyout] the label group
+                "HierLabel" => EditorTool.HierLabel,
                 "NoConnect" => EditorTool.NoConnect,
                 "Text" => EditorTool.Text,   // [notes]
                 "Highlight" => EditorTool.Highlight,   // [highlight]
@@ -249,7 +251,8 @@ namespace RobotWin.Studio.Pages
         {
             ToolSelect.IsChecked = Canvas.Tool == EditorTool.Select || Canvas.Tool == EditorTool.Place;
             ToolWire.IsChecked = Canvas.Tool == EditorTool.Wire;
-            ToolLabel.IsChecked = Canvas.Tool == EditorTool.Label || Canvas.Tool == EditorTool.GlobalLabel;
+            ToolLabel.IsChecked = Canvas.Tool is EditorTool.Label or EditorTool.GlobalLabel or EditorTool.HierLabel;
+            Theme.ToolFlyout.Select(ToolLabel, Canvas.Tool.ToString());   // [flyout] the group's face follows a label tool picked by its key
             ToolNoConnect.IsChecked = Canvas.Tool == EditorTool.NoConnect;
             ToolText.IsChecked = Canvas.Tool == EditorTool.Text;   // [notes]
             ToolHighlight.IsChecked = Canvas.Tool == EditorTool.Highlight;   // [highlight]
@@ -414,6 +417,7 @@ namespace RobotWin.Studio.Pages
         private void OnSimFrame()
         {
             UpdatePinPanel();
+            RefreshLive(throttled: true);   // [live] the selected part's values
             var fw = W.Simulation.Firmware.FirstOrDefault();
             var esp = W.Simulation.Esp32Boards.FirstOrDefault();   // [esp32hw] ESP32 boards, either mode
             double baud = fw != null ? fw.Mcu.BaudRate : esp?.SerialBaud ?? 0;
@@ -641,6 +645,7 @@ namespace RobotWin.Studio.Pages
         private void BuildInspector()
         {
             Inspector.Children.Clear();
+            _liveRefresh.Clear();   // [live] the rows belong to the inspector they were built in
             var selection = Canvas.Selection;
             if (selection.Count == 1 && selection.First() is SchematicPart part)
             {
@@ -749,6 +754,7 @@ namespace RobotWin.Studio.Pages
                 Inspector.Children.Add(new Expander { Header = $"Modelin sınırları ({limits.Count})", Content = notes, Margin = new Thickness(0, 6, 0, 0) });
             }
 
+            LiveSection(part, def);   // [live] while it runs, its values first (Pages/SchematicPage.Live.cs)
             Section("Tanımlayıcı");
             var refBox = new TextBox { Text = part.RefDes };
             Commit(refBox, value =>
@@ -1764,6 +1770,21 @@ namespace RobotWin.Studio.Pages
         public void FinishSnapshot(string? fault)
         {
             var sim = W.Simulation;
+            if (fault != null && fault.StartsWith("live:", StringComparison.Ordinal))
+            {
+                // [live] --fault live:Q1: that part selected while the circuit runs, its live values in the inspector
+                string refDes = fault.Substring(5);
+                if (W.Schematic.Parts.FirstOrDefault(p => p.RefDes == refDes) is { } livePart)
+                {
+                    Canvas.SelectItems(new object[] { livePart });
+                    BuildInspector();
+                    Inspector.UpdateLayout();
+                    RefreshLive();
+                }
+
+                return;
+            }
+
             switch (fault)
             {
                 case "decode":

@@ -28,7 +28,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Geri al, yinele | Ctrl+Z / Ctrl+Y, araç çubuğunda | var | |
 | Bul (parça, hat, yazı) | Bul (Ctrl+F), görünüm çubuğunda | var | |
 | Yakınlaştır, uzaklaştır, sığdır, nesnelere sığdır, seçime sığdır | görünüm çubuğu (kartın sağ üstü) | var | |
-| Döndür, çevir (alt/üst), aynala | görünüm çubuğu, R, F | var | |
+| Döndür, çevir (alt/üst), aynala | görünüm çubuğu (döndür, öbür yüze çevir, aynala), R, F; çizimler ve yazılar da döner ve aynalanır | var | |
 | Grupla, grubu çöz | Ctrl+G / Ctrl+Shift+G ve sağ tık; gruptaki öğeye tıklamak bütün grubu seçer; grup adı dosyada saklanır | var | |
 | Kilitle, kilidi aç | görünüm çubuğu, L | var | |
 | Şemadan güncelle | Güncelle | var | |
@@ -121,7 +121,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Bus, bus girişi | Bus (B): kalın mavi çizgi, D[0..7] / {SDA SCL} etiketi, üyeler adlarıyla birleşir, dokunduğunu birleştirmez; bus girişi (Z) 45° ayak; sayfa pininden üye üye geçer; KiCad şemasından bus bağlantıları da okunur | var | |
 | NC işareti | var | var | |
 | Bağlantı noktası (junction) aracı | J aracı: kesişen telleri birleştirir, yeniden tıklayınca ayırır; T bağlantıları kendiliğinden | var | |
-| Etiket: yerel, global | var | var | |
+| Etiket: yerel, global | araç şeridinde etiket grubu (yerel L, global Ctrl+L, hiyerarşik H; basılı tut ya da sağ tık) | var | |
 | Etiket: hiyerarşik, yönerge | Net sınıfı yönergesi (netclass flag): hattı adlandırmaz, değdiği hattın PCB net sınıfını verir (yoksa Default kopyası açılır); hiyerarşik etiket (H): sayfa sembolünün aynı adlı pinine bağlanır, yönü (giriş / çıkış / çift yönlü / üç durumlu / pasif) | var | |
 | Kural alanı | Kural alanı: iki köşe, net sınıfı; içinde teli, pini ya da etiketi olan hatlar PCB'de o sınıfı alır, alandaki yönerge önce gelir | var | |
 | Hiyerarşik sayfa, sayfa pini | Hiyerarşik sayfa (S): çerçeve, ad, çift tıkla gir; sayfa pini (kenara tık, iç etiketlerden eşitle, yön); sayfa yerel hatlar /Ad/hat, global ve güç her sayfada; ERC pinsiz etiket / etiketsiz pin; KiCad'e sayfa başına .kicad_sch | var | |

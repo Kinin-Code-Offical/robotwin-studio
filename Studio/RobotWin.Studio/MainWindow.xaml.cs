@@ -857,6 +857,17 @@ namespace RobotWin.Studio
         /// <summary>Used by --snapshot: puts the page in a representative state.</summary>
         public void PrepareSnapshot(string page, string? simulate, string? fault = null)
         {
+            if (fault is "dim-group" or "label-group")
+            {
+                // [flyout] a tool group's list opened: the PCB's dimensions or the circuit's labels
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    var list = Theme.ToolFlyout.OpenForSnapshot(fault == "dim-group" ? _pcb.ToolDimension : _schematic.ToolLabel);
+                    list?.UpdateLayout();
+                    App.SnapshotTarget = list;
+                }), System.Windows.Threading.DispatcherPriority.Loaded);
+            }
+
             if (fault == "fold-demo")
             {
                 // [fold] some inspector sections folded, as a user left them (the snapshot's settings are its own)

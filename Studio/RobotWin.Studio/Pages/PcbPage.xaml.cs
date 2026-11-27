@@ -424,7 +424,15 @@ namespace RobotWin.Studio.Pages
 
         private void OnTool(object sender, RoutedEventArgs e)
         {
-            if (sender is FrameworkElement fe && Enum.TryParse<PcbTool>((string)fe.Tag, out var tool))
+            string tag = (sender as FrameworkElement)?.Tag as string ?? string.Empty;
+            if (tag.StartsWith("Dimension:", StringComparison.Ordinal) && Enum.TryParse<DimensionKind>(tag.Substring(10), out var kind))
+            {
+                // [flyout] a dimension kind from its group: the dimension tool with that kind
+                Canvas.DimKind = kind;
+                tag = nameof(PcbTool.Dimension);
+            }
+
+            if (Enum.TryParse<PcbTool>(tag, out var tool))
             {
                 Show3D(false);
                 Canvas.SetTool(tool);
@@ -436,10 +444,12 @@ namespace RobotWin.Studio.Pages
 
         private void SyncTools()
         {
+            string current = Canvas.Tool == PcbTool.Dimension ? "Dimension:" + Canvas.DimKind : Canvas.Tool.ToString();   // [flyout] the dimension group's tags carry the kind
             foreach (var tb in _toolButtons)
             {
-                Theme.ToolFlyout.Select(tb, Canvas.Tool.ToString());   // [flyout] a group shows the tool picked by its key too
-                tb.IsChecked = Enum.TryParse<PcbTool>((string)tb.Tag, out var t) && t == Canvas.Tool;
+                Theme.ToolFlyout.Select(tb, current);   // [flyout] a group shows the tool picked by its key too
+                string tag = tb.Tag as string ?? string.Empty;
+                tb.IsChecked = tag.StartsWith("Dimension:", StringComparison.Ordinal) ? Canvas.Tool == PcbTool.Dimension : Enum.TryParse<PcbTool>(tag, out var t) && t == Canvas.Tool;
             }
 
             ToolDraw.IsChecked = DrawingTools.Contains(Canvas.Tool) || _drawPanel?.IsOpen == true;   // [overlays] the drawing strip open, or drawing

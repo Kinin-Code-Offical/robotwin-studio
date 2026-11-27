@@ -116,7 +116,7 @@
                     <Border Height="1" Background="{DynamicResource B.Border}" Margin="6,4,6,8"/>
                     <ToggleButton x:Name="ToolText" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Text" Click="OnTool" ToolTip="Serigrafi yazısı (T)"><t:Icon Data="{StaticResource I.Text}" Size="16"/></ToggleButton>
                     <ToggleButton x:Name="ToolDraw" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Draw" Click="OnDrawTool" ToolTip="Çizim araçları: yanında ayrı bir şerit açar ya da kapatır (çizgi, dikdörtgen, daire, yay, çokgen, Bezier, resim, tablo; serigrafi, montaj ya da çizim katmanına)"><t:Icon Data="{StaticResource I.DrawRect}" Size="16"/></ToggleButton>
-                    <ToggleButton x:Name="ToolDimension" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Dimension" Click="OnTool" ToolTip="Ölçü çizgisi (Ctrl+Shift+H)"><t:Icon Data="{StaticResource I.Dimension}" Size="16"/></ToggleButton>
+                    <ToggleButton x:Name="ToolDimension" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Dimension:Aligned" Click="OnTool" ToolTip="Ölçüler: hizalı (Ctrl+Shift+H), dik, yarıçap, kılavuz, merkez işareti"/>
                     <ToggleButton x:Name="ToolOutline" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Outline" Click="OnTool" ToolTip="Kart kenarını çokgen olarak çiz"><t:Icon Data="{StaticResource I.Outline}" Size="16"/></ToggleButton>
                     <ToggleButton x:Name="ToolHole" Style="{StaticResource Toggle.Tool}" Width="32" Height="32" Margin="0,0,0,4" Tag="Hole" Click="OnTool" ToolTip="Delikler: montaj deliği, via"/>
                 </StackPanel>
@@ -137,6 +137,7 @@
                     <Border Width="1" Margin="4,6" Background="{DynamicResource B.Border}"/>
                     <Button Style="{StaticResource Btn.Icon}" Click="OnHeadsRotate" ToolTip="Seçimi döndür (R)"><t:Icon Data="{StaticResource I.Rotate}" Size="16"/></Button>
                     <Button Style="{StaticResource Btn.Icon}" Click="OnHeadsFlip" ToolTip="Seçili parçaları öbür yüze çevir (F)"><t:Icon Data="{StaticResource I.FlipSide}" Size="16"/></Button>
+                    <Button Style="{StaticResource Btn.Icon}" Click="OnHeadsMirror" ToolTip="Seçili çizimleri ve yazıları soldan sağa aynala (parçalar F ile öbür yüze çevrilir)"><t:Icon Data="{StaticResource I.Mirror}" Size="16"/></Button>
                     <Button Style="{StaticResource Btn.Icon}" Click="OnHeadsLock" ToolTip="Seçimi kilitle / kilidi aç (L)"><t:Icon Data="{StaticResource I.Lock}" Size="16"/></Button>
                     <Border Width="1" Margin="4,6" Background="{DynamicResource B.Border}"/>
                     <Button Style="{StaticResource Btn.Icon}" Click="OnHeadsFind" ToolTip="Bul: parça, değer, hat, yazı (Ctrl+F)"><t:Icon Data="{StaticResource I.Search}" Size="16"/></Button>

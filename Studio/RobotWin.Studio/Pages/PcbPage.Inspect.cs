@@ -172,6 +172,8 @@ namespace RobotWin.Studio.Pages
 
         private void OnHeadsRotate(object sender, RoutedEventArgs e) => Canvas.RotateSelection();
 
+        private void OnHeadsMirror(object sender, RoutedEventArgs e) => Canvas.MirrorSelection();   // [mirror]
+
         private void OnHeadsFlip(object sender, RoutedEventArgs e) => Canvas.FlipSelection();
 
         private void OnHeadsLock(object sender, RoutedEventArgs e) => Canvas.ToggleLock();

@@ -67,6 +67,12 @@ namespace RobotWin.Studio.Pages
         /// </summary>
         private void InitToolStrips()
         {
+            // [flyout] KiCad's label group: a net label, a global label, a hierarchical label (hold or right-click)
+            Theme.ToolFlyout.Attach(ToolLabel, new[]
+            {
+                new Theme.ToolChoice("Label", "Hat etiketi", "I.Label", "L"), new Theme.ToolChoice("GlobalLabel", "Global etiket", "I.GlobalLabel", "Ctrl+L"),
+                new Theme.ToolChoice("HierLabel", "Hiyerarşik etiket", "I.HierLabel", "H")
+            });
             var items = PageOverlays.ItemsOf(DrawTools);
             DrawToolsHost.Visibility = Visibility.Collapsed;
             ToolSep0.Visibility = Visibility.Collapsed;

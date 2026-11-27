@@ -75,6 +75,7 @@ Bağlantı kuralları KiCad'inkilerdir:
 
 - Alt sayfadaki yerel etiketler yalnız o sayfanındır ve netlistte `/Motor/IN1` gibi sayfa yoluyla adlanır; aynı adlı başka bir sayfadaki etiket ayrı bir hattır.
 - Global etiketler ve güç sembolleri (GND, +5V) her sayfada aynı hattır.
+- Araç şeridindeki etiket düğmesi bir gruptur: basılı tutunca ya da sağ tıklayınca **Hat etiketi** (L), **Global etiket** (Ctrl+L) ve **Hiyerarşik etiket** (H) listelenir, seçilen düğmenin yüzü olur.
 - Farklı sayfalarda aynı yerde duran parçalar birbirine değmez.
 
 Sayfa açıkken sol üstte bir yol çubuğu belirir: **◀ Geri**, **▲ Üst sayfa**, **▶ İleri** ve kökten bu sayfaya kadar her basamak tıklanabilir, **▾** alt sayfaları listeler. Kısayollar: Alt+↑ ya da Alt+Backspace üst sayfaya çıkar, Alt+← geri, Alt+→ ileri gider. Bul, ERC ve PCB'de göster başka sayfadaki bir parçaya o sayfayı açarak gider. ERC, sayfa sembolünde pini olmayan hiyerarşik etiketi ve içinde etiketi olmayan sayfa pinini uyarır. Bütün sayfalar tek tasarımdır: PCB, simülasyon, malzeme listesi ve netlist hepsini birlikte görür. KiCad'e aktarımda her alt sayfa kendi `.kicad_sch` dosyası olur ve kök sayfada KiCad'in sayfa sembolüyle durur.
@@ -108,6 +109,7 @@ Sayfa açıkken sol üstte bir yol çubuğu belirir: **◀ Geri**, **▲ Üst sa
    - Butonlara ve anahtarlara tıklayın.
    - Potansiyometreleri fare tekerleğiyle çevirin.
    - Bir kabloya tıklayın: osiloskop o noktayı ölçmeye başlar.
+   - Bir parçayı seçin: Özellikler panelinin en üstünde **Canlı değerler** çıkar: pinlerinin gerilimi, içinden geçen akım (MOSFET'te VGS, ID ve güç kaybı; servoda hedef ve gerçek açı, akım) ve her sınırı (gerilim, akım, güç, sıcaklık) değeri ve sınırıyla; altındaki çubuk sınıra ne kadar yakın olduğunu gösterir (yeşil rahat, sarı yakın, kırmızı aşılmış). Saniyede birkaç kez yenilenir.
 3. **F5** tekrar basılınca duraklatır, **Shift+F5** durdurur. **1 ms ilerlet** düğmesi tek adım ilerletir.
 4. Hız seçimi: **0.01×**, **0.1×**, **Gerçek zaman**, **5×**, **20×**.
 

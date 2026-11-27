@@ -66,6 +66,15 @@ namespace RobotWin.Studio.Pages
                 new ToolChoice(nameof(PcbTool.Zone), "Bakır dolgu alanı", "I.Zone", "Z"),
                 new ToolChoice(nameof(PcbTool.Keepout), "Yasak bölge", "I.Keepout")
             });
+            // [flyout] KiCad's dimension group: aligned, orthogonal, radial, leader, centre mark
+            ToolFlyout.Attach(ToolDimension, new[]
+            {
+                new ToolChoice("Dimension:Aligned", "Ölçü (hizalı)", "I.Dimension", "Ctrl+Shift+H"),
+                new ToolChoice("Dimension:Orthogonal", "Dik ölçü (yatay / dikey)", "I.DimOrtho"),
+                new ToolChoice("Dimension:Radial", "Yarıçap ölçüsü", "I.DimRadius"),
+                new ToolChoice("Dimension:Leader", "Kılavuz (ok ve not)", "I.Leader"),
+                new ToolChoice("Dimension:Center", "Merkez işareti", "I.CenterMark")
+            });
             ToolFlyout.Attach(ToolHole, new[]
             {
                 new ToolChoice(nameof(PcbTool.Hole), "Montaj deliği", "I.Hole"),
@@ -258,6 +267,7 @@ namespace RobotWin.Studio.Pages
                 var kind = Combo(kinds, Canvas.DimKind, k =>
                 {
                     Canvas.DimKind = k;
+                    ToolFlyout.Select(ToolDimension, "Dimension:" + k);   // the group's face follows
                     Canvas.InvalidateVisual();
                     W.Status = Shell.Lang.T(Canvas.ToolHint());
                 }, k => Shell.Lang.T(DimensionKindName(k)));
