@@ -1,0 +1,43 @@
+name: Good first issue (for maintainers)
+description: A small, well-described task a newcomer can pick up
+title: "[GFI] "
+labels: ["good first issue", "help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A good first issue says exactly where to look and how to know it is done, so someone new to the code can finish it
+        in an evening. See CONTRIBUTING.md, "Good first issues", for the kinds of task that fit.
+  - type: textarea
+    id: what
+    attributes:
+      label: What to do
+      placeholder: Add the English text of the Turkish label "…" shown on the PCB page's … panel.
+    validations:
+      required: true
+  - type: textarea
+    id: where
+    attributes:
+      label: Where in the code
+      placeholder: Studio/RobotWin.Studio/Lang/en.json (strings are keyed by their Turkish source), Pages/PcbPage.….cs
+    validations:
+      required: true
+  - type: textarea
+    id: check
+    attributes:
+      label: How to check it
+      placeholder: dotnet test Studio/RobotWin.Studio.Tests --filter LangTests; a --snapshot of the page in English.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Translation
+        - Documentation
+        - Part library
+        - Example project
+        - Tests
+        - Studio UI
+        - CoreSim

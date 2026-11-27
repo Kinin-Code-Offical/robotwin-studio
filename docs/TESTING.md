@@ -36,6 +36,40 @@ The Studio's own tests are in `Studio/RobotWin.Studio.Tests` (WPF-free parts lin
 
 ESP32 tests compile real sketches with MSVC. On a machine without the Visual Studio C++ tools (`vcvars64.bat` not found) they are reported as **skipped**, not failed.
 
+## Test templates
+
+A CoreSim test (`CoreSim/tests/RobotTwin.CoreSim.Tests`, xUnit): build the smallest situation that shows the behaviour, run it, compare with a number you can justify (a datasheet, a formula, a hand calculation) and say where the number comes from.
+
+```csharp
+using RobotTwin.CoreSim.Design;
+using Xunit;
+
+namespace RobotTwin.CoreSim.Tests
+{
+    /// <summary>[tag] What these tests show, in a sentence.</summary>
+    public class MyFeatureTests
+    {
+        [Fact]
+        public void TheBehaviourInPlainWords()
+        {
+            // arrange: the smallest circuit, world or board that shows it
+            var sch = new Schematic();
+            // act: run it
+            // assert: against a value with its source in a comment (formula, datasheet, measurement)
+            Assert.InRange(actual, expected - tolerance, expected + tolerance);
+        }
+    }
+}
+```
+
+A Studio test (`Studio/RobotWin.Studio.Tests`) covers logic without WPF: put it in a file of its own (as `Shell/ProjectSettings.cs`, `Firmware/PinProbe.cs`), link that file into the test project and test it there:
+
+```xml
+<Compile Include="..\RobotWin.Studio\Firmware\PinProbe.cs" Link="Linked\PinProbe.cs" />
+```
+
+What only shows on screen is checked with a snapshot (`--snapshot out.png --page … --fault …`, below) and the UI checks in CONTRIBUTING.md.
+
 ## Render test
 
 ```powershell

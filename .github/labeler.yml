@@ -2,9 +2,9 @@ area:core:
   - changed-files:
     - any-glob-to-any-file: 'CoreSim/**'
 
-area:unity:
+area:studio:
   - changed-files:
-    - any-glob-to-any-file: 'UnityApp/**'
+    - any-glob-to-any-file: 'Studio/**'
 
 area:docs:
   - changed-files:

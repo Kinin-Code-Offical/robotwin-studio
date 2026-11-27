@@ -33,9 +33,34 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/PROJECT_STRUCTURE.md
 
 - C#: standard .NET conventions; `PascalCase` for types and public members, `_camelCase` for private fields, nullable reference types enabled. XML doc comments (`/// <summary>`) on public and non-obvious members.
 - Keep CoreSim deterministic: no wall-clock time or unseeded randomness in simulation code.
-- UI text is **Turkish**. Use correct Turkish characters (ç, ğ, ı, İ, ö, ş, ü) and the existing terminology (Devre, Dünya, Kablo çek, Bağla…).
+- UI text is written in **Turkish** in the code and shown in the user's language from a language pack: `Studio/RobotWin.Studio/Lang/en.json` maps every Turkish text to English (`strings`), and texts with numbers or names in them through `patterns` (`"{…} kablo": "{0} cables"`). English is the default language, so every new label needs its English line; `LangTests` fails on a XAML label without one. Use correct Turkish characters (ç, ğ, ı, İ, ö, ş, ü) and the existing terminology (Devre, Dünya, Kablo çek, Bağla…).
 - Save files as UTF-8. Do not rewrite source or Markdown files with Windows PowerShell 5.1 `Get-Content`/`Set-Content` (they use the ANSI code page and corrupt Turkish text).
 - The product name is always **RobotWin Studio**.
+
+## Good first issues
+
+Issues labelled **good first issue** say what to change, where, and how to check it; **help wanted** marks larger ones that are free to take. Comment on one before you start so two people do not do the same work. Tasks that make a good first contribution:
+
+- **A translation:** a Turkish text with no English in `Lang/en.json`, or an English line that reads badly. Add it next to the others; texts with values go in `patterns`.
+- **A part:** a resistor, sensor or module the library lacks. Parts are defined in `CoreSim/src/RobotTwin.CoreSim/Design/StandardParts.cs` (`Def(lib, id, name, category, prefix, symbol, footprint, …)`); what its model leaves out goes in `ModelLimits.cs`, and a test in `CoreSim/tests` shows it behaves (a datasheet value at one operating point is enough to start).
+- **An example project:** a small circuit in `Studio/RobotWin.Studio/Examples/ExampleProjects.cs`; it appears on the start page as a card drawn from its own circuit, and `--selftest` builds, simulates and routes it.
+- **A documentation fix or picture:** the user guide is `docs/kullanim/` (Turkish) and `docs/en/guide/` (English); pictures are rendered by the app itself, `python tools/scripts/doc_images.py <RobotWinStudio.exe> [--lang en] name` (`docs/images/shots.json` says how each is taken).
+- **A test:** a behaviour that has none yet (see the templates in [docs/TESTING.md](docs/TESTING.md#test-templates)).
+
+## Checks for UI changes
+
+Run these on a Release build after changing a page (they are what CI and reviewers look at):
+
+- `python tools/scripts/contrast_check.py <exe> --quick`: every text readable (3:1 or better) in four themes;
+- `python tools/scripts/layout_check.py <exe> --sizes 1920x1080,960x540`: nothing cut off, overlapping or out of keyboard reach;
+- `python tools/scripts/token_scan.py --check`: no new hard-coded colours or sizes outside the design tokens;
+- `python tools/scripts/doc_check.py`: the guides name files, versions and menu steps that exist.
+
+The interface follows a few rules: icons with tooltips rather than words on bars, flat colours (no gradients, glows or shadows), every slider also takes a typed value, panels show only the sections in use.
+
+## Plugins and scripts
+
+Physics and behaviour of your own (expressions, C# scripts in a world, plugin DLLs) are described in [docs/gelistirici/SDK.md](docs/gelistirici/SDK.md), with a project template and worked examples (a force field, a circuit part of your own). A plugin runs with the app's rights, so a plugin from someone else needs the same care as any program you download.
 
 ## Pull requests
 

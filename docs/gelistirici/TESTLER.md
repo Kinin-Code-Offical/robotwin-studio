@@ -36,6 +36,40 @@ Studio'nun kendi testleri `Studio/RobotWin.Studio.Tests` içindedir (WPF'siz par
 
 ESP32 testleri gerçek çizimleri MSVC ile derler. Visual Studio C++ araçları olmayan bir makinede (`vcvars64.bat` bulunamazsa) başarısız değil **atlandı** olarak raporlanır.
 
+## Test şablonları
+
+CoreSim testi (`CoreSim/tests/RobotTwin.CoreSim.Tests`, xUnit): davranışı gösteren en küçük durumu kurun, çalıştırın, gerekçesini söyleyebildiğiniz bir sayıyla karşılaştırın (veri sayfası, formül, elle hesap) ve sayının nereden geldiğini yazın.
+
+```csharp
+using RobotTwin.CoreSim.Design;
+using Xunit;
+
+namespace RobotTwin.CoreSim.Tests
+{
+    /// <summary>[etiket] Bu testlerin gösterdiği, bir cümleyle.</summary>
+    public class MyFeatureTests
+    {
+        [Fact]
+        public void TheBehaviourInPlainWords()
+        {
+            // kur: onu gösteren en küçük devre, dünya ya da kart
+            var sch = new Schematic();
+            // çalıştır
+            // karşılaştır: kaynağı yorumda yazılı bir değerle (formül, veri sayfası, ölçüm)
+            Assert.InRange(actual, expected - tolerance, expected + tolerance);
+        }
+    }
+}
+```
+
+Studio testi (`Studio/RobotWin.Studio.Tests`) WPF'siz mantığı sınar: mantığı kendi dosyasına koyun (`Shell/ProjectSettings.cs`, `Firmware/PinProbe.cs` gibi), o dosyayı test projesine bağlayın ve orada test edin:
+
+```xml
+<Compile Include="..\RobotWin.Studio\Firmware\PinProbe.cs" Link="Linked\PinProbe.cs" />
+```
+
+Yalnız ekranda görünen şey ekran görüntüsüyle (`--snapshot cikti.png --page … --fault …`, aşağıda) ve CONTRIBUTING.md'deki arayüz denetimleriyle denetlenir.
+
 ## Öz test
 
 ```powershell

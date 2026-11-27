@@ -20,11 +20,11 @@ body:
     attributes:
       label: Component
       options:
-        - UnityApp
-        - CoreSim
-        - FirmwareEngine
-        - NativeEngine
+        - Studio (the app's pages and windows)
+        - CoreSim (simulation, firmware, PCB, physics, file formats)
+        - Language packs / translations
         - Documentation
+        - Installer / updates
         - Other
     validations:
       required: false
