@@ -655,6 +655,31 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "measure":   // [measure] a plate with a clearance hole: its wall clicked (Ø, centre) and then the top face (angle)
+                {
+                    var plate = ModelOps.AddMesh(doc, PrimitiveBuilder.Box(40, 30, 8), "Plaka");
+                    plate.Transform.Position = new Vec3(0, 0, 4);
+                    plate.Color = "#3B82C4";
+                    HoleWizard.Drill(doc, plate, new Vec3(0, 0, 8), Vec3.UnitZ, new DrillSpec { Type = HoleType.Clearance, Size = "M6" });
+                    _ed.Load(doc, null);
+                    _ed.Notify(ModelChange.All);
+                    _ed.Tool = ModelTool.Measure;
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        _vp.UpdateLayout();
+                        if (_vp.FirstHoleForSnapshot(plate.Id) is not { } h) return;
+                        // the far wall, the one that faces the camera through the opening
+                        var away = _vp.Cam.Forward - h.Axis * _vp.Cam.Forward.Dot(h.Axis);
+                        var across = away.Length > 1e-9 ? away.Normalized() : h.Axis.Cross(Vec3.UnitX).Normalized();
+                        var wall = h.Center + across * (h.Radius * 0.98);
+                        // look at the wall from inside the hole's opening: a point a little below the top, seen from above-ish
+                        var up = h.Axis.Dot(_vp.Cam.Forward) < 0 ? h.Axis : h.Axis * -1;   // towards the opening the camera looks into
+                        if (_vp.Cam.Project(wall + up * (h.Depth * 0.4)) is var (sa, _, oka) && oka) _vp.MeasureClick(sa);
+                        if (_vp.Cam.Project(new Vec3(15, 10, 8)) is var (sb, _, okb) && okb) _vp.MeasureClick(sb);
+                    }), System.Windows.Threading.DispatcherPriority.Background);
+                    break;
+                }
+
                 case "holes":   // [holes] a motor plate with four wizard holes, cut through them by the section view
                 case "holes-dialog":
                 {

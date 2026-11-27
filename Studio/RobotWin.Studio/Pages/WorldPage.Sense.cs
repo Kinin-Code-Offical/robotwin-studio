@@ -739,6 +739,12 @@ namespace RobotWin.Studio.Pages
                 Scene.Select(hinge.ObjectA);
             }
 
+            if (_snapshotModes.Contains("check"))
+            {
+                RunAssemblyCheck();   // [assembly-check] the report in the Problems panel
+                _main.SnapshotProblemsFor(true);
+            }
+
             DockSnapshot();   // [dock]
         }
     }

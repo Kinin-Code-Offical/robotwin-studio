@@ -46,6 +46,7 @@ namespace RobotWin.Studio
             ProblemsHub.Register(ProblemsHub.Code, () => On("code", _code.CodeProblems));
             ProblemsHub.Register(ProblemsHub.Assembly, () => CheckArea(montaj: true));   // [problems] the project check's two areas (MainWindow.Check.cs)
             ProblemsHub.Register(ProblemsHub.Project, () => CheckArea(montaj: false));
+            ProblemsHub.Register(ProblemsHub.AssemblyCheck, () => On("world", _world.AssemblyProblems));   // [assembly-check]
             ProblemsHub.Register(ProblemsHub.ModelLimits, ModelLimitsArea);   // [limits]
             ProblemsHub.Changed += ScheduleProblems;
             W.DocumentChanged += (_, _) =>
@@ -151,6 +152,9 @@ namespace RobotWin.Studio
         /// <summary>[problems] Snapshot: the counts now and the list's window as the picture.</summary>
         /// <summary>[problems] The areas whose "bilgi" fold is open.</summary>
         private readonly HashSet<string> _openNotes = new HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>--snapshot: the Problems window as the picture (a page's own check has just run).</summary>
+        internal void SnapshotProblemsFor(bool openNotes) => SnapshotProblems(openNotes);
 
         private void SnapshotProblems(bool openNotes = false)
         {

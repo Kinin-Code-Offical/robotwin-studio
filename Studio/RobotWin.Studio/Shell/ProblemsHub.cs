@@ -69,6 +69,9 @@ namespace RobotWin.Studio.Shell
         public const string Assembly = "Montaj";
         public const string Project = "Proje";
 
+        /// <summary>[assembly-check] The assembly's geometry: overlapping parts, holes off-axis, cables too short.</summary>
+        public const string AssemblyCheck = "Montaj denetimi";
+
         /// <summary>[limits] What the parts' simulation models leave out (worth knowing when reading a result).</summary>
         public const string ModelLimits = "Model sınırları";
 

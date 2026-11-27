@@ -50,6 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The 3D board frames the selected part:** a part picked on the PCB, in the circuit or in the Montaj is boxed in the accent colour where it sits on the 3D board, and stays boxed when the board is rebuilt.
+- **Measure on the Part page reads faces and holes:** besides the distance it gives the angle between the two faces clicked, a parallel pair's gap, and on a hole's wall the hole's diameter, centre and depth.
+- **Servo torque in the live values:** a running servo shows the torque its motor pushes with, from its current by the same law the world's physics drives it with, against its model's stall torque (SG90 0.18 N·m, MG996 1.08 N·m …).
+- **Assembly check in the Problems panel:** interference, hole alignment and cable lengths of the open world or Montaj in one area, run with Check, out of date after an edit; a row selects the part or the cable. Interference now counts parts welded into one body by fixed joints as joined (a ball caster sunk into its post is how it is built), but not a part fixed to a moving port.
 - **Many Unos in one world run side by side:** with four or more Arduino Unos and no breakpoint set, each slice's boards run on separate cores (each runs its own chip on its own pins and only reads the circuit); in a 25-arm world the boards' share went from 3.6 to 1.5 s per simulated second. The bench also prints each solver's cost per simulated second.
 - **Gamepad sketches for the real ESP32:** a sketch using Bluepad32 is built and uploaded with Bluepad32's own core (4.1.0), installed once from Code → Real board → Install the Bluepad32 core into a short folder of its own; a small header, added to the sketch's file only, maps the 3.x LEDC calls to the 2.x core, and error lines stay the sketch's own. The ps5-car and ps5-plane templates build.
 - **Large-scene benchmark:** `--bench … --bench-copies N` builds each template N times over in one world (objects, joints and cables), and every bench line now gives p95, p99, the worst frame and the process memory.

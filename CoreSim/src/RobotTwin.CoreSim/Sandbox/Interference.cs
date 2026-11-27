@@ -131,15 +131,43 @@ namespace RobotTwin.CoreSim.Sandbox
             return solids;
         }
 
-        /// <summary>The pairs a joint ties together, both ways round.</summary>
+        /// <summary>
+        /// The pairs a joint ties together, both ways round; and [assembly-check] every two parts welded into one rigid
+        /// body by fixed joints between their main bodies (a ball caster and its post, both fixed to the plate, move as one
+        /// solid in the physics: a ball sunk into its housing is how it is built, not a clash). A fixed joint on a moving
+        /// port (a wheel on a motor's shaft) does not weld its part to the rest: that one turns, its rubbing is news.
+        /// </summary>
         internal static HashSet<(string, string)> JoinedPairs(WorldDocument world)
         {
             var joined = new HashSet<(string, string)>();
+            var parent = new Dictionary<string, string>(StringComparer.Ordinal);
+            string Root(string x)
+            {
+                while (parent.TryGetValue(x, out var p) && p != x) x = parent[x] = parent.TryGetValue(p, out var pp) ? pp : p;
+                return x;
+            }
+
             foreach (var j in world.Joints)
             {
                 if (j.ObjectB == null) continue;   // fixed to the world: no second part
                 joined.Add((j.ObjectA, j.ObjectB));
                 joined.Add((j.ObjectB, j.ObjectA));
+                if (j.Kind != WorldJointKind.Fixed || !string.IsNullOrEmpty(j.PortA) || !string.IsNullOrEmpty(j.PortB)) continue;
+                foreach (var id in new[] { j.ObjectA, j.ObjectB })
+                    if (!parent.ContainsKey(id)) parent[id] = id;
+                string ra = Root(j.ObjectA), rb = Root(j.ObjectB);
+                if (ra != rb) parent[ra] = rb;
+            }
+
+            foreach (var group in parent.Keys.GroupBy(Root))
+            {
+                var members = group.ToList();
+                for (int i = 0; i < members.Count; i++)
+                for (int k = i + 1; k < members.Count; k++)
+                {
+                    joined.Add((members[i], members[k]));
+                    joined.Add((members[k], members[i]));
+                }
             }
 
             return joined;

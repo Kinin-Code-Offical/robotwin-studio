@@ -180,26 +180,7 @@ namespace RobotWin.Studio.Modeling
             if (e.ChangedButton != MouseButton.Left) return;
             if (_ed.Tool == ModelTool.Measure)
             {
-                var hit = PickSurfacePoint(p);
-                if (hit != null)
-                {
-                    if (_measureA == null || _measureFixed)
-                    {
-                        _measureA = hit;
-                        _measureB = null;
-                        _measureFixed = false;
-                    }
-                    else
-                    {
-                        _measureB = hit;
-                        _measureFixed = true;
-                        var d = _measureB.Value - _measureA.Value;
-                        _ed.Status(string.Format(CultureInfo.InvariantCulture, "Ölçü: {0:0.###} mm  (ΔX {1:0.###} · ΔY {2:0.###} · ΔZ {3:0.###})", d.Length, d.X, d.Y, d.Z));
-                    }
-
-                    RefreshOverlays();
-                }
-
+                MeasureClick(p);
                 e.Handled = true;
                 return;
             }
@@ -1125,8 +1106,121 @@ namespace RobotWin.Studio.Modeling
 
         // ================================================================ measure tool
 
+        /// <summary>A click of the measure tool: the first point, or the second and what the two say.</summary>
+        internal void MeasureClick(Point p)
+        {
+            var hit = PickSurfacePoint(p);   // snapped to a vertex nearby, as before
+            if (hit == null) return;
+            var face = FaceUnder(p);   // [measure] the face's normal and the hole it is the wall of, if any
+            if (_measureA == null || _measureFixed)
+            {
+                _measureA = hit;
+                _measureB = null;
+                _measureFixed = false;
+                _measureFaceA = face;
+                if (HoleAt(face, hit.Value) is { } hole) _ed.Status(HoleText("Delik", hole));
+            }
+            else
+            {
+                _measureB = hit;
+                _measureFixed = true;
+                var d = _measureB.Value - _measureA.Value;
+                _ed.Status(string.Format(CultureInfo.InvariantCulture, "Ölçü: {0:0.###} mm  (ΔX {1:0.###} · ΔY {2:0.###} · ΔZ {3:0.###})", d.Length, d.X + 0.0, d.Y + 0.0, d.Z + 0.0)
+                           + MeasureExtras(_measureFaceA, face, _measureA.Value, hit.Value));
+            }
+
+            RefreshOverlays();
+            _overlay.InvalidateVisual();
+        }
+
+        /// <summary>--snapshot: the first hole of an object (world), to measure on its wall.</summary>
+        internal (Vec3 Center, Vec3 Axis, double Radius, double Depth)? FirstHoleForSnapshot(string objectId)
+        {
+            if (!_entries.TryGetValue(objectId, out var e)) return null;
+            e.EnsureWorld();
+            var face = (e, e.WN!.Length > 0 ? e.WN[0] : Vec3.UnitZ);
+            HoleAt(face, Vec3.Zero);
+            return _holesOf.TryGetValue(e, out var holes) && holes.Count > 0 ? holes[0] : null;
+        }
+
+        /// <summary>[measure] The face picked first: its world normal and its object (for the angle, parallel gap and holes).</summary>
+        private (Entry Entry, Vec3 Normal)? _measureFaceA;
+
+        private readonly Dictionary<Entry, List<(Vec3 Center, Vec3 Axis, double Radius, double Depth)>> _holesOf = new Dictionary<Entry, List<(Vec3, Vec3, double, double)>>();
+
+        /// <summary>The face under a screen point: its object and outward normal (world), or null on empty space.</summary>
+        private (Entry Entry, Vec3 Normal)? FaceUnder(Point screen)
+        {
+            var (e, _, _, f) = RayPick(screen);
+            if (e == null || f < 0) return null;
+            e.EnsureWorld();
+            return f < e.WN!.Length ? (e, e.WN[f]) : null;
+        }
+
+        /// <summary>
+        /// [measure] The hole whose wall a point lies on (SolidWorks' measure reads a cylinder's diameter): the part's holes
+        /// found from its own mesh, the point at the hole's radius from its axis and within its depth.
+        /// </summary>
+        private (Vec3 Center, Vec3 Axis, double Radius, double Depth)? HoleAt((Entry Entry, Vec3 Normal)? face, Vec3 point)
+        {
+            if (face is not { } f) return null;
+            if (!_holesOf.TryGetValue(f.Entry, out var holes))
+            {
+                holes = new List<(Vec3, Vec3, double, double)>();
+                try
+                {
+                    foreach (var h in RobotTwin.CoreSim.Mechanics.HoleFinder.Find(f.Entry.Tri))
+                    {
+                        // the part's own scale carries over: across the axis for the radius, along it for the depth
+                        var along = f.Entry.World.ApplyVector(h.Axis);
+                        var across = h.Axis.Cross(Math.Abs(h.Axis.Z) < 0.9 ? Vec3.UnitZ : Vec3.UnitX).Normalized();
+                        double scaleAcross = f.Entry.World.ApplyVector(across).Length;
+                        holes.Add((f.Entry.World.Apply(h.Center), along.Normalized(), h.Radius * scaleAcross, h.Depth * along.Length));
+                    }
+                }
+                catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException)
+                {
+                }
+
+                _holesOf[f.Entry] = holes;
+            }
+
+            foreach (var h in holes)
+            {
+                var rel = point - h.Center;
+                double along = rel.Dot(h.Axis);
+                double off = (rel - h.Axis * along).Length;
+                if (Math.Abs(off - h.Radius) <= Math.Max(0.05, h.Radius * 0.04) && Math.Abs(along) <= h.Depth / 2 + 0.05) return h;
+            }
+
+            return null;
+        }
+
+        private static string HoleText(string which, (Vec3 Center, Vec3 Axis, double Radius, double Depth) h) =>
+            Shell.Lang.T(string.Format(CultureInfo.InvariantCulture, "{0} Ø{1:0.###} mm · merkez ({2:0.##}, {3:0.##}, {4:0.##}) · derinlik {5:0.##} mm", which, h.Radius * 2, h.Center.X + 0.0, h.Center.Y + 0.0, h.Center.Z + 0.0, h.Depth));   // + 0.0: no "-0"
+
+        /// <summary>[measure] What two picked faces say besides the distance: their angle, a parallel pair's gap, a hole's size.</summary>
+        private string MeasureExtras((Entry Entry, Vec3 Normal)? a, (Entry Entry, Vec3 Normal)? b, Vec3 pa, Vec3 pb)
+        {
+            var parts = new List<string>();
+            if (a is { } fa && b is { } fb)
+            {
+                double cos = Math.Max(-1, Math.Min(1, fa.Normal.Dot(fb.Normal)));
+                double angle = Math.Acos(Math.Abs(cos)) * 180 / Math.PI;   // between the planes (0–90°)
+                if (angle < 0.5)
+                    parts.Add(Shell.Lang.T(string.Format(CultureInfo.InvariantCulture, "paralel yüzler, aralık {0:0.###} mm", Math.Abs((pb - pa).Dot(fa.Normal)))));
+                else parts.Add(Shell.Lang.T(string.Format(CultureInfo.InvariantCulture, "yüzler arası açı {0:0.##}°", angle)));
+            }
+
+            if (HoleAt(a, pa) is { } ha) parts.Add(HoleText("A deliği", ha));
+            if (HoleAt(b, pb) is { } hb) parts.Add(HoleText("B deliği", hb));
+            return parts.Count == 0 ? string.Empty : "  ·  " + string.Join("  ·  ", parts);
+        }
+
         public void ClearMeasure()
         {
+            _holesOf.Clear();   // the parts may have changed since
+            _measureFaceA = null;
             _measureA = null;
             _measureB = null;
             _measureFixed = false;

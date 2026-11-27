@@ -50,5 +50,30 @@ namespace RobotTwin.CoreSim.Tests
             var all = Interference.Find(w, new ApproximateGeometry(w, RobotTwin.CoreSim.Design.PartLibrary.Default), new InterferenceOptions { IncludeJoined = true });
             Assert.True(Assert.Single(all).Joined);
         }
+
+        [Fact]
+        public void PartsWeldedToOneBodyAreJoinedButNotThroughAMovingPort()
+        {
+            // [assembly-check] a ball caster and its post, each fixed to the plate: one solid in the physics, not a clash
+            var w = new WorldDocument();
+            WorldObject Add(WorldObject o)
+            {
+                w.Objects.Add(o);   // each in the world before the next takes an id
+                return o;
+            }
+
+            var plate = Add(Box(w, "Plate", 0.2));
+            var ball = Add(Box(w, "Ball", 0));
+            var post = Add(Box(w, "Post", 0.01));   // 10 mm into the ball
+            w.Joints.Add(new WorldJoint { ObjectA = ball.Id, ObjectB = plate.Id });
+            w.Joints.Add(new WorldJoint { ObjectA = post.Id, ObjectB = plate.Id });
+            var geo = new ApproximateGeometry(w, RobotTwin.CoreSim.Design.PartLibrary.Default);
+            Assert.Empty(Interference.Find(w, geo));
+            Assert.True(Assert.Single(Interference.Find(w, geo, new InterferenceOptions { IncludeJoined = true })).Joined);
+
+            // fixed to a moving port (a wheel on a shaft) the part turns against the rest: its overlap is reported
+            w.Joints[0].PortB = "shaft";
+            Assert.Single(Interference.Find(w, geo));
+        }
     }
 }

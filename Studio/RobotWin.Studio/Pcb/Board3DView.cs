@@ -30,6 +30,7 @@ namespace RobotWin.Studio.Pcb
             public string RefDes = string.Empty;
             public Point3D Center;
             public ComponentInstance Instance = null!;
+            public Matrix3D ToBoard = Matrix3D.Identity;   // [crossprobe] the part's own frame → the board's
             public bool Charred;
             public double Brightness = -1;
         }
@@ -47,12 +48,48 @@ namespace RobotWin.Studio.Pcb
         private double _boardSpan = 100;
         private DateTime _last = DateTime.Now;
 
+        private readonly ModelVisual3D _highlight = new ModelVisual3D();
+        private string? _highlighted;
+
+        /// <summary>
+        /// [crossprobe] The part picked in the circuit or on the PCB, framed in the accent colour on the 3D board (the
+        /// roadmap's "kartın üstündeki parçanın 3B kartta vurgusu"); null clears it. Kept across rebuilds.
+        /// </summary>
+        public void Highlight(string? refDes)
+        {
+            _highlighted = refDes;
+            var part = refDes == null ? null : _parts.FirstOrDefault(p => string.Equals(p.RefDes, refDes, StringComparison.OrdinalIgnoreCase));
+            var b = part == null ? Rect3D.Empty : new MatrixTransform3D(part.ToBoard).TransformBounds(part.Instance.Root.Bounds);
+            if (part == null || b.IsEmpty)
+            {
+                _highlight.Content = null;
+                return;
+            }
+
+            double pad = Math.Max(0.4, Math.Max(b.SizeX, b.SizeY) * 0.06);
+            b = new Rect3D(b.X - pad, b.Y - pad, b.Z - pad * 0.5, b.SizeX + 2 * pad, b.SizeY + 2 * pad, b.SizeZ + pad);
+            double r = Math.Max(0.12, _boardSpan * 0.0018);
+            var accent = new MaterialGroup();
+            accent.Children.Add(new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(0x6E, 0x9B, 0xFF))));
+            accent.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromRgb(0x6E, 0x9B, 0xFF))));
+            accent.Freeze();
+            var p = new Point3D[8];
+            for (int i = 0; i < 8; i++) p[i] = new Point3D(b.X + ((i & 1) != 0 ? b.SizeX : 0), b.Y + ((i & 2) != 0 ? b.SizeY : 0), b.Z + ((i & 4) != 0 ? b.SizeZ : 0));
+            int[,] e = { { 0, 1 }, { 2, 3 }, { 4, 5 }, { 6, 7 }, { 0, 2 }, { 1, 3 }, { 4, 6 }, { 5, 7 }, { 0, 4 }, { 1, 5 }, { 2, 6 }, { 3, 7 } };
+            var g = new Model3DGroup();
+            for (int i = 0; i < 12; i++)
+                g.Children.Add(new GeometryModel3D(World.WorldScene.Tube(new List<Point3D> { p[e[i, 0]], p[e[i, 1]] }, r, 4), accent));
+            g.Freeze();
+            _highlight.Content = g;
+        }
+
         public Board3DView()
         {
             Background = new SolidColorBrush(Color.FromRgb(0x0B, 0x0B, 0x0D));
             ClipToBounds = true;
             _view.Camera = _camera;
             _view.Children.Add(_content);
+            _view.Children.Add(_highlight);   // [crossprobe] the picked part's frame
             Children.Add(_view);
             _gpu = Render.GpuHost.Attach(this, _view, auto: false, focus: () => _distance);   // [render] our GPU renderer draws the view
             _effects.Project = Project;
@@ -145,12 +182,14 @@ namespace RobotWin.Studio.Pcb
                 {
                     RefDes = pc.RefDes,
                     Instance = pc.Instance,
+                    ToBoard = pc.ToBoard,
                     Center = new Point3D(c.X / 1000, c.Y / 1000, c.Z / 1000)
                 });
             }
 
             _content.Content = root;
             _boardSpan = Math.Max(board.Width, board.Height);
+            Highlight(_highlighted);   // [crossprobe] the part picked before the rebuild
             _distance = _boardSpan * 1.7;
             _target = new Point3D(0, 0, 0);
             UpdateCamera();

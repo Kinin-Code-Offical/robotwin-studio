@@ -55,6 +55,15 @@ namespace RobotWin.Studio.Pages
                         LiveRow(Prefix("Hedef açı"), () => double.IsNaN(s.TargetAngleDeg) ? "—" : $"{s.TargetAngleDeg:0.0}°");
                         LiveRow(Prefix("Gerçek açı"), () => $"{s.AngleDeg:0.0}°");
                         LiveRow(Prefix("Akım"), () => SiValue.Format(s.SupplyCurrent, "A"));
+                        // [servo-torque] what its motor pushes with, from its current, by the same law the world's physics
+                        // drives it with (current over idle grows with torque up to stall); the stall torque its model's
+                        var drive = RobotTwin.CoreSim.Mechanics.ServoMotor.ForModel(part.Parameters.TryGetValue("model", out var model) ? model : def.DefaultParameter("model"));
+                        LiveRow(Prefix("Tork (akımdan)"), () =>
+                        {
+                            double frac = Math.Max(0, Math.Min(1, (s.SupplyCurrent - s.IdleCurrent) / Math.Max(1e-9, s.StallCurrent - s.IdleCurrent)));
+                            double nm = drive.StallTorque * frac;
+                            return Shell.Lang.T(string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0:0.000} N·m ({1:0.0} kg·cm, kilitlenme torkunun %{2:0})", nm, nm / 0.0980665, frac * 100));
+                        });
                         break;
                     default:
                         if (!double.IsNaN(SimulationSession.DeviceCurrent(device))) LiveRow(Prefix("Akım"), () => SiValue.Format(SimulationSession.DeviceCurrent(device), "A"));

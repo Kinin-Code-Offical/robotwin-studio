@@ -85,11 +85,13 @@ namespace RobotWin.Studio.Pages
             Canvas.SelectionChanged += (_, _) =>
             {
                 if (!_crossSelecting && Canvas.SelectedComponent is { } c) CrossProbe.SelectPart(this, c.PartUid, c.RefDes);
+                View3D.Highlight(Canvas.SelectedComponent?.RefDes);   // [crossprobe] the 3D board frames it too
             };
             CrossProbe.PartSelected += (sender, _) =>
             {
                 if (ReferenceEquals(sender, this) || W.Schematic.Board is not { } board) return;
                 var comp = board.Components.FirstOrDefault(x => CrossProbe.IsSelected(x.PartUid, x.RefDes));
+                if (comp != null) View3D.Highlight(comp.RefDes);   // [crossprobe] picked in the circuit or the Montaj: framed on the 3D board
                 if (comp == null || ReferenceEquals(Canvas.SelectedComponent, comp)) return;
                 _crossSelecting = true;
                 try
@@ -1163,6 +1165,14 @@ namespace RobotWin.Studio.Pages
 
                     Canvas.SetTool(PcbTool.Select);
                     RunDrcNow();
+                    break;
+                }
+
+                case "select3d":
+                {
+                    // [crossprobe] the board in 3D with R1 picked (framed in the accent colour)
+                    Show3D(true);
+                    if (board.Components.FirstOrDefault(x => x.RefDes == "R1") is { } r1) Canvas.Select(r1);
                     break;
                 }
 
