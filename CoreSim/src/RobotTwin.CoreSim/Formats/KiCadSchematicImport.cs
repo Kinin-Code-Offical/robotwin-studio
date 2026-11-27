@@ -68,6 +68,25 @@ namespace RobotTwin.CoreSim.Formats
         public string File { get; set; } = string.Empty;
         public string Uuid { get; set; } = string.Empty;
         public List<KiCadSchLabel> Pins { get; } = new List<KiCadSchLabel>();
+
+        /// <summary>[sheets] The block's top left corner and size on its parent sheet (mm).</summary>
+        public double X { get; set; }
+
+        public double Y { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
+    }
+
+    /// <summary>[sheets] One placed instance of a sub-sheet: its path of names, its parent's, and its block on the parent.</summary>
+    public sealed class KiCadSheetInstance
+    {
+        public string NamePath { get; set; } = string.Empty;
+        public string ParentNamePath { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
     }
 
     /// <summary>One <c>.kicad_sch</c> file as written: its symbols with their definitions, wires, junctions, labels, sheets.</summary>
@@ -173,7 +192,10 @@ namespace RobotTwin.CoreSim.Formats
         public List<string> Warnings { get; } = new List<string>();
         public int Sheets { get; set; }
 
-        /// <summary>[shapes] Every sheet's graphics with the path of the sheet they are on.</summary>
+        /// <summary>[sheets] Every sub-sheet instance, parents before their children.</summary>
+        public List<KiCadSheetInstance> SheetInstances { get; } = new List<KiCadSheetInstance>();
+
+        /// <summary>[shapes] Every sheet's graphics with the path (of names) of the sheet they are on.</summary>
         public List<(string SheetPath, KiCadSheetShape Shape)> SheetShapes { get; } = new List<(string, KiCadSheetShape)>();
 
         /// <summary>Bus segments over every sheet instance.</summary>
@@ -373,6 +395,9 @@ namespace RobotTwin.CoreSim.Formats
                     File = Prop("Sheetfile", "Sheet file"),
                     Uuid = sh.ChildText("uuid") ?? string.Empty
                 };
+                (sheet.X, sheet.Y) = At(sh);   // [sheets] where the block stands
+                sheet.Width = sh.Child("size")?.Number(1) ?? 0;
+                sheet.Height = sh.Child("size")?.Number(2) ?? 0;
                 foreach (var pin in sh.Children("pin"))
                 {
                     var (x, y) = At(pin);
@@ -620,7 +645,7 @@ namespace RobotTwin.CoreSim.Formats
             {
                 design.Sheets++;
                 design.Buses += sheet.Buses;
-                foreach (var shape in sheet.Shapes) design.SheetShapes.Add((path, shape));   // [shapes]
+                foreach (var shape in sheet.Shapes) design.SheetShapes.Add((sheetNamePath, shape));   // [shapes] by the sheet's names, as its parts
                 depthNow = depth;
 
                 var attach = new List<(double X, double Y, int Item)>();
@@ -720,6 +745,10 @@ namespace RobotTwin.CoreSim.Formats
                 {
                     string childPath = path + "/" + child.Uuid;
                     string childNames = sheetNamePath + "/" + child.Name;
+                    design.SheetInstances.Add(new KiCadSheetInstance
+                    {
+                        NamePath = childNames, ParentNamePath = sheetNamePath, Name = child.Name, X = child.X, Y = child.Y, Width = child.Width, Height = child.Height
+                    });   // [sheets]
                     foreach (var pin in child.Pins)
                     {
                         // A bus pin joins each member to the sub-sheet's member of the same name.
@@ -860,24 +889,13 @@ namespace RobotTwin.CoreSim.Formats
                 mapped.Add((s, refDes, custom, def));
             }
 
-            // Sheets side by side: each sheet instance keeps its own drawing, shifted right of the one before.
+            // [sheets] Each sheet instance becomes a sheet of ours, drawn where KiCad drew it; its block stands on its parent.
             var offsets = new Dictionary<string, (double X, double Y)>(StringComparer.Ordinal);
-            double right = double.NegativeInfinity, top = 0;
-            foreach (var sheet in mapped.GroupBy(m => m.Symbol.SheetPath).OrderBy(g => g.Key.Length).ThenBy(g => g.Key, StringComparer.Ordinal))
-            {
-                double minX = sheet.Min(m => m.Symbol.Placement.X), maxX = sheet.Max(m => m.Symbol.Placement.X), minY = sheet.Min(m => m.Symbol.Placement.Y);
-                if (double.IsNegativeInfinity(right))
-                {
-                    offsets[sheet.Key] = (0, 0);
-                    top = minY;
-                    right = maxX;
-                    continue;
-                }
-
-                double dx = right + 60 - minX;
-                offsets[sheet.Key] = (dx, top - minY);
-                right = maxX + dx;
-            }
+            foreach (var sheet in mapped.GroupBy(m => m.Symbol.SheetPath)) offsets[sheet.Key] = (0, 0);
+            var sheetUid = new Dictionary<string, string?>(StringComparer.Ordinal) { [string.Empty] = null };
+            foreach (var inst in design.SheetInstances)
+                if (!sheetUid.ContainsKey(inst.NamePath))
+                    sheetUid[inst.NamePath] = Guid.NewGuid().ToString("N");
 
             // Our symbols are drawn larger than KiCad's: the drawing is spread by how much (the typical part's ratio), and
             // further while two of our pins still meet where KiCad's did not.
@@ -885,7 +903,7 @@ namespace RobotTwin.CoreSim.Formats
             double spreadUsed = scale;
             foreach (double step in new[] { 1.0, 1.5, 2.0, 3.0 })
             {
-                var sch = Build(mapped, offsets, netOf, library, scale * step);
+                var sch = Build(mapped, offsets, netOf, library, scale * step, sheetUid);
                 var clash = Clashes(sch, mapped, netOf, library);
                 result.Schematic = sch;
                 spreadUsed = scale * step;
@@ -893,12 +911,30 @@ namespace RobotTwin.CoreSim.Formats
                 if (step >= 3.0) result.Report.Add("uyarı: " + clash);
             }
 
+            // [sheets] the sub-sheets' blocks on their parents, spread as the parts were
+            foreach (var inst in design.SheetInstances)
+            {
+                double Gs(double mm) => Math.Round(mm * spreadUsed / (2 * MmPerGridUnit)) / 2;
+                double x0 = Math.Round(Gs(inst.X)), y0 = Math.Round(Gs(inst.Y));
+                result.Schematic.Sheets.Add(new SchematicSheet
+                {
+                    Uid = sheetUid[inst.NamePath]!, Name = inst.Name.Length > 0 ? inst.Name : "Sayfa", Sheet = sheetUid.TryGetValue(inst.ParentNamePath, out var parent) ? parent : null,
+                    Position = new GridPoint(x0, y0), Width = Math.Max(4, Math.Round(Gs(inst.X + inst.Width)) - x0), Height = Math.Max(3, Math.Round(Gs(inst.Y + inst.Height)) - y0)
+                });
+            }
+
+            if (design.SheetInstances.Count > 0) result.Report.Add($"{design.SheetInstances.Count} alt sayfa ayrı sayfa olarak alındı (bağlantılar hat adlarıyla)");
+
             // [shapes] the sheets' graphics, moved and spread as their sheet's parts were
             foreach (var (sheetPath, shape) in design.SheetShapes)
             {
                 var (ox, oy) = offsets.TryGetValue(sheetPath, out var o) ? o : (0, 0);
                 double G(double mm) => Math.Round(mm * spreadUsed / (2 * MmPerGridUnit)) / 2;
-                var drawn = new SchematicShape { Kind = shape.Kind, Width = shape.Width > 0 ? shape.Width : 0.15, Dashed = shape.Dashed, Filled = shape.Filled, ImageData = shape.ImageData };
+                var drawn = new SchematicShape
+                {
+                    Kind = shape.Kind, Width = shape.Width > 0 ? shape.Width : 0.15, Dashed = shape.Dashed, Filled = shape.Filled, ImageData = shape.ImageData,
+                    Sheet = sheetUid.TryGetValue(sheetPath, out var shapeSheet) ? shapeSheet : null   // [sheets] on its own sheet
+                };
                 foreach (var (x, y) in shape.Points) drawn.Points.Add(new GridPoint(G(x + ox), G(y + oy)));
                 if (shape.Kind == SheetShapeKind.Table && shape.ColumnWidths != null && shape.RowHeights != null && shape.Points.Count > 0)
                 {
@@ -934,7 +970,8 @@ namespace RobotTwin.CoreSim.Formats
         }
 
         private static Schematic Build(List<(KiCadDesignSymbol Symbol, string RefDes, CustomPart Part, PartDefinition Def)> mapped,
-            Dictionary<string, (double X, double Y)> offsets, Dictionary<(string, string), KiCadNet> netOf, PartLibrary library, double spread)
+            Dictionary<string, (double X, double Y)> offsets, Dictionary<(string, string), KiCadNet> netOf, PartLibrary library, double spread,
+            Dictionary<string, string?> sheetUid)
         {
             var sch = new Schematic();
             double Grid(double mm) => Math.Round(mm * spread / (2 * MmPerGridUnit)) / 2;   // half-unit steps
@@ -951,7 +988,8 @@ namespace RobotTwin.CoreSim.Formats
                     PartId = def.Id,
                     Position = new GridPoint(Grid(p.X + ox), Grid(p.Y + oy)),
                     Rotation = rotation,
-                    Mirror = mirror
+                    Mirror = mirror,
+                    Sheet = sheetUid.TryGetValue(symbol.SheetPath, out var onSheet) ? onSheet : null   // [sheets]
                 };
                 foreach (var kv in custom.Parameters) part.Parameters[kv.Key] = kv.Value;
                 sch.Parts.Add(part);
@@ -987,9 +1025,11 @@ namespace RobotTwin.CoreSim.Formats
 
             // Where KiCad's parts sit closer than ours fit, push the later one (top to bottom, left to right) right or down,
             // whichever is shorter, until nothing it carries — body, pins, labels, power symbols — touches what came before.
-            var boxes = new List<(double X0, double Y0, double X1, double Y1)>();
+            var boxesBySheet = new Dictionary<string, List<(double X0, double Y0, double X1, double Y1)>>(StringComparer.Ordinal);   // [sheets] each sheet its own room
             foreach (var item in placed.OrderBy(x => x.Part.Position.Y).ThenBy(x => x.Part.Position.X))
             {
+                string room = item.Part.Sheet ?? string.Empty;
+                if (!boxesBySheet.TryGetValue(room, out var boxes)) boxesBySheet[room] = boxes = new List<(double, double, double, double)>();
                 var box = Box(item.Part, item.Def, Outs(item.Part, item.Symbol, item.Custom, item.Def));
                 for (int guard = 0; guard < 400; guard++)
                 {
@@ -1011,22 +1051,25 @@ namespace RobotTwin.CoreSim.Formats
                 {
                     if (o.Net.Nodes.Count < 2 && !o.Net.Named)
                     {
-                        if (o.Net.NoConnect) sch.NoConnects.Add(new NoConnectFlag { Position = o.At });
+                        if (o.Net.NoConnect) sch.NoConnects.Add(new NoConnectFlag { Position = o.At, Sheet = part.Sheet });
                         continue;
                     }
 
-                    sch.Wires.Add(new SchematicWire { Points = { o.At, o.Tip } });
+                    // [sheets] on the part's sheet; a sub-sheet's labels are global, as the nets join across sheets by their names
+                    sch.Wires.Add(new SchematicWire { Points = { o.At, o.Tip }, Sheet = part.Sheet });
                     if (o.Net.Power && (o.Name == "GND" || o.Name == "0"))
                     {
                         var gnd = sch.AddPart(library, "ground", new GridPoint(o.Tip.X, o.Tip.Y + 1));
                         gnd.RefDes = sch.NextRefDes("#GND");
+                        gnd.Sheet = part.Sheet;
                     }
                     else if (o.Net.Power)
                     {
                         var rail = sch.AddPart(library, "power-rail", new GridPoint(o.Tip.X, o.Tip.Y - 1));
                         rail.Parameters["net"] = o.Name;
+                        rail.Sheet = part.Sheet;
                     }
-                    else sch.Labels.Add(new NetLabel { Name = o.Name, Position = o.Tip });
+                    else sch.Labels.Add(new NetLabel { Name = o.Name, Position = o.Tip, Sheet = part.Sheet, Global = part.Sheet != null });
                 }
             }
 

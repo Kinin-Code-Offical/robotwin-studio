@@ -95,6 +95,11 @@ namespace RobotTwin.CoreSim.Modeling
                 new ParamSpec("pitch", "Adım (tur başına yükselme)", "mm", 5, 0.05, Big), new ParamSpec("turns", "Tur sayısı", "", 6, 0.25, 500),
                 new ParamSpec("closed", "Kapalı uçlar (0/1)", "", 1, 0, 1, true), new ParamSpec("seg", "Tur başına bölüm", "", 32, 8, 128, true)
             },
+            [PrimitiveKind.Wrap] = new[]
+            {
+                new ParamSpec("d", "Silindir çapı", "mm", 30, 0.1, Big), new ParamSpec("depth", "Kabartma (+) / oyma (−)", "mm", 1.5, -Big, Big),
+                new ParamSpec("step", "Bölüm açısı", "°", 4, 0.5, 30)
+            },
             [PrimitiveKind.Sweep] = new[]
             {
                 new ParamSpec("seg", "Bölüm sayısı", "", 32, 6, 256, true)
@@ -125,6 +130,7 @@ namespace RobotTwin.CoreSim.Modeling
             PrimitiveKind.Loft => "Geçiş (loft)",
             PrimitiveKind.Sweep => "Süpürme (sweep)",
             PrimitiveKind.Helix => "Helis (yay)",   // a profile turned about an axis (not "Döndürme": that is the rotation fields' word)
+            PrimitiveKind.Wrap => "Sarma (wrap)",
             _ => "Parça"
         };
 
@@ -152,6 +158,12 @@ namespace RobotTwin.CoreSim.Modeling
                 // [sweep] a 10 mm round bar bent into a handle: up, across, down
                 s.Sketch = new Sketch2D { Outer = SketchShape.Circle(10) };
                 s.Path = new List<double> { -30, 0, 0, -30, 0, 30, 30, 0, 30, 30, 0, 0 };
+            }
+            else if (kind == PrimitiveKind.Wrap)
+            {
+                // [wrap] a nameplate round a 30 mm bar: a rounded band with a window
+                s.Sketch = new Sketch2D { Outer = SketchShape.Rect(36, 12, 0, 0, 2) };
+                s.Sketch.Holes.Add(SketchShape.Circle(5));
             }
             else if (kind == PrimitiveKind.Loft)
             {
@@ -217,6 +229,12 @@ namespace RobotTwin.CoreSim.Modeling
                     var pts = Enumerable.Range(0, path.Count / 3).Select(i => new Vec3(path[3 * i], path[3 * i + 1], path[3 * i + 2])).ToList();
                     return Sweep((s.Sketch ?? new Sketch2D()).Outer.ToPolygon(I("seg")), pts, Math.Max(6, I("seg")));
                 }
+                case PrimitiveKind.Wrap:   // [wrap]
+                {
+                    var sk = s.Sketch ?? new Sketch2D();
+                    return Wrap(sk.Outer.ToPolygon(48), sk.Holes.Select(h => h.ToPolygon(32)).ToList(), G("d") / 2, G("depth"), G("step"));
+                }
+
                 case PrimitiveKind.Loft:
                 {
                     int seg = I("seg");
@@ -760,6 +778,83 @@ namespace RobotTwin.CoreSim.Modeling
             }
 
             m.DissolveCoplanar(1e-3, 1e-7);
+            return m;
+        }
+
+        /// <summary>
+        /// [wrap] SolidWorks' wrap: a 2D region (X as arc length round the circumference from +X, Y along Z) laid round a
+        /// cylinder of radius <paramref name="radius"/> about Z, as a solid from the surface out by <paramref name="depth"/>
+        /// (an emboss) or in by −depth (a deboss), reaching 0.1 mm past the surface so it joins or cuts it cleanly. The
+        /// region is triangulated and split evenly until no edge spans more than <paramref name="stepDegrees"/> of the
+        /// circle, so both faces follow the curve; the walls follow the split edges, and the solid stays closed.
+        /// </summary>
+        public static PolyMesh Wrap(List<Vec2> outer, List<List<Vec2>> holes, double radius, double depth, double stepDegrees = 4)
+        {
+            var m = new PolyMesh();
+            if (outer.Count < 3 || radius <= 0 || Math.Abs(depth) < 1e-6) return m;
+            outer = Ccw(outer, true);
+            var hs = holes.Where(h => h.Count >= 3).Select(h => Ccw(h, false)).ToList();
+            const double Overlap = 0.1;
+            double r0 = depth > 0 ? radius - Overlap : radius + depth, r1 = depth > 0 ? radius + depth : radius + Overlap;
+            double step = Math.Max(0.1, radius * Math.Max(0.5, stepDegrees) * Math.PI / 180);
+            var points = new List<Vec2>(outer);
+            foreach (var h in hs) points.AddRange(h);
+            var idx = Triangulator.Triangulate(outer, hs.Cast<IReadOnlyList<Vec2>>().ToList());
+            var tris = new List<(Vec2 A, Vec2 B, Vec2 C)>();
+            for (int i = 0; i + 2 < idx.Count; i += 3) tris.Add((points[idx[i]], points[idx[i + 1]], points[idx[i + 2]]));
+            double longest = 0;
+            foreach (var (a, b, c) in tris) longest = Math.Max(longest, Math.Max((b - a).Length, Math.Max((c - b).Length, (a - c).Length)));
+            int levels = 0;
+            while (levels < 5 && longest / (1 << levels) > step) levels++;
+            for (int l = 0; l < levels; l++)
+            {
+                // every triangle into four by its edges' midpoints: a neighbour's shared edge splits at the same point
+                var next = new List<(Vec2, Vec2, Vec2)>(tris.Count * 4);
+                foreach (var (a, b, c) in tris)
+                {
+                    Vec2 ab = (a + b) * 0.5, bc = (b + c) * 0.5, ca = (c + a) * 0.5;
+                    next.Add((a, ab, ca));
+                    next.Add((ab, b, bc));
+                    next.Add((ca, bc, c));
+                    next.Add((ab, bc, ca));
+                }
+
+                tris = next;
+            }
+
+            var inner = new Dictionary<(long, long), int>();
+            var outerFace = new Dictionary<(long, long), int>();
+            int V(Dictionary<(long, long), int> layer, Vec2 p, double rho)
+            {
+                var key = ((long)Math.Round(p.X * 1e4), (long)Math.Round(p.Y * 1e4));
+                if (layer.TryGetValue(key, out int i)) return i;
+                double a = p.X / radius;
+                return layer[key] = m.AddVertex(new Vec3(rho * Math.Cos(a), rho * Math.Sin(a), p.Y));
+            }
+
+            // the region's turn (CCW, normal +Z) maps onto the outward radial normal: the outer face as it is, the inner one turned over
+            foreach (var (a, b, c) in tris)
+            {
+                m.AddFace(V(outerFace, a, r1), V(outerFace, b, r1), V(outerFace, c, r1));
+                m.AddFace(V(inner, a, r0), V(inner, c, r0), V(inner, b, r0));
+            }
+
+            int seg = 1 << levels;
+            foreach (var loop in new[] { outer }.Concat(hs))
+            {
+                for (int i = 0; i < loop.Count; i++)
+                {
+                    var a = loop[i];
+                    var b = loop[(i + 1) % loop.Count];
+                    for (int k = 0; k < seg; k++)
+                    {
+                        var p = a + (b - a) * ((double)k / seg);
+                        var q = a + (b - a) * ((double)(k + 1) / seg);
+                        m.AddFace(V(inner, p, r0), V(inner, q, r0), V(outerFace, q, r1), V(outerFace, p, r1));
+                    }
+                }
+            }
+
             return m;
         }
 

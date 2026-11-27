@@ -285,7 +285,7 @@ namespace RobotTwin.CoreSim.Design
                     {
                         result.Add(new ErcViolation(ErcSeverity.Warning, "label-unconnected", $"'{label.Name}' etiketi hiçbir kabloya veya pine değmiyor.", label.Position, null, label.Name) { Sheet = sheetId });
                     }
-                    else if (!label.Hierarchical &&
+                    else if (!label.Hierarchical && Formats.KiCadBusNames.Members(label.Name.Trim()) == null &&   // [bus] a bus's label names its members
                              doc.Labels.Count(l => !l.Hierarchical && string.Equals(l.Name.Trim(), label.Name.Trim(), StringComparison.OrdinalIgnoreCase)) == 1 &&
                              !doc.Parts.Any(p => library.Find(p.PartId)?.Symbol == SymbolKind.PowerRail &&
                                                  string.Equals(doc.ResolveParameters(library, p).TryGetValue("net", out var n) ? n.Trim() : "", label.Name.Trim(), StringComparison.OrdinalIgnoreCase)))

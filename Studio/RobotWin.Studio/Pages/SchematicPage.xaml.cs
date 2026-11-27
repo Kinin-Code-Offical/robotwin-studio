@@ -295,7 +295,7 @@ namespace RobotWin.Studio.Pages
             ToolText.IsChecked = Canvas.Tool == EditorTool.Text;   // [notes]
             ToolHighlight.IsChecked = Canvas.Tool == EditorTool.Highlight;   // [highlight]
             ToolJunction.IsChecked = Canvas.Tool == EditorTool.Junction;   // [junction]
-            ToolSheet.IsChecked = Canvas.Tool is EditorTool.Sheet or EditorTool.SheetPin or EditorTool.HierLabel;   // [sheets]
+            ToolSheet.IsChecked = Canvas.Tool is EditorTool.Sheet or EditorTool.SheetPin or EditorTool.HierLabel or EditorTool.Bus or EditorTool.BusEntry;   // [sheets] [bus]
             ToolErase.IsChecked = Canvas.Tool == EditorTool.Erase;   // [erase]
             ToolDraw.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier or EditorTool.Table;   // [shapes]
         }

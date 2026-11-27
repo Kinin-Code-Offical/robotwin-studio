@@ -100,11 +100,12 @@ namespace RobotWin.Studio.Pages
         private void OnSheetTool(object sender, RoutedEventArgs e)
         {
             var button = (System.Windows.Controls.Primitives.ToggleButton)sender;
-            button.IsChecked = Canvas.Tool is EditorTool.Sheet or EditorTool.SheetPin or EditorTool.HierLabel;
+            button.IsChecked = Canvas.Tool is EditorTool.Sheet or EditorTool.SheetPin or EditorTool.HierLabel or EditorTool.Bus or EditorTool.BusEntry;
             var menu = new ContextMenu { PlacementTarget = button, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
             foreach (var (text, tool) in new[]
                      {
-                         ("Hiyerarşik sayfa  (S)", EditorTool.Sheet), ("Sayfa pini", EditorTool.SheetPin), ("Hiyerarşik etiket  (H)", EditorTool.HierLabel)
+                         ("Hiyerarşik sayfa  (S)", EditorTool.Sheet), ("Sayfa pini", EditorTool.SheetPin), ("Hiyerarşik etiket  (H)", EditorTool.HierLabel),
+                         ("Bus  (B)", EditorTool.Bus), ("Bus girişi  (Z)", EditorTool.BusEntry)
                      })
             {
                 var item = new MenuItem { Header = Shell.Lang.T(text), IsChecked = Canvas.Tool == tool };

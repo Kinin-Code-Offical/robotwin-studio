@@ -65,7 +65,13 @@ namespace RobotWin.Studio.Editor
         SheetPin,
 
         /// <summary>[sheets] KiCad's hierarchical label (H).</summary>
-        HierLabel
+        HierLabel,
+
+        /// <summary>[bus] KiCad's bus (B): drawn like a wire, it carries its members by name.</summary>
+        Bus,
+
+        /// <summary>[bus] KiCad's bus entry (Z): a 45° stub from a bus to a wire (Shift: the other way).</summary>
+        BusEntry
     }
 
     /// <summary>
@@ -84,6 +90,7 @@ namespace RobotWin.Studio.Editor
         private static Color TextColor => Shell.CanvasColors.Text;
         private static Color MutedText => Shell.CanvasColors.MutedText;
         private static Color LabelColor => Shell.CanvasColors.Label;
+        private static readonly Color BusColor = Color.FromRgb(0x4A, 0x7F, 0xD9);   // [bus] as KiCad draws buses
         private static Color PanelColor => Shell.CanvasColors.Panel;
         private static Color PanelBorder => Shell.CanvasColors.PanelBorder;
 
@@ -536,12 +543,13 @@ namespace RobotWin.Studio.Editor
                 }
 
                 bool selected = _selection.Contains(wire);
+                if (wire.Bus) color = BusColor;   // [bus] KiCad's blue, thick
                 if (!Simulating && net != null && _netHighlight != null && string.Equals(net, _netHighlight, StringComparison.OrdinalIgnoreCase)) color = HighlightColor;
                 bool hovered = ReferenceEquals(_hover, wire) || (Simulating && net != null && _hover is SchematicWire hw &&
                                                                   Doc.Wires.IndexOf(hw) is int hi && hi >= 0 && hi < netlist.WireNets.Count && netlist.WireNets[hi] == net);
                 var geo = Polyline(wire.Points);
                 if (selected || hovered) dc.DrawGeometry(null, MakePen(Color.FromArgb(selected ? (byte)0x40 : (byte)0x22, Accent.R, Accent.G, Accent.B), 5), geo);
-                dc.DrawGeometry(null, MakePen(selected ? Accent : color, Math.Max(1.3, _scale * 0.1)), geo);
+                dc.DrawGeometry(null, MakePen(selected ? Accent : color, Math.Max(wire.Bus ? 3.2 : 1.3, _scale * (wire.Bus ? 0.3 : 0.1))), geo);
             }
 
             // Junctions

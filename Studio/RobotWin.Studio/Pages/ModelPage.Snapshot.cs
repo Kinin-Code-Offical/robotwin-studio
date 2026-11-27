@@ -493,6 +493,31 @@ namespace RobotWin.Studio.Pages
                     break;
                 }
 
+                case "wrap":   // [wrap] a nameplate embossed round a shaft, and the same plate debossed into another
+                {
+                    ModelObject Shaft(double x, double depth, string name, string colour)
+                    {
+                        var shaft = ModelOps.AddPrimitive(doc, PrimitiveKind.Cylinder, x, 0);
+                        shaft.Primitive!.Set("d", 30);
+                        shaft.Primitive.Set("h", 36);
+                        shaft.Primitive.Set("seg", 96);
+                        shaft.Name = name;
+                        shaft.Color = colour;
+                        var plate = PrimitiveSchema.Create(PrimitiveKind.Wrap);
+                        plate.Set("d", 30);
+                        plate.Set("depth", depth);
+                        shaft.Features = new System.Collections.Generic.List<ModelFeature> { new ModelFeature { Name = PrimitiveSchema.Name(PrimitiveKind.Wrap), Kind = depth > 0 ? FeatureKind.Join : FeatureKind.Cut, Primitive = plate } };
+                        return shaft;
+                    }
+
+                    var embossed = Shaft(-25, 1.5, "Kabartma", "#8E98A8");
+                    Shaft(25, -1.2, "Oyma", "#3B82C4");
+                    _ed.Load(doc, null);
+                    _ed.Select(embossed.Id);
+                    _vp.FrameAll();
+                    break;
+                }
+
                 case "helix":   // [helix] a compression spring with closed ends, an open coil and a tight one
                 {
                     var spring = ModelOps.AddPrimitive(doc, PrimitiveKind.Helix);

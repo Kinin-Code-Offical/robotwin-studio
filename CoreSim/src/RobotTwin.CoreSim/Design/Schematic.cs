@@ -94,6 +94,13 @@ namespace RobotTwin.CoreSim.Design
         public string? Sheet { get; set; }
 
         public List<GridPoint> Points { get; set; } = new List<GridPoint>();
+
+        /// <summary>
+        /// [bus] KiCad's bus: a thick line that carries a group of nets by name ("D[0..7]", "{SDA SCL}") and joins no wire
+        /// itself; its members join by their labels, and a bus through a sheet pin joins each member to the sub-sheet's.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool Bus { get; set; }
     }
 
     /// <summary>A named label attached to a point; every label with the same text is one net.</summary>
@@ -660,6 +667,7 @@ namespace RobotTwin.CoreSim.Design
             var segments = new List<(string Sheet, GridPoint A, GridPoint B)>();
             foreach (var wire in Wires)
             {
+                if (wire.Bus) continue;   // [bus] a bus joins nothing by touching: its members join by name
                 for (int i = 0; i + 1 < wire.Points.Count; i++)
                 {
                     uf.Union(Id(wire.Sheet, wire.Points[i]), Id(wire.Sheet, wire.Points[i + 1]));
@@ -734,6 +742,19 @@ namespace RobotTwin.CoreSim.Design
                     foreach (var l in inside.Where(l => string.Equals(l.Name.Trim(), pin.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
                         uf.Union(at, pointIds[(Key(l.Sheet), l.Position)]);
                     Name(at, SheetPath(symbol.Sheet) == "/" ? pin.Name.Trim() : SheetPath(symbol.Sheet) + pin.Name.Trim(), false, 200 + SheetDepth(symbol.Sheet));
+
+                    // [bus] a bus pin joins each member to the sub-sheet's member of the same name
+                    if (inside.Any(l => string.Equals(l.Name.Trim(), pin.Name.Trim(), StringComparison.OrdinalIgnoreCase)) &&
+                        Formats.KiCadBusNames.Members(pin.Name.Trim()) is { } members)
+                    {
+                        string outer = symbol.Sheet != null && known.Contains(symbol.Sheet) ? symbol.Sheet + ":" : ":";
+                        foreach (var m in members)
+                        {
+                            int v = uf.Add();
+                            Join(v, outer + m.Net);
+                            Join(v, symbol.Uid + ":" + m.Net);
+                        }
+                    }
                 }
             }
 
@@ -847,7 +868,7 @@ namespace RobotTwin.CoreSim.Design
             foreach (var wire in Wires)
             {
                 string? name = null;
-                if (wire.Points.Count > 0 && nameByRoot.TryGetValue(uf.Find(pointIds[(Key(wire.Sheet), wire.Points[0])]), out var n)) name = n;
+                if (!wire.Bus && wire.Points.Count > 0 && nameByRoot.TryGetValue(uf.Find(pointIds[(Key(wire.Sheet), wire.Points[0])]), out var n)) name = n;
                 netlist.WireNets.Add(name);
             }
 
@@ -860,6 +881,7 @@ namespace RobotTwin.CoreSim.Design
             void Bump((string, GridPoint) p, int by) => degree[p] = (degree.TryGetValue(p, out int d) ? d : 0) + by;
             foreach (var wire in Wires)
             {
+                if (wire.Bus) continue;   // [bus] no junction dots on a bus
                 for (int i = 0; i < wire.Points.Count; i++)
                 {
                     bool end = i == 0 || i == wire.Points.Count - 1;

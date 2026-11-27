@@ -610,7 +610,7 @@ namespace RobotTwin.CoreSim.Design
             var result = new List<(SchematicWire, GridPoint)>();
             foreach (var w in doc.Wires)
             {
-                if (w.Points.Count < 2 || !Schematic.SameSheet(w.Sheet, sheet)) continue;   // [sheets] the sheet's own wires
+                if (w.Points.Count < 2 || w.Bus || !Schematic.SameSheet(w.Sheet, sheet)) continue;   // [sheets] the sheet's own wires; [bus] a bus may end free
                 foreach (var end in new[] { w.Points[0], w.Points[^1] })
                 {
                     if (tips.Contains(end) || doc.Labels.Any(l => Schematic.SameSheet(l.Sheet, sheet) && l.Position.Equals(end)) ||

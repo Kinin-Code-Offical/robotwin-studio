@@ -53,7 +53,7 @@
                             <ToggleButton x:Name="ToolText" Style="{StaticResource Toggle.Tool}" ToolTip="Metin (T): sayfaya not, başlık ya da açıklama; çift tıkla düzenlenir" Click="OnToolClick" Tag="Text" Margin="2,0,0,0">
                                 <t:Icon Data="{StaticResource I.Text}" Size="15"/>
                             </ToggleButton>
-                            <ToggleButton x:Name="ToolSheet" Style="{StaticResource Toggle.Tool}" ToolTip="Hiyerarşi: sayfa (S), sayfa pini, hiyerarşik etiket (H) · çift tıkla sayfaya gir, Alt+↑ çık" Click="OnSheetTool" Margin="2,0,0,0">
+                            <ToggleButton x:Name="ToolSheet" Style="{StaticResource Toggle.Tool}" ToolTip="Hiyerarşi ve bus: sayfa (S), sayfa pini, hiyerarşik etiket (H), bus (B), bus girişi (Z) · çift tıkla sayfaya gir, Alt+↑ çık" Click="OnSheetTool" Margin="2,0,0,0">
                                 <t:Icon Data="{StaticResource I.Sheet}" Size="15"/>
                             </ToggleButton>
                             <ToggleButton x:Name="ToolDraw" Style="{StaticResource Toggle.Tool}" ToolTip="Çiz: çizgi, dikdörtgen, daire, yay (çerçeve, bölme, mekanik çizim; hattı yoktur)" Click="OnDrawTool" Margin="2,0,0,0">

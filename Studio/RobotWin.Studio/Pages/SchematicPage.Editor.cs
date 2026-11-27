@@ -1167,6 +1167,27 @@ namespace RobotWin.Studio.Pages
                     return;
                 }
 
+                case "bus":   // [bus] a D[0..3] bus with its entries and member labels, picked
+                {
+                    double x0 = Math.Round(b.MaxX) + 8, y0 = Math.Round(b.MinY) + 3;
+                    var bus = new SchematicWire { Bus = true, Points = { new GridPoint(x0, y0), new GridPoint(x0 + 22, y0) } };
+                    sch.Wires.Add(bus);
+                    sch.Labels.Add(new NetLabel { Name = "D[0..3]", Position = new GridPoint(x0, y0) });
+                    for (int i = 0; i < 4; i++)
+                    {
+                        var at = new GridPoint(x0 + 4 + i * 5, y0);
+                        sch.Wires.Add(new SchematicWire { Points = { at, new GridPoint(at.X + 1, at.Y + 1) } });
+                        sch.Wires.Add(new SchematicWire { Points = { new GridPoint(at.X + 1, at.Y + 1), new GridPoint(at.X + 1, at.Y + 5) } });
+                        sch.Labels.Add(new NetLabel { Name = "D" + i.ToString(CultureInfo.InvariantCulture), Position = new GridPoint(at.X + 1, at.Y + 5) });
+                    }
+
+                    Canvas.Refresh();
+                    Canvas.FitToContent();
+                    Canvas.SelectItems(new object[] { bus });
+                    Canvas.InvalidateVisual();
+                    return;
+                }
+
                 case "rule-area":   // [rule-area] the motor's switch and supply inside a Power area, picked
                 {
                     var q1 = sch.Parts.FirstOrDefault(x => x.RefDes == "Q1") ?? firstPart;

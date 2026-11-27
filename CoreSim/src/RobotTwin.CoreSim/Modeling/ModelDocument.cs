@@ -41,7 +41,14 @@ namespace RobotTwin.CoreSim.Modeling
         Sweep,
 
         /// <summary>[helix] A round wire wound on a helix: a coil spring (SolidWorks' helix and spiral, swept).</summary>
-        Helix
+        Helix,
+
+        /// <summary>
+        /// [wrap] SolidWorks' wrap: the profile (<see cref="PrimitiveSpec.Sketch"/>, X along the circumference, Y along the
+        /// axis) laid round a cylinder, standing out of it (emboss) or sunk into it (deboss); joined to or cut from the
+        /// cylinder by the feature history.
+        /// </summary>
+        Wrap
     }
 
     /// <summary>Object placement relative to its parent: position (mm), Euler XYZ rotation (degrees), scale.</summary>

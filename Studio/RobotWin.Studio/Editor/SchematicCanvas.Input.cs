@@ -109,6 +109,7 @@ namespace RobotWin.Studio.Editor
                     PlaceGhost();
                     return;
                 case EditorTool.Wire:
+                case EditorTool.Bus:   // [bus] routed as a wire
                     WireClick(e.ClickCount >= 2);
                     return;
                 case EditorTool.Label:
@@ -168,6 +169,9 @@ namespace RobotWin.Studio.Editor
                 case EditorTool.HierLabel:
                     AddHierarchicalLabelAt(WireSnap(_mouseGrid));
                     Tool = EditorTool.Select;
+                    return;
+                case EditorTool.BusEntry:   // [bus]
+                    PlaceBusEntry(WireSnap(_mouseGrid), shift);
                     return;
             }
 
@@ -645,6 +649,12 @@ namespace RobotWin.Studio.Editor
                     return true;
                 case Key.H when !ctrl && !shift:   // [sheets] KiCad's hierarchical label
                     Tool = EditorTool.HierLabel;
+                    return true;
+                case Key.B when !ctrl && !shift:   // [bus] KiCad's bus
+                    Tool = EditorTool.Bus;
+                    return true;
+                case Key.Z when !ctrl && !shift:   // [bus] KiCad's bus entry
+                    Tool = EditorTool.BusEntry;
                     return true;
                 case Key.T when !ctrl:   // [notes] KiCad's text tool
                     Tool = EditorTool.Text;

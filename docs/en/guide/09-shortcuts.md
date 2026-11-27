@@ -50,6 +50,7 @@ The keys on this page are the defaults. In **Settings → Keyboard shortcuts** y
 | L / Ctrl+L | Net label / global label |
 | Q | No-connect (NC) marker |
 | S / H | Hierarchical sheet / hierarchical label |
+| B / Z | Bus / bus entry (Shift: to the left) |
 | Double-click sheet · Alt+↑ (Alt+Backspace) | Enter the sheet · up to the parent |
 | Alt+← / Alt+→ | Back / forward through the sheets |
 | T | Text |

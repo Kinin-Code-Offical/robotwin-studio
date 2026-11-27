@@ -165,6 +165,24 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void KiCadRoundTripKeepsTheSheets()
+        {
+            var (s, _, _, _) = Design();
+            var board = RobotTwin.CoreSim.Pcb.BoardDocument.Synchronize(s, Lib);
+            var files = RobotTwin.CoreSim.Pcb.KiCadExporter.GenerateProject(s, Lib, board, "hier");
+            var back = RobotTwin.CoreSim.Formats.KiCadSchematicImport.Import(files["hier/hier.kicad_sch"], Lib,
+                name => files.TryGetValue("hier/" + System.IO.Path.GetFileName(name), out var t) ? t : null).Schematic;
+            var motor = Assert.Single(back.Sheets);
+            Assert.Equal("Motor", motor.Name);
+            Assert.Equal(motor.Uid, back.Parts.Single(p => p.RefDes == "R2").Sheet);   // into its own sheet again
+            Assert.Null(back.Parts.Single(p => p.RefDes == "R1").Sheet);
+
+            string Groups(Schematic x) => string.Join(" | ", x.BuildNetlist(Lib).Nets.Where(n => n.Connections.Count > 0)
+                .Select(n => string.Join(",", n.Connections.Select(c => c.ToString()).OrderBy(c => c, StringComparer.Ordinal))).OrderBy(g => g, StringComparer.Ordinal));
+            Assert.Equal(Groups(s), Groups(back));   // the same pins on the same nets
+        }
+
+        [Fact]
         public void SheetsAreSavedAndLoaded()
         {
             var (s, motor, _, _) = Design();

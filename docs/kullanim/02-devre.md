@@ -79,6 +79,8 @@ Bağlantı kuralları KiCad'inkilerdir:
 
 Sayfa açıkken sol üstte bir yol çubuğu belirir: **◀ Geri**, **▲ Üst sayfa**, **▶ İleri** ve kökten bu sayfaya kadar her basamak tıklanabilir, **▾** alt sayfaları listeler. Kısayollar: Alt+↑ ya da Alt+Backspace üst sayfaya çıkar, Alt+← geri, Alt+→ ileri gider. Bul, ERC ve PCB'de göster başka sayfadaki bir parçaya o sayfayı açarak gider. ERC, sayfa sembolünde pini olmayan hiyerarşik etiketi ve içinde etiketi olmayan sayfa pinini uyarır. Bütün sayfalar tek tasarımdır: PCB, simülasyon, malzeme listesi ve netlist hepsini birlikte görür. KiCad'e aktarımda her alt sayfa kendi `.kicad_sch` dosyası olur ve kök sayfada KiCad'in sayfa sembolüyle durur.
 
+**Bus** (KiCad'deki gibi): birçok hattı tek kalın mavi çizgiyle taşır. **Hiyerarşi** menüsünden ya da **B** ile kablo gibi çizilir. Üstüne `D[0..7]` (vektör: D0…D7) ya da `{SDA SCL}` (grup) adlı bir etiket konur. **Bus girişi** (**Z**) bus'a tıklanan yerden 45° aşağı-sağa (Shift ile sola) kısa bir ayak çizer; ayağa bağlanan tele üyenin adıyla (`D3`) bir etiket konur. Bus'ın kendisi dokunduğu hiçbir teli birleştirmez; üyeler etiketlerinin adıyla birleşir. Bir sayfa pini ve içerideki hiyerarşik etiket bus adı taşırsa (`D[0..7]`), her üye alt sayfadaki aynı adlı üyeye bağlanır. ERC bus'ın boşta kalan ucunu ve bus etiketini uyarı saymaz.
+
 | Tuş | İşlev |
 | --- | --- |
 | M / G | Taşı / sürükle (G'de kablolar uzar) |
@@ -154,7 +156,7 @@ Alternatifler parçaları adlarıyla değil kimlikleriyle izler: bir parçanın 
 - Netler KiCad'in kendi netlistesiyle aynıdır: KiCad'le gelen bütün örnek tasarımlarda (73 sayfalık olanlar dahil) `kicad-cli`'nin çıkardığı netlisteyle karşılaştırılarak denenir.
 - Her sembol, kütüphane içe aktarmadaki kurallarla bir simülasyon modeline eşlenir; değeri (10k, 100nF, 5V…) ve kılıfı kendi alanlarından gelir. Pil sembolünün gerilimi gerçek bir kimyanın hücre sayısına çevrilir (9 V = 6 alkalin hücre); hiçbiri tutmazsa düzenleyicili bir Li-ion paket olur (5 V: iki hücre ve düzenleyici).
 - Birimleri ayrı çizilmiş semboller (çift op-amp'ın iki yarısı) her birim için ayrı parça olur: U1A, U1B.
-- Parçalar KiCad'deki yerlerinde ve yönlerinde durur; sembollerimiz daha büyük olduğu için çizim oranında açılır, sığmayan parça sağa ya da aşağı kayar. Pinler netlerine kısa bir tel ve net etiketiyle bağlanır; GND'ye toprak, diğer güç netlerine besleme sembolü konur. Bağlantısız bırakılmış pinler işaretleriyle gelir.
+- Parçalar KiCad'deki yerlerinde ve yönlerinde durur; sembollerimiz daha büyük olduğu için çizim oranında açılır, sığmayan parça sağa ya da aşağı kayar. Her alt sayfa kendi sayfası olur: üst sayfasında KiCad'deki yerinde bir sayfa sembolüyle durur, çift tıkla açılır; alt sayfaların etiketleri global olduğu için hatlar sayfalar arasında adlarıyla birleşir. Pinler netlerine kısa bir tel ve net etiketiyle bağlanır; GND'ye toprak, diğer güç netlerine besleme sembolü konur. Bağlantısız bırakılmış pinler işaretleriyle gelir.
 - Modeli olmayan ve bacak sayısına uyan genel parçası da olmayan semboller alınmaz; KiCad'de "takılmaz" (DNP) işaretli olanlar benzetime girmez. Açılışta hangilerinin alınmadığı söylenir.
 
 ![KiCad şemasından açılan devre](../images/kicad-schematic-import.png)

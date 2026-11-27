@@ -118,7 +118,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Hat vurgula aracı | ` tuşu ve araç çubuğunda Hattı vurgula aracı (pin, tel, etiket; kartta da vurgular) | var | |
 | Sembol, güç sembolü | var | var | |
 | Kablo | var | var | |
-| Bus, bus girişi | yok | yok | 3 |
+| Bus, bus girişi | Bus (B): kalın mavi çizgi, D[0..7] / {SDA SCL} etiketi, üyeler adlarıyla birleşir, dokunduğunu birleştirmez; bus girişi (Z) 45° ayak; sayfa pininden üye üye geçer; KiCad şemasından bus bağlantıları da okunur | var | |
 | NC işareti | var | var | |
 | Bağlantı noktası (junction) aracı | J aracı: kesişen telleri birleştirir, yeniden tıklayınca ayırır; T bağlantıları kendiliğinden | var | |
 | Etiket: yerel, global | var | var | |
@@ -165,7 +165,7 @@ Her eksik gerçek işleviyle eklenir: model, çizim, kayıt, dışa aktarma, den
 | Doğrusal / dairesel çoğaltma | var | var | |
 | Aynala | Ayna kopyası | var | |
 | Referans düzlem, eksen, nokta | Ekle ▸ Referans düzlem (üç nokta, uzaklık, iki düzlemin ortası, eksene dik), eksen (iki nokta, yuvarlak parça, iki düzlemin kesişimi), nokta (seçili nokta, parçaların ortası); katısız, çizgisinden seçilir; ayna kopyası ve dairesel dizi kullanır | var | |
-| Helis, sarma (wrap) | Helis (yay): tel helis üstüne süpürülür; ortalama çap, tel çapı, adım, tur sayısı, kapalı uçlar; sarma sonra | kısmi | 3 |
+| Helis, sarma (wrap) | Helis (yay): tel helis üstüne süpürülür; ortalama çap, tel çapı, adım, tur sayısı, kapalı uçlar; sarma (wrap): profil silindir çevresine, kabartma (+) / oyma (−), bölüm açısı; birleştir / kes ile yüzeye | var | |
 | Anında 3B (tutamaçla boyutlandırma) | tutamaçlar | var | |
 | Düzenlenebilir özellik geçmişi | parametrik parçalar; Özellik geçmişi: fark, birleşim, kesişim ve delikler özellik olarak kalır (aracın ölçüleri ve yeri, deliğin ölçüsü, türü, derinliği sonradan değişir; bastır, sırala, ayır, sil); radyüs, pah, kabuk ağa uygular | var | |
 

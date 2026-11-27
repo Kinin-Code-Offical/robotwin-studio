@@ -180,6 +180,8 @@ namespace RobotWin.Studio.Editor
             if (_wirePoints != null) return "Kablo · " + WireModeText + " · tık: köşe · çift tık / Esc: bitir · Backspace: son köşeyi sil";
             return _tool switch
             {
+                EditorTool.Bus => Shell.Lang.T("Bus · kablo gibi çizilir; üyeleri (D[0..7], {SDA SCL}) etiketleriyle bağlanır"),
+                EditorTool.BusEntry => Shell.Lang.T("Bus girişi · bus üstüne tıklayın (Shift: sola)"),
                 EditorTool.Wire => "Kablo · " + WireModeText + " · / köşe yönü · Shift+Boşluk mod",
                 EditorTool.Label => "Etiket · tıklayın",
                 EditorTool.Text => "Metin · yazının sol üst köşesine tıklayın",
@@ -714,8 +716,9 @@ namespace RobotWin.Studio.Editor
                 if (clean.Count >= 2)
                 {
                     W.BeginChange();
-                    Doc.Wires.Add(new SchematicWire { Points = clean, Sheet = CurrentSheet });
-                    W.CommitChange("Kablo eklendi");
+                    bool bus = _tool == EditorTool.Bus;   // [bus]
+                    Doc.Wires.Add(new SchematicWire { Points = clean, Sheet = CurrentSheet, Bus = bus });
+                    W.CommitChange(bus ? Shell.Lang.T("Bus eklendi") : "Kablo eklendi");
                 }
             }
 
@@ -772,6 +775,18 @@ namespace RobotWin.Studio.Editor
         {
             AddLabelAt(WireSnap(_mouseGrid), _tool == EditorTool.GlobalLabel);
             Tool = EditorTool.Select;
+        }
+
+        /// <summary>[bus] A bus entry: a 45° stub from the point (on a bus) down to the right, or to the left with Shift.</summary>
+        public void PlaceBusEntry(GridPoint at, bool left)
+        {
+            if (!GuardEditing()) return;
+            var a = Snap(at);
+            var b = new GridPoint(a.X + (left ? -1 : 1), a.Y + 1);
+            W.BeginChange();
+            Doc.Wires.Add(new SchematicWire { Points = { a, b }, Sheet = CurrentSheet });
+            W.CommitChange(Shell.Lang.T("Bus girişi eklendi"));
+            InvalidateVisual();
         }
 
         /// <summary>Q: puts (or removes) a no-connect flag on the pin under the cursor.</summary>

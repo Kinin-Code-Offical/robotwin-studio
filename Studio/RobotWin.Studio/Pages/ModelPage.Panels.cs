@@ -44,6 +44,7 @@ namespace RobotWin.Studio.Pages
                 PrimitiveKind.Loft => Icon("M.Loft"),
                 PrimitiveKind.Sweep => Icon("M.Sweep"),
                 PrimitiveKind.Helix => Icon("M.Helix"),
+                PrimitiveKind.Wrap => Icon("M.Wrap"),   // [wrap]
                 _ => Icon("I.Part")
             };
         }
@@ -434,6 +435,11 @@ namespace RobotWin.Studio.Pages
             if (spec.Kind == PrimitiveKind.Part && RobotParts.Find(spec.Template) is { } tpl) Caption(tpl.Description);
             if (spec.Kind == PrimitiveKind.Plate) PlateHoles(spec);
             if (spec.Kind == PrimitiveKind.Extrude) SketchSection(spec);
+            if (spec.Kind == PrimitiveKind.Wrap)   // [wrap] the profile laid round the cylinder
+            {
+                SketchSection(spec);
+                Caption("Profilin X'i silindirin çevresi boyunca (+X yönünden başlayarak), Y'si ekseni boyuncadır. Kabartma (+) silindirden dışarı, oyma (−) içeri doğru bir gövdedir: Birleştir ile kabartılır, Kes ile oyulur (aynı çaptaki bir silindirin üstünde).");
+            }
             if (spec.Kind == PrimitiveKind.Revolve) RevolveSection(spec);
             if (spec.Kind == PrimitiveKind.Sweep) SweepSection(spec);   // [sweep] Pages/ModelPage.Sweep.cs
             if (spec.Kind == PrimitiveKind.Loft)   // [loft] the two profiles it passes between
@@ -1187,7 +1193,7 @@ namespace RobotWin.Studio.Pages
                          (PrimitiveKind.Box, "M.Box"), (PrimitiveKind.Cylinder, "M.Cylinder"), (PrimitiveKind.Cone, "M.Cone"), (PrimitiveKind.Sphere, "M.Sphere"),
                          (PrimitiveKind.Torus, "M.Torus"), (PrimitiveKind.Tube, "M.Tube"), (PrimitiveKind.Wedge, "M.Wedge"), (PrimitiveKind.Plate, "M.Plate"),
                          (PrimitiveKind.Extrude, "M.Extrude"), (PrimitiveKind.Revolve, "M.Revolve"), (PrimitiveKind.Loft, "M.Loft"), (PrimitiveKind.Sweep, "M.Sweep"),
-                         (PrimitiveKind.Helix, "M.Helix")
+                         (PrimitiveKind.Helix, "M.Helix"), (PrimitiveKind.Wrap, "M.Wrap")
                      })
             {
                 var k = kind;

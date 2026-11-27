@@ -50,6 +50,7 @@ Bu sayfadaki tuşlar varsayılanlardır. Pencerenin kısayollarını ve Devre, P
 | L / Ctrl+L | Hat etiketi / global etiket |
 | Q | Bağlantı yok (NC) işareti |
 | S / H | Hiyerarşik sayfa / hiyerarşik etiket |
+| B / Z | Bus / bus girişi (Shift: sola) |
 | Çift tık sayfa · Alt+↑ (Alt+Backspace) | Sayfaya gir · üst sayfaya çık |
 | Alt+← / Alt+→ | Sayfalarda geri / ileri |
 | T | Metin |

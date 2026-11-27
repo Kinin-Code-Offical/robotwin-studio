@@ -15,6 +15,7 @@ namespace RobotWin.Studio.Editor
                 ("L / Ctrl+L", "Hat etiketi / global etiket"),
                 ("Q", "Bağlantı yok (NC) işareti"),
                 ("S · H", "Hiyerarşik sayfa · hiyerarşik etiket"),
+                ("B · Z", "Bus · bus girişi (Shift: sola)"),
                 ("Pine tık", "Kablo başlat"),
             }),
             ("Kablo", new List<(string, string)>

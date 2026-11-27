@@ -79,6 +79,8 @@ The connection rules are KiCad's:
 
 With a sheet open, a path bar appears at the top left: **◀ Back**, **▲ Up** and **▶ Forward**, then every step from the root to the sheet (each one clickable); **▾** lists the sheets below. Shortcuts: Alt+↑ or Alt+Backspace goes up, Alt+← back, Alt+→ forward. Find, ERC and Show in PCB reach a part on another sheet by opening that sheet. ERC warns about a hierarchical label with no pin on its sheet symbol and a sheet pin with no label inside. All the sheets are one design: the PCB, the simulation, the bill of materials and the netlist see them together. Exported to KiCad, every sub-sheet becomes its own `.kicad_sch` file, standing on the root sheet as a KiCad sheet symbol.
 
+**Bus** (as in KiCad): a single thick blue line that carries many nets. Draw it like a wire from the **Hierarchy** menu or with **B**, and put a label on it named `D[0..7]` (a vector: D0…D7) or `{SDA SCL}` (a group). A **bus entry** (**Z**) draws a short 45° stub down and to the right of where you click on the bus (to the left with Shift); the wire on the stub gets a label with the member's name (`D3`). The bus itself joins no wire it touches; the members join by their labels' names. When a sheet pin and the hierarchical label inside carry a bus name (`D[0..7]`), each member joins the member of the same name in the sub-sheet. ERC does not warn about a bus's free end or its label.
+
 | Key | Function |
 | --- | --- |
 | M / G | Move / drag (with G the wires stretch) |
@@ -154,7 +156,7 @@ Alternatives follow parts by their identity, not their names: renaming a part ke
 - The nets are KiCad's own netlist: this is tried against what `kicad-cli` exports for every example design that ships with KiCad (73-sheet ones included).
 - Each symbol is mapped onto a simulation model by the same rules as importing a library; its value (10k, 100nF, 5V…) and footprint come from its own fields. A battery's voltage becomes the cell count of a real chemistry (9 V = 6 alkaline cells); when none fits it is a Li-ion pack with a regulator (5 V: two cells and a regulator).
 - A symbol whose units are drawn apart (the two halves of a dual op-amp) becomes a part per unit: U1A, U1B.
-- The parts keep KiCad's places and orientations; our symbols are larger, so the drawing is spread in proportion, and a part that does not fit moves right or down. Each pin joins its net by a short wire and a net label; GND gets a ground symbol, the other power nets a supply symbol. Pins left open come with their markers.
+- The parts keep KiCad's places and orientations; our symbols are larger, so the drawing is spread in proportion, and a part that does not fit moves right or down. Every sub-sheet becomes a sheet of its own, standing on its parent as a sheet symbol where KiCad had it (double-click to open it); the sub-sheets' labels are global, so the nets join across the sheets by their names. Each pin joins its net by a short wire and a net label; GND gets a ground symbol, the other power nets a supply symbol. Pins left open come with their markers.
 - Symbols with no model and no generic part of their pin count are left out; those marked "do not populate" (DNP) in KiCad are not simulated. Which ones is said when it opens.
 
 ![A circuit opened from a KiCad schematic](../../images/en/kicad-schematic-import.png)
