@@ -2,27 +2,23 @@
  "files": {
   "Libraries/LibUi.cs": 1,
   "Libraries/SvgFlatImage.cs": 2,
-  "Pages/CodePage.Debug.cs": 1,
-  "Pages/CodePage.Registers.cs": 2,
   "Pages/HomePage.xaml.cs": 2,
   "Pages/LadderWindow.cs": 1,
   "Pages/ModelPage.Analysis.cs": 10,
   "Pages/SchematicPage.Editor.cs": 1,
-  "Pages/SchematicPage.xaml.cs": 2,
   "Pages/SettingsPage.Themes.cs": 1,
   "Pages/WorldPage.Hmi.cs": 1,
   "Pages/WorldPage.SceneTree.cs": 5,
   "Pages/WorldPage.Sense.cs": 10,
-  "Pages/WorldPage.Shells.cs": 3,
   "Pages/WorldPage.Terrain.cs": 1,
-  "Pages/WorldPage.xaml": 1,
   "Pages/WorldPage.xaml.cs": 3,
   "Shell/ContrastAudit.cs": 1,
   "Shell/DockManager.cs": 1,
   "Shell/GuideHighlight.cs": 1,
   "Shell/Perf.cs": 5,
   "Shell/SceneOverlays.cs": 1,
+  "Shell/ThemeBrushes.cs": 2,
   "Simulation/SimulationSession.cs": 6
  },
- "total": 62
+ "total": 55
 }

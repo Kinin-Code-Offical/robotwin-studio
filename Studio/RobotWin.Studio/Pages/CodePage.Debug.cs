@@ -20,7 +20,7 @@ namespace RobotWin.Studio.Pages
         public string Type { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
         public string Where { get; set; } = string.Empty;
-        public Brush ValueBrush { get; set; } = Brushes.White;
+        public Brush ValueBrush { get; set; } = Shell.ThemeBrushes.Text;
     }
 
     /// <summary>

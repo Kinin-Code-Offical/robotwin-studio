@@ -156,13 +156,13 @@ namespace RobotWin.Studio.Pages
             var issues = physics.ShellFit(world).Where(i => string.Equals(i.ShellId, shell.Id, StringComparison.OrdinalIgnoreCase)).ToList();
             if (issues.Count == 0)
             {
-                Inspector.Children.Add(StatusLine("✓ Her şey sığıyor: kapak kapanıyor, duvara giren parça ve ezilen kablo yok.", Color.FromRgb(0x4C, 0xC3, 0x8A)));
+                Inspector.Children.Add(StatusLine("✓ Her şey sığıyor: kapak kapanıyor, duvara giren parça ve ezilen kablo yok.", "B.Success"));
                 return;
             }
 
             foreach (var i in issues)
             {
-                var colour = i.Kind is "yükseklik" or "ezilme" or "duvar" ? Color.FromRgb(0xE5, 0x48, 0x4D) : Color.FromRgb(0xF5, 0xA6, 0x23);
+                var colour = i.Kind is "yükseklik" or "ezilme" or "duvar" ? "B.Danger" : "B.Warning";
                 var line = StatusLine("● " + i.Message, colour);
                 line.Cursor = System.Windows.Input.Cursors.Hand;
                 line.ToolTip = "Seçmek için tıklayın";
@@ -200,7 +200,12 @@ namespace RobotWin.Studio.Pages
             if (args.Contains("--xray") || args.Contains("--exploded")) BuildInspector();
         }
 
-        private TextBlock StatusLine(string text, Color colour) =>
-            new TextBlock { Text = text, Foreground = new SolidColorBrush(colour), TextWrapping = TextWrapping.Wrap, FontSize = Shell.TypeScale.Body, Margin = new Thickness(0, 1, 0, 3) };
+        /// <summary>A status line in one of the theme's state colours (<paramref name="brushKey"/>: B.Success, B.Warning, B.Danger), following a theme change.</summary>
+        private static TextBlock StatusLine(string text, string brushKey)
+        {
+            var line = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = Shell.TypeScale.Body, Margin = new Thickness(0, 1, 0, 3) };
+            line.SetResourceReference(TextBlock.ForegroundProperty, brushKey);
+            return line;
+        }
     }
 }

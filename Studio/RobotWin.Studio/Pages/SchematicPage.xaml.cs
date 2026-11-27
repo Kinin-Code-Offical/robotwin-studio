@@ -1308,7 +1308,7 @@ namespace RobotWin.Studio.Pages
                     {
                         Width = 9,
                         Height = 9,
-                        Fill = new SolidColorBrush(red ? Color.FromRgb(0xD9, 0x3A, 0x3A) : Color.FromRgb(0x50, 0x50, 0x56)),
+                        Fill = (Brush)FindResource(red ? "B.Danger" : "B.TextMuted"),
                         Margin = new Thickness(0, 0, 8, 0),
                         VerticalAlignment = VerticalAlignment.Center
                     });

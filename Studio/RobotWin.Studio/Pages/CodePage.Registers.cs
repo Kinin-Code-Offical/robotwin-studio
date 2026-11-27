@@ -18,8 +18,8 @@ namespace RobotWin.Studio.Pages
         public string Address { get; set; } = string.Empty;
         public string Flags { get; set; } = string.Empty;
         public string? Tip { get; set; }
-        public Brush NameBrush { get; set; } = Brushes.White;
-        public Brush ValueBrush { get; set; } = Brushes.White;
+        public Brush NameBrush { get; set; } = Shell.ThemeBrushes.Text;
+        public Brush ValueBrush { get; set; } = Shell.ThemeBrushes.Text;
         public FontWeight Weight { get; set; } = FontWeights.Normal;
         public Thickness Spacing { get; set; } = new Thickness(0, 1, 0, 1);
     }
