@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Theme colours:** the World page's warnings (a burned or overloaded cable, a cable that does not fit) use the theme's danger and warning colours, and the import window's footprint preview the canvas colours, so both read right in light themes too.
 - **Problems panel:** an opened "info" fold no longer closes again whenever the list is redrawn (after a check or a fix).
 - **FMU blocks exchanged at every circuit step:** the FMU was stepped to each step the circuit took and asked for a restart every time, which held the circuit at its smallest steps (a million integrator steps for 0.1 s of a model-exchange FMU). The circuit and the FMU now meet only at the communication points (102 steps).
 

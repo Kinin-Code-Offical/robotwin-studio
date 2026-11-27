@@ -175,7 +175,7 @@ namespace RobotWin.Studio.Pages
         {
             var a = world.Find(c.A.ObjectId);
             var b = world.Find(c.B.ObjectId);
-            Inspector.Children.Add(new TextBlock { Text = $"Kablo: {a?.Name} {c.A.Pin} → {b?.Name} {c.B.Pin}", FontSize = 15, TextWrapping = TextWrapping.Wrap });
+            Inspector.Children.Add(new TextBlock { Text = $"Kablo: {a?.Name} {c.A.Pin} → {b?.Name} {c.B.Pin}", FontSize = TitleSize, TextWrapping = TextWrapping.Wrap });
             Inspector.Children.Add(Note($"AWG {c.Awg:0} · {(c.SolderedA ? "lehimli" : "geçmeli")} / {(c.SolderedB ? "lehimli" : "geçmeli")} uçlar"));
 
             var sizes = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 8) };
@@ -253,8 +253,8 @@ namespace RobotWin.Studio.Pages
                 _diagValues.RowDefinitions.Add(new RowDefinition());
                 var l = new TextBlock { Text = label, Foreground = muted, Margin = new Thickness(0, 2, 12, 2) };
                 var v = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 2) };
-                v.Inlines.Add(new System.Windows.Documents.Run(value) { FontWeight = FontWeights.SemiBold, Foreground = warn ? Brushes.OrangeRed : text });
-                if (note.Length > 0) v.Inlines.Add(new System.Windows.Documents.Run("  " + note) { Foreground = warn ? Brushes.OrangeRed : muted, FontSize = 12 });
+                v.Inlines.Add(new System.Windows.Documents.Run(value) { FontWeight = FontWeights.SemiBold, Foreground = warn ? DangerBrush : text });
+                if (note.Length > 0) v.Inlines.Add(new System.Windows.Documents.Run("  " + note) { Foreground = warn ? DangerBrush : muted, FontSize = 12 });
                 Grid.SetRow(l, k);
                 Grid.SetRow(v, k);
                 Grid.SetColumn(v, 1);
@@ -398,7 +398,7 @@ namespace RobotWin.Studio.Pages
                 var b = world.Find(c.B.ObjectId);
                 var (span, len, verdict, bad) = CableFit(c);
                 var (copper, contact) = CableResistance(c, len);
-                Brush? warn = bad ? Brushes.OrangeRed : null;
+                Brush? warn = bad ? DangerBrush : null;
                 if (c.Id == Scene.SelectedCable)
                 {
                     var hl = new Border { Background = (Brush)FindResource("B.AccentSoft") };
@@ -420,7 +420,7 @@ namespace RobotWin.Studio.Pages
                     double load = Math.Abs(i) / amp;
                     if (burned)
                     {
-                        Cell("YANDI", 6, Brushes.OrangeRed, false, c.Id);
+                        Cell("YANDI", 6, DangerBrush, false, c.Id);
                         continue;
                     }
 
@@ -428,7 +428,7 @@ namespace RobotWin.Studio.Pages
                     Cell(SiValue.Format(Math.Abs(i), "A") + (spread > 0 ? $" ±%{spread * 100:0}" : string.Empty), 6, null, false, c.Id);
                     Cell(SiValue.Format(CableDrop(c), "V"), 7, null, false, c.Id);
                     Cell(SiValue.Format(p, "W"), 8, null, false, c.Id);
-                    Cell(Shell.Lang.Percent(load * 100, "0"), 9, load > 1 ? Brushes.OrangeRed : load > 0.8 ? Brushes.Orange : null, false, c.Id);
+                    Cell(Shell.Lang.Percent(load * 100, "0"), 9, load > 1 ? DangerBrush : load > 0.8 ? WarningBrush : null, false, c.Id);
                 }
             }
 

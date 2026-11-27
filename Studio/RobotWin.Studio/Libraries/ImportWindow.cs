@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using RobotWin.Studio.Shell;
 using RobotTwin.CoreSim.Design;
 using RobotTwin.CoreSim.Formats;
 using RobotTwin.CoreSim.Libraries;
@@ -279,13 +280,13 @@ namespace RobotWin.Studio.Libraries
 
         protected override void OnRender(DrawingContext dc)
         {
-            dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(0x15, 0x16, 0x18)), null, new Rect(0, 0, ActualWidth, ActualHeight));
+            dc.DrawRectangle(new SolidColorBrush(CanvasColors.Paper), null, new Rect(0, 0, ActualWidth, ActualHeight));   // [tokens] the theme's canvas
             var fp = _fp;
             if (fp == null || ActualWidth < 4)
             {
                 if (fp == null)
                 {
-                    var t = new FormattedText(RobotWin.Studio.Shell.Lang.T("kılıf yok"), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 12, Brushes.Gray, 1.0);
+                    var t = new FormattedText(RobotWin.Studio.Shell.Lang.T("kılıf yok"), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 12, new SolidColorBrush(CanvasColors.MutedText), 1.0);
                     dc.DrawText(t, new Point(ActualWidth / 2 - t.Width / 2, ActualHeight / 2 - t.Height / 2));
                 }
 
@@ -298,13 +299,13 @@ namespace RobotWin.Studio.Libraries
             double ox = ActualWidth / 2 - (fp.CourtyardMinX + fp.CourtyardMaxX) / 2 * s;
             double oy = ActualHeight / 2 - (fp.CourtyardMinY + fp.CourtyardMaxY) / 2 * s;
             Point P(double x, double y) => new Point(ox + x * s, oy + y * s);
-            var silk = new Pen(new SolidColorBrush(Color.FromRgb(0xF1, 0xF3, 0xF5)), Math.Max(1, 0.15 * s));
+            var silk = new Pen(new SolidColorBrush(CanvasColors.Text), Math.Max(1, 0.15 * s));
             foreach (var seg in fp.Silkscreen) dc.DrawLine(silk, P(seg.X1, seg.Y1), P(seg.X2, seg.Y2));
             foreach (var (x, y, r) in fp.SilkCircles) dc.DrawEllipse(null, silk, P(x, y), r * s, r * s);
-            var gold = new SolidColorBrush(Color.FromRgb(0xB8, 0xB8, 0xBE));
-            var bad = new SolidColorBrush(Color.FromRgb(0xE5, 0x48, 0x4D));
-            var hole = new SolidColorBrush(Color.FromRgb(0x0E, 0x0E, 0x10));
-            var label = new SolidColorBrush(Color.FromRgb(0x9A, 0xA0, 0xA6));
+            var gold = new SolidColorBrush(CanvasColors.Symbol);
+            var bad = new SolidColorBrush(CanvasColors.StressHot);
+            var hole = new SolidColorBrush(CanvasColors.Paper);
+            var label = new SolidColorBrush(CanvasColors.Label);
             foreach (var pad in fp.Pads)
             {
                 var c = P(pad.X, pad.Y);

@@ -1,7 +1,6 @@
 {
  "files": {
   "Help/MarkdownView.cs": 3,
-  "Libraries/ImportWindow.cs": 7,
   "Libraries/LibUi.cs": 1,
   "Libraries/LibraryManagerWindow.cs": 1,
   "Libraries/SvgFlatImage.cs": 2,
@@ -30,7 +29,6 @@
   "Pages/SchematicPage.Nets.cs": 1,
   "Pages/SchematicPage.xaml.cs": 3,
   "Pages/SettingsPage.Themes.cs": 1,
-  "Pages/WorldPage.Cables.cs": 7,
   "Pages/WorldPage.Explode.cs": 2,
   "Pages/WorldPage.Hmi.cs": 4,
   "Pages/WorldPage.Holes.cs": 1,
@@ -40,7 +38,7 @@
   "Pages/WorldPage.Shells.cs": 4,
   "Pages/WorldPage.Terrain.cs": 1,
   "Pages/WorldPage.xaml": 2,
-  "Pages/WorldPage.xaml.cs": 7,
+  "Pages/WorldPage.xaml.cs": 3,
   "Shell/CommandPalette.cs": 1,
   "Shell/ContrastAudit.cs": 1,
   "Shell/Dialog.cs": 2,
@@ -54,5 +52,5 @@
   "Simulation/SimulationSession.cs": 6,
   "Updates/UpdateFlow.cs": 1
  },
- "total": 135
+ "total": 117
 }

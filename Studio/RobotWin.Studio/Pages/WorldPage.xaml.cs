@@ -121,6 +121,12 @@ namespace RobotWin.Studio.Pages
         private static PartLibrary Lib => PartLibrary.Default;
         private WorldDocument? World => W.ActiveWorld;
 
+        /// <summary>[tokens] A value near its limit (the theme's warning colour; a failed one is <see cref="DangerBrush"/>).</summary>
+        private Brush WarningBrush => (Brush)FindResource("B.Warning");
+
+        /// <summary>[tokens] The inspector's heading size (the theme's subtitle step).</summary>
+        private double TitleSize => (double)FindResource("T.Subtitle");
+
         /// <summary>[crossprobe] Selecting what another page selected (it is not announced back).</summary>
         private bool _crossSelecting;
 
@@ -831,7 +837,7 @@ namespace RobotWin.Studio.Pages
                 return;
             }
 
-            var name = new TextBox { Text = o.Name, FontSize = 15 };
+            var name = new TextBox { Text = o.Name, FontSize = TitleSize };
             name.LostFocus += (_, _) =>
             {
                 if (name.Text.Trim().Length > 0 && name.Text != o.Name) Edit("Ad değişti", () => o.Name = name.Text.Trim());
@@ -1005,7 +1011,7 @@ namespace RobotWin.Studio.Pages
 
         private void BuildWorldSummary(WorldDocument world)
         {
-            Inspector.Children.Add(new TextBlock { Text = world.Title, FontSize = 16, Margin = new Thickness(0, 0, 0, 4), TextWrapping = TextWrapping.Wrap });
+            Inspector.Children.Add(new TextBlock { Text = world.Title, FontSize = TitleSize, Margin = new Thickness(0, 0, 0, 4), TextWrapping = TextWrapping.Wrap });
             Inspector.Children.Add(Note($"{world.Objects.Count} nesne · {world.Designs.Count} kart tasarımı · {world.Cables.Count} kablo · {world.Joints.Count} mekanik bağlantı"));
             if (world.IsAssembly)
             {
@@ -1315,7 +1321,7 @@ namespace RobotWin.Studio.Pages
                     Style = (Style)FindResource("Text.Caption"),
                     TextWrapping = TextWrapping.Wrap
                 });
-                if (bad) ((TextBlock)sp.Children[sp.Children.Count - 1]).Foreground = Brushes.OrangeRed;
+                if (bad) ((TextBlock)sp.Children[sp.Children.Count - 1]).Foreground = DangerBrush;
                 grid.Children.Add(sp);
                 var awg = new ComboBox { Width = 64, Margin = new Thickness(4, 0, 4, 0), ToolTip = "Kablo kesiti (AWG)" };
                 foreach (var g in new[] { 30, 28, 26, 24, 22, 20, 18, 16, 14, 12 }) awg.Items.Add(new ComboBoxItem { Content = g.ToString(CultureInfo.InvariantCulture), Tag = (double)g, IsSelected = Math.Abs(g - c.Awg) < 0.5 });
@@ -1421,7 +1427,7 @@ namespace RobotWin.Studio.Pages
             {
                 Text = "Tork sınırı " + force + (min > double.MinValue ? $" · aralık {min:0.#} … {max:0.#} {unit}" : string.Empty),
                 Foreground = (Brush)FindResource("B.TextSecondary"),
-                FontSize = 11.5,
+                FontSize = (double)FindResource("T.Caption"),
                 Margin = new Thickness(0, 0, 0, 6)
             });
         }
