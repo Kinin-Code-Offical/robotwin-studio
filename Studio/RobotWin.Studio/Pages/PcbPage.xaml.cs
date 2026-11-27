@@ -990,6 +990,8 @@ namespace RobotWin.Studio.Pages
                     board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Circle, Points = { new PcbPoint(10.5, 6), new PcbPoint(12, 6) }, Filled = true });
                     board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Arc, Layer = GraphicLayer.FabTop, Points = { new PcbPoint(board.Width - 8, board.Height - 8), new PcbPoint(board.Width - 4, board.Height - 8), new PcbPoint(board.Width - 8, board.Height - 4) } });
                     board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Polygon, Layer = GraphicLayer.Drawings, Points = { new PcbPoint(board.Width - 16, 3), new PcbPoint(board.Width - 6, 3), new PcbPoint(board.Width - 11, 9) } });
+                    // [bezier] a swoosh under the logo frame
+                    board.Graphics.Add(new BoardGraphic { Shape = GraphicShape.Bezier, Width = 0.3, Points = { new PcbPoint(3, 12), new PcbPoint(8, 7), new PcbPoint(13, 17), new PcbPoint(18, 11) } });
                     Canvas.Refresh();
                     Canvas.SetTool(PcbTool.Rectangle);
                     break;

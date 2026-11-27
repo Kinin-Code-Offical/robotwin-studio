@@ -8592,6 +8592,9 @@
   "Seçenekler": "Options",
   "Renkli (kapalıyken her şey siyah: toner transferi, film)": "In colour (off: everything black, for toner transfer and film)",
   "Aynala": "Mirror",
+  "Bezier eğrisi": "Bezier curve",
+  "Bezier eğrisi · başlangıca, bitişe, sonra iki denetim noktasına tıklayın": "Bezier curve · click the start, the end, then its two control points",
+  "Bezier eğrisi: başlangıca, bitişe, sonra iki denetim noktasına tıklayın · Esc: iptal": "Bezier curve: click the start, the end, then its two control points · Esc: cancel",
   "Analiz": "Analysis",
   "Analiz: yüzleri draft açısına, eğriliğe ya da simetriye göre boya (SolidWorks'teki gibi; yalnız görüntü)": "Analysis: colour the faces by draft angle, curvature or symmetry (as in SolidWorks; display only)",
   "Draft": "Draft",
@@ -9009,6 +9012,7 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+  "eğri {…} mm": "curve {0} mm",
   "Draft analizi: çekme {…} · en az {…}° (yalnız görüntü)": "Draft analysis: pull {0} · at least {1}° (display only)",
   "Simetri denetimi: gövdelerin ortasından geçen {…} düzlemine göre (yalnız görüntü)": "Symmetry check: across the {0} plane through the middle of the bodies (display only)",
   "{…} delik; kayık çift yok": "{0} holes; no pair out of line",

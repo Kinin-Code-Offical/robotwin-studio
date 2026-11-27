@@ -174,7 +174,7 @@ namespace RobotWin.Studio.Pcb
                 case PcbTool.Text:
                     TextRequested?.Invoke(this, new PcbPoint(SnapX(x), SnapY(y)));
                     return;
-                case PcbTool.Line or PcbTool.Rectangle or PcbTool.Circle or PcbTool.Arc or PcbTool.Polygon:   // [graphics]
+                case PcbTool.Line or PcbTool.Rectangle or PcbTool.Circle or PcbTool.Arc or PcbTool.Polygon or PcbTool.Bezier:   // [graphics]
                     GraphicClick(x, y, e.ClickCount >= 2);
                     return;
                 case PcbTool.Via:
@@ -397,7 +397,7 @@ namespace RobotWin.Studio.Pcb
                 case PcbTool.Keepout:
                 case PcbTool.Measure:
                 case PcbTool.Dimension:
-                case PcbTool.Line or PcbTool.Rectangle or PcbTool.Circle or PcbTool.Arc or PcbTool.Polygon:   // [graphics] the preview follows
+                case PcbTool.Line or PcbTool.Rectangle or PcbTool.Circle or PcbTool.Arc or PcbTool.Polygon or PcbTool.Bezier:   // [graphics] the preview follows
                     InvalidateVisual();
                     break;
             }

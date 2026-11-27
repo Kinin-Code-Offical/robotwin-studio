@@ -12,14 +12,18 @@ namespace RobotTwin.CoreSim.Pcb
         Rectangle,
         Circle,
         Arc,
-        Polygon
+        Polygon,
+
+        /// <summary>[bezier] A cubic Bézier curve (KiCad's gr_curve): start, two control points, end.</summary>
+        Bezier
     }
 
     /// <summary>
     /// [graphics] A drawn shape on a silkscreen, fab or drawing layer (KiCad's gr_line / gr_rect / gr_circle / gr_arc /
     /// gr_poly): logos, keep-clear outlines, assembly marks, notes' frames. Its points, by shape:
     /// line: start, end; rectangle: two opposite corners; circle: centre, a point on it; arc: centre, start, end (drawn
-    /// counter-clockwise from start to end, in the board's y-down frame clockwise on screen); polygon: its corners.
+    /// counter-clockwise from start to end, in the board's y-down frame clockwise on screen); polygon: its corners;
+    /// Bézier: start, two control points, end.
     /// </summary>
     public sealed class BoardGraphic
     {
@@ -42,6 +46,7 @@ namespace RobotTwin.CoreSim.Pcb
         {
             GraphicShape.Arc => Points.Count >= 3,
             GraphicShape.Polygon => Points.Count >= 3,
+            GraphicShape.Bezier => Points.Count >= 4,
             _ => Points.Count >= 2
         };
 
@@ -74,6 +79,13 @@ namespace RobotTwin.CoreSim.Pcb
                 {
                     var (a0, sweep) = ArcAngles();
                     Curve(s, p[0], Radius, a0, sweep, tolerance);
+                    break;
+                }
+
+                case GraphicShape.Bezier:
+                {
+                    var pts = RobotTwin.CoreSim.Design.CubicBezier.Flatten(p[0].X, p[0].Y, p[1].X, p[1].Y, p[2].X, p[2].Y, p[3].X, p[3].Y, tolerance);
+                    for (int i = 0; i + 1 < pts.Count; i++) s.Add(new Segment2(pts[i].X, pts[i].Y, pts[i + 1].X, pts[i + 1].Y));
                     break;
                 }
             }
@@ -150,6 +162,7 @@ namespace RobotTwin.CoreSim.Pcb
                 GraphicShape.Rectangle => $"dikdörtgen {Math.Abs(Points[1].X - Points[0].X):0.##} × {Math.Abs(Points[1].Y - Points[0].Y):0.##} mm",
                 GraphicShape.Circle => $"daire Ø{2 * Radius:0.##} mm",
                 GraphicShape.Arc => $"yay R{Radius:0.##} mm, {ArcAngles().Sweep * 180 / Math.PI:0}°",
+                GraphicShape.Bezier => $"eğri {Strokes(0.05).Sum(q => Math.Sqrt((q.X2 - q.X1) * (q.X2 - q.X1) + (q.Y2 - q.Y1) * (q.Y2 - q.Y1))):0.##} mm",
                 _ => $"çokgen, {Points.Count} köşe"
             };
             return what;

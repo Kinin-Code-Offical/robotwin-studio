@@ -1091,6 +1091,21 @@ namespace RobotWin.Studio.Pages
                             ?? sch.Parts.FirstOrDefault();
             switch (fault)
             {
+                case "bezier":   // [bezier] a curve beside the circuit, picked: its stroke and control points
+                {
+                    var curve = new SchematicShape
+                    {
+                        Kind = SheetShapeKind.Bezier, Width = 0.25,
+                        Points = { new GridPoint(b.MinX + 14, b.MinY - 2), new GridPoint(b.MinX + 20, b.MinY - 9), new GridPoint(b.MinX + 26, b.MinY + 5), new GridPoint(b.MinX + 32, b.MinY - 2) }
+                    };
+                    sch.Shapes.Add(curve);
+                    Canvas.SelectItems(new object[] { curve });
+                    Canvas.Tool = EditorTool.Bezier;
+                    SyncTools();
+                    Canvas.InvalidateVisual();
+                    return;
+                }
+
                 case "fields":   // [fields] the Symbol Fields Table, grouped, the window is the picture
                     ShowFieldsTable();
                     return;

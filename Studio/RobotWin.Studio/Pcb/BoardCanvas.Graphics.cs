@@ -65,7 +65,7 @@ namespace RobotWin.Studio.Pcb
         /// <summary>New rectangles, circles and polygons filled in.</summary>
         public bool DrawFilled { get; set; }
 
-        public static bool IsGraphicTool(PcbTool t) => t is PcbTool.Line or PcbTool.Rectangle or PcbTool.Circle or PcbTool.Arc or PcbTool.Polygon;
+        public static bool IsGraphicTool(PcbTool t) => t is PcbTool.Line or PcbTool.Rectangle or PcbTool.Circle or PcbTool.Arc or PcbTool.Polygon or PcbTool.Bezier;
 
         private static GraphicShape ShapeOf(PcbTool t) => t switch
         {
@@ -73,12 +73,24 @@ namespace RobotWin.Studio.Pcb
             PcbTool.Rectangle => GraphicShape.Rectangle,
             PcbTool.Circle => GraphicShape.Circle,
             PcbTool.Arc => GraphicShape.Arc,
+            PcbTool.Bezier => GraphicShape.Bezier,
             _ => GraphicShape.Polygon
         };
+
+        /// <summary>[bezier] The curve's points from the clicks (start, end, first control, second control), the cursor standing in for those still to come.</summary>
+        private static List<PcbPoint> BezierPoints(IReadOnlyList<PcbPoint> clicks)
+        {
+            var s = clicks[0];
+            var e = clicks.Count > 1 ? clicks[1] : s;
+            var c1 = clicks.Count > 2 ? clicks[2] : s;
+            var c2 = clicks.Count > 3 ? clicks[3] : clicks.Count > 2 ? clicks[2] : e;
+            return new List<PcbPoint> { s, c1, c2, e };
+        }
 
         private int PointsNeeded => _tool switch
         {
             PcbTool.Arc => 3,
+            PcbTool.Bezier => 4,
             PcbTool.Polygon => int.MaxValue,
             _ => 2
         };
@@ -132,7 +144,7 @@ namespace RobotWin.Studio.Pcb
         {
             var board = Board;
             if (board == null) return;
-            var g = new BoardGraphic { Shape = ShapeOf(_tool), Layer = GraphicDrawLayer, Width = DrawWidth, Points = _gfx.ToList(), Filled = DrawFilled && _tool is PcbTool.Rectangle or PcbTool.Circle or PcbTool.Polygon };
+            var g = new BoardGraphic { Shape = ShapeOf(_tool), Layer = GraphicDrawLayer, Width = DrawWidth, Points = _tool == PcbTool.Bezier ? BezierPoints(_gfx) : _gfx.ToList(), Filled = DrawFilled && _tool is PcbTool.Rectangle or PcbTool.Circle or PcbTool.Polygon };
             var last = _gfx[^1];
             _gfx.Clear();
             if (!g.IsComplete || g.Shape == GraphicShape.Circle && g.Radius < 1e-3)
@@ -182,8 +194,32 @@ namespace RobotWin.Studio.Pcb
                 var color = GraphicColor(g.Layer);
                 if (g.Filled && g.Area().Count >= 3) dc.DrawGeometry(SymbolRenderer.Brush(color), null, Poly(g.Area()));
                 var pen = P(color, Math.Max(1, g.Width * _scale));
-                foreach (var s in g.Strokes(0.5 / Math.Max(1, _scale))) dc.DrawLine(pen, S(s.X1, s.Y1), S(s.X2, s.Y2));
+                dc.DrawGeometry(null, pen, StrokePath(g.Strokes(0.5 / Math.Max(1, _scale))));
             }
+        }
+
+        /// <summary>
+        /// The strokes as one path, joined where one ends and the next starts: a see-through pen laid over itself at every
+        /// joint (each piece drawn alone) beads a curve with darker dots.
+        /// </summary>
+        private System.Windows.Media.Geometry StrokePath(List<Segment2> strokes)
+        {
+            var geo = new StreamGeometry();
+            using (var ctx = geo.Open())
+            {
+                Point? end = null;
+                foreach (var s in strokes)
+                {
+                    var a = S(s.X1, s.Y1);
+                    if (end is not { } e || (e - a).LengthSquared > 1e-6) ctx.BeginFigure(a, false, false);
+                    var b = S(s.X2, s.Y2);
+                    ctx.LineTo(b, true, true);
+                    end = b;
+                }
+            }
+
+            geo.Freeze();
+            return geo;
         }
 
         /// <summary>The shape being drawn, its last point following the cursor.</summary>
@@ -193,9 +229,17 @@ namespace RobotWin.Studio.Pcb
             var pts = _gfx.ToList();
             var cursor = Magnet(_cursor.X, _cursor.Y);   // [magnet]
             pts.Add(_tool is PcbTool.Line or PcbTool.Polygon ? Angle45(pts[^1], cursor) : cursor);   // [angle45]
-            var g = new BoardGraphic { Shape = ShapeOf(_tool), Layer = GraphicDrawLayer, Width = DrawWidth, Points = pts };
+            var g = new BoardGraphic { Shape = ShapeOf(_tool), Layer = GraphicDrawLayer, Width = DrawWidth, Points = _tool == PcbTool.Bezier ? BezierPoints(pts) : pts };
             var pen = new Pen(SymbolRenderer.Brush(A(Accent, (byte)0xD0)), Math.Max(1, DrawWidth * _scale)) { DashStyle = DashStyles.Dash };
             pen.Freeze();
+            if (_tool == PcbTool.Bezier && pts.Count >= 3)
+            {
+                // [bezier] the control points' handles, as KiCad shows them
+                var handle = new Pen(SymbolRenderer.Brush(A(Accent, (byte)0x90)), 1) { DashStyle = DashStyles.Dot };
+                handle.Freeze();
+                dc.DrawLine(handle, S(g.Points[0].X, g.Points[0].Y), S(g.Points[1].X, g.Points[1].Y));
+                dc.DrawLine(handle, S(g.Points[3].X, g.Points[3].Y), S(g.Points[2].X, g.Points[2].Y));
+            }
             if (_tool == PcbTool.Arc && pts.Count == 2)
             {
                 // centre and start: the radius line until the end is picked

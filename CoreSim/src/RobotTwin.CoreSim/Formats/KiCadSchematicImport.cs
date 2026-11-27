@@ -417,6 +417,16 @@ namespace RobotTwin.CoreSim.Formats
                 file.Shapes.Add(shape);
             }
 
+            foreach (var n in root.Children("bezier"))   // [bezier]
+            {
+                var shape = new KiCadSheetShape { Kind = SheetShapeKind.Bezier };
+                foreach (var xy in n.Child("pts")?.Children("xy") ?? Enumerable.Empty<SExpression>()) shape.Points.Add(P(xy));
+                if (shape.Points.Count != 4) continue;
+                Style(n, shape);
+                shape.Filled = false;
+                file.Shapes.Add(shape);
+            }
+
             foreach (var n in root.Children("arc"))
             {
                 var shape = new KiCadSheetShape { Kind = SheetShapeKind.Arc };

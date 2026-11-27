@@ -17,15 +17,26 @@ namespace RobotWin.Studio.Editor
     {
         private List<GridPoint>? _shapeDraft;
 
-        private static bool IsShapeTool(EditorTool t) => t is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc;
+        private static bool IsShapeTool(EditorTool t) => t is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier;
 
         private static SheetShapeKind KindOf(EditorTool t) => t switch
         {
             EditorTool.Rectangle => SheetShapeKind.Rectangle,
             EditorTool.Circle => SheetShapeKind.Circle,
             EditorTool.Arc => SheetShapeKind.Arc,
+            EditorTool.Bezier => SheetShapeKind.Bezier,
             _ => SheetShapeKind.Line
         };
+
+        /// <summary>[bezier] The curve's points from the clicks (start, end, first control, second control), the cursor standing in for those still to come.</summary>
+        private static List<GridPoint> BezierPoints(IReadOnlyList<GridPoint> clicks)
+        {
+            var s = clicks[0];
+            var e = clicks.Count > 1 ? clicks[1] : s;
+            var c1 = clicks.Count > 2 ? clicks[2] : s;
+            var c2 = clicks.Count > 3 ? clicks[3] : clicks.Count > 2 ? clicks[2] : e;
+            return new List<GridPoint> { s, c1, c2, e };
+        }
 
         private void ShapeClick(bool doubleClick)
         {
@@ -38,7 +49,7 @@ namespace RobotWin.Studio.Editor
             }
 
             if (_shapeDraft.Count == 0 || !_shapeDraft[_shapeDraft.Count - 1].Equals(at)) _shapeDraft.Add(at);
-            int need = _tool switch { EditorTool.Rectangle => 2, EditorTool.Circle => 2, EditorTool.Arc => 3, _ => int.MaxValue };
+            int need = _tool switch { EditorTool.Rectangle => 2, EditorTool.Circle => 2, EditorTool.Arc => 3, EditorTool.Bezier => 4, _ => int.MaxValue };
             if (_shapeDraft.Count >= need) FinishShape();
             InvalidateVisual();
         }
@@ -50,12 +61,13 @@ namespace RobotWin.Studio.Editor
             _shapeDraft = null;
             InvalidateVisual();
             if (pts == null) return;
-            var shape = new SchematicShape { Kind = KindOf(_tool), Points = pts };
+            var shape = new SchematicShape { Kind = KindOf(_tool), Points = _tool == EditorTool.Bezier && pts.Count == 4 ? BezierPoints(pts) : pts };
             bool real = shape.Kind switch
             {
                 SheetShapeKind.Line => pts.Count >= 2,
                 SheetShapeKind.Rectangle => pts.Count == 2 && pts[0].X != pts[1].X && pts[0].Y != pts[1].Y,
                 SheetShapeKind.Circle => pts.Count == 2 && !pts[0].Equals(pts[1]),
+                SheetShapeKind.Bezier => pts.Count == 4 && !pts[0].Equals(pts[1]),
                 _ => pts.Count == 3 && shape.ArcCircle() != null
             };
             if (!real) return;
@@ -71,6 +83,19 @@ namespace RobotWin.Studio.Editor
             {
                 var preview = new SchematicShape { Kind = KindOf(_tool), Points = draft.Concat(new[] { Snap(_mouseGrid) }).ToList(), Dashed = true };
                 if (preview.Kind == SheetShapeKind.Arc && preview.Points.Count == 2) preview.Kind = SheetShapeKind.Line;   // until its middle is chosen
+                if (preview.Kind == SheetShapeKind.Bezier)
+                {
+                    if (preview.Points.Count == 2) preview.Kind = SheetShapeKind.Line;   // until its end is chosen
+                    else
+                    {
+                        // the control points' handles, as KiCad shows them
+                        var bp = BezierPoints(preview.Points);
+                        var handle = new Pen(SymbolRenderer.Brush(Color.FromArgb(0x90, Accent.R, Accent.G, Accent.B)), 1) { DashStyle = DashStyles.Dot };
+                        dc.DrawLine(handle, ToScreen(bp[0]), ToScreen(bp[1]));
+                        dc.DrawLine(handle, ToScreen(bp[3]), ToScreen(bp[2]));
+                        preview.Points = bp;
+                    }
+                }
                 DrawShape(dc, preview, Accent);
             }
         }

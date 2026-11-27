@@ -145,6 +145,7 @@ namespace RobotWin.Studio.Editor
                 case EditorTool.Rectangle:
                 case EditorTool.Circle:
                 case EditorTool.Arc:
+                case EditorTool.Bezier:   // [bezier]
                     ShapeClick(e.ClickCount >= 2);
                     return;
                 case EditorTool.Text:   // [notes]

@@ -218,12 +218,12 @@ namespace RobotWin.Studio.Pages
         private void OnDrawTool(object sender, RoutedEventArgs e)
         {
             var button = (System.Windows.Controls.Primitives.ToggleButton)sender;
-            button.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc;
+            button.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier;
             var menu = new ContextMenu { PlacementTarget = button, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
             foreach (var (text, tool, icon) in new[]
                      {
                          ("Çizgi", EditorTool.Line, "I.DrawLine"), ("Dikdörtgen", EditorTool.Rectangle, "I.DrawRect"),
-                         ("Daire", EditorTool.Circle, "I.DrawCircle"), ("Yay", EditorTool.Arc, "I.DrawArc")
+                         ("Daire", EditorTool.Circle, "I.DrawCircle"), ("Yay", EditorTool.Arc, "I.DrawArc"), ("Bezier eğrisi", EditorTool.Bezier, "I.DrawBezier")
                      })
             {
                 var item = new MenuItem { Header = text, IsChecked = Canvas.Tool == tool, Icon = new RobotWin.Studio.Theme.Icon { Data = (System.Windows.Media.Geometry)FindResource(icon), Size = 14 } };
@@ -266,7 +266,7 @@ namespace RobotWin.Studio.Pages
             ToolHighlight.IsChecked = Canvas.Tool == EditorTool.Highlight;   // [highlight]
             ToolJunction.IsChecked = Canvas.Tool == EditorTool.Junction;   // [junction]
             ToolErase.IsChecked = Canvas.Tool == EditorTool.Erase;   // [erase]
-            ToolDraw.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc;   // [shapes]
+            ToolDraw.IsChecked = Canvas.Tool is EditorTool.Line or EditorTool.Rectangle or EditorTool.Circle or EditorTool.Arc or EditorTool.Bezier;   // [shapes]
         }
 
         private void OnRotate(object sender, RoutedEventArgs e) => Canvas.RotateSelection();

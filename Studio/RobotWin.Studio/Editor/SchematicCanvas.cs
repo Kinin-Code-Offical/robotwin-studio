@@ -43,6 +43,9 @@ namespace RobotWin.Studio.Editor
         Circle,
         Arc,
 
+        /// <summary>[bezier] A cubic Bézier curve: start, end, then its two control points.</summary>
+        Bezier,
+
         /// <summary>[erase] KiCad's eraser: every click deletes what is under it (a wire, a part, a label, a note, a flag).</summary>
         Erase
     }

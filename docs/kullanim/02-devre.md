@@ -63,7 +63,7 @@ Aynı adı taşıyan etiketler birbirine bağlıdır; `GND` adı toprak demektir
 
 ## Düzenleme
 
-**Çizim** (KiCad'in şema çizimleri gibi): araç çubuğundaki **Çiz** düğmesinin menüsünden **Çizgi** (köşelere tıklayın; çift tık, Enter ya da Esc bitirir), **Dikdörtgen** (iki köşe), **Daire** (merkez, sonra çemberin bir noktası) ve **Yay** (başlangıç, yayın bir noktası, bitiş) seçilir. Çizimler bir bloğun çerçevesi, bir bölme ya da mekanik bir taslak içindir; hatları yoktur, devreyi değiştirmez. Diğer öğeler gibi seçilir, taşınır, döndürülür, aynalanır, kopyalanır ve silinir; PNG/SVG görüntüsüne ve KiCad şemasına (polyline, rectangle, circle, arc olarak) gider, KiCad şeması açılınca onlar da alınır.
+**Çizim** (KiCad'in şema çizimleri gibi): araç çubuğundaki **Çiz** düğmesinin menüsünden **Çizgi** (köşelere tıklayın; çift tık, Enter ya da Esc bitirir), **Dikdörtgen** (iki köşe), **Daire** (merkez, sonra çemberin bir noktası) **Yay** (başlangıç, yayın bir noktası, bitiş) ve **Bezier eğrisi** (başlangıç, bitiş, sonra iki denetim noktası; çizerken denetim noktalarının kolları görünür) seçilir. Çizimler bir bloğun çerçevesi, bir bölme ya da mekanik bir taslak içindir; hatları yoktur, devreyi değiştirmez. Diğer öğeler gibi seçilir, taşınır, döndürülür, aynalanır, kopyalanır ve silinir; PNG/SVG görüntüsüne ve KiCad şemasına (polyline, rectangle, circle, arc, bezier olarak) gider, KiCad şeması açılınca onlar da alınır.
 
 | Tuş | İşlev |
 | --- | --- |

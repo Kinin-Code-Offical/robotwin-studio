@@ -587,6 +587,14 @@ namespace RobotTwin.CoreSim.Pcb
                         yield return new SNode("gr_poly", pts, Stroke(g.Width), fill, new SNode("layer", Q(layer)), uid);
                         break;
                     }
+
+                    case GraphicShape.Bezier:   // [bezier]
+                    {
+                        var pts = new SNode("pts");
+                        foreach (var q in p.Take(4)) pts.Add(XY("xy", q.X, q.Y));
+                        yield return new SNode("gr_curve", pts, Stroke(g.Width), new SNode("layer", Q(layer)), uid);
+                        break;
+                    }
                 }
             }
         }
@@ -1106,6 +1114,9 @@ namespace RobotTwin.CoreSim.Pcb
                         break;
                     case SheetShapeKind.Arc when sh.Points.Count >= 3:
                         root.Add(new SNode("arc", At("start", sh.Points[0]), At("mid", sh.Points[1]), At("end", sh.Points[2]), stroke, new SNode("fill", new SNode("type", "none")), id));
+                        break;
+                    case SheetShapeKind.Bezier when sh.Points.Count >= 4:   // [bezier]
+                        root.Add(new SNode("bezier", new SNode("pts", sh.Points.Take(4).Select(q => At("xy", q))), stroke, new SNode("fill", new SNode("type", "none")), id));
                         break;
                 }
             }

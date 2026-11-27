@@ -180,6 +180,7 @@ namespace RobotWin.Studio.Editor
                 EditorTool.Rectangle => "Dikdörtgen · iki köşeye tıklayın",
                 EditorTool.Circle => "Daire · merkeze, sonra çemberin bir noktasına tıklayın",
                 EditorTool.Arc => "Yay · başlangıca, yayın bir noktasına, sonra bitişe tıklayın",
+                EditorTool.Bezier => "Bezier eğrisi · başlangıca, bitişe, sonra iki denetim noktasına tıklayın",
                 EditorTool.Place => "Yerleştir · R döndür · X/Y aynala · Esc bitir",
                 _ => string.Empty
             };

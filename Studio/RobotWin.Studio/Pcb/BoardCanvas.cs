@@ -29,6 +29,9 @@ namespace RobotWin.Studio.Pcb
         Circle,
         Arc,
         Polygon,
+
+        /// <summary>[bezier] A cubic Bézier curve: start, end, then its two control points.</summary>
+        Bezier,
         Via,
 
         /// <summary>[tuning] KiCad's length tuner: meanders on the clicked segment up to its pair's or group's length.</summary>
@@ -321,6 +324,7 @@ namespace RobotWin.Studio.Pcb
             PcbTool.Rectangle => "Dikdörtgen: iki karşı köşeye tıklayın · Esc: iptal",
             PcbTool.Circle => "Daire: merkeze, sonra çevresinden bir noktaya tıklayın · Esc: iptal",
             PcbTool.Arc => "Yay: merkeze, başlangıca ve bitişe tıklayın (saat yönünün tersine) · Esc: iptal",
+            PcbTool.Bezier => "Bezier eğrisi: başlangıca, bitişe, sonra iki denetim noktasına tıklayın · Esc: iptal",
             PcbTool.Polygon => "Çokgen: köşelere tıklayın · çift tık, ilk köşeye tıklamak ya da Enter: kapat · Esc: iptal",
             PcbTool.Via => "Via: yere tıklayın (altındaki yolun, pedin ya da dolgunun hattını alır) · Esc: çık",
             PcbTool.Keepout => "Yasak bölge: köşelere tıklayın · çift tık veya Enter: kapat · seçenek çubuğundan katman ve neyin yasak olduğu · Esc: iptal",

@@ -160,7 +160,10 @@ namespace RobotTwin.CoreSim.Design
         Circle,
 
         /// <summary>An arc through three points: start, a point on it, end.</summary>
-        Arc
+        Arc,
+
+        /// <summary>[bezier] A cubic Bézier curve: start, first control point, second control point, end.</summary>
+        Bezier
     }
 
     /// <summary>
@@ -176,7 +179,7 @@ namespace RobotTwin.CoreSim.Design
 
         public SheetShapeKind Kind { get; set; }
 
-        /// <summary>Line: its points; rectangle: two corners; circle: centre, then a point on it; arc: start, middle, end.</summary>
+        /// <summary>Line: its points; rectangle: two corners; circle: centre, then a point on it; arc: start, middle, end; Bézier: start, two control points, end.</summary>
         public List<GridPoint> Points { get; set; } = new List<GridPoint>();
 
         /// <summary>Stroke width in millimetres (KiCad's default schematic line, 0.15 mm).</summary>
@@ -236,6 +239,13 @@ namespace RobotTwin.CoreSim.Design
                         pts.Add(new GridPoint(circle.Centre.X + circle.Radius * Math.Cos(t), circle.Centre.Y + circle.Radius * Math.Sin(t)));
                     }
 
+                    break;
+                }
+
+                case SheetShapeKind.Bezier when Points.Count >= 4:
+                {
+                    var (a, b, c, d) = (Points[0], Points[1], Points[2], Points[3]);
+                    foreach (var (x, y) in CubicBezier.Flatten(a.X, a.Y, b.X, b.Y, c.X, c.Y, d.X, d.Y, 0.02)) pts.Add(new GridPoint(x, y));
                     break;
                 }
 
