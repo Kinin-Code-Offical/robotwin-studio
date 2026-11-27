@@ -325,6 +325,12 @@ namespace RobotWin.Studio.Shell
 
         // ================================================================ placing
 
+        /// <summary>Docks the panel with this key at a place (nothing if there is none).</summary>
+        public void DockTo(string key, DockPlace place)
+        {
+            if (Find(key) is { } it) Dock(it, place);
+        }
+
         public void Dock(DockItem it, DockPlace place)
         {
             if (place == DockPlace.Float)

@@ -88,6 +88,7 @@
                             <Button x:Name="DebugInto" Style="{StaticResource Btn.Icon}" Click="OnDebugInto" ToolTip="Çağrılan fonksiyonun içine gir (F11)"><t:Icon Data="{StaticResource I.StepInto}" Size="16"/></Button>
                             <Button x:Name="DebugOut" Style="{StaticResource Btn.Icon}" Click="OnDebugOut" ToolTip="İçinde bulunulan fonksiyon dönene kadar çalış (Shift+F11)"><t:Icon Data="{StaticResource I.StepOut}" Size="16"/></Button>
                             <Border Width="1" Height="18" Background="{DynamicResource B.Border}" Margin="8,0"/>
+                            <ToggleButton x:Name="UnifiedButton" Style="{StaticResource Toggle.Tool}" Click="OnUnifiedDebug" ToolTip="Birleşik görünüm: kod, değişkenler, yazmaçlar, zaman çizelgesi ve seri monitör aynı anda (yeniden basınca eski düzen)"><t:Icon Data="{StaticResource I.Split}" Size="15"/></ToggleButton>
                             <Button x:Name="DebugClear" Style="{StaticResource Btn.Icon}" Click="OnDebugClear" ToolTip="Bu kartın bütün kesme noktalarını kaldır"><t:Icon Data="{StaticResource I.BreakClear}" Size="16"/></Button>
                         </StackPanel>
                         <Ellipse x:Name="DebugDot" Width="9" Height="9" Fill="{DynamicResource B.Danger}" VerticalAlignment="Center" Margin="0,0,8,0"/>

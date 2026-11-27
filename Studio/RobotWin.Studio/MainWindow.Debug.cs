@@ -220,6 +220,7 @@ namespace RobotWin.Studio
             }
 
             if (front == "registers") _code.ShowRegistersTab();
+            if (front == "unified") _code.ShowUnifiedDebug(true);   // [debug] code, variables, registers, timeline and serial at once
             if (front == "timeline") _code.ShowTimelineTab();
             if (front == "timeline-scope")   // [timebase] the scope's window taken over, its pointer marked
             {

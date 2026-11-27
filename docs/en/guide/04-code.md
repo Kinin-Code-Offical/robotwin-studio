@@ -205,10 +205,13 @@ You can follow Arduino Uno and Nano code line by line. When the board reaches a 
 | **Into** | F11 | Goes into the called function, to its first line in your code |
 | **Out** | Shift+F11 | Runs until the current function returns |
 | **Stop at line** | — | Stops the running program at its next line of your code |
+| **Unified view** | — | Shows the code, variables, registers, timeline and serial monitor at once: variables and registers stacked on the right, timeline and serial monitor below. Press it again for the previous layout |
 
 The values also refresh while the board runs. A value that changed since you last looked is shown in orange. You can also resume a stopped world with **Continue** on the **World** page.
 
 ![The servo arm stopped at a breakpoint: line 29, the variables and the status bar](../../images/en/code-debugger.png)
+
+![Unified view: the code in the middle, variables and registers on the right, the timeline below](../../images/en/code-debug-unified.png)
 
 > In code compiled with `-Os`, the compiler merges some lines or inlines them into others, so steps sometimes go in a different order than you expect.
 

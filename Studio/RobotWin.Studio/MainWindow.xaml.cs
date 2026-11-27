@@ -976,7 +976,7 @@ namespace RobotWin.Studio
             if (fault == "montaj-e2e" && App.SnapshotPath != null) RunMontajCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [assembly]
             if (fault == "guide") StartGuide();   // [guide] the card at its first step
             if (fault != null && fault.StartsWith("learning:", StringComparison.Ordinal) && int.TryParse(fault.Substring(9), out int learnLevel)) StartLearningGuide(learnLevel);   // [learning]
-            if (fault is "debug-e2e" or "debug-registers" or "debug-timeline" or "debug-timeline-scope" && App.SnapshotPath != null) RunDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"), fault.Substring("debug-".Length));   // [debug]
+            if (fault is "debug-e2e" or "debug-registers" or "debug-timeline" or "debug-timeline-scope" or "debug-unified" && App.SnapshotPath != null) RunDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"), fault.Substring("debug-".Length));   // [debug]
             if (fault == "tabs" && App.SnapshotPath != null) RunTabsCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [tabs]
             if (fault == "keys" && App.SnapshotPath != null) RunKeysCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));   // [keys]
             if (fault == "debug-e2e-circuit" && App.SnapshotPath != null) RunCircuitDebugCheck(Path.ChangeExtension(App.SnapshotPath, ".txt"));

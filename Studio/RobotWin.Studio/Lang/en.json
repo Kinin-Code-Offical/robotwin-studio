@@ -8654,6 +8654,9 @@
   "A deliği": "Hole A",
   "B deliği": "Hole B",
   "Aynala": "Mirror",
+  "Birleşik görünüm: kod, değişkenler, yazmaçlar, zaman çizelgesi ve seri monitör aynı anda (yeniden basınca eski düzen)": "Unified view: the code, variables, registers, timeline and serial monitor at once (press again for the previous layout)",
+  "Birleşik görünüm: değişkenler ve yazmaçlar sağda, zaman çizelgesi ve seri monitör altta. Yeniden basınca eski düzen.": "Unified view: variables and registers on the right, timeline and serial monitor below. Press again for the previous layout.",
+  "onsemi BC546–BC548 (B grubu)": "onsemi BC546–BC548 (group B)",
   "Doğrusal regülatörün besleme bastırması (PSRR) frekansla değişmez; çıkış empedansı (yük geçici tepkisi) LM7805'te veri sayfasının eğrisinden, AMS1117 ve LD1117'de sonsuz hızlı döngüyle.": "A linear regulator's supply rejection (PSRR) does not change with frequency; its output impedance (load transient response) follows the datasheet's curve on the LM7805 and is an instant loop on the AMS1117 and LD1117.",
   "Veri sayfasıyla karşılaştırma": "Compared with the datasheet",
   "Aralıkta": "In range",
@@ -9748,6 +9751,9 @@
   "Süpürme yolu": "Sweep path"
  },
  "patterns": {
+    "İleri gerilim Vf, If {…} (en çok)": "Forward voltage Vf, If {0} (max.)",
+    "Akım kazancı hFE, Ic {…}, Vce {…} V (en az)": "Current gain hFE, Ic {0}, Vce {1} V (min.)",
+    "Akım kazancı hFE, Ic {…}, Vce {…} V": "Current gain hFE, Ic {0}, Vce {1} V",
     "Model veri sayfasının {…} değerinin hepsini tutturuyor (aşağıda)": "The model meets all {0} of the datasheet's figures (below)",
     "Model veri sayfasının {…} değerinden {…} tanesinin dışında (aşağıda)": "The model is outside {1} of the datasheet's {0} figures (below)",
     "Rds(on), Vgs {…} V, Id {…} (en çok)": "Rds(on), Vgs {0} V, Id {1} (max.)",

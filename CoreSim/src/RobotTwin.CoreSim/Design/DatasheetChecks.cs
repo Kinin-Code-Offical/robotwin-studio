@@ -65,7 +65,7 @@ namespace RobotTwin.CoreSim.Design
         private static readonly ConcurrentDictionary<string, IReadOnlyList<DatasheetResult>> Cache = new ConcurrentDictionary<string, IReadOnlyList<DatasheetResult>>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>The part numbers that have checks.</summary>
-        public static IEnumerable<string> Parts => new[] { "lm7805", "irfz44n", "irf540n", "2n7000" };
+        public static IEnumerable<string> Parts => new[] { "lm7805", "irfz44n", "irf540n", "2n7000", "1n4148", "1n4007", "1n5819", "1n5822", "bc547b", "2n2222a", "tip120" };
 
         /// <summary>The checks of a part number (its preset id), empty when it has none.</summary>
         public static IReadOnlyList<DatasheetCheck> For(string presetId, PartLibrary? library = null)
@@ -91,6 +91,32 @@ namespace RobotTwin.CoreSim.Design
                     return Fet(lib, presetId, "Infineon IRF540N", rdsMax: 0.044, vgs: 10, id: 16, vthMin: 2, vthMax: 4, vthId: 250e-6);
                 case "2n7000":
                     return Fet(lib, presetId, "onsemi 2N7000", rdsMax: 5.0, vgs: 10, id: 0.5, vthMin: 0.8, vthMax: 3.0, vthId: 1e-3);
+
+                // diodes: the forward voltage at the datasheet's test current (its maximum, 25 °C)
+                case "1n4148":
+                    return new[] { Forward(lib, presetId, "onsemi 1N4148", 10e-3, 1.0) };
+                case "1n4007":
+                    return new[] { Forward(lib, presetId, "onsemi 1N4001–1N4007", 1.0, 1.1) };
+                case "1n5819":
+                    return new[] { Forward(lib, presetId, "onsemi 1N5817–1N5819", 1.0, 0.6) };
+                case "1n5822":
+                    return new[] { Forward(lib, presetId, "onsemi 1N5820–1N5822", 3.0, 0.525) };
+
+                // transistors: the DC current gain at the datasheet's collector current and voltage
+                case "bc547b":
+                    return new[] { Gain(lib, presetId, "onsemi BC546–BC548 (B grubu)", 2e-3, 5, 200, 450) };
+                case "2n2222a":
+                    return new[]
+                    {
+                        Gain(lib, presetId, "onsemi P2N2222A", 10e-3, 10, 75, double.PositiveInfinity),
+                        Gain(lib, presetId, "onsemi P2N2222A", 150e-3, 10, 100, 300),
+                    };
+                case "tip120":
+                    return new[]
+                    {
+                        Gain(lib, presetId, "onsemi TIP120", 0.5, 3, 1000, double.PositiveInfinity),
+                        Gain(lib, presetId, "onsemi TIP120", 3.0, 3, 1000, double.PositiveInfinity),
+                    };
                 default:
                     return Array.Empty<DatasheetCheck>();
             }
@@ -110,6 +136,62 @@ namespace RobotTwin.CoreSim.Design
             {
                 return double.NaN;
             }
+        }
+
+        // ---------------------------------------------------------------- diodes and transistors
+
+        private static DatasheetCheck Forward(PartLibrary lib, string presetId, string source, double current, double vfMax)
+        {
+            string at = current >= 1 ? $"{current:0.#} A" : $"{current * 1000:0.#} mA";
+            return new DatasheetCheck { Quantity = $"İleri gerilim Vf, If {at} (en çok)", Source = source, Unit = "V", Low = 0, High = vfMax, Measure = () => DiodeForward(lib, presetId, current) };
+        }
+
+        private static double DiodeForward(PartLibrary lib, string presetId, double current)
+        {
+            var c = new AnalogCircuit();
+            int a = c.Node("a");
+            c.Add(new CurrentSource("IF", a, 0, current));   // pushes the forward current into the anode
+            BuildPart(c, lib, presetId, new Dictionary<string, int> { ["A"] = a, ["K"] = 0 }, nonlinearHeat: false);
+            var sim = new AnalogSimulator(c);
+            sim.Initialize(InitialState.OperatingPoint);
+            return sim.NodeVoltage("a");
+        }
+
+        private static DatasheetCheck Gain(PartLibrary lib, string presetId, string source, double ic, double vce, double min, double max)
+        {
+            string at = ic >= 1 ? $"{ic:0.#} A" : $"{ic * 1000:0.#} mA";
+            return new DatasheetCheck
+            {
+                Quantity = $"Akım kazancı hFE, Ic {at}, Vce {vce:0.#} V" + (double.IsPositiveInfinity(max) ? " (en az)" : string.Empty), Source = source, Unit = string.Empty,
+                Low = min, High = max, Measure = () => BjtGain(lib, presetId, ic, vce),
+            };
+        }
+
+        /// <summary>hFE = I_C / I_B with the collector held at <paramref name="vce"/> and the base driven to the collector current.</summary>
+        private static double BjtGain(PartLibrary lib, string presetId, double ic, double vce)
+        {
+            (double Ic, double Ib) At(double vbe)
+            {
+                var c = new AnalogCircuit();
+                int b = c.Node("b"), col = c.Node("c");
+                var vb = c.Add(new VoltageSource("VB", b, 0, vbe));
+                var vc = c.Add(new VoltageSource("VC", col, 0, vce));
+                BuildPart(c, lib, presetId, new Dictionary<string, int> { ["B"] = b, ["C"] = col, ["E"] = 0 }, nonlinearHeat: false);
+                var sim = new AnalogSimulator(c);
+                sim.Initialize(InitialState.OperatingPoint);
+                return (Math.Abs(vc.Current), Math.Abs(vb.Current));   // what the sources deliver into the collector and the base
+            }
+
+            double lo = 0.3, hi = 2.5;
+            for (int k = 0; k < 60; k++)
+            {
+                double mid = (lo + hi) / 2;
+                if (At(mid).Ic < ic) lo = mid;
+                else hi = mid;
+            }
+
+            var (icAt, ib) = At((lo + hi) / 2);
+            return ib > 0 ? icAt / ib : double.NaN;
         }
 
         // ---------------------------------------------------------------- MOSFETs

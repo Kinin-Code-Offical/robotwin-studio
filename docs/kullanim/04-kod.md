@@ -205,10 +205,13 @@ Arduino Uno ve Nano kodunu satır satır izleyebilirsiniz. Kart bir kesme noktas
 | **İçine** | F11 | Çağrılan fonksiyonun içine, kodunuzdaki ilk satırına girer |
 | **Dışına** | Shift+F11 | İçinde bulunulan fonksiyon dönene kadar çalışır |
 | **Satırda dur** | — | Çalışan programı kodunuzun bir sonraki satırında durdurur |
+| **Birleşik görünüm** | — | Kodu, değişkenleri, yazmaçları, zaman çizelgesini ve seri monitörü aynı anda gösterir: değişkenler ve yazmaçlar sağda üst üste, zaman çizelgesi ve seri monitör altta. Yeniden basınca önceki düzen geri gelir |
 
 Değerler kart çalışırken de yenilenir. Son bakıştan beri değişen değer turuncu görünür. Duran bir dünyayı **Dünya** sayfasındaki **Devam** düğmesiyle de sürdürebilirsiniz.
 
 ![Kesme noktasında duran servo kol: 29. satır, değişkenler ve durum çubuğu](../images/code-debugger.png)
+
+![Birleşik görünüm: kod ortada, değişkenler ve yazmaçlar sağda, zaman çizelgesi altta](../images/code-debug-unified.png)
 
 > `-Os` ile derlenen kodda derleyici bazı satırları birleştirir ya da başka satırların içine gömer. Bu yüzden adımlar bazen beklediğinizden farklı bir sırayla ilerler.
 
