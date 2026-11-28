@@ -86,6 +86,9 @@ namespace RobotTwin.CoreSim.Sandbox
                     var a = list[x].Body;
                     var b = list[y].Body;
                     if (a.IsStatic && b.IsStatic) continue;
+                    // [perf] solids whose bounding spheres miss each other cannot overlap (600 objects: 180 000 pairs)
+                    double reach = a.EffectiveShape!.BoundingRadius + b.EffectiveShape!.BoundingRadius + tolerance;
+                    if ((a.Position - b.Position).LengthSquared > reach * reach) continue;
                     if (ignore.Contains((a, b))) continue;
                     double depth = ObbOverlap(a, b);
                     if (depth > tolerance) depth = Math.Min(depth, ShapeOverlap(a, b));   // boxes overlap; do the shapes?

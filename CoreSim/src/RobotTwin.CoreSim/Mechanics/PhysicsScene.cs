@@ -489,6 +489,8 @@ namespace RobotTwin.CoreSim.Mechanics
         private readonly HashSet<long> _noCollide = new HashSet<long>();
         private int[] _order = new int[16];
         private double[] _minX = new double[16];
+        private bool[] _still = new bool[16];   // [perf] static or asleep this substep, by slot (the sweep's inner test)
+        private int[] _nextMoving = new int[17];   // [perf] by position in the sweep: the next body there on that moves (or m)
         private Vec3[] _lo = new Vec3[16], _hi = new Vec3[16];
         private CollisionShape?[] _shapes = new CollisionShape?[16];
         private readonly List<PhysicsEvent> _events = new List<PhysicsEvent>();
@@ -791,6 +793,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 Array.Resize(ref _state, cap);
                 Array.Resize(ref _order, cap);
                 Array.Resize(ref _minX, cap);
+                Array.Resize(ref _still, cap);
+                Array.Resize(ref _nextMoving, cap + 1);
                 Array.Resize(ref _lo, cap);
                 Array.Resize(ref _hi, cap);
                 Array.Resize(ref _shapes, cap);
@@ -1057,6 +1061,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (_shapes[i] == null) continue;
                 _order[m++] = i;
                 _minX[i] = _lo[i].X;
+                _still[i] = Bodies[i].IsStatic || Asleep(i);
             }
 
             for (int i = 1; i < m; i++)
@@ -1073,6 +1078,9 @@ namespace RobotTwin.CoreSim.Mechanics
                 _order[j + 1] = key;
             }
 
+            // [perf] a body that does not move meets only those that do: it skips the others in one step
+            _nextMoving[m] = m;
+            for (int i = m - 1; i >= 0; i--) _nextMoving[i] = _still[_order[i]] ? _nextMoving[i + 1] : i;
             // (the concurrent dictionary's Count takes all its locks: looked at now and then)
             if (_apartBodies != Bodies.Count || ((++_apartChecks & 511) == 0 && _apart.Count > 4096 + 16 * Bodies.Count))
             {
@@ -1087,40 +1095,65 @@ namespace RobotTwin.CoreSim.Mechanics
             main.Count = _contactCount;
             bool sideBySide = NarrowBesideEachOther(m);
             long started = System.Diagnostics.Stopwatch.GetTimestamp();
-            _narrowOpCount = 0;
-            for (int ii = 0; ii < m; ii++)
-            {
-                int a = _order[ii];
-                var ba = Bodies[a];
-                if (!ba.IsStatic && GroundEnabled && !Asleep(a)) // [phys] [terrain] soil state of the body
-                {
-                    if (sideBySide) AddNarrowOp(a, -1, 0);
-                    else CollideGroundSoil(a, h);
-                }
-
-                double maxX = _hi[a].X;
-                for (int jj = ii + 1; jj < m; jj++)
-                {
-                    int b = _order[jj];
-                    if (_minX[b] > maxX) break;
-                    var bb = Bodies[b];
-                    if ((ba.IsStatic || Asleep(a)) && (bb.IsStatic || Asleep(b))) continue; // [phys]
-                    if (!Overlap(a, b)) continue;
-                    if (!LayersMeet(ba, bb)) continue;   // [layers]
-                    if (_noCollide.Count > 0 && _noCollide.Contains(PairKey(a, b))) continue;
-                    if (SameWeldGroup(a, b)) continue;   // [weld] parts of one rigid body do not collide with each other
-                    bool swap = ba.IsStatic || (Asleep(a) && !bb.IsStatic); // [phys]
-                    if (sideBySide) AddNarrowOp(a, b, swap ? (byte)2 : (byte)1);
-                    else if (swap) CollidePair(b, a, h);
-                    else CollidePair(a, b, h);
-                }
-            }
-
+            if (!sideBySide)
+                for (int ii = 0; ii < m; ii++) SweepFrom(ii, m, h, null);
+            else SweepSideBySide(m, h);   // the sweep too: runs of the x order on the cores, their work joined in order
             if (sideBySide) RunNarrowOps(h);
             _contacts = main.Contacts;
             _contactCount = main.Count;
             NarrowSideBySide = sideBySide;
             NoteNarrowCost(m, sideBySide, System.Diagnostics.Stopwatch.GetTimestamp() - started);
+        }
+
+        /// <summary>
+        /// The sweep's work for the body at place <paramref name="ii"/> in x: against the ground, then against every later
+        /// body whose box overlaps its own; done now, or listed <paramref name="into"/> for the narrow phase on the cores.
+        /// </summary>
+        private void SweepFrom(int ii, int m, double h, NarrowWork? into)
+        {
+            int a = _order[ii];
+            var ba = Bodies[a];
+            if (!ba.IsStatic && GroundEnabled && !Asleep(a)) // [phys] [terrain] soil state of the body
+            {
+                if (into != null) into.AddOp(a, -1, 0);
+                else CollideGroundSoil(a, h);
+            }
+
+            // [perf] the candidates along x are many when copies stand in rows (100 robot arms: 20 000 a substep);
+            // each is settled first from the boxes' own arrays, in y and z, before its bodies are looked at. b comes after a
+            // in x, so its box reaches past a's start: missing neither in y nor z, the boxes overlap.
+            double maxX = _hi[a].X;
+            var loA = _lo[a];
+            var hiA = _hi[a];
+            bool stillA = _still[a];
+            var order = _order;
+            var minX = _minX;
+            var los = _lo;
+            var his = _hi;
+            var next = _nextMoving;
+            for (int jj = stillA ? next[ii + 1] : ii + 1; jj < m; jj = stillA ? next[jj + 1] : jj + 1)
+            {
+                int b = order[jj];
+                if (minX[b] > maxX) break;   // (a still body passes the moving ones only; those past its reach end it too)
+                ref var lb = ref los[b];
+                ref var hb = ref his[b];
+                // one branch, taken for nearly every candidate (most miss): the four tests at once, not one by one
+                if ((lb.Y > hiA.Y) | (hb.Y < loA.Y) | (lb.Z > hiA.Z) | (hb.Z < loA.Z)) continue;
+                TryPair(a, ba, b, h, into);
+            }
+        }
+
+        /// <summary>A pair whose boxes overlap: tested (or listed) unless the filters keep it apart.</summary>
+        private void TryPair(int a, SceneBody ba, int b, double h, NarrowWork? into)
+        {
+            var bb = Bodies[b];
+            if (!LayersMeet(ba, bb)) return;   // [layers]
+            if (_noCollide.Count > 0 && _noCollide.Contains(PairKey(a, b))) return;
+            if (SameWeldGroup(a, b)) return;   // [weld] parts of one rigid body do not collide with each other
+            bool swap = ba.IsStatic || (Asleep(a) && !bb.IsStatic); // [phys]
+            if (into != null) into.AddOp(a, b, swap ? (byte)2 : (byte)1);
+            else if (swap) CollidePair(b, a, h);
+            else CollidePair(a, b, h);
         }
 
         private double TerrainSeparation(Vec3 p, out Vec3 normal)

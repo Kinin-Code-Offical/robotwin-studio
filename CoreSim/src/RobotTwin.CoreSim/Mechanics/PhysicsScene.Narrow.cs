@@ -28,6 +28,16 @@ namespace RobotTwin.CoreSim.Mechanics
             internal int FeatureBase;
 
             internal SoilState? GroundSoil;   // [terrain] the soil of the body tested against the ground
+
+            // the work a run of the sweep listed
+            internal NarrowOp[] Ops = new NarrowOp[16];
+            internal int OpCount;
+
+            internal void AddOp(int a, int b, byte kind)
+            {
+                if (OpCount == Ops.Length) Array.Resize(ref Ops, Ops.Length * 2);
+                Ops[OpCount++] = new NarrowOp { A = a, B = b, Kind = kind };
+            }
         }
 
         [ThreadStatic] private static NarrowWork? t_narrow;
@@ -63,23 +73,41 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>[islands] Whether the last substep's narrow phase ran side by side.</summary>
         public bool NarrowSideBySide { get; private set; }
 
-        private void AddNarrowOp(int a, int b, byte kind)
+        /// <summary>One run per thread (kept small: each holds its own lists, grown only as far as its work needs); made once.</summary>
+        private void EnsureNarrowRuns()
         {
-            if (_narrowOpCount == _narrowOps.Length) Array.Resize(ref _narrowOps, _narrowOps.Length * 2);
-            _narrowOps[_narrowOpCount++] = new NarrowOp { A = a, B = b, Kind = kind };
+            if (_narrowRuns.Length != 0) return;
+            _narrowRuns = new NarrowWork[WorkTeam.Shared.Workers + 1];
+            for (int i = 0; i < _narrowRuns.Length; i++) _narrowRuns[i] = new NarrowWork(16);
+        }
+
+        /// <summary>The sweep in runs of the x order on the cores, each listing its work; the lists joined in order.</summary>
+        private void SweepSideBySide(int m, double h)
+        {
+            EnsureNarrowRuns();
+            int runs = Math.Max(1, Math.Min(m, _narrowRuns.Length));
+            WorkTeam.Each(runs, r =>
+            {
+                var w = _narrowRuns[r];
+                w.OpCount = 0;
+                for (int ii = (int)((long)m * r / runs), to = (int)((long)m * (r + 1) / runs); ii < to; ii++) SweepFrom(ii, m, h, w);
+            });
+
+            _narrowOpCount = 0;
+            for (int r = 0; r < runs; r++)
+            {
+                var w = _narrowRuns[r];
+                if (_narrowOps.Length < _narrowOpCount + w.OpCount) Array.Resize(ref _narrowOps, Math.Max(_narrowOps.Length * 2, _narrowOpCount + w.OpCount));
+                Array.Copy(w.Ops, 0, _narrowOps, _narrowOpCount, w.OpCount);
+                _narrowOpCount += w.OpCount;
+            }
         }
 
         /// <summary>The collected work, cut into runs on the cores; the runs' contacts are then joined into the scene's in order.</summary>
         private void RunNarrowOps(double h)
         {
             int ops = _narrowOpCount;
-            // one run per thread (kept small: each holds its own contact list, which grows only as far as its work needs);
-            // all made at once, so the scene does not keep adding them as its work grows
-            if (_narrowRuns.Length == 0)
-            {
-                _narrowRuns = new NarrowWork[WorkTeam.Shared.Workers + 1];
-                for (int i = 0; i < _narrowRuns.Length; i++) _narrowRuns[i] = new NarrowWork(16);
-            }
+            EnsureNarrowRuns();
 
             int runs = Math.Max(1, Math.Min(ops, _narrowRuns.Length));
             _narrowShared = true;

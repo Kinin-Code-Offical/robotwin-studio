@@ -780,28 +780,21 @@ namespace RobotWin.Studio.World
                 return;
             }
 
-            var g = new Model3DGroup();
+            var children = _cableChildren;
+            children.Clear();
             _cableModels.Clear();
             _cableSeen.Clear();
+            var lookup = new WorldLookup(World);   // [perf] once a frame, not two list walks per cable end
             foreach (var c in World.Cables)
             {
-                var a = World.Find(c.A.ObjectId);
-                var b = World.Find(c.B.ObjectId);
+                var a = lookup.Find(c.A.ObjectId);
+                var b = lookup.Find(c.B.ObjectId);
                 if (a == null || b == null) continue;
-                if (!WorldBuilding.ActiveInHierarchy(World, a) || !WorldBuilding.ActiveInHierarchy(World, b)) continue;   // [active] not in the run, not drawn
+                if (!lookup.ActiveInHierarchy(a) || !lookup.ActiveInHierarchy(b)) continue;   // [active] not in the run, not drawn
                 var pa = WorldAnchor(a, c.A.Pin);
                 var pb = WorldAnchor(b, c.B.Pin);
                 double r = Math.Max(0.0006, Math.Sqrt(WorldCable.CrossSection(c.Awg) / Math.PI) + 0.0003);
-                Color color;
-                try
-                {
-                    color = (Color)ColorConverter.ConvertFromString(c.Color);
-                }
-                catch (FormatException)
-                {
-                    color = Colors.OrangeRed;
-                }
-
+                var color = CableColour(c.Color);
                 var state = Session?.CableState(c);
                 if (state is { Burned: true }) color = Color.FromRgb(0x2A, 0x20, 0x1A);
                 if (CableColor?.Invoke(c) is Color replay) color = replay;   // [render] current colours in a replay
@@ -837,15 +830,53 @@ namespace RobotWin.Studio.World
                 Place(look.PlugA, pa);
                 Place(look.PlugB, pb);
                 _cableModels[look.Tube] = c.Id;
-                g.Children.Add(look.Tube);
-                g.Children.Add(look.PlugModelA);
-                g.Children.Add(look.PlugModelB);
+                children.Add(look.Tube);
+                children.Add(look.PlugModelA);
+                children.Add(look.PlugModelB);
             }
 
             if (_cableLooks.Count > _cableSeen.Count)
                 foreach (var gone in _cableLooks.Keys.Where(k => !_cableSeen.Contains(k)).ToList()) _cableLooks.Remove(gone);
-            AppendUsbCables(g);   // [radio] PC → board USB cables
+            var usb = new Model3DGroup();
+            AppendUsbCables(usb);   // [radio] PC → board USB cables
+            // [perf] the same models as last frame (their meshes and plugs updated in place): the group stays as it is, so
+            // the scene is not handed 1 800 new children every frame (600 cables)
+            if (usb.Children.Count == 0 && _cables.Content is Model3DGroup kept && SameChildren(kept, children)) return;
+            var g = new Model3DGroup();
+            foreach (var m in children) g.Children.Add(m);
+            foreach (var m in usb.Children.ToList()) g.Children.Add(m);
             _cables.Content = g;
+        }
+
+        private readonly List<Model3D> _cableChildren = new List<Model3D>();
+
+        private static bool SameChildren(Model3DGroup group, List<Model3D> children)
+        {
+            if (group.Children.Count != children.Count) return false;
+            for (int i = 0; i < children.Count; i++)
+                if (!ReferenceEquals(group.Children[i], children[i])) return false;
+            return true;
+        }
+
+        private static readonly Dictionary<string, Color> CableColours = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>[perf] A cable's colour from its text, parsed once per text (not every frame).</summary>
+        private static Color CableColour(string? text)
+        {
+            text ??= string.Empty;
+            if (CableColours.TryGetValue(text, out var known)) return known;
+            Color color;
+            try
+            {
+                color = (Color)ColorConverter.ConvertFromString(text);
+            }
+            catch (Exception ex) when (ex is FormatException || ex is NotSupportedException || ex is ArgumentException)
+            {
+                color = Colors.OrangeRed;
+            }
+
+            if (CableColours.Count < 4096) CableColours[text] = color;
+            return color;
         }
 
         // ================================================================ [perf] what a cable looks like, kept from frame to frame

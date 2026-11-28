@@ -93,6 +93,7 @@ namespace RobotTwin.CoreSim.Sandbox
             }
 
             _cables.Clear();
+            _ropeById = null;   // [perf] the ropes are new
             var settle = new List<(CableRope Rope, int Steps)>();
             ShortCables.Clear();
             BlockedCables.Clear();
@@ -407,22 +408,25 @@ namespace RobotTwin.CoreSim.Sandbox
         }
 
         /// <summary>Points of a cable's rope from end A to end B (world), or null when it has none.</summary>
-        public IReadOnlyList<Vec3>? CablePoints(string cableId)
-        {
-            foreach (var c in _cables)
-                if (string.Equals(c.Cable.Id, cableId, StringComparison.OrdinalIgnoreCase))
-                    return c.Rope.Points;
-            return null;
-        }
+        public IReadOnlyList<Vec3>? CablePoints(string cableId) => RopeOf(cableId)?.Points;
 
         /// <summary>The rope of a cable, or null.</summary>
         public CableRope? RopeOf(string cableId)
         {
-            foreach (var c in _cables)
-                if (string.Equals(c.Cable.Id, cableId, StringComparison.OrdinalIgnoreCase))
-                    return c.Rope;
-            return null;
+            // [perf] by id: asked for every cable every frame (600 cables walked a 600 list each time)
+            if (_ropeById == null || _ropeByIdCount != _cables.Count)
+            {
+                _ropeById = new Dictionary<string, CableRope>(StringComparer.OrdinalIgnoreCase);
+                foreach (var c in _cables)
+                    if (!_ropeById.ContainsKey(c.Cable.Id)) _ropeById[c.Cable.Id] = c.Rope;
+                _ropeByIdCount = _cables.Count;
+            }
+
+            return _ropeById.TryGetValue(cableId, out var rope) ? rope : null;
         }
+
+        private Dictionary<string, CableRope>? _ropeById;
+        private int _ropeByIdCount = -1;
 
         /// <summary>Whether each plug of a cable is still in its pin (true, true when the cable has no rope).</summary>
         public (bool A, bool B) PlugState(string cableId) =>
