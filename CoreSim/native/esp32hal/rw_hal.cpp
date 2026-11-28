@@ -449,6 +449,7 @@ void hal_reset() {
     hal_gpio_driver_reset();
     hal_mcpwm_reset();
     hal_mcpwm_cap_reset();
+    hal_mcpwm_legacy_reset();
 }
 
 void hal_pin_changed(int gpio, int level, uint64_t time_ns) {

@@ -53,8 +53,8 @@ struct mcpwm_gen_t {
     int force;             // -1 none, 0 low, 1 high
     bool dead_time;        // this output is another generator's wave through the dead-time module
     mcpwm_gen_t* dt_in;
-    uint32_t red;
-    uint32_t fed;
+    double red;            // ticks of the timer's resolution
+    double fed;
     bool dt_invert;
 };
 
@@ -337,6 +337,103 @@ void rearm(mcpwm_timer_t* t) {
 }  // namespace
 
 namespace rw {
+/* ---- [legacy] the legacy driver (driver/mcpwm.h, rw_mcpwm_legacy.cpp) on the same model: its timer n drives operator n,
+   whose comparators A / B and generators A / B it owns. */
+static mcpwm_oper_t& legacy_oper(int unit, int timer) {
+    mcpwm_oper_t& op = g_opers[unit][timer];
+    if (!op.used) {
+        op = mcpwm_oper_t{};
+        op.used = true;
+        op.group = unit;
+        for (int i = 0; i < 2; i++) {
+            op.cmprs[i].oper = &op;
+            op.cmprs[i].used = true;
+            op.gens[i].oper = &op;
+            op.gens[i].used = true;
+            op.gens[i].id = i;
+            op.gens[i].gpio = -1;
+            op.gens[i].force = -1;
+        }
+    }
+
+    op.timer = &g_timers[unit][timer];
+    return op;
+}
+
+void mcpwm_legacy_config(int unit, int timer, uint32_t resolution, int count_mode, uint32_t period_ticks) {
+    mcpwm_timer_t& t = g_timers[unit][timer];
+    if (!t.used) {
+        t = mcpwm_timer_t{};
+        t.used = true;
+        t.group = unit;
+    }
+
+    t.resolution = resolution;
+    t.mode = (mcpwm_timer_count_mode_t)count_mode;
+    t.period_ticks = period_ticks;
+    t.enabled = true;
+    legacy_oper(unit, timer);
+    update(unit);
+}
+
+uint32_t mcpwm_legacy_period(int unit, int timer) { return g_timers[unit][timer].used ? g_timers[unit][timer].period_ticks : 0; }
+int mcpwm_legacy_mode(int unit, int timer) { return g_timers[unit][timer].used ? (int)g_timers[unit][timer].mode : 0; }
+uint32_t mcpwm_legacy_resolution(int unit, int timer) { return g_timers[unit][timer].used ? g_timers[unit][timer].resolution : 0; }
+
+void mcpwm_legacy_compare(int unit, int timer, int which, uint32_t value) {
+    legacy_oper(unit, timer).cmprs[which].value = value;
+    update(unit);
+}
+
+uint32_t mcpwm_legacy_compare_value(int unit, int timer, int which) { return g_opers[unit][timer].used ? g_opers[unit][timer].cmprs[which].value : 0; }
+
+void mcpwm_legacy_actions(int unit, int timer, int gen, uint32_t actions) {
+    mcpwm_gen_t& g = legacy_oper(unit, timer).gens[gen];
+    g.actions = actions;
+    g.force = -1;
+    update(unit);
+}
+
+void mcpwm_legacy_force(int unit, int timer, int gen, int level) {
+    legacy_oper(unit, timer).gens[gen].force = level;
+    update(unit);
+}
+
+void mcpwm_legacy_pin(int unit, int timer, int gen, int gpio) {
+    mcpwm_gen_t& g = legacy_oper(unit, timer).gens[gen];
+    if (g.gpio >= 0 && g.gpio != gpio) hal_pwm_out(g.gpio, 1000.0, 0.0);
+    g.gpio = gpio;
+    if (gpio >= 0) pinMode((uint8_t)gpio, OUTPUT);
+    update(unit);
+}
+
+void mcpwm_legacy_run(int unit, int timer, bool run) {
+    mcpwm_timer_t& t = g_timers[unit][timer];
+    if (!t.used) return;
+    bool was = t.running;
+    t.running = run;
+    t.stopped_full = false;
+    if (run && !was) {
+        t.origin_ns = (double)now_ns();
+        t.fired_ticks = 0;
+    }
+
+    update(unit);
+}
+
+/* Dead time between generator A's wave and the two outputs: out 0 = A, 1 = B; from = 0 A's wave, 1 B's; delays in seconds. */
+void mcpwm_legacy_dead_time(int unit, int timer, int out, int from, double red_s, double fed_s, bool invert, bool on) {
+    mcpwm_oper_t& op = legacy_oper(unit, timer);
+    mcpwm_gen_t& g = op.gens[out];
+    double res = op.timer ? (double)op.timer->resolution : 1e6;
+    g.dead_time = on;
+    g.dt_in = &op.gens[from];
+    g.red = red_s * res;
+    g.fed = fed_s * res;
+    g.dt_invert = invert;
+    update(unit);
+}
+
 void hal_mcpwm_reset() {
     for (auto& row : g_timers)
         for (auto& t : row)

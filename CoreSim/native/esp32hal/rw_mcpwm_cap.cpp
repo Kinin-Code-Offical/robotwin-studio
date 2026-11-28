@@ -44,6 +44,10 @@ struct mcpwm_cap_channel_t {
     double pwm_freq, pwm_duty;  // that PWM
     double pwm_since_ns;
     long long pwm_edge;         // index of the next of its edges: even rising, odd falling
+    uint32_t last_value;        // as CAP_CHn holds it
+    bool last_negative;         // as CAP_STATUS holds it
+    rw::legacy_cap_fn legacy;   // [legacy] the legacy driver's callback instead of on_cap
+    void* legacy_user;
 };
 
 namespace {
@@ -80,7 +84,13 @@ void deliver(void*) {
     while (g_tail != g_head) {
         Caught c = g_caught[g_tail % 64];
         g_tail++;
-        if (!c.chan->used || !c.chan->enabled || !c.chan->on_cap) continue;
+        if (!c.chan->used || !c.chan->enabled) continue;
+        if (c.chan->legacy) {
+            c.chan->legacy(c.chan->timer->group, c.chan->id, c.value, c.edge == MCPWM_CAP_EDGE_NEG, c.chan->legacy_user);
+            continue;
+        }
+
+        if (!c.chan->on_cap) continue;
         mcpwm_capture_event_data_t data = {c.value, c.edge};
         c.chan->on_cap(c.chan, &data, c.chan->ctx);
     }
@@ -88,8 +98,11 @@ void deliver(void*) {
 
 void catch_at(mcpwm_cap_channel_t& ch, mcpwm_capture_edge_t edge, double at_ns) {
     if (!ch.timer || !ch.timer->enabled) return;
+    uint32_t value = count_at(*ch.timer, at_ns);
+    ch.last_value = value;
+    ch.last_negative = edge == MCPWM_CAP_EDGE_NEG;
     if (g_head - g_tail >= 64) return;   // the interrupt is far behind: the hardware keeps only the latest value too
-    g_caught[g_head % 64] = Caught{&ch, count_at(*ch.timer, at_ns), edge};
+    g_caught[g_head % 64] = Caught{&ch, value, edge};
     g_head++;
     raise_isr(deliver, nullptr);
 }
@@ -198,6 +211,61 @@ static void adopt_pin_pwm(mcpwm_cap_channel_t& c) {
     if (c.gpio < 0 || c.gpio >= 40 || g_pin_pwm_freq[c.gpio] <= 0) return;
     follow_pwm(c, g_pin_pwm_freq[c.gpio], g_pin_pwm_duty[c.gpio], now_ns());
 }
+
+/* [legacy] channel n of the group's capture timer, which the legacy driver starts with its first channel */
+bool mcpwm_legacy_capture(int unit, int channel, int gpio, bool pos, bool neg, uint32_t prescale, legacy_cap_fn fn, void* user) {
+    if (unit < 0 || unit > 1 || channel < 0 || channel > 2) return false;
+    if (prescale > 1 && prescale % 2 != 0) return false;
+    mcpwm_cap_timer_t& t = g_cap_timers[unit];
+    if (!t.used) {
+        t = mcpwm_cap_timer_t{};
+        t.used = true;
+        t.group = unit;
+        t.resolution = kApbHz;
+    }
+
+    if (!t.running) {
+        t.enabled = true;
+        t.running = true;
+        t.origin_ns = (double)now_ns();
+    }
+
+    mcpwm_cap_channel_t& c = g_cap_chans[unit][channel];
+    if (c.pwm_event) cancel_event(c.pwm_event);
+    c = mcpwm_cap_channel_t{};
+    c.used = true;
+    c.timer = &t;
+    c.id = channel;
+    c.gpio = gpio;
+    c.pos = pos;
+    c.neg = neg;
+    c.prescale = prescale;
+    c.level = gpio >= 0 ? hal_pin_level(gpio) : -1;
+    c.legacy = fn;
+    c.legacy_user = user;
+    c.enabled = true;
+    adopt_pin_pwm(c);
+    return true;
+}
+
+void mcpwm_legacy_capture_off(int unit, int channel) {
+    mcpwm_cap_channel_t& c = g_cap_chans[unit][channel];
+    if (c.pwm_event) cancel_event(c.pwm_event);
+    c.pwm_event = 0;
+    c.enabled = false;
+}
+
+void mcpwm_legacy_capture_gpio(int unit, int channel, int gpio) {
+    mcpwm_cap_channel_t& c = g_cap_chans[unit][channel];
+    if (gpio >= 0 && (gpio >= 40 || g_pin_pwm_freq[gpio] <= 0)) pinMode((uint8_t)gpio, INPUT);
+    if (!c.used) return;
+    c.gpio = gpio;
+    c.level = hal_pin_level(gpio);
+    if (c.enabled) adopt_pin_pwm(c);
+}
+
+uint32_t mcpwm_legacy_capture_value(int unit, int channel) { return g_cap_chans[unit][channel].last_value; }
+bool mcpwm_legacy_capture_negative(int unit, int channel) { return g_cap_chans[unit][channel].last_negative; }
 
 }  // namespace rw
 

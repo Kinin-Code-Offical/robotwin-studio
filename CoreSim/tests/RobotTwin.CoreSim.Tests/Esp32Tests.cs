@@ -485,6 +485,59 @@ void setup() {
 void loop() { delay(100); }
 ";
 
+        // [legacy] the legacy MCPWM driver (driver/mcpwm.h): three timers' outputs, dead time, and a capture channel
+        public const string LegacyMcpwm = @"
+#include ""driver/mcpwm.h""
+volatile uint32_t rise[6], fall[6];
+volatile int nr = 0, nf = 0;
+static bool IRAM_ATTR onCap(mcpwm_unit_t, mcpwm_capture_channel_id_t, const cap_event_data_t* e, void*) {
+  if (e->cap_edge == MCPWM_POS_EDGE) { if (nr < 6) rise[nr++] = e->cap_value; }
+  else if (nf < 6) fall[nf++] = e->cap_value;
+  return false;
+}
+void setup() {
+  Serial.begin(115200);
+  mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, 18);
+  mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0B, 19);
+  mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1A, 21);
+  mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM2A, 22);
+  mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM2B, 23);
+  mcpwm_config_t c = {};
+  c.frequency = 1000;
+  c.cmpr_a = 25.0;
+  c.cmpr_b = 60.0;
+  c.counter_mode = MCPWM_UP_COUNTER;
+  c.duty_mode = MCPWM_DUTY_MODE_0;
+  ESP_ERROR_CHECK(mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_0, &c));
+  c.frequency = 2000;
+  c.cmpr_a = 30.0;
+  c.cmpr_b = 0;
+  c.counter_mode = MCPWM_UP_DOWN_COUNTER;
+  ESP_ERROR_CHECK(mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_1, &c));
+  c.frequency = 5000;
+  c.cmpr_a = 40.0;
+  c.counter_mode = MCPWM_UP_COUNTER;
+  ESP_ERROR_CHECK(mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_2, &c));
+  ESP_ERROR_CHECK(mcpwm_deadtime_enable(MCPWM_UNIT_0, MCPWM_TIMER_2, MCPWM_ACTIVE_HIGH_COMPLIMENT_MODE, 20, 20));
+  mcpwm_gpio_init(MCPWM_UNIT_1, MCPWM_CAP_0, 4);
+  mcpwm_capture_config_t cc = {};
+  cc.cap_edge = MCPWM_BOTH_EDGE;
+  cc.cap_prescale = 1;
+  cc.capture_cb = onCap;
+  ESP_ERROR_CHECK(mcpwm_capture_enable_channel(MCPWM_UNIT_1, MCPWM_SELECT_CAP0, &cc));
+  delay(20);
+  uint32_t high = 0;
+  for (int i = 0; i < nf; i++) if ((int32_t)(fall[i] - rise[1]) > 0) { high = fall[i] - rise[1]; break; }
+  Serial.printf(""CAP res=%u period=%u high=%u edge=%u\n"", (unsigned)mcpwm_capture_get_resolution(MCPWM_UNIT_1), (unsigned)(rise[2] - rise[1]),
+                (unsigned)high, (unsigned)mcpwm_capture_signal_get_edge(MCPWM_UNIT_1, MCPWM_SELECT_CAP0));
+  Serial.printf(""SONUC f=%u a=%.1f b=%.1f us=%u"", (unsigned)mcpwm_get_frequency(MCPWM_UNIT_0, MCPWM_TIMER_0),
+                mcpwm_get_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A), mcpwm_get_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_B),
+                (unsigned)mcpwm_get_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_B));
+  Serial.println();
+}
+void loop() { delay(100); }
+";
+
         public Esp32SketchFixture()
         {
             Available = Esp32SketchCompiler.IsToolchainAvailable;
@@ -514,7 +567,8 @@ void loop() { delay(100); }
                 ["registers"] = Registers,
                 ["no-stack"] = NoStack,
                 ["capture"] = Capture,
-                ["mcpwm-events"] = McpwmEvents
+                ["mcpwm-events"] = McpwmEvents,
+                ["legacy-mcpwm"] = LegacyMcpwm
             };
             var compiler = new Esp32SketchCompiler();
             var results = new ConcurrentDictionary<string, Esp32BuildResult>();
@@ -895,6 +949,46 @@ void loop() { delay(100); }
             Assert.InRange(v["ud_reach"], 998, 1001);  // passed twice a period
             Assert.Equal(1, v["stop"]);
             Assert.Equal(0, v["after"]);
+        }
+
+        [Esp32Fact]
+        public void TheLegacyMcpwmDriverDrivesAndCapturesAsTheRealOneDoes()
+        {
+            // the same numbers as the deprecated IDF driver's real-chip build on the emulator, counting up-down too (it writes
+            // res / f - 1 as the peak: 2 kHz asked, 1002 Hz out)
+            var (sch, board) = NewBoard();
+            var gen = sch.AddPart(Lib, "signal-generator", new GridPoint(-40, 0));
+            gen.Parameters["frequency"] = "2000";
+            gen.Parameters["duty"] = "0.3";
+            gen.Parameters["amplitude"] = "3.3";
+            gen.Parameters["rs"] = "0";
+            Label(sch, gen, "+", "SIG");
+            Label(sch, gen, "-", "GND");
+            Label(sch, board, "IO4", "SIG");
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            using var rig = new Rig(compiled, _fx.Dll("legacy-mcpwm"), new Esp32Options { BootDelay = 0.002 });
+            rig.Run(0.03, 1e-6);
+            string serial = rig.Serial.ToString();
+            _out.WriteLine(serial);
+            Assert.Contains("SONUC f=1000 a=25.0 b=60.0 us=600", serial);
+            var pins = compiled.Circuit.Devices.OfType<DigitalPin>().ToDictionary(p => p.Id.Substring(p.Id.LastIndexOf('.') + 1));
+            void Pwm(string id, double hz, double duty)
+            {
+                Assert.True(pins[id].PwmActive, id + " is not a PWM");
+                Assert.Equal(hz, pins[id].PwmFrequency, 0);
+                Assert.Equal(duty, pins[id].PwmDuty, 3);
+            }
+
+            Pwm("IO18", 1000, 0.25);
+            Pwm("IO19", 1000, 0.60);
+            Pwm("IO21", 1e6 / 998, 300.0 / 998);
+            Pwm("IO22", 5000, 0.39);   // 40 % less the 2 µs rising-edge delay
+            Pwm("IO23", 5000, 0.59);   // the inverse with the falling-edge delay
+            var cap = serial.Split('\n').Single(l => l.StartsWith("CAP ", StringComparison.Ordinal)).Trim().Split(' ');
+            Assert.Equal("res=80000000", cap[1]);
+            Assert.InRange(int.Parse(cap[2].Substring(7)), 40000 - 160, 40000 + 160);
+            Assert.InRange(int.Parse(cap[3].Substring(5)), 12000 - 160, 12000 + 160);
+            Assert.Contains(cap[4], new[] { "edge=1", "edge=2" });
         }
 
         [Esp32Fact]

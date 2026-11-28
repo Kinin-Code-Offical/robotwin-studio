@@ -96,7 +96,27 @@ void hal_gpio_driver_reset();
 void hal_mcpwm_reset();
 void hal_mcpwm_cap_reset();                                /* every capture timer and channel released (rw_mcpwm_cap.cpp) */
 void hal_mcpwm_cap_edge(int gpio, int level, uint64_t time_ns);   /* an input pin's edge, for the capture channels on it */
-void hal_mcpwm_cap_pwm(int gpio, double frequency, double duty, uint64_t now_ns);   /* a pin's own PWM changed */                                    /* chip reset: every MCPWM timer and operator released (rw_mcpwm.cpp) */
+void hal_mcpwm_cap_pwm(int gpio, double frequency, double duty, uint64_t now_ns);   /* a pin's own PWM changed */
+/* [legacy] the legacy MCPWM driver (rw_mcpwm_legacy.cpp) on the new driver's model, in plain types (its own types clash
+   with the new driver's): timer n with operator n (rw_mcpwm.cpp), the group's capture (rw_mcpwm_cap.cpp) */
+void hal_mcpwm_legacy_reset();
+void mcpwm_legacy_config(int unit, int timer, uint32_t resolution, int count_mode, uint32_t period_ticks);
+uint32_t mcpwm_legacy_period(int unit, int timer);
+int mcpwm_legacy_mode(int unit, int timer);
+uint32_t mcpwm_legacy_resolution(int unit, int timer);
+void mcpwm_legacy_compare(int unit, int timer, int which, uint32_t value);
+uint32_t mcpwm_legacy_compare_value(int unit, int timer, int which);
+void mcpwm_legacy_actions(int unit, int timer, int gen, uint32_t actions);
+void mcpwm_legacy_force(int unit, int timer, int gen, int level);
+void mcpwm_legacy_pin(int unit, int timer, int gen, int gpio);
+void mcpwm_legacy_run(int unit, int timer, bool run);
+void mcpwm_legacy_dead_time(int unit, int timer, int out, int from, double red_s, double fed_s, bool invert, bool on);
+typedef bool (*legacy_cap_fn)(int unit, int channel, uint32_t value, bool negative, void* user);
+bool mcpwm_legacy_capture(int unit, int channel, int gpio, bool pos, bool neg, uint32_t prescale, legacy_cap_fn fn, void* user);
+void mcpwm_legacy_capture_off(int unit, int channel);
+void mcpwm_legacy_capture_gpio(int unit, int channel, int gpio);
+uint32_t mcpwm_legacy_capture_value(int unit, int channel);
+bool mcpwm_legacy_capture_negative(int unit, int channel);                                    /* chip reset: every MCPWM timer and operator released (rw_mcpwm.cpp) */
 void hal_pwm_out(int gpio, double frequency, double duty);  /* a PWM on a pin through the host (duty < 0: released) */                               /* chip reset: driver/gpio.h's pin configurations (rw_gpio_driver.cpp) */                                     /* chip reset: every pulse counter unit released (rw_pcnt.cpp) */
 void hal_pcnt_edge(int gpio, int level, uint64_t time_ns);
 void hal_pcnt_settle(uint64_t now_ns);

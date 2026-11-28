@@ -6,6 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using RobotTwin.CoreSim.Analog;
+using RobotTwin.CoreSim.Analog.Devices;
 using RobotTwin.CoreSim.Automation;
 using RobotTwin.CoreSim.Design;
 using RobotTwin.CoreSim.Formats;
@@ -22,9 +24,10 @@ namespace RobotWin.Studio.Firmware
     /// </summary>
     internal static class Esp32LibraryMatrix
     {
-        private sealed record Case(string Library, string Folder, string Sketch, string Expect, string Note = "");
+        private sealed record Case(string Library, string Folder, string Sketch, string Expect, string Note = "", int[]? Pins = null);
 
-        // Each sketch prints one line starting "SONUC " once it has used the library; Expect is a regex over that line.
+        // Each sketch prints one line starting "SONUC " once it has used the library; Expect is a regex over that line, with
+        // each of Pins' final output added to it (" p18=1000 Hz %25.0", or the level) so the two modes' waves compare too.
         private static readonly Case[] Cases =
         {
             // not a library: a sketch written for the 2.x core (LEDC by channel, the 2.x timers, the IDF 4.4 task watchdog)
@@ -222,6 +225,18 @@ namespace RobotWin.Studio.Firmware
                 r.Serial = serial;
                 var lines = serial.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToList();
                 r.Line = lines.FirstOrDefault(l => l.StartsWith("SONUC ", StringComparison.Ordinal));
+                if (r.Line != null && c.Pins != null && runner.Compiled != null)
+                {
+                    var pins = runner.Compiled.Circuit.Devices.OfType<DigitalPin>().ToList();
+                    foreach (int gpio in c.Pins)
+                    {
+                        var pin = pins.FirstOrDefault(d => d.Id.EndsWith(".IO" + gpio.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal));
+                        r.Line += pin == null ? $" p{gpio}=?"
+                            : pin.PwmActive ? string.Format(CultureInfo.InvariantCulture, " p{0}={1:0} Hz %{2:0.0}", gpio, pin.PwmFrequency, pin.PwmDuty * 100)
+                            : $" p{gpio}={(pin.Mode == PinMode.OutputHigh ? 1 : 0)}";
+                    }
+                }
+
                 r.Ran = r.Line != null && Regex.IsMatch(r.Line, c.Expect);
                 if (r.Line == null && lines.Count > 0) r.Tail = lines[^1].Length > 90 ? lines[^1].Substring(0, 90) + "…" : lines[^1];
             }
