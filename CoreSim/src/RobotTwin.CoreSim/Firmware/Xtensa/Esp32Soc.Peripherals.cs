@@ -168,6 +168,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (ReadSpiRegister(register, out value)) return true;
             if (ReadRmtRegister(register, out value)) return true;
             if (ReadPcntRegister(register, out value)) return true;
+            if (ReadMcpwmRegister(register, out value)) return true;
             if (ReadTimerRegister(register, out value)) return true;
             if (ReadAdcRegister(register, out value)) return true;
             if (ReadTouchRegister(register, out value)) return true;

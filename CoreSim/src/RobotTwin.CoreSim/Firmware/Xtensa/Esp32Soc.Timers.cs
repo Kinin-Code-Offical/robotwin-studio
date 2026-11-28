@@ -85,6 +85,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             ServiceSpi();
             ServiceRmt();
             ServicePcnt();
+            ServiceMcpwmCapture();
             ServiceLightSleep();
             ServiceWifi();
         }

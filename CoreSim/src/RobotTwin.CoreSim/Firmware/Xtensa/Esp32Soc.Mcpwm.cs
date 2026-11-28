@@ -12,8 +12,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
     /// (RED) and falling (FED) edges, inverts and bypasses as configured, so complementary outputs for a half bridge come out
     /// as on the chip; a continuous software force holds an output low or high. Each output goes to the GPIO matrix
     /// (PWM0_OUT0A–2B 32–37, PWM1_OUT0A–2B 108–113) as the PWM the circuit drives: its frequency and duty, worked out from
-    /// one period of the generator's events (two when a toggle doubles it). Capture, carrier, fault and interrupts are not
-    /// modelled.
+    /// one period of the generator's events (two when a toggle doubles it). The capture unit and its interrupts are in
+    /// Esp32Soc.McpwmCapture.cs; carrier, fault and the timer and operator interrupts are not modelled.
     /// </summary>
     public sealed partial class Esp32Soc
     {
@@ -56,6 +56,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             int unit = register >= McpwmBase[0] && register < McpwmBase[0] + 0x130 ? 0 : register >= McpwmBase[1] && register < McpwmBase[1] + 0x130 ? 1 : -1;
             if (unit < 0) return false;
             uint offset = register - McpwmBase[unit];
+            if (WriteMcpwmCapture(unit, offset, value)) return true;
             if (offset >= 0x08 && offset <= 0x28 && (offset - 0x08) % 0x10 == 0)
             {
                 // TIMERn_CFG1: TIMER_START (self-clearing on the chip) is a command; its effect is kept here.

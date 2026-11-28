@@ -93,7 +93,10 @@ void hal_wifi_reset();
 void hal_rmt_reset();
 void hal_pcnt_reset();
 void hal_gpio_driver_reset();
-void hal_mcpwm_reset();                                    /* chip reset: every MCPWM timer and operator released (rw_mcpwm.cpp) */
+void hal_mcpwm_reset();
+void hal_mcpwm_cap_reset();                                /* every capture timer and channel released (rw_mcpwm_cap.cpp) */
+void hal_mcpwm_cap_edge(int gpio, int level, uint64_t time_ns);   /* an input pin's edge, for the capture channels on it */
+void hal_mcpwm_cap_pwm(int gpio, double frequency, double duty, uint64_t now_ns);   /* a pin's own PWM changed */                                    /* chip reset: every MCPWM timer and operator released (rw_mcpwm.cpp) */
 void hal_pwm_out(int gpio, double frequency, double duty);  /* a PWM on a pin through the host (duty < 0: released) */                               /* chip reset: driver/gpio.h's pin configurations (rw_gpio_driver.cpp) */                                     /* chip reset: every pulse counter unit released (rw_pcnt.cpp) */
 void hal_pcnt_edge(int gpio, int level, uint64_t time_ns);
 void hal_pcnt_settle(uint64_t now_ns);

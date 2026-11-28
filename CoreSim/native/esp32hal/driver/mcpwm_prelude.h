@@ -2,8 +2,8 @@
  * RoboTwin ESP32 simulation - ESP-IDF's MCPWM driver (driver/mcpwm_prelude.h): timers, operators, comparators and
  * generators with their timer and compare actions, dead time and software force, on the classic ESP32's two groups of
  * three timers and three operators. Each generator's pin gets the PWM its actions make (frequency and duty worked out
- * from one period, as the Xtensa emulator's MCPWM does); see rw_mcpwm.cpp. Capture, fault, sync, carrier and the event
- * callbacks are accepted but not simulated.
+ * from one period, as the Xtensa emulator's MCPWM does); see rw_mcpwm.cpp. The capture unit (driver/mcpwm_cap.h) latches
+ * its timer on a GPIO's edges at their own times (rw_mcpwm_cap.cpp).
  */
 #pragma once
 #include <stdint.h>
@@ -171,6 +171,59 @@ esp_err_t mcpwm_generator_set_actions_on_timer_event(mcpwm_gen_handle_t gen, mcp
 esp_err_t mcpwm_generator_set_action_on_compare_event(mcpwm_gen_handle_t gen, mcpwm_gen_compare_event_action_t ev_act);
 esp_err_t mcpwm_generator_set_actions_on_compare_event(mcpwm_gen_handle_t gen, mcpwm_gen_compare_event_action_t ev_act, ...);
 esp_err_t mcpwm_generator_set_dead_time(mcpwm_gen_handle_t in_generator, mcpwm_gen_handle_t out_generator, const mcpwm_dead_time_config_t* config);
+
+/* ---- capture (driver/mcpwm_cap.h; rw_mcpwm_cap.cpp) */
+typedef struct mcpwm_cap_timer_t* mcpwm_cap_timer_handle_t;
+typedef struct mcpwm_cap_channel_t* mcpwm_cap_channel_handle_t;
+typedef enum { MCPWM_CAP_EDGE_POS, MCPWM_CAP_EDGE_NEG } mcpwm_capture_edge_t;
+typedef enum { MCPWM_CAPTURE_CLK_SRC_APB = 4, MCPWM_CAPTURE_CLK_SRC_DEFAULT = 4 } mcpwm_capture_clock_source_t;
+
+typedef struct {
+    int group_id;
+    mcpwm_capture_clock_source_t clk_src;
+    uint32_t resolution_hz;   /* the classic ESP32's capture timer counts the APB clock (80 MHz) */
+    struct {
+        uint32_t allow_pd : 1;
+    } flags;
+} mcpwm_capture_timer_config_t;
+
+typedef struct {
+    int gpio_num;
+    int intr_priority;
+    uint32_t prescale;   /* 0 or 1: every edge; otherwise even: the captured signal toggles every prescale/2 rising edges */
+    struct {
+        uint32_t pos_edge : 1;
+        uint32_t neg_edge : 1;
+        uint32_t pull_up : 1;
+        uint32_t pull_down : 1;
+        uint32_t invert_cap_signal : 1;
+        uint32_t io_loop_back : 1;
+        uint32_t keep_io_conf_at_exit : 1;
+    } flags;
+} mcpwm_capture_channel_config_t;
+
+typedef struct {
+    uint32_t cap_value;
+    mcpwm_capture_edge_t cap_edge;
+} mcpwm_capture_event_data_t;
+typedef bool (*mcpwm_capture_event_cb_t)(mcpwm_cap_channel_handle_t cap_channel, const mcpwm_capture_event_data_t* edata, void* user_ctx);
+typedef struct {
+    mcpwm_capture_event_cb_t on_cap;
+} mcpwm_capture_event_callbacks_t;
+
+esp_err_t mcpwm_new_capture_timer(const mcpwm_capture_timer_config_t* config, mcpwm_cap_timer_handle_t* ret_cap_timer);
+esp_err_t mcpwm_del_capture_timer(mcpwm_cap_timer_handle_t cap_timer);
+esp_err_t mcpwm_capture_timer_enable(mcpwm_cap_timer_handle_t cap_timer);
+esp_err_t mcpwm_capture_timer_disable(mcpwm_cap_timer_handle_t cap_timer);
+esp_err_t mcpwm_capture_timer_start(mcpwm_cap_timer_handle_t cap_timer);
+esp_err_t mcpwm_capture_timer_stop(mcpwm_cap_timer_handle_t cap_timer);
+esp_err_t mcpwm_capture_timer_get_resolution(mcpwm_cap_timer_handle_t cap_timer, uint32_t* out_resolution);
+esp_err_t mcpwm_new_capture_channel(mcpwm_cap_timer_handle_t cap_timer, const mcpwm_capture_channel_config_t* config, mcpwm_cap_channel_handle_t* ret_cap_channel);
+esp_err_t mcpwm_del_capture_channel(mcpwm_cap_channel_handle_t cap_channel);
+esp_err_t mcpwm_capture_channel_enable(mcpwm_cap_channel_handle_t cap_channel);
+esp_err_t mcpwm_capture_channel_disable(mcpwm_cap_channel_handle_t cap_channel);
+esp_err_t mcpwm_capture_channel_register_event_callbacks(mcpwm_cap_channel_handle_t cap_channel, const mcpwm_capture_event_callbacks_t* cbs, void* user_data);
+esp_err_t mcpwm_capture_channel_trigger_soft_catch(mcpwm_cap_channel_handle_t cap_channel);
 
 #ifdef __cplusplus
 }

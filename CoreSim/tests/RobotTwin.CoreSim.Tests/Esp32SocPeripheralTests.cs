@@ -112,6 +112,81 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void McpwmCaptureLatchesItsTimerOnTheInputsEdges()
+        {
+            // IDF's mcpwm_cap driver: the capture timer on the APB clock, channel 0 on both edges of GPIO4 through the matrix
+            var soc = Chip();
+            bool high = false;
+            soc.PadVoltage = gpio => gpio == 4 && high ? 3.3 : 0;
+            soc.Write32(0x3FF49048, 2u << 12 | 1u << 9);      // IO_MUX GPIO4: GPIO function, input on
+            soc.Write32(0x3FF44130 + 109 * 4, 4u | 1u << 7);   // FUNC_IN_SEL PWM0_CAP0 (109) ← GPIO4
+            soc.Write32(0x3FF5E110, 1u << 27);                 // INT_ENA: CAP0
+            soc.Write32(0x3FF5E0E8, 1);                        // CAP_TIMER_EN
+            soc.Write32(0x3FF5E0F0, 1 | 3u << 1);              // CAP0: on, both edges
+            soc.SamplePads();
+            soc.Run(240_000);                                  // 1 ms
+            high = true;
+            soc.SamplePads();
+            uint rise = soc.Read32(0x3FF5E0FC);
+            Assert.InRange(rise, 79_990u, 80_010u);            // 80 MHz × 1 ms
+            Assert.Equal(0u, soc.Read32(0x3FF5E108) & 1);      // CAP_STATUS: a rising edge
+            Assert.NotEqual(0u, soc.Read32(0x3FF5E118) & (1u << 27));   // INT_ST: CAP0
+            soc.Write32(0x3FF5E11C, 1u << 27);                 // INT_CLR
+            Assert.Equal(0u, soc.Read32(0x3FF5E114) & (1u << 27));
+            soc.Run(60_000);                                   // 250 µs
+            high = false;
+            soc.SamplePads();
+            Assert.InRange(soc.Read32(0x3FF5E0FC) - rise, 19_990u, 20_010u);
+            Assert.Equal(1u, soc.Read32(0x3FF5E108) & 1);      // a falling edge
+
+            // the prescaler (IDF writes prescale − 1): with 2 the captured signal toggles at each rising edge only
+            soc.Write32(0x3FF5E0F0, 0);
+            soc.Write32(0x3FF5E0F0, 1 | 3u << 1 | 1u << 3);
+            uint before = soc.Read32(0x3FF5E0FC);
+            soc.Run(2400);
+            high = true;
+            soc.SamplePads();
+            uint first = soc.Read32(0x3FF5E0FC);
+            Assert.NotEqual(before, first);
+            Assert.Equal(0u, soc.Read32(0x3FF5E108) & 1);      // the prescaled signal rose
+            soc.Run(2400);
+            high = false;
+            soc.SamplePads();
+            Assert.Equal(first, soc.Read32(0x3FF5E0FC));       // a falling input edge is not one of the prescaled signal's
+            soc.Run(2400);
+            high = true;
+            soc.SamplePads();
+            Assert.Equal(1u, soc.Read32(0x3FF5E108) & 1);      // the next rising input edge: the prescaled signal fell
+        }
+
+        [Fact]
+        public void McpwmCaptureTimesTheChipsOwnPwmFedBack()
+        {
+            // LEDC's 5 kHz, 50 % on GPIO18, captured from the same pad: the edges at the PWM's own times
+            var soc = Chip();
+            soc.Write32(0x3FF59140, 0x0201F40A);               // HSTIMER0: 5 kHz, 10 bits
+            soc.Write32(0x3FF59000, 1u << 2);                  // HSCH0: output on, timer 0
+            soc.Write32(0x3FF59008, 512u << 4);                // duty 512 / 1024
+            soc.Write32(0x3FF5900C, 1u << 31 | 1u << 30 | 1u << 20 | 1u << 10);
+            soc.Write32(0x3FF44530 + 18 * 4, 71);              // FUNC_OUT_SEL GPIO18 ← LEDC_HS_SIG_OUT0
+            soc.Write32(0x3FF44024, 1u << 18);                 // GPIO_ENABLE_W1TS
+            soc.Write32(0x3FF49070, 2u << 12 | 1u << 9);       // IO_MUX GPIO18: GPIO function, input on
+            soc.Write32(0x3FF44130 + 109 * 4, 18u | 1u << 7);  // PWM0_CAP0 ← GPIO18
+            soc.Write32(0x3FF5E0E8, 1);
+            soc.Write32(0x3FF5E0F0, 1 | 2u << 1);              // rising edges
+            soc.Run(240 * 500);
+            Assert.True(soc.PadDrive(18).IsPwm);
+            uint a = soc.Read32(0x3FF5E0FC);
+            soc.Run(240 * 200);                                // one period later
+            uint b = soc.Read32(0x3FF5E0FC);
+            Assert.InRange(b - a, 15_998u, 16_002u);           // 80 MHz / 5 kHz
+            soc.Write32(0x3FF5E0F0, 1 | 1u << 1);              // falling edges
+            soc.Run(240 * 200);
+            uint c = soc.Read32(0x3FF5E0FC);
+            Assert.InRange((c - b) % 16_000u, 7_998u, 8_002u);   // half a period after a rising one
+        }
+
+        [Fact]
         public void LedcTakesTheNewDutyAtTheNextPeriod()
         {
             var soc = Chip();

@@ -141,6 +141,7 @@ int host_read(int pin) {
 
 void host_pwm(int pin, double freq, double duty) {
     hal_pcnt_pwm(pin, freq, duty, now_ns());   // [pcnt-pwm] a pulse counter on this pin counts the chip's own PWM
+    hal_mcpwm_cap_pwm(pin, freq, duty, now_ns());   // and a capture channel on it catches its edges
     if (!has_api || !api.pwm_write) return;
     ApiScope s;
     api.pwm_write(api.user, pin, freq, duty);
@@ -447,6 +448,7 @@ void hal_reset() {
     hal_pcnt_reset();
     hal_gpio_driver_reset();
     hal_mcpwm_reset();
+    hal_mcpwm_cap_reset();
 }
 
 void hal_pin_changed(int gpio, int level, uint64_t time_ns) {
@@ -463,6 +465,7 @@ void hal_pin_changed(int gpio, int level, uint64_t time_ns) {
     e.level = lv;
     s.edge_count++;
     hal_pcnt_edge(gpio, lv, time_ns);   // the pulse counters see the edge too
+    hal_mcpwm_cap_edge(gpio, lv, time_ns);   // and the MCPWM's capture channels
     if (!s.isr_enabled || (!s.isr0 && !s.isr1)) return;
     int m = s.isr_mode;
     if ((m == RISING && lv) || (m == FALLING && !lv) || m == CHANGE) fire_isr(gpio);

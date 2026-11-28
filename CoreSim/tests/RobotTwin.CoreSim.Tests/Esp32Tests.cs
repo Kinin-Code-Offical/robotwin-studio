@@ -377,6 +377,58 @@ void setup() {
 void loop() { delay(10); }
 ";
 
+        // [motor] the MCPWM capture unit: an external 2 kHz 30 % signal on GPIO4 and the chip's own 1 kHz 25 % LEDC on GPIO18
+        public const string Capture = @"
+#include ""driver/mcpwm_cap.h""
+struct Seen { volatile uint32_t rise[6], fall[6]; volatile int nr, nf; };
+Seen seen[2];
+static bool IRAM_ATTR onCap(mcpwm_cap_channel_handle_t, const mcpwm_capture_event_data_t* e, void* ctx) {
+  Seen* s = (Seen*)ctx;
+  if (e->cap_edge == MCPWM_CAP_EDGE_POS) { if (s->nr < 6) s->rise[s->nr++] = e->cap_value; }
+  else if (s->nf < 6) s->fall[s->nf++] = e->cap_value;
+  return false;
+}
+static void channel(mcpwm_cap_timer_handle_t t, int gpio, Seen* s) {
+  mcpwm_capture_channel_config_t cc = {};
+  cc.gpio_num = gpio;
+  cc.prescale = 1;
+  cc.flags.pos_edge = 1;
+  cc.flags.neg_edge = 1;
+  mcpwm_cap_channel_handle_t ch = NULL;
+  ESP_ERROR_CHECK(mcpwm_new_capture_channel(t, &cc, &ch));
+  mcpwm_capture_event_callbacks_t cbs = {};
+  cbs.on_cap = onCap;
+  ESP_ERROR_CHECK(mcpwm_capture_channel_register_event_callbacks(ch, &cbs, s));
+  ESP_ERROR_CHECK(mcpwm_capture_channel_enable(ch));
+}
+static void report(const char* name, Seen& s) {
+  uint32_t period = s.rise[2] - s.rise[1], high = 0;
+  for (int i = 0; i < s.nf; i++) if ((int32_t)(s.fall[i] - s.rise[1]) > 0) { high = s.fall[i] - s.rise[1]; break; }
+  Serial.printf(""%s period=%u high=%u\n"", name, (unsigned)period, (unsigned)high);
+}
+void setup() {
+  Serial.begin(115200);
+  ledcAttach(18, 1000, 10);
+  ledcWrite(18, 256);
+  mcpwm_capture_timer_config_t tc = {};
+  tc.group_id = 0;
+  tc.clk_src = MCPWM_CAPTURE_CLK_SRC_DEFAULT;
+  mcpwm_cap_timer_handle_t timer = NULL;
+  ESP_ERROR_CHECK(mcpwm_new_capture_timer(&tc, &timer));
+  channel(timer, 4, &seen[0]);
+  channel(timer, 18, &seen[1]);
+  ESP_ERROR_CHECK(mcpwm_capture_timer_enable(timer));
+  ESP_ERROR_CHECK(mcpwm_capture_timer_start(timer));
+  uint32_t res = 0;
+  mcpwm_capture_timer_get_resolution(timer, &res);
+  delay(8);
+  Serial.printf(""res=%u\n"", (unsigned)res);
+  report(""ext"", seen[0]);
+  report(""own"", seen[1]);
+}
+void loop() { delay(100); }
+";
+
         public Esp32SketchFixture()
         {
             Available = Esp32SketchCompiler.IsToolchainAvailable;
@@ -404,7 +456,8 @@ void loop() { delay(10); }
                 ["pcnt-filter"] = PcntFilter,
                 ["pcnt-ledc"] = PcntLedc,
                 ["registers"] = Registers,
-                ["no-stack"] = NoStack
+                ["no-stack"] = NoStack,
+                ["capture"] = Capture
             };
             var compiler = new Esp32SketchCompiler();
             var results = new ConcurrentDictionary<string, Esp32BuildResult>();
@@ -741,6 +794,30 @@ void loop() { delay(10); }
             Assert.Contains("REGS a=1 high=1 low=0 en=0 high33=1 set=1 cleared=0", serial);
             Assert.Contains("BITS pop=8 clz=31 ctz=3 clz0=32 cpp=1", serial);
             Assert.Contains("NET client=0 udp=1 rtc4=1 rtc5=0", serial);
+        }
+
+        [Esp32Fact]
+        public void TheCaptureUnitTimesAnInputsEdgesAndTheChipsOwnPwm()
+        {
+            var (sch, board) = NewBoard();
+            var gen = sch.AddPart(Lib, "signal-generator", new GridPoint(-40, 0));
+            gen.Parameters["frequency"] = "2000";
+            gen.Parameters["duty"] = "0.3";
+            gen.Parameters["amplitude"] = "3.3";
+            gen.Parameters["rs"] = "0";
+            Label(sch, gen, "+", "SIG");
+            Label(sch, gen, "-", "GND");
+            Label(sch, board, "IO4", "SIG");
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            using var rig = new Rig(compiled, _fx.Dll("capture"), new Esp32Options { BootDelay = 0.002 });
+            rig.Run(0.014, 1e-6);
+            string serial = rig.Serial.ToString();
+            _out.WriteLine(serial);
+            Assert.Contains("res=80000000", serial);
+            Assert.Contains("own period=80000 high=20000", serial);   // the chip's own PWM: exact
+            var ext = serial.Split('\n').Single(l => l.StartsWith("ext ", StringComparison.Ordinal)).Trim().Split(' ');
+            Assert.InRange(int.Parse(ext[1].Substring(7)), 40000 - 160, 40000 + 160);   // 2 kHz, the circuit's edges within ~2 µs
+            Assert.InRange(int.Parse(ext[2].Substring(5)), 12000 - 160, 12000 + 160);   // 30 %
         }
 
         [Esp32Fact]
