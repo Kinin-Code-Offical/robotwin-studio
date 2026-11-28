@@ -10820,6 +10820,8 @@
   "Kayıt açıldı: {rec.Title} ({rec.Channels.Count} kanal, {rec.Events.Count} olay)": "Recording opened: {0} ({1} channels, {2} events)",
   "Kayıt açıldı: {…} ({…} kanal, {…} olay)": "Recording opened: {0} ({1} channels, {2} events)",
   "Kayıt kaydedildi: {…}": "Recording saved: {0}",
+  "Hızlı mod bu çizimi derleyemiyor ({…}); kart gerçek yonga derlemesiyle donanım uyumlu modda çalışıyor.": "The fast mode cannot build this sketch ({0}); the board runs its real-chip build in the hardware-compatible mode.",
+  "Hızlı mod bu çizimi derleyemiyor ({…}); çizim gerçek yonga için derleniyor (ilk derleme birkaç dakika sürebilir). Derleme bitince çalıştırmayı yeniden başlatın: kart donanım uyumlu modda açılır.": "The fast mode cannot build this sketch ({0}); it is being built for the real chip (the first build can take a few minutes). When it is done, start the run again: the board opens in the hardware-compatible mode.",
   "Osiloskop verisi kaydedildi: {…}": "Scope data saved: {0}",
   "Osiloskop görüntüsü kaydedildi: {…}": "Scope image saved: {0}",
   "Kayıt: {…} · {…}": "Recording: {0} · {1}",

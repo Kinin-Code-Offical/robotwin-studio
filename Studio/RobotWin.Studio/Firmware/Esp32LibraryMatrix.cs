@@ -172,6 +172,7 @@ namespace RobotWin.Studio.Firmware
             if (!r.Built)
             {
                 r.BuildNote = FirstError(build);
+                r.Serial = BuildLog(build);   // the whole log goes to the dump folder with the serial dumps
                 return r;
             }
 
@@ -187,12 +188,17 @@ namespace RobotWin.Studio.Firmware
             if (!r.Built)
             {
                 r.BuildNote = FirstError(build);
+                r.Serial = BuildLog(build);
                 return r;
             }
 
             Run(c, r, Esp32Parts.HardwareMode, seconds);
             return r;
         }
+
+        /// <summary>A failed build's diagnostics and log, for the dump folder.</summary>
+        private static string BuildLog(BuildResult build) =>
+            string.Join("\n", build.Diagnostics.Select(d => d.ToString())) + "\n\n" + build.Log;
 
         private static string FirstError(BuildResult build)
         {

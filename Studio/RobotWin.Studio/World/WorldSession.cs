@@ -686,14 +686,21 @@ namespace RobotWin.Studio.World
             string? dll = Firmware.ArduinoCompiler.CachedEsp32Dll(source!);
             if (dll == null)
             {
-                var build = Firmware.ArduinoCompiler.CompileEsp32(source!);
-                if (!build.Success || build.Hex == null)
+                string? why = Firmware.ArduinoCompiler.FailedEsp32FastBuild(source!);
+                if (why == null)
                 {
-                    AddLog(new SimLogEntry(0, where, "ESP32 çizimi derlenemedi: " + (build.Diagnostics.FirstOrDefault()?.Message ?? "?"), AnalogEventKind.Warning));
-                    return;
+                    var build = Firmware.ArduinoCompiler.CompileEsp32(source!);
+                    if (build.Success && build.Hex != null) dll = build.Hex.Substring("esp32:".Length);
+                    else why = build.Diagnostics.FirstOrDefault(d => d.IsError)?.Message ?? build.Diagnostics.FirstOrDefault()?.Message ?? "?";
                 }
 
-                dll = build.Hex.Substring("esp32:".Length);
+                if (dll == null)
+                {
+                    // [esp32hw] a library the fast mode lacks: the real-chip build on the emulator instead
+                    if (FastFailedRunHardware(prog, where, source!, why!)) return;
+                    AddLog(new SimLogEntry(0, where, "ESP32 çizimi derlenemedi: " + why, AnalogEventKind.Warning));
+                    return;
+                }
             }
 
             try
@@ -721,6 +728,22 @@ namespace RobotWin.Studio.World
         /// false (after saying why) when there is none yet, and the board runs as the fast mode. The radio and the camera
         /// stay with the fast mode for now.
         /// </summary>
+        /// <summary>[esp32hw] As the circuit session's: a sketch the fast mode cannot build runs its real-chip build instead.</summary>
+        private bool FastFailedRunHardware(WorldProgrammable prog, string where, string source, string why)
+        {
+            if (RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap(source) != null || !Firmware.ArduinoCompiler.Esp32ToolchainInstalled) return false;
+            if (Firmware.ArduinoCompiler.CachedEsp32Hardware(source) != null)
+            {
+                AddLog(new SimLogEntry(0, where, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.FastModeFallback, why), AnalogEventKind.Warning));
+                return AttachEmulatedEsp32(prog, where, source);
+            }
+
+            if (Firmware.ArduinoCompiler.FailedEsp32HardwareBuild(source) != null) return false;
+            AddLog(new SimLogEntry(0, where, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.FastModeFallbackBuilding, why), AnalogEventKind.Warning));
+            Firmware.ArduinoCompiler.WhenEsp32HardwareBuilt(source, r => AddLog(SimulationSession.BuildEnded(where, r, 0)));
+            return true;
+        }
+
         private bool AttachEmulatedEsp32(WorldProgrammable prog, string where, string source)
         {
             if (RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap(source) is { } gap)

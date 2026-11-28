@@ -850,16 +850,22 @@ namespace RobotWin.Studio.Simulation
             string? dll = RobotWin.Studio.Firmware.ArduinoCompiler.CachedEsp32Dll(source!);
             if (dll == null)
             {
-                AddLog(new SimLogEntry(0, part.RefDes, $"{fileName} MSVC ile derleniyor…", AnalogEventKind.StateChange));
-                var build = RobotWin.Studio.Firmware.ArduinoCompiler.CompileEsp32(source!);
-                if (!build.Success || build.Hex == null)
+                string? why = RobotWin.Studio.Firmware.ArduinoCompiler.FailedEsp32FastBuild(source!);
+                if (why == null)
                 {
-                    string why = build.Diagnostics.FirstOrDefault()?.Message ?? "derleme başarısız";
+                    AddLog(new SimLogEntry(0, part.RefDes, $"{fileName} MSVC ile derleniyor…", AnalogEventKind.StateChange));
+                    var build = RobotWin.Studio.Firmware.ArduinoCompiler.CompileEsp32(source!);
+                    if (build.Success && build.Hex != null) dll = build.Hex.Substring("esp32:".Length);
+                    else why = build.Diagnostics.FirstOrDefault(d => d.IsError)?.Message ?? build.Diagnostics.FirstOrDefault()?.Message ?? "derleme başarısız";
+                }
+
+                if (dll == null)
+                {
+                    // [esp32hw] a library the fast mode lacks: the real-chip build on the emulator instead
+                    if (FastFailedRunHardware(part, source!, fileName, why!)) return;
                     AddLog(new SimLogEntry(0, part.RefDes, "ESP32 çizimi derlenemedi: " + why, AnalogEventKind.Warning));
                     return;
                 }
-
-                dll = build.Hex.Substring("esp32:".Length);
             }
 
             try
@@ -888,6 +894,27 @@ namespace RobotWin.Studio.Simulation
                 ? string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuilt, r.Duration.TotalSeconds.ToString("0", System.Globalization.CultureInfo.InvariantCulture))
                 : string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.HardwareModeBuildFailed, RobotWin.Studio.Firmware.ArduinoCompiler.FirstError(r)),
                 r.Success ? AnalogEventKind.StateChange : AnalogEventKind.Warning);
+
+        /// <summary>
+        /// [esp32hw] A sketch the fast mode cannot build (a library it lacks, such as FastLED's GCC-only code) runs its
+        /// real-chip build on the Xtensa emulator instead; when that build is not there yet it is started, and the next run
+        /// uses it. False when the emulator cannot take the sketch either (no toolchain, a peripheral it lacks, a failed build).
+        /// </summary>
+        private bool FastFailedRunHardware(SchematicPart part, string source, string? fileName, string why)
+        {
+            if (RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap(source) != null || !RobotWin.Studio.Firmware.ArduinoCompiler.Esp32ToolchainInstalled) return false;
+            if (RobotWin.Studio.Firmware.ArduinoCompiler.CachedEsp32Hardware(source) != null)
+            {
+                AddLog(new SimLogEntry(0, part.RefDes, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.FastModeFallback, why), AnalogEventKind.Warning));
+                return AttachEmulatedEsp32(part, source, fileName);
+            }
+
+            if (RobotWin.Studio.Firmware.ArduinoCompiler.FailedEsp32HardwareBuild(source) != null) return false;
+            string refDes = part.RefDes;
+            AddLog(new SimLogEntry(0, refDes, string.Format(System.Globalization.CultureInfo.InvariantCulture, RobotTwin.CoreSim.Design.Esp32Parts.FastModeFallbackBuilding, why), AnalogEventKind.Warning));
+            RobotWin.Studio.Firmware.ArduinoCompiler.WhenEsp32HardwareBuilt(source, r => AddLog(BuildEnded(refDes, r, Simulator?.Time ?? 0)));
+            return true;
+        }
 
         private bool AttachEmulatedEsp32(SchematicPart part, string source, string? fileName)
         {

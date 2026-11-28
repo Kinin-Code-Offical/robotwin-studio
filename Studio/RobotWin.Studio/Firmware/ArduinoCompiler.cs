@@ -187,6 +187,16 @@ namespace RobotWin.Studio.Firmware
             return File.Exists(dll) ? dll : null;
         }
 
+        /// <summary>
+        /// [esp32hw] Why the fast mode could not build this source (its first error), when it tried with the same HAL and
+        /// libraries before: the board then runs the real-chip build instead, without compiling again for nothing.
+        /// </summary>
+        public static string? FailedEsp32FastBuild(string source)
+        {
+            string marker = Path.Combine(Esp32Dir(source), "fast.failed");
+            return File.Exists(marker) ? File.ReadAllText(marker) : null;
+        }
+
         /// <summary>Builds an ESP32 sketch with MSVC (Visual Studio C++ tools) into a DLL; reuses an earlier build of the same source.</summary>
         public static BuildResult CompileEsp32(string source)
         {
@@ -232,12 +242,14 @@ namespace RobotWin.Studio.Firmware
             if (build.Success && build.DllPath != null && File.Exists(build.DllPath))
             {
                 File.WriteAllText(Path.Combine(dir, "build.path"), build.DllPath);
+                File.Delete(Path.Combine(dir, "fast.failed"));
                 result.Success = true;
                 result.Hex = "esp32:" + build.DllPath;
             }
-            else if (result.Diagnostics.Count == 0)
+            else
             {
-                result.Diagnostics.Add(new CodeDiagnostic(1, 0, true, "Derleme başarısız (günlüğe bakın)."));
+                if (result.Diagnostics.Count == 0) result.Diagnostics.Add(new CodeDiagnostic(1, 0, true, "Derleme başarısız (günlüğe bakın)."));
+                File.WriteAllText(Path.Combine(dir, "fast.failed"), (result.Diagnostics.FirstOrDefault(d => d.IsError) ?? result.Diagnostics[0]).Message);   // remembered: not built again for nothing
             }
 
             result.Duration = watch.Elapsed;

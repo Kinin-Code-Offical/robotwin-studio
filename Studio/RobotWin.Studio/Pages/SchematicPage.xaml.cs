@@ -1883,9 +1883,11 @@ namespace RobotWin.Studio.Pages
                     break;
                 case "serial":
                     DockSerial.IsChecked = true;   // [esp32hw] what the boards printed
+                    ShowDock(5);                   // unfolded: the docks start folded
                     break;
                 case "log":
                     DockLog.IsChecked = true;      // the run's events
+                    ShowDock(6);
                     break;
                 case "burn":
                 case "diag":

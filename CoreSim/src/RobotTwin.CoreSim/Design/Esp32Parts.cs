@@ -116,6 +116,11 @@ namespace RobotTwin.CoreSim.Design
             System.Text.RegularExpressions.Regex.IsMatch(source, @"#\s*include\s*[<""]" + System.Text.RegularExpressions.Regex.Escape(header) + "[>\"]");
 
         /// <summary>A hardware-compatible board without Espressif's toolchain: fast mode until it is installed.</summary>
+        /// <summary>[esp32hw] A sketch the fast mode cannot build (a library it lacks) runs its real-chip build on the emulator.</summary>
+        public const string FastModeFallback = "Hızlı mod bu çizimi derleyemiyor ({0}); kart gerçek yonga derlemesiyle donanım uyumlu modda çalışıyor.";
+
+        public const string FastModeFallbackBuilding = "Hızlı mod bu çizimi derleyemiyor ({0}); çizim gerçek yonga için derleniyor (ilk derleme birkaç dakika sürebilir). Derleme bitince çalıştırmayı yeniden başlatın: kart donanım uyumlu modda açılır.";
+
         public const string HardwareModeNoToolchain = "Donanım uyumlu mod için ESP32 araç zinciri gerekiyor (Kod → Gerçek kart → araç zincirini kur); o zamana dek bu kart hızlı modda çalışıyor.";
 
         private static PartDefinition Board(PartLibrary lib, string id, string name, string variant, string footprint,
