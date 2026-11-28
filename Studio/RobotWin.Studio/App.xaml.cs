@@ -588,7 +588,9 @@ namespace RobotWin.Studio
                 }
             }
 
-            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+            // [bigscene] Above the frames' own priority: a scene whose frames take longer than the frame interval keeps the
+            // renderer always due, and a Background timer (the default) then never ran: the measurement never ended.
+            var timer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = TimeSpan.FromMilliseconds(100) };
             timer.Tick += (_, _) =>
             {
                 double elapsed = (DateTime.Now - phaseStart).TotalSeconds;

@@ -313,24 +313,49 @@ namespace RobotTwin.CoreSim.Mechanics
                 if (pr.Body is SceneBody sb)
                     WakeBody(sb);
 
-            // A moving awake body that reaches a sleeping one wakes its island.
-            for (int i = 0; i < count; i++)
+            // A moving awake body that reaches a sleeping one wakes its island. [bigscene] The sleepers sorted along x: each
+            // mover looks only at those within its reach along x (every pair before: a thousand-body scene spent two thirds
+            // of its rigid-body time here). Waking only ever wakes, and a body woken now has no speed to wake others in this
+            // pass, so the order the pairs are met in does not change which islands wake.
+            _sleepers.Clear();
+            double maxR = 0;
+            for (int k = 0; k < count; k++)
             {
-                var a = Bodies[i];
-                if ((a.IsStatic && !a.IsKinematic) || IsAsleep(a)) continue;   // [rigidbody] a moving kinematic body wakes what it reaches
-                var sa = a.EffectiveShape;
-                if (sa == null || !a.Collides) continue;
-                double va = a.Velocity.Length + a.AngularVelocity.Length * sa.BoundingRadius;
-                if (va < SleepLinearSpeed) continue;
-                double ra = sa.BoundingRadius + va * dt * 2 + 0.003;
-                for (int k = 0; k < count; k++)
+                var b = Bodies[k];
+                if (b.IsStatic || b.EffectiveShape is not { } sb || !IsAsleep(b)) continue;
+                _sleepers.Add((b.Position.X, k));
+                maxR = Math.Max(maxR, sb.BoundingRadius);
+            }
+
+            if (_sleepers.Count > 0)
+            {
+                _sleepers.Sort(SleeperOrder);
+                for (int i = 0; i < count; i++)
                 {
-                    var b = Bodies[k];
-                    if (k == i || b.IsStatic || !IsAsleep(b)) continue;
-                    var sb = b.EffectiveShape;
-                    if (sb == null) continue;
-                    double r = ra + sb.BoundingRadius;
-                    if ((a.Position - b.Position).LengthSquared <= r * r) WakeIsland(k);
+                    var a = Bodies[i];
+                    if ((a.IsStatic && !a.IsKinematic) || IsAsleep(a)) continue;   // [rigidbody] a moving kinematic body wakes what it reaches
+                    var sa = a.EffectiveShape;
+                    if (sa == null || !a.Collides) continue;
+                    double va = a.Velocity.Length + a.AngularVelocity.Length * sa.BoundingRadius;
+                    if (va < SleepLinearSpeed) continue;
+                    double ra = sa.BoundingRadius + va * dt * 2 + 0.003;
+                    double reach = ra + maxR, from = a.Position.X - reach, to = a.Position.X + reach;
+                    int lo = 0, hi = _sleepers.Count;
+                    while (lo < hi)
+                    {
+                        int mid = (lo + hi) >> 1;
+                        if (_sleepers[mid].X < from) lo = mid + 1;
+                        else hi = mid;
+                    }
+
+                    for (int s = lo; s < _sleepers.Count && _sleepers[s].X <= to; s++)
+                    {
+                        int k = _sleepers[s].K;
+                        var b = Bodies[k];
+                        if (k == i || !IsAsleep(b)) continue;
+                        double r = ra + b.EffectiveShape!.BoundingRadius;
+                        if ((a.Position - b.Position).LengthSquared <= r * r) WakeIsland(k);
+                    }
                 }
             }
 
@@ -345,6 +370,9 @@ namespace RobotTwin.CoreSim.Mechanics
                 }
             }
         }
+
+        private readonly List<(double X, int K)> _sleepers = new List<(double X, int K)>();
+        private static readonly Comparison<(double X, int K)> SleeperOrder = (p, q) => p.X != q.X ? p.X.CompareTo(q.X) : p.K.CompareTo(q.K);
 
         private static double QDot(Quat a, Quat b) => a.W * b.W + a.X * b.X + a.Y * b.Y + a.Z * b.Z;
 

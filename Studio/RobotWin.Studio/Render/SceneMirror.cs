@@ -175,12 +175,26 @@ namespace RobotWin.Studio.Render
             switch (model)
             {
                 case Model3DGroup group:
-                    foreach (var child in group.Children) Visit(child, m);
+                    if (FlatOf(group) is { } flat)
+                    {
+                        // [perf] its meshes as flattened when it last changed: no walk of WPF's tree, no material read
+                        foreach (var e in flat.Meshes)
+                        {
+                            var w = ToNumerics(e.Local * m);
+                            if (e.Front is { } fm) Items.Add(new DrawItem(e.Mesh, w, fm, false));
+                            if (e.Back is { } bm) Items.Add(new DrawItem(e.Mesh, w, bm, true));
+                        }
+                    }
+                    else
+                    {
+                        foreach (var child in group.Children) Visit(child, m);
+                    }
+
                     break;
                 case GeometryModel3D gm when gm.Geometry is MeshGeometry3D mesh && mesh.Positions.Count > 0:
                     var world = ToNumerics(m);
-                    if (gm.Material != null && Convert(gm.Material) is { } front) Items.Add(new DrawItem(mesh, world, front, false));
-                    if (gm.BackMaterial != null && Convert(gm.BackMaterial) is { } back) Items.Add(new DrawItem(mesh, world, back, true));
+                    if (gm.Material != null && ConvertCached(gm.Material) is { } front) Items.Add(new DrawItem(mesh, world, front, false));
+                    if (gm.BackMaterial != null && ConvertCached(gm.BackMaterial) is { } back) Items.Add(new DrawItem(mesh, world, back, true));
                     break;
                 case AmbientLight a:
                     Ambient += Rgb(a.Color);
@@ -207,6 +221,95 @@ namespace RobotWin.Studio.Render
                         new Vector3((float)p.ConstantAttenuation, (float)p.LinearAttenuation, (float)p.QuadraticAttenuation), aimN, cosIn, cosOut, p is SpotLight));
                     break;
             }
+        }
+
+        /// <summary>[perf] A model group's meshes, relative to the group, with their materials converted; valid until it changes.</summary>
+        private sealed class Flat
+        {
+            public bool Valid;
+            public bool HasLights;
+            public readonly List<(MeshGeometry3D Mesh, Matrix3D Local, PbrMaterial? Front, PbrMaterial? Back)> Meshes =
+                new List<(MeshGeometry3D, Matrix3D, PbrMaterial?, PbrMaterial?)>();
+        }
+
+        private sealed class MaterialBox
+        {
+            public bool Valid;
+            public PbrMaterial? Value;
+        }
+
+        private static readonly ConditionalWeakTable<Model3DGroup, Flat> Flats = new ConditionalWeakTable<Model3DGroup, Flat>();
+        private static readonly ConditionalWeakTable<Material, MaterialBox> Materials = new ConditionalWeakTable<Material, MaterialBox>();
+
+        /// <summary>
+        /// [perf] A group flattened once and kept until WPF says it changed (Freezable.Changed: a child, a transform, a mesh's
+        /// points, a material's brush); a frozen part model never does. A big scene's frame then costs a multiply per mesh
+        /// instead of reading every dependency property of every model and material. Null when the group holds lights.
+        /// </summary>
+        private static Flat? FlatOf(Model3DGroup group)
+        {
+            if (Flats.TryGetValue(group, out var flat))
+            {
+                if (flat.Valid) return flat.HasLights ? null : flat;
+            }
+            else
+            {
+                flat = new Flat();
+                Flats.AddOrUpdate(group, flat);
+                if (!group.IsFrozen)
+                {
+                    var f = flat;
+                    group.Changed += (_, _) => f.Valid = false;
+                }
+            }
+
+            flat.Meshes.Clear();
+            flat.HasLights = false;
+            foreach (var child in group.Children) Flatten(child, Matrix3D.Identity, flat);
+            flat.Valid = true;
+            return flat.HasLights ? null : flat;
+        }
+
+        private static void Flatten(Model3D model, Matrix3D parent, Flat flat)
+        {
+            var m = model.Transform is { } t && !t.Value.IsIdentity ? t.Value * parent : parent;
+            switch (model)
+            {
+                case Model3DGroup group:
+                    foreach (var child in group.Children) Flatten(child, m, flat);
+                    break;
+                case GeometryModel3D gm when gm.Geometry is MeshGeometry3D mesh && mesh.Positions.Count > 0:
+                    var front = gm.Material != null ? ConvertCached(gm.Material) : null;
+                    var back = gm.BackMaterial != null ? ConvertCached(gm.BackMaterial) : null;
+                    if (front != null || back != null) flat.Meshes.Add((mesh, m, front, back));
+                    break;
+                case Light:
+                    flat.HasLights = true;
+                    break;
+            }
+        }
+
+        /// <summary>[perf] A material converted once and kept until it changes (its brush, colour or picture).</summary>
+        private static PbrMaterial? ConvertCached(Material material)
+        {
+            if (Materials.TryGetValue(material, out var box))
+            {
+                if (box.Valid) return box.Value;
+            }
+            else
+            {
+                box = new MaterialBox();
+                Materials.AddOrUpdate(material, box);
+                if (!material.IsFrozen)
+                {
+                    var b = box;
+                    material.Changed += (_, _) => b.Valid = false;
+                }
+            }
+
+            box.Value = Convert(material);
+            box.Valid = true;
+            return box.Value;
         }
 
         public static Matrix4x4 ToNumerics(Matrix3D m) => new Matrix4x4(
