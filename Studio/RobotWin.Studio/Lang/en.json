@@ -2058,7 +2058,7 @@
   "Düğüm adı boş.": "Node name is empty.",
   "Düşme gerilimi": "Dropout voltage",
   "Düşük": "Low",
-  "Düşük: kenar yumuşatma kapalı, daha az parçacık.": "Low: anti-aliasing off, fewer particles.",
+  "Fizik doğruluğundan ayrı. Düşük: kenar yumuşatma kapalı, tek gölge katmanı, daha az parçacık. Orta: 2× kenar yumuşatma, iki gölge katmanı. Yüksek: 4×, üç gölge katmanı.": "Separate from the physics' accuracy. Low: anti-aliasing off, one shadow cascade, fewer particles. Medium: 2× anti-aliasing, two shadow cascades. High: 4×, three shadow cascades.",
   "Dış bakır": "Outer copper",
   "Dış bakır (µm)": "Outer copper (µm)",
   "Dış derinlik": "Outer depth",

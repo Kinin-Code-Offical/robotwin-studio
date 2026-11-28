@@ -142,7 +142,11 @@ namespace RobotWin.Studio.Pages
             });
             Card("3B görünüm", "Dünya ve parça görünümlerinin çizim kalitesi.", c =>
             {
-                c.Children.Add(Choice("3D kalitesi", new[] { ("Düşük", "low"), ("Orta", "medium"), ("Yüksek", "high") }, S.Quality3D, v => S.Quality3D = v, "Düşük: kenar yumuşatma kapalı, daha az parçacık."));
+                c.Children.Add(Choice("3D kalitesi", new[] { ("Düşük", "low"), ("Orta", "medium"), ("Yüksek", "high") }, S.Quality3D, v =>
+                {
+                    S.Quality3D = v;
+                    Render.GpuRenderer.QualityChanged();   // [quality] at once, in every 3D view
+                }, "Fizik doğruluğundan ayrı. Düşük: kenar yumuşatma kapalı, tek gölge katmanı, daha az parçacık. Orta: 2× kenar yumuşatma, iki gölge katmanı. Yüksek: 4×, üç gölge katmanı."));
                 c.Children.Add(Choice("3B çizici", new[] { ("GPU (RobotWin)", "gpu"), ("WPF", "wpf") }, S.Renderer3D, v => S.Renderer3D = v, "GPU: kendi çizicimiz, ekran kartında fiziksel tabanlı malzeme, güneş gölgesi ve 4× kenar yumuşatma. WPF: eski çizim; ekran kartı sorun çıkarırsa."));
             });
 

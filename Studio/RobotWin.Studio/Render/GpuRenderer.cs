@@ -62,7 +62,14 @@ namespace RobotWin.Studio.Render
             public EventHandler? OnChanged;
         }
 
-        private const int ShadowSize = 2048;
+        // [quality] the 3D quality profile (Settings → 3D quality, apart from the physics' accuracy): the sun's shadow map
+        // size and cascades, the anti-aliasing samples and the texture filtering; low one cascade / none / 2×, medium two /
+        // 2× / 4×, high three / 4× / 8× (a 2048 map each: at 1024 one cascade over the whole scene streaked the shadows)
+        private int ShadowSize = 2048;
+        private int _cascadeLimit = MaxCascades;
+        private uint _wantSamples = 4;
+        private uint _anisotropy = 8;
+        private string _quality = string.Empty;
         private const int MaxLamps = 16;
         private const int VertexStride = 32;
 
@@ -93,18 +100,18 @@ namespace RobotWin.Studio.Render
         private readonly ID3D11RasterizerState _cullBack, _cullFront, _shadowRaster;
         private readonly ID3D11BlendState _opaque, _alpha, _additive;
         private readonly ID3D11DepthStencilState _depthWrite, _sceneWrite, _sceneRead;
-        private readonly ID3D11SamplerState _wrap, _clamp, _shadowCmp;
+        private ID3D11SamplerState _wrap = null!, _clamp = null!, _shadowCmp;
         private readonly ID3D11ShaderResourceView _white;
-        private readonly ID3D11Texture2D _shadowTex;
+        private ID3D11Texture2D _shadowTex = null!;
         private readonly ID3D11DepthStencilView[] _shadowDsv = new ID3D11DepthStencilView[MaxCascades];
-        private readonly ID3D11ShaderResourceView _shadowSrv;
+        private ID3D11ShaderResourceView _shadowSrv = null!;
         private readonly ID3D11Buffer _cascadeCb;
         private readonly uint[] _cascadeIndex = new uint[4];
         private readonly Matrix4x4[] _cascadeLight = new Matrix4x4[MaxCascades];
         private readonly float[] _cascadeRadius = new float[MaxCascades];
         private const int MaxCascades = 3;
         private readonly ID3D11Query _done;
-        private readonly uint _samples;
+        private uint _samples;
 
         private sealed class GpuTexture
         {
@@ -134,6 +141,8 @@ namespace RobotWin.Studio.Render
             private D3D9.IDirect3DTexture9? _d9Texture;
             private D3D9.IDirect3DSurface9? _surface;
 
+            private uint _samples;   // the anti-aliasing samples it was made with
+
             internal Target(GpuRenderer r) => _r = r;
 
             /// <summary>Drawn for reading back only (tests): no surface shared with WPF.</summary>
@@ -147,8 +156,9 @@ namespace RobotWin.Studio.Render
             {
                 width = Math.Clamp(width, 1, 16384);
                 height = Math.Clamp(height, 1, 16384);
-                if (width == Width && height == Height && Shared != null) return false;
+                if (width == Width && height == Height && Shared != null && _samples == _r._samples) return false;   // [quality] new samples: made again
                 Release();
+                _samples = _r._samples;
                 Width = width;
                 Height = height;
                 var d = _r._device;
@@ -230,15 +240,50 @@ namespace RobotWin.Studio.Render
             _depthWrite = _device.CreateDepthStencilState(new DepthStencilDescription(true, DepthWriteMask.All, ComparisonFunction.LessEqual));
             _sceneWrite = _device.CreateDepthStencilState(new DepthStencilDescription(true, DepthWriteMask.All, ComparisonFunction.GreaterEqual));
             _sceneRead = _device.CreateDepthStencilState(new DepthStencilDescription(true, DepthWriteMask.Zero, ComparisonFunction.GreaterEqual));
-            _wrap = _device.CreateSamplerState(new SamplerDescription(Filter.Anisotropic, TextureAddressMode.Wrap, 0, 8, ComparisonFunction.Never, 0, float.MaxValue));
-            _clamp = _device.CreateSamplerState(new SamplerDescription(Filter.Anisotropic, TextureAddressMode.Clamp, 0, 8, ComparisonFunction.Never, 0, float.MaxValue));
+            ReadQuality(Shell.AppSettings.Current.Quality3D);
+            CreateSamplers();
             _shadowCmp = _device.CreateSamplerState(new SamplerDescription(Filter.ComparisonMinMagLinearMipPoint, TextureAddressMode.Border, TextureAddressMode.Border, TextureAddressMode.Border, 0, 1, ComparisonFunction.LessEqual, new Color4(1, 1, 1, 1), 0, 0));
 
             var white = _device.CreateTexture2D(new uint[] { 0xFFFFFFFF }, Format.B8G8R8A8_UNorm, 1, 1, 1, 1, BindFlags.ShaderResource, ResourceOptionFlags.None, ResourceUsage.Immutable, CpuAccessFlags.None);
             _white = _device.CreateShaderResourceView(white);
             white.Dispose();
 
-            _shadowTex = _device.CreateTexture2D(new Texture2DDescription(Format.R32_Typeless, ShadowSize, ShadowSize, MaxCascades, 1, BindFlags.DepthStencil | BindFlags.ShaderResource, ResourceUsage.Default, CpuAccessFlags.None, 1, 0, ResourceOptionFlags.None));
+            CreateShadowMap();
+            _cascadeCb = _device.CreateBuffer(16, BindFlags.ConstantBuffer, ResourceUsage.Default, CpuAccessFlags.None, ResourceOptionFlags.None, 0);
+            _done = _device.CreateQuery(QueryType.Event, QueryFlags.None);
+
+            _samples = SupportedSamples(_wantSamples);
+        }
+
+        /// <summary>[quality] The profile's numbers ("low", "medium", "high"; anything else is high).</summary>
+        private void ReadQuality(string quality)
+        {
+            _quality = quality;
+            (ShadowSize, _cascadeLimit, _wantSamples, _anisotropy) = quality switch
+            {
+                "low" => (2048, 1, 1u, 2u),
+                "medium" => (2048, 2, 2u, 4u),
+                _ => (2048, MaxCascades, 4u, 8u),
+            };
+        }
+
+        /// <summary>The most anti-aliasing samples up to <paramref name="want"/> the device does.</summary>
+        private uint SupportedSamples(uint want)
+        {
+            uint n = Math.Max(1, want);
+            while (n > 1 && _device.CheckMultisampleQualityLevels(Format.B8G8R8A8_UNorm, n) == 0) n /= 2;
+            return n;
+        }
+
+        private void CreateSamplers()
+        {
+            _wrap = _device.CreateSamplerState(new SamplerDescription(Filter.Anisotropic, TextureAddressMode.Wrap, 0, _anisotropy, ComparisonFunction.Never, 0, float.MaxValue));
+            _clamp = _device.CreateSamplerState(new SamplerDescription(Filter.Anisotropic, TextureAddressMode.Clamp, 0, _anisotropy, ComparisonFunction.Never, 0, float.MaxValue));
+        }
+
+        private void CreateShadowMap()
+        {
+            _shadowTex = _device.CreateTexture2D(new Texture2DDescription(Format.R32_Typeless, (uint)ShadowSize, (uint)ShadowSize, MaxCascades, 1, BindFlags.DepthStencil | BindFlags.ShaderResource, ResourceUsage.Default, CpuAccessFlags.None, 1, 0, ResourceOptionFlags.None));
             for (int k = 0; k < MaxCascades; k++)
                 _shadowDsv[k] = _device.CreateDepthStencilView(_shadowTex, new DepthStencilViewDescription(DepthStencilViewDimension.Texture2DArray, Format.D32_Float, 0, (uint)k, 1, DepthStencilViewFlags.None));
             _shadowSrv = _device.CreateShaderResourceView(_shadowTex, new ShaderResourceViewDescription
@@ -247,11 +292,39 @@ namespace RobotWin.Studio.Render
                 ViewDimension = ShaderResourceViewDimension.Texture2DArray,
                 Texture2DArray = new Texture2DArrayShaderResourceView { MipLevels = 1, FirstArraySlice = 0, ArraySize = MaxCascades },
             });
-            _cascadeCb = _device.CreateBuffer(16, BindFlags.ConstantBuffer, ResourceUsage.Default, CpuAccessFlags.None, ResourceOptionFlags.None, 0);
-            _done = _device.CreateQuery(QueryType.Event, QueryFlags.None);
+        }
 
-            _samples = 4;
-            while (_samples > 1 && _device.CheckMultisampleQualityLevels(Format.B8G8R8A8_UNorm, _samples) == 0) _samples /= 2;
+        /// <summary>
+        /// [quality] Takes the 3D quality profile now: the shadow map and the samplers are made again, and each view's
+        /// target at its next frame (its anti-aliasing samples changed). Nothing to do when it is the profile in use.
+        /// </summary>
+        public void ApplyQuality(string quality)
+        {
+            if (quality == _quality) return;
+            int oldShadow = ShadowSize;
+            uint oldAniso = _anisotropy;
+            ReadQuality(quality);
+            _samples = SupportedSamples(_wantSamples);
+            if (ShadowSize != oldShadow)
+            {
+                for (int k = 0; k < MaxCascades; k++) _shadowDsv[k]?.Dispose();
+                _shadowSrv?.Dispose();
+                _shadowTex?.Dispose();
+                CreateShadowMap();
+            }
+
+            if (_anisotropy != oldAniso)
+            {
+                _wrap?.Dispose();
+                _clamp?.Dispose();
+                CreateSamplers();
+            }
+        }
+
+        /// <summary>[quality] The profile changed in the settings: the shared renderer takes it at once.</summary>
+        public static void QualityChanged()
+        {
+            if (_shared1 != null) _shared1.ApplyQuality(Shell.AppSettings.Current.Quality3D);
         }
 
         private static (D3D9.IDirect3D9Ex, D3D9.IDirect3DDevice9Ex) CreateD3D9(IntPtr window)
@@ -863,11 +936,12 @@ namespace RobotWin.Studio.Render
             {
                 n = 0;
                 float[] want = { focus * 1.6f, focus * 5f, focus * 20f };
-                for (int k = 0; k < MaxCascades; k++)
+                int limit = Math.Clamp(_cascadeLimit, 1, MaxCascades);   // [quality]
+                for (int k = 0; k < limit; k++)
                 {
                     ends[k] = want[k];
                     n++;
-                    if (want[k] >= sceneFar)
+                    if (want[k] >= sceneFar || k == limit - 1)
                     {
                         ends[k] = 1e30f;   // the scene ends inside this cascade: no fading out at its end
                         break;
@@ -946,7 +1020,7 @@ namespace RobotWin.Studio.Render
         }
 
         /// <summary>The sun's view of a sphere: from <paramref name="back"/> up-sun, an orthographic square around it.</summary>
-        private static Matrix4x4 LightMatrix(Vector3 dir, Vector3 center, float radius, float back)
+        private Matrix4x4 LightMatrix(Vector3 dir, Vector3 center, float radius, float back)
         {
             var up = MathF.Abs(dir.Z) > 0.9f ? Vector3.UnitY : Vector3.UnitZ;
             var eye = center - dir * back;

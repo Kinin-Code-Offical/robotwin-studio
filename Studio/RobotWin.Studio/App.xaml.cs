@@ -199,6 +199,7 @@ namespace RobotWin.Studio
 
             // [render] --renderer gpu|wpf — this run only (nothing is saved): who draws the 3D views.
             if (Arg("--renderer") is { } rendererArg) Shell.AppSettings.Current.Renderer3D = rendererArg;
+            if (Arg("--quality") is { } qualityArg) Shell.AppSettings.Current.Quality3D = qualityArg;   // [quality] low|medium|high, this run only
             if (Arg("--sim-thread") is { } simThreadArg) Shell.AppSettings.Current.SimulationThread = simThreadArg != "off";   // [perf] A/B with --bench
             RobotTwin.CoreSim.Localization.Translate = Shell.Lang.T;   // [lang] what the simulator writes into files (BOM …)
             Shell.Lang.Install();
