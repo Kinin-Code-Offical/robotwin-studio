@@ -5,7 +5,10 @@
  * direction, the chip's priority B > A > peak > zero on a tie) make its wave; dead time delays the rising and falling
  * edges of a generator's wave into another (and inverts it), a software force holds a level. Each generator's pin gets the
  * result through the host's PWM output: frequency and duty worked out from one period (two when a toggle doubles it), the
- * same arithmetic as the Xtensa emulator's MCPWM (Esp32Soc.Mcpwm.cs).
+ * same arithmetic as the Xtensa emulator's MCPWM (Esp32Soc.Mcpwm.cs). The event callbacks (a timer's on_full, on_empty
+ * and on_stop, a comparator's on_reach) run in interrupt context at the ticks they happen on: from when the timer started,
+ * each period has its zero and its peak and the comparison where the count passes the compare value (twice in up-down
+ * mode), as the chip's TEZ, TEP and TEA / TEB interrupts come.
  */
 #include "Arduino.h"
 #include "driver/mcpwm_prelude.h"
@@ -23,12 +26,21 @@ struct mcpwm_timer_t {
     bool enabled;
     bool running;
     bool stopped_full;
+    // the event callbacks and their timeline
+    mcpwm_timer_event_cb_t on_full, on_empty, on_stop;
+    void* ctx;
+    double origin_ns;      // when the count started (0 counting up, the peak counting down)
+    double fired_ticks;    // the last event delivered, in ticks from the origin
+    int event_id;
+    int stopping;          // 1 at the next empty, 2 at the next full: on_stop then
 };
 
 struct mcpwm_cmpr_t {
     mcpwm_oper_t* oper;
     bool used;
     uint32_t value;
+    mcpwm_compare_event_cb_t on_reach;
+    void* ctx;
 };
 
 struct mcpwm_gen_t {
@@ -202,10 +214,133 @@ void update(int group) {
 
 bool gen_ok(mcpwm_gen_handle_t g) { return g && g->used && g->oper && g->oper->used; }
 
+/* ---- event callbacks: the timer's timeline in ticks from its origin */
+/* One period's length in ticks, and where the zero and the peak fall in it. */
+void period_events(const mcpwm_timer_t& t, double& length, double& zero, double& peak) {
+    length = (double)t.period_ticks;
+    switch (t.mode) {
+    case MCPWM_TIMER_COUNT_MODE_DOWN: zero = length - 1; peak = 0; break;
+    case MCPWM_TIMER_COUNT_MODE_UP_DOWN: zero = 0; peak = length / 2; break;
+    default: zero = 0; peak = length - 1; break;
+    }
+}
+
+/* The first tick after `after` that is `offset` into a period. */
+double next_at(double after, double offset, double length) {
+    double n = floor((after - offset) / length) + 1;
+    double at = n * length + offset;
+    if (at <= after + 0.5) at += length;
+    return at;
+}
+
+double ticks_now(const mcpwm_timer_t& t) { return ((double)now_ns() - t.origin_ns) * t.resolution / 1e9; }
+
+void arm(mcpwm_timer_t& t);
+
+/* The events at one tick, delivered in the chip's order (zero, peak, then the operators' comparisons), then the next. */
+void timer_event(void* arg) {
+    auto* t = static_cast<mcpwm_timer_t*>(arg);
+    t->event_id = 0;
+    if (!t->used || !t->enabled) return;
+    double length, zero, peak;
+    period_events(*t, length, zero, peak);
+    double at = t->fired_ticks;
+    auto here = [&](double offset) { double r = fmod(at - offset, length); if (r < 0) r += length; return r < 0.5 || r > length - 0.5; };
+    uint32_t peak_count = t->mode == MCPWM_TIMER_COUNT_MODE_UP_DOWN ? t->period_ticks / 2 : t->period_ticks - 1;
+    if (t->stopping) {
+        if ((t->stopping == 1 && here(zero)) || (t->stopping == 2 && here(peak))) {
+            int kind = t->stopping;
+            t->stopping = 0;
+            if (t->on_stop) {
+                mcpwm_timer_event_data_t d = {kind == 2 ? peak_count : 0u, MCPWM_TIMER_DIRECTION_UP};
+                t->on_stop(t, &d, t->ctx);
+            }
+        }
+        arm(*t);
+        return;
+    }
+
+    if (!t->running) return;
+    if (here(zero) && t->on_empty) {
+        mcpwm_timer_event_data_t d = {0u, t->mode == MCPWM_TIMER_COUNT_MODE_DOWN ? MCPWM_TIMER_DIRECTION_DOWN : MCPWM_TIMER_DIRECTION_UP};
+        t->on_empty(t, &d, t->ctx);
+    }
+
+    if (here(peak) && t->on_full) {
+        mcpwm_timer_event_data_t d = {peak_count, t->mode == MCPWM_TIMER_COUNT_MODE_UP ? MCPWM_TIMER_DIRECTION_UP : MCPWM_TIMER_DIRECTION_DOWN};
+        t->on_full(t, &d, t->ctx);
+    }
+
+    for (auto& op : g_opers[t->group]) {
+        if (!op.used || op.timer != t) continue;
+        for (auto& c : op.cmprs) {
+            if (!c.used || !c.on_reach) continue;
+            bool up = false, down = false;
+            switch (t->mode) {
+            case MCPWM_TIMER_COUNT_MODE_DOWN: down = c.value <= peak_count && here(zero - c.value); break;
+            case MCPWM_TIMER_COUNT_MODE_UP_DOWN:
+                up = c.value < peak_count && here((double)c.value);
+                down = c.value > 0 && c.value < peak_count && here(length - c.value);
+                break;
+            default: up = c.value <= peak_count && here((double)c.value); break;
+            }
+
+            if (up || down) {
+                mcpwm_compare_event_data_t d = {c.value, down ? MCPWM_TIMER_DIRECTION_DOWN : MCPWM_TIMER_DIRECTION_UP};
+                c.on_reach(&c, &d, c.ctx);
+            }
+        }
+    }
+
+    arm(*t);
+}
+
+/* The next tick any callback of this timer is due, scheduled. */
+void arm(mcpwm_timer_t& t) {
+    if (t.event_id) cancel_event(t.event_id);
+    t.event_id = 0;
+    if (!t.used || !t.enabled || t.period_ticks < 2 || t.resolution == 0) return;
+    double length, zero, peak;
+    period_events(t, length, zero, peak);
+    double after = t.fired_ticks, best = -1;
+    auto consider = [&](double offset) { double at = next_at(after, offset, length); if (best < 0 || at < best) best = at; };
+    if (t.stopping) consider(t.stopping == 1 ? zero : peak);
+    else if (t.running) {
+        if (t.on_empty) consider(zero);
+        if (t.on_full) consider(peak);
+        uint32_t peak_count = t.mode == MCPWM_TIMER_COUNT_MODE_UP_DOWN ? t.period_ticks / 2 : t.period_ticks - 1;
+        for (auto& op : g_opers[t.group]) {
+            if (!op.used || op.timer != &t) continue;
+            for (auto& c : op.cmprs) {
+                if (!c.used || !c.on_reach) continue;
+                if (t.mode == MCPWM_TIMER_COUNT_MODE_DOWN) consider(zero - c.value);
+                else if (t.mode == MCPWM_TIMER_COUNT_MODE_UP_DOWN) {
+                    if (c.value < peak_count) consider((double)c.value);
+                    if (c.value > 0 && c.value < peak_count) consider(length - c.value);
+                } else consider((double)c.value);
+            }
+        }
+    }
+
+    if (best < 0) return;
+    t.fired_ticks = best;
+    t.event_id = schedule_event((uint64_t)ceil(t.origin_ns + best * 1e9 / t.resolution), timer_event, &t);
+}
+
+/* From now on: the timeline goes on from the present tick (after a change of period, compare value or callbacks). */
+void rearm(mcpwm_timer_t* t) {
+    if (!t || !t->used) return;
+    if (t->running || t->stopping) t->fired_ticks = ticks_now(*t);
+    arm(*t);
+}
+
 }  // namespace
 
 namespace rw {
 void hal_mcpwm_reset() {
+    for (auto& row : g_timers)
+        for (auto& t : row)
+            if (t.event_id) cancel_event(t.event_id);
     memset(g_timers, 0, sizeof g_timers);
     memset(g_opers, 0, sizeof g_opers);
 }
@@ -259,6 +394,7 @@ extern "C" esp_err_t mcpwm_timer_set_period(mcpwm_timer_handle_t timer, uint32_t
     if (!timer || !timer->used || period_ticks < 2) return ESP_ERR_INVALID_ARG;
     timer->period_ticks = period_ticks;
     update(timer->group);
+    rearm(timer);
     return ESP_OK;
 }
 
@@ -282,6 +418,8 @@ extern "C" esp_err_t mcpwm_timer_disable(mcpwm_timer_handle_t timer) {
     }
 
     timer->enabled = false;
+    if (timer->event_id) cancel_event(timer->event_id);
+    timer->event_id = 0;
     update(timer->group);
     return ESP_OK;
 }
@@ -293,20 +431,40 @@ extern "C" esp_err_t mcpwm_timer_start_stop(mcpwm_timer_handle_t timer, mcpwm_ti
         return ESP_ERR_INVALID_STATE;
     }
 
+    bool was = timer->running;
     switch (command) {
     case MCPWM_TIMER_STOP_EMPTY: timer->running = false; timer->stopped_full = false; break;
     case MCPWM_TIMER_STOP_FULL: timer->running = false; timer->stopped_full = true; break;
     default: timer->running = true; break;   // free running, or one more period (counted as running)
     }
 
+    if (timer->running && !was) {
+        // started: the count from 0 (or the peak, counting down) now
+        timer->origin_ns = (double)now_ns();
+        timer->fired_ticks = 0;   // the count is loaded, not reached: the first zero comes a period on
+        timer->stopping = 0;
+        arm(*timer);
+    } else if (!timer->running && was) {
+        timer->fired_ticks = ticks_now(*timer);
+        timer->stopping = command == MCPWM_TIMER_STOP_FULL ? 2 : 1;   // on_stop at the next empty / full
+        arm(*timer);
+    }
+
     update(timer->group);
     return ESP_OK;
 }
 
-extern "C" esp_err_t mcpwm_timer_register_event_callbacks(mcpwm_timer_handle_t timer, const mcpwm_timer_event_callbacks_t*, void*) {
-    if (!timer || !timer->used) return ESP_ERR_INVALID_ARG;
-    log_once(0xA00, RW_LOG_WARN, "W (%lu) mcpwm: timer event callbacks are not simulated (the PWM outputs are)",
-             (unsigned long)(uptime_ns() / 1000000ull));
+extern "C" esp_err_t mcpwm_timer_register_event_callbacks(mcpwm_timer_handle_t timer, const mcpwm_timer_event_callbacks_t* cbs, void* user_data) {
+    if (!timer || !timer->used || !cbs) return ESP_ERR_INVALID_ARG;
+    if (timer->enabled) {
+        mcpwm_log("mcpwm_timer_register_event_callbacks", 336, "timer not in init state");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    timer->on_full = cbs->on_full;
+    timer->on_empty = cbs->on_empty;
+    timer->on_stop = cbs->on_stop;
+    timer->ctx = user_data;
     return ESP_OK;
 }
 
@@ -396,13 +554,15 @@ extern "C" esp_err_t mcpwm_comparator_set_compare_value(mcpwm_cmpr_handle_t cmpr
 
     cmpr->value = cmp_ticks;
     update(cmpr->oper->group);
+    if (cmpr->on_reach) rearm(cmpr->oper->timer);
     return ESP_OK;
 }
 
-extern "C" esp_err_t mcpwm_comparator_register_event_callbacks(mcpwm_cmpr_handle_t cmpr, const mcpwm_comparator_event_callbacks_t*, void*) {
-    if (!cmpr || !cmpr->used) return ESP_ERR_INVALID_ARG;
-    log_once(0xA01, RW_LOG_WARN, "W (%lu) mcpwm: comparator event callbacks are not simulated (the PWM outputs are)",
-             (unsigned long)(uptime_ns() / 1000000ull));
+extern "C" esp_err_t mcpwm_comparator_register_event_callbacks(mcpwm_cmpr_handle_t cmpr, const mcpwm_comparator_event_callbacks_t* cbs, void* user_data) {
+    if (!cmpr || !cmpr->used || !cbs) return ESP_ERR_INVALID_ARG;
+    cmpr->on_reach = cbs->on_reach;
+    cmpr->ctx = user_data;
+    if (cmpr->oper) rearm(cmpr->oper->timer);
     return ESP_OK;
 }
 

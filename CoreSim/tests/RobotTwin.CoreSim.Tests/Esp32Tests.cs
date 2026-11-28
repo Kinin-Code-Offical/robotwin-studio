@@ -429,6 +429,62 @@ void setup() {
 void loop() { delay(100); }
 ";
 
+        // [motor] the MCPWM's event callbacks: a 10 kHz up timer and a 5 kHz up-down one, each with a comparator
+        public const string McpwmEvents = @"
+#include ""driver/mcpwm_prelude.h""
+volatile int empty = 0, full = 0, reach = 0, stops = 0, emptyUd = 0, reachUd = 0;
+static bool IRAM_ATTR onEmpty(mcpwm_timer_handle_t, const mcpwm_timer_event_data_t*, void* c) { (*(volatile int*)c)++; return false; }
+static bool IRAM_ATTR onFull(mcpwm_timer_handle_t, const mcpwm_timer_event_data_t*, void*) { full++; return false; }
+static bool IRAM_ATTR onStop(mcpwm_timer_handle_t, const mcpwm_timer_event_data_t*, void*) { stops++; return false; }
+static bool IRAM_ATTR onReach(mcpwm_cmpr_handle_t, const mcpwm_compare_event_data_t*, void* c) { (*(volatile int*)c)++; return false; }
+static mcpwm_timer_handle_t make(mcpwm_timer_count_mode_t mode, uint32_t ticks, volatile int* e, bool withFull) {
+  mcpwm_timer_config_t tc = {};
+  tc.group_id = 0;
+  tc.clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT;
+  tc.resolution_hz = 1000000;
+  tc.count_mode = mode;
+  tc.period_ticks = ticks;
+  mcpwm_timer_handle_t t = NULL;
+  ESP_ERROR_CHECK(mcpwm_new_timer(&tc, &t));
+  mcpwm_timer_event_callbacks_t cb = {};
+  cb.on_empty = onEmpty;
+  if (withFull) { cb.on_full = onFull; cb.on_stop = onStop; }
+  ESP_ERROR_CHECK(mcpwm_timer_register_event_callbacks(t, &cb, (void*)e));
+  return t;
+}
+static void comparator(mcpwm_timer_handle_t t, uint32_t value, volatile int* r) {
+  mcpwm_operator_config_t oc = {};
+  oc.group_id = 0;
+  mcpwm_oper_handle_t op = NULL;
+  ESP_ERROR_CHECK(mcpwm_new_operator(&oc, &op));
+  ESP_ERROR_CHECK(mcpwm_operator_connect_timer(op, t));
+  mcpwm_comparator_config_t cc = {};
+  mcpwm_cmpr_handle_t c = NULL;
+  ESP_ERROR_CHECK(mcpwm_new_comparator(op, &cc, &c));
+  ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(c, value));
+  mcpwm_comparator_event_callbacks_t cb = {};
+  cb.on_reach = onReach;
+  ESP_ERROR_CHECK(mcpwm_comparator_register_event_callbacks(c, &cb, (void*)r));
+}
+void setup() {
+  Serial.begin(115200);
+  mcpwm_timer_handle_t up = make(MCPWM_TIMER_COUNT_MODE_UP, 100, &empty, true);
+  mcpwm_timer_handle_t ud = make(MCPWM_TIMER_COUNT_MODE_UP_DOWN, 200, &emptyUd, false);
+  comparator(up, 30, &reach);
+  comparator(ud, 50, &reachUd);
+  ESP_ERROR_CHECK(mcpwm_timer_enable(up));
+  ESP_ERROR_CHECK(mcpwm_timer_enable(ud));
+  ESP_ERROR_CHECK(mcpwm_timer_start_stop(up, MCPWM_TIMER_START_NO_STOP));
+  ESP_ERROR_CHECK(mcpwm_timer_start_stop(ud, MCPWM_TIMER_START_NO_STOP));
+  delay(100);
+  int e = empty, f = full, r = reach, eu = emptyUd, ru = reachUd;
+  ESP_ERROR_CHECK(mcpwm_timer_start_stop(up, MCPWM_TIMER_STOP_EMPTY));
+  delay(5);
+  Serial.printf(""SONUC empty=%d full=%d reach=%d ud_empty=%d ud_reach=%d stop=%d after=%d\n"", e, f, r, eu, ru, stops, empty - e);
+}
+void loop() { delay(100); }
+";
+
         public Esp32SketchFixture()
         {
             Available = Esp32SketchCompiler.IsToolchainAvailable;
@@ -457,7 +513,8 @@ void loop() { delay(100); }
                 ["pcnt-ledc"] = PcntLedc,
                 ["registers"] = Registers,
                 ["no-stack"] = NoStack,
-                ["capture"] = Capture
+                ["capture"] = Capture,
+                ["mcpwm-events"] = McpwmEvents
             };
             var compiler = new Esp32SketchCompiler();
             var results = new ConcurrentDictionary<string, Esp32BuildResult>();
@@ -818,6 +875,26 @@ void loop() { delay(100); }
             var ext = serial.Split('\n').Single(l => l.StartsWith("ext ", StringComparison.Ordinal)).Trim().Split(' ');
             Assert.InRange(int.Parse(ext[1].Substring(7)), 40000 - 160, 40000 + 160);   // 2 kHz, the circuit's edges within ~2 µs
             Assert.InRange(int.Parse(ext[2].Substring(5)), 12000 - 160, 12000 + 160);   // 30 %
+        }
+
+        [Esp32Fact]
+        public void TheMcpwmsEventCallbacksComeAtTheirTicks()
+        {
+            var (sch, _) = NewBoard();
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            using var rig = new Rig(compiled, _fx.Dll("mcpwm-events"), new Esp32Options { BootDelay = 0.002 });
+            rig.Run(0.15, 1e-3);
+            string serial = rig.Serial.ToString();
+            _out.WriteLine(serial);
+            var v = serial.Split('\n').Single(l => l.StartsWith("SONUC ", StringComparison.Ordinal)).Trim().Split(' ').Skip(1)
+                .ToDictionary(x => x.Split('=')[0], x => int.Parse(x.Split('=')[1]));
+            Assert.InRange(v["empty"], 999, 1000);     // 100 µs periods for 100 ms
+            Assert.InRange(v["full"], 999, 1001);
+            Assert.InRange(v["reach"], 999, 1001);
+            Assert.InRange(v["ud_empty"], 499, 500);   // 200 µs up-down periods
+            Assert.InRange(v["ud_reach"], 998, 1001);  // passed twice a period
+            Assert.Equal(1, v["stop"]);
+            Assert.Equal(0, v["after"]);
         }
 
         [Esp32Fact]

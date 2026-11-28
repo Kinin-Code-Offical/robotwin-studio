@@ -269,7 +269,7 @@ Like the Arduino table: whether each feature works in the two modes, how it was 
 | `SPI` | ✓ | ✓ | a byte, a 16-bit word, a 40-byte buffer; 0xFF while not selected | |
 | RMT (NeoPixel) | ✓ | ✓ | `rgbLedWrite`, `rmtWrite`, Adafruit_NeoPixel bytes | |
 | PCNT (encoder) | ✓ | ✓ | a JGA25 encoder decoded ×4 edge for edge; the watch point at 100 | |
-| MCPWM | ✓ | ✓ | a 20 kHz complementary pair with 2 µs dead time (26 % / 66 %) | no fault, sync, carrier or event callbacks |
+| MCPWM | ✓ | ✓ | a 20 kHz complementary pair with 2 µs dead time (26 % / 66 %); the event callbacks (`on_empty`, `on_full`, `on_stop`, `on_reach`) at their ticks: a 10 kHz timer's 1000 zeros in 100 ms, an up-down timer's comparison passed twice a period | no fault, sync or carrier |
 | MCPWM capture (`driver/mcpwm_cap.h`) | ✓ (the circuit's edges at their own times) | ✓ (capture timer, channels, interrupt) | `Esp32Tests`: an external 2 kHz 30 % signal and the chip's own 1 kHz 25 % LEDC; in a real-chip build both modes alike: 80 MHz, period 80000, high 20000 ticks | in the hardware-compatible mode external edges are as exact as the board's circuit samples |
 | FreeRTOS (tasks, queues, semaphores) | ✓ | ✓ (two cores, inter-core interrupts) | the dimmer and every hardware firmware | |
 | Watchdogs, panic | ✓ (task watchdog, `enableLoopWDT`; on simulated time, with IDF's messages) | ✓ (interrupt and task watchdogs) | an endless loop with interrupts off: interrupt watchdog, panic report, `SW_CPU_RESET`, the sketch starts again | no interrupt watchdog in the fast mode (interrupts cannot be switched off on the PC) |

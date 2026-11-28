@@ -269,7 +269,7 @@ Arduino'daki tablo gibi: her özelliğin iki modda çalışıp çalışmadığı
 | `SPI` | ✓ | ✓ | bayt, 16 bitlik sözcük, 40 baytlık tampon; seçili değilken 0xFF | |
 | RMT (NeoPixel) | ✓ | ✓ | `rgbLedWrite`, `rmtWrite`, Adafruit_NeoPixel baytları | |
 | PCNT (enkoder) | ✓ | ✓ | JGA25 enkoderin ×4 dördün çözümü kenarı kenarına; 100'deki izleme noktası | |
-| MCPWM | ✓ | ✓ | 20 kHz tümleyen çift, 2 µs ölü zaman (%26 / %66) | arıza, eşitleme, taşıyıcı ve olay geri çağrıları yok |
+| MCPWM | ✓ | ✓ | 20 kHz tümleyen çift, 2 µs ölü zaman (%26 / %66); olay geri çağrıları (`on_empty`, `on_full`, `on_stop`, `on_reach`) kendi tiklerinde: 100 ms'de 10 kHz'lik zamanlayıcının 1000 sıfırı, aşağı-yukarı sayanın iki kez geçilen karşılaştırması | arıza, eşitleme ve taşıyıcı yok |
 | MCPWM yakalama (`driver/mcpwm_cap.h`) | ✓ (devrenin kenarları kendi zamanlarında) | ✓ (yakalama zamanlayıcısı, kanallar, kesme) | `Esp32Tests`: 2 kHz %30 dış sinyal ve çipin kendi 1 kHz %25 LEDC'si; gerçek yonga derlemesiyle iki modda aynı: 80 MHz, periyot 80000, yüksek 20000 tik | donanım uyumlu modda dış kenarlar kartın devre örneklemesi kadar kesin |
 | FreeRTOS (görev, kuyruk, semafor) | ✓ | ✓ (iki çekirdek, çekirdekler arası kesme) | dimmer ve bütün donanım yazılımları | |
 | Bekçi köpekleri, panik | ✓ (görev bekçisi, `enableLoopWDT`; simüle zamanda, IDF'nin iletileriyle) | ✓ (kesme ve görev bekçisi) | kesmeler kapalı sonsuz döngü: kesme bekçisi, panik raporu, `SW_CPU_RESET`, çizim yeniden başlar | hızlı modda kesme bekçisi yok (kesmeler bilgisayarda kapatılamaz) |
