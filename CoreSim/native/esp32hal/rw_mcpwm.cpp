@@ -36,6 +36,23 @@ struct mcpwm_timer_t {
     double fired_ticks;    // the last event delivered, in ticks from the origin
     int event_id;
     int stopping;          // 1 at the next empty, 2 at the next full: on_stop then
+    // [sync] the source that reloads it with its phase, and its own sync out
+    struct mcpwm_sync_t* sync_in;
+    uint32_t phase;
+    mcpwm_timer_direction_t phase_dir;
+    struct mcpwm_sync_t* sync_out;
+};
+
+/* A sync source: a timer's sync out (on its empty or full, or its input passed on), a GPIO's edge, or software. */
+struct mcpwm_sync_t {
+    bool used;
+    int kind;              // 0 timer, 1 GPIO, 2 software
+    int group;             // -1: a software source not yet given to a timer
+    mcpwm_timer_t* timer;  // a timer source's timer
+    mcpwm_timer_event_t event;
+    bool propagate;
+    int gpio;
+    bool active_neg;
 };
 
 struct mcpwm_cmpr_t {
@@ -91,6 +108,10 @@ struct mcpwm_oper_t {
     int cbc_soft_event;    // a software CBC brake ends with its period
     mcpwm_brake_event_cb_t on_cbc, on_ost;
     void* brake_ctx;
+    // [carrier] the chopper after dead time (seconds)
+    bool carrier;
+    double carrier_period, carrier_duty, carrier_first;
+    bool carrier_in_invert, carrier_out_invert;
 };
 
 namespace {
@@ -98,6 +119,8 @@ namespace {
 mcpwm_timer_t g_timers[2][3];
 mcpwm_oper_t g_opers[2][3];
 mcpwm_fault_t g_faults[2][4];   // three GPIO faults and a software one per group
+mcpwm_sync_t g_syncs[24];       // per group three timer and three GPIO sync sources, and software ones
+uint32_t g_group_resolution[2]; // the group clock IDF set for the first timer (0: none yet)
 
 struct Wave {
     double frequency;   // 0: a constant level
@@ -209,6 +232,31 @@ Wave delayed(Wave w, double delay_s, bool rising) {
 
 Wave inverted(Wave w) { return Wave{w.frequency, 1.0 - w.duty}; }
 
+Wave flipped(Wave w) { return w.frequency > 0 ? inverted(w) : constant(w.duty < 0.5); }
+
+/* [carrier] A wave chopped by its operator's carrier: the first pulse, then the carrier's duty, as the circuit sees it (the
+   carrier's frequency, the duty averaged over the PWM period), the same as Esp32Soc.McpwmSync.cs. */
+Wave carried(const mcpwm_oper_t& op, Wave w) {
+    if (!op.carrier) return w;
+    if (op.carrier_in_invert) w = flipped(w);
+    double period = op.carrier_period, duty = op.carrier_duty, first = op.carrier_first;
+    Wave c;
+    if (w.frequency <= 0) {
+        c = w.duty < 0.5 || duty <= 0 ? constant(false) : Wave{1.0 / period, duty};
+    } else {
+        double high = w.duty / w.frequency;
+        if (high <= first) c = w;
+        else {
+            double rest = high - first, whole = floor(rest / period);
+            double h = first + whole * duty * period + fmin(rest - whole * period, duty * period);
+            double avg = h * w.frequency;
+            c = avg <= 0 ? constant(false) : avg >= 1 ? constant(true) : Wave{1.0 / period, avg};
+        }
+    }
+
+    return op.carrier_out_invert ? flipped(c) : c;
+}
+
 /* What a generator's pin carries: its own wave or another's through dead time, a brake, a force, the GPIO's inversion. */
 Wave output_wave(const mcpwm_gen_t& g) {
     Wave w;
@@ -228,8 +276,9 @@ Wave output_wave(const mcpwm_gen_t& g) {
         if (g.red) w = delayed(w, g.red * tick, true);
         if (g.fed) w = delayed(w, g.fed * tick, false);
         if (g.dt_invert) w = inverted(w);
+        w = carried(op, w);
     } else {
-        w = generator_wave(g);
+        w = carried(op, generator_wave(g));
     }
 
     if (g.force < 0 && brake_act == MCPWM_GEN_ACTION_TOGGLE) w = w.frequency > 0 ? inverted(w) : constant(w.duty < 0.5);
@@ -246,6 +295,18 @@ void update(int group) {
             hal_pwm_out(g.gpio, w.frequency > 0 ? w.frequency : 1000.0, w.duty);
         }
     }
+}
+
+/* The group clock IDF 5.5 picks for a group's first timer: the group prescale from 2 up, the first that leaves the timer a
+   whole prescale of at most 256 for its resolution (1 MHz: 160 MHz / 2 / 80; 100 kHz: / 8 / 200, as the chip's registers
+   show under the real driver). Later timers keep it. */
+uint32_t group_clock_for(uint32_t resolution) {
+    const uint32_t src = 160000000u;
+    for (uint32_t g = 2; resolution && g <= 256; g++) {
+        uint64_t step = (uint64_t)g * resolution;
+        if (src % step == 0 && src / step <= 256) return src / g;
+    }
+    return src / 2;
 }
 
 bool gen_ok(mcpwm_gen_handle_t g) { return g && g->used && g->oper && g->oper->used; }
@@ -272,6 +333,10 @@ double next_at(double after, double offset, double length) {
 double ticks_now(const mcpwm_timer_t& t) { return ((double)now_ns() - t.origin_ns) * t.resolution / 1e9; }
 
 void arm(mcpwm_timer_t& t);
+void sync_fire(mcpwm_sync_t* s, double at_ns, int depth);
+
+/* Whether the timer's sync out comes on that event of its own. */
+bool syncs_on(const mcpwm_timer_t& t, mcpwm_timer_event_t ev) { return t.sync_out && t.sync_out->used && t.sync_out->event == ev; }
 
 /* The events at one tick, delivered in the chip's order (zero, peak, then the operators' comparisons), then the next. */
 void timer_event(void* arg) {
@@ -328,6 +393,10 @@ void timer_event(void* arg) {
         }
     }
 
+    // [sync] its zero or full as a sync out: the timers that take it reloaded at this tick
+    double at_ns = t->origin_ns + at * 1e9 / t->resolution;
+    if (here(zero) && syncs_on(*t, MCPWM_TIMER_EVENT_EMPTY)) sync_fire(t->sync_out, at_ns, 0);
+    if (here(peak) && syncs_on(*t, MCPWM_TIMER_EVENT_FULL)) sync_fire(t->sync_out, at_ns, 0);
     arm(*t);
 }
 
@@ -342,8 +411,8 @@ void arm(mcpwm_timer_t& t) {
     auto consider = [&](double offset) { double at = next_at(after, offset, length); if (best < 0 || at < best) best = at; };
     if (t.stopping) consider(t.stopping == 1 ? zero : peak);
     else if (t.running) {
-        if (t.on_empty) consider(zero);
-        if (t.on_full) consider(peak);
+        if (t.on_empty || syncs_on(t, MCPWM_TIMER_EVENT_EMPTY)) consider(zero);
+        if (t.on_full || syncs_on(t, MCPWM_TIMER_EVENT_FULL)) consider(peak);
         uint32_t peak_count = t.mode == MCPWM_TIMER_COUNT_MODE_UP_DOWN ? t.period_ticks / 2 : t.period_ticks - 1;
         for (auto& op : g_opers[t.group]) {
             if (!op.used || op.timer != &t) continue;
@@ -480,6 +549,8 @@ void hal_mcpwm_reset() {
     memset(g_faults, 0, sizeof g_faults);
     memset(g_timers, 0, sizeof g_timers);
     memset(g_opers, 0, sizeof g_opers);
+    memset(g_syncs, 0, sizeof g_syncs);
+    memset(g_group_resolution, 0, sizeof g_group_resolution);
 }
 }  // namespace rw
 
@@ -506,6 +577,7 @@ extern "C" esp_err_t mcpwm_new_timer(const mcpwm_timer_config_t* config, mcpwm_t
         t.resolution = config->resolution_hz;
         t.mode = config->count_mode;
         t.period_ticks = config->period_ticks;
+        if (!g_group_resolution[t.group]) g_group_resolution[t.group] = group_clock_for(config->resolution_hz);
         *ret_timer = &t;
         return ESP_OK;
     }
@@ -1078,4 +1150,255 @@ extern "C" esp_err_t mcpwm_generator_set_actions_on_brake_event(mcpwm_gen_handle
 
     va_end(ap);
     return rc;
+}
+
+/* ---- [sync] sync sources: a sync reloads the timers that take it with their phase (in their direction), as the chip's
+   SYNCI_EN / TIMER_SYNCI_CFG do; a timer's sync out comes on its empty or full, or passes its own input on, and a software
+   sync of a timer always gives its sync out too. The circuit sees an output by its frequency and duty, so a sync moves when
+   the timer's events come (its callbacks, a capture's count) and the phase between timers of one period. */
+namespace {
+
+void reload(mcpwm_timer_t& t, double at_ns) {
+    if (!t.used || !t.enabled || !t.running || t.resolution == 0) return;
+    double length, zero, peak;
+    period_events(t, length, zero, peak);
+    double phase = (double)t.phase, pos;
+    switch (t.mode) {
+    case MCPWM_TIMER_COUNT_MODE_DOWN: pos = zero - fmin(phase, zero); break;
+    case MCPWM_TIMER_COUNT_MODE_UP_DOWN: {
+        double p = fmin(phase, peak);
+        pos = t.phase_dir == MCPWM_TIMER_DIRECTION_DOWN && p > 0 ? length - p : p;
+        break;
+    }
+    default: pos = fmin(phase, peak); break;
+    }
+
+    t.origin_ns = at_ns - pos * 1e9 / t.resolution;
+    t.fired_ticks = pos;
+    arm(t);
+}
+
+void sync_fire(mcpwm_sync_t* s, double at_ns, int depth) {
+    if (!s || !s->used) return;
+    for (auto& row : g_timers)
+        for (auto& t : row) {
+            if (!t.used || t.sync_in != s) continue;
+            reload(t, at_ns);
+            if (t.sync_out && t.sync_out->used && t.sync_out->propagate && depth < 3) sync_fire(t.sync_out, at_ns, depth + 1);
+        }
+
+    hal_mcpwm_cap_sync(s, at_ns);
+}
+
+mcpwm_sync_t* new_sync() {
+    for (auto& s : g_syncs)
+        if (!s.used) {
+            s = mcpwm_sync_t{};
+            s.used = true;
+            s.gpio = -1;
+            s.event = MCPWM_TIMER_EVENT_INVALID;
+            return &s;
+        }
+    return nullptr;
+}
+
+bool sync_ok(mcpwm_sync_handle_t s) { return s && s->used; }
+
+int g_sync_level[64];   // each GPIO sync pin as last seen (0 / 1, -1 unknown)
+bool g_sync_levels_init;
+
+}  // namespace
+
+namespace rw {
+void hal_mcpwm_sync_edge(int gpio, int level, uint64_t time_ns) {
+    if (gpio < 0 || gpio >= 64) return;
+    if (!g_sync_levels_init) {
+        for (auto& l : g_sync_level) l = -1;
+        g_sync_levels_init = true;
+    }
+
+    int was = g_sync_level[gpio];
+    g_sync_level[gpio] = level ? 1 : 0;
+    if (was < 0 || was == g_sync_level[gpio]) return;
+    for (auto& s : g_syncs)
+        if (s.used && s.kind == 1 && s.gpio == gpio && (level != 0) != s.active_neg) sync_fire(&s, (double)time_ns, 0);
+}
+
+int hal_mcpwm_sync_group(const void* sync, bool claim, int group) {
+    auto* s = (mcpwm_sync_t*)sync;
+    if (!s || !s->used) return -2;
+    if (s->kind == 2 && claim && s->group < 0) s->group = group;
+    return s->group;
+}
+}  // namespace rw
+
+extern "C" esp_err_t mcpwm_new_timer_sync_src(mcpwm_timer_handle_t timer, const mcpwm_timer_sync_src_config_t* config, mcpwm_sync_handle_t* ret_sync) {
+    charge(cost(4000.0));
+    if (!timer || !timer->used || !config || !ret_sync) {
+        mcpwm_log("mcpwm_new_timer_sync_src", 52, "invalid argument");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (timer->sync_out) {
+        mcpwm_log("mcpwm_new_timer_sync_src", 54, "timer sync_src already exists");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    mcpwm_sync_t* s = new_sync();
+    if (!s) return ESP_ERR_NO_MEM;
+    s->kind = 0;
+    s->group = timer->group;
+    s->timer = timer;
+    s->propagate = config->flags.propagate_input_sync;
+    s->event = s->propagate ? MCPWM_TIMER_EVENT_INVALID : config->timer_event;
+    timer->sync_out = s;
+    rearm(timer);
+    *ret_sync = s;
+    return ESP_OK;
+}
+
+extern "C" esp_err_t mcpwm_new_gpio_sync_src(const mcpwm_gpio_sync_src_config_t* config, mcpwm_sync_handle_t* ret_sync) {
+    charge(cost(4000.0));
+    if (!config || !ret_sync || config->group_id < 0 || config->group_id > 1 || !digitalPinIsValid(config->gpio_num)) {
+        mcpwm_log("mcpwm_new_gpio_sync_src", 118, "invalid argument");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    int taken = 0;
+    for (auto& o : g_syncs)
+        if (o.used && o.kind == 1 && o.group == config->group_id) taken++;
+    if (taken >= 3) {
+        mcpwm_log("mcpwm_gpio_sync_src_register_to_group", 102, "no free gpio sync in group (%d)", config->group_id);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    mcpwm_sync_t* s = new_sync();
+    if (!s) return ESP_ERR_NO_MEM;
+    s->kind = 1;
+    s->group = config->group_id;
+    s->gpio = config->gpio_num;
+    s->active_neg = config->flags.active_neg;
+    if (config->flags.pull_up) pinMode(config->gpio_num, INPUT_PULLUP);
+    else if (config->flags.pull_down) pinMode(config->gpio_num, INPUT_PULLDOWN);
+    else pinMode(config->gpio_num, INPUT);
+    *ret_sync = s;
+    return ESP_OK;
+}
+
+extern "C" esp_err_t mcpwm_new_soft_sync_src(const mcpwm_soft_sync_config_t* config, mcpwm_sync_handle_t* ret_sync) {
+    charge(cost(2000.0));
+    if (!config || !ret_sync) {
+        mcpwm_log("mcpwm_new_soft_sync_src", 190, "invalid argument");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    mcpwm_sync_t* s = new_sync();
+    if (!s) return ESP_ERR_NO_MEM;
+    s->kind = 2;
+    s->group = -1;
+    *ret_sync = s;
+    return ESP_OK;
+}
+
+extern "C" esp_err_t mcpwm_del_sync_src(mcpwm_sync_handle_t sync) {
+    if (!sync_ok(sync)) return ESP_ERR_INVALID_ARG;
+    for (auto& row : g_timers)
+        for (auto& t : row) {
+            if (t.sync_out == sync) {
+                t.sync_out = nullptr;
+                rearm(&t);
+            }
+            if (t.sync_in == sync) t.sync_in = nullptr;
+        }
+
+    *sync = mcpwm_sync_t{};
+    return ESP_OK;
+}
+
+extern "C" esp_err_t mcpwm_soft_sync_activate(mcpwm_sync_handle_t sync) {
+    charge(cost(400.0));
+    if (!sync_ok(sync) || sync->kind != 2) {
+        mcpwm_log("mcpwm_soft_sync_activate", 240, "invalid argument");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    double at = (double)now_ns();
+    for (auto& row : g_timers)
+        for (auto& t : row) {
+            if (!t.used || t.sync_in != sync) continue;
+            reload(t, at);
+            if (t.sync_out) sync_fire(t.sync_out, at, 1);   // a software sync of a timer gives its sync out as well
+        }
+
+    hal_mcpwm_cap_sync(sync, at);
+    return ESP_OK;
+}
+
+extern "C" esp_err_t mcpwm_timer_set_phase_on_sync(mcpwm_timer_handle_t timer, const mcpwm_timer_sync_phase_config_t* config) {
+    charge(cost(1500.0));
+    if (!timer || !timer->used || !config) {
+        mcpwm_log("mcpwm_timer_set_phase_on_sync", 348, "invalid argument");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!config->sync_src) {
+        timer->sync_in = nullptr;
+        return ESP_OK;
+    }
+
+    if (!sync_ok(config->sync_src)) return ESP_ERR_INVALID_ARG;
+    uint32_t peak_ticks = timer->mode == MCPWM_TIMER_COUNT_MODE_UP_DOWN ? timer->period_ticks / 2 : timer->period_ticks;
+    if (config->count_value >= peak_ticks) {
+        mcpwm_log("mcpwm_timer_set_phase_on_sync", 351, "invalid sync count value");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    int group = hal_mcpwm_sync_group(config->sync_src, true, timer->group);
+    if (group != timer->group) {
+        mcpwm_log("mcpwm_timer_set_phase_on_sync", 357, "timer and sync source are not in the same group");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    timer->sync_in = config->sync_src;
+    timer->phase = config->count_value;
+    timer->phase_dir = config->direction;
+    return ESP_OK;
+}
+
+/* ---- [carrier] mcpwm_operator_apply_carrier, as IDF works it out from the group clock: a prescale of the group clock over
+   8 a carrier period (1-16), the duty in eighths, the first pulse in whole carrier periods (1-16). */
+extern "C" esp_err_t mcpwm_operator_apply_carrier(mcpwm_oper_handle_t oper, const mcpwm_carrier_config_t* config) {
+    charge(cost(3000.0));
+    if (!oper || !oper->used) {
+        mcpwm_log("mcpwm_operator_apply_carrier", 278, "invalid argument");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    uint32_t real_frequency = 0;
+    if (config && config->frequency_hz) {
+        uint32_t res = g_group_resolution[oper->group];
+        uint8_t pre_scale = (uint8_t)(res / 8 / config->frequency_hz);
+        if (pre_scale == 0 || pre_scale > 16) {
+            mcpwm_log("mcpwm_operator_apply_carrier", 290, "group clock cannot match the frequency");
+            return ESP_ERR_INVALID_STATE;
+        }
+
+        real_frequency = res / 8 / pre_scale;
+        uint8_t duty = (uint8_t)(config->duty_cycle * 8);
+        uint8_t first = (uint8_t)(config->first_pulse_duration_us * real_frequency / 1000000UL);
+        if (first == 0 || first > 16) {
+            mcpwm_log("mcpwm_operator_apply_carrier", 300, "invalid first pulse duration");
+            return ESP_ERR_INVALID_ARG;
+        }
+
+        oper->carrier_period = 8.0 * pre_scale / res;
+        oper->carrier_duty = (duty & 7) / 8.0;   // a three-bit field
+        oper->carrier_first = first * oper->carrier_period;
+        oper->carrier_in_invert = config->flags.invert_before_modulate;
+        oper->carrier_out_invert = config->flags.invert_after_modulate;
+    }
+
+    oper->carrier = real_frequency > 0;
+    update(oper->group);
+    return ESP_OK;
 }

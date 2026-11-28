@@ -63,6 +63,51 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         private static long McpwmCrossed(double a, double b, double offset, double length) =>
             (long)Math.Floor((b - offset) / length) - (long)Math.Floor((a - offset) / length);
 
+        /// <summary>
+        /// Cycles until the next timer or comparison event whose interrupt is enabled (or a timer's zero or peak that is a
+        /// sync out): an idle turn of both cores ends there, so the interrupt is raised when it happens, not up to 25 µs late.
+        /// </summary>
+        private long CyclesToMcpwmEvent()
+        {
+            if (!_mcpwmEventsActive) return long.MaxValue;
+            double best = double.MaxValue;
+            for (int unit = 0; unit < 2; unit++)
+            {
+                uint b = McpwmBase[unit], ena = Reg(b + McpwmIntEna);
+                for (int timer = 0; timer < 3; timer++)
+                {
+                    if (!_mcpwmRunning[unit, timer]) continue;
+                    McpwmPeriod(unit, timer, out int mode, out double length, out double zero, out double peak, out int period);
+                    if (mode == 0 || period == 0) continue;
+                    double hz = McpwmTickHz(unit, timer), now = McpwmTicks(unit, timer, Seconds);
+                    void Consider(double offset)
+                    {
+                        double at = (Math.Floor((now - offset) / length) + 1) * length + offset;
+                        double dt = (at - now) / hz;
+                        if (dt < best) best = dt;
+                    }
+
+                    int synco = (int)((Reg(b + TimerSyncRegister(timer)) >> 2) & 3);
+                    if ((ena & (1u << (3 + timer))) != 0 || synco == 1) Consider(zero);
+                    if ((ena & (1u << (6 + timer))) != 0 || synco == 2) Consider(peak);
+                    for (int op = 0; op < 3; op++)
+                    {
+                        if ((int)((Reg(b + 0x38) >> (2 * op)) & 3) != timer) continue;
+                        for (int which = 0; which < 2; which++)
+                        {
+                            if ((ena & (1u << (which == 0 ? 15 + op : 18 + op))) == 0) continue;
+                            int cmp = (int)(Reg(b + 0x3C + 0x38 * (uint)op + 0x04 + 4 * (uint)which) & 0xFFFF);
+                            if (mode == 2) { if (cmp <= period) Consider(period - cmp); }
+                            else if (mode == 3) { if (cmp < period) Consider(cmp); if (cmp > 0 && cmp < period) Consider(length - cmp); }
+                            else if (cmp <= period) Consider(cmp);
+                        }
+                    }
+                }
+            }
+
+            return best == double.MaxValue ? long.MaxValue : Math.Max(1, (long)Math.Ceiling(best * CpuHz));
+        }
+
         /// <summary>Each turn: the timer and comparison events the running timers passed, as raw interrupt bits.</summary>
         private void ServiceMcpwmEvents()
         {
@@ -94,6 +139,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
                     if (McpwmCrossed(from, to, zero, length) > 0) raised |= 1u << (3 + timer);
                     if (McpwmCrossed(from, to, peak, length) > 0) raised |= 1u << (6 + timer);
+                    McpwmPeriodicSync(unit, timer, from, to, zero, peak, length);   // its zero or peak as a sync out (Esp32Soc.McpwmSync.cs)
                     for (int op = 0; op < 3; op++)
                     {
                         int opTimer = (int)((Reg(b + 0x38) >> (2 * op)) & 3);

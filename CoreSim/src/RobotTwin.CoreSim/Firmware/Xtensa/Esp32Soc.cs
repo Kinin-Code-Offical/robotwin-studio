@@ -473,6 +473,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                     // CCOMPARE, the FreeRTOS tick) keeps them asleep throughout; the peripherals catch up by time at its end.
                     long idle = Math.Min((long)(25e-6 * CpuHz), CyclesToCompare(Pro));
                     if (AppRunning) idle = Math.Min(idle, CyclesToCompare(App));
+                    idle = Math.Min(idle, CyclesToMcpwmEvent());   // an MCPWM interrupt on time (Esp32Soc.McpwmEvents.cs)
                     if (idle > turn) quantum = idle;
                 }
 

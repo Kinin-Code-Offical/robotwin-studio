@@ -214,6 +214,59 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void McpwmSyncLoadsThePhaseAndTheCarrierChops()
+        {
+            // timers 0 and 1 up at 1 MHz (period 999 → 1 kHz); timer 1 takes a sync with phase 250
+            var soc = Chip();
+            soc.Write32(0x3FF5E000, 15);                      // group prescale: 10 MHz
+            soc.Write32(0x3FF5E004, 9 | 999u << 8);           // TIMER0: 1 MHz, period 999
+            soc.Write32(0x3FF5E014, 9 | 999u << 8);           // TIMER1
+            soc.Write32(0x3FF5E01C, 1u | 250u << 4);          // TIMER1_SYNC: SYNCI_EN, phase 250
+            soc.Write32(0x3FF5E018, 2 | 1u << 3);             // TIMER1: start, counting up
+            soc.Run(240_000);
+
+            // Ticks of 10 µs until the next raw TEZ of each timer, after INT_CLR.
+            int StepsTo(uint bit)
+            {
+                soc.Write32(0x3FF5E11C, bit);
+                for (int i = 1; i < 300; i++)
+                {
+                    soc.Run(2400);
+                    if ((soc.Read32(0x3FF5E114) & bit) != 0) return i;
+                }
+
+                return -1;
+            }
+
+            // a software sync (SYNC_SW toggled): the count is 250 now, its zero 750 µs on
+            soc.Write32(0x3FF5E01C, 1u | 1u << 1 | 250u << 4);
+            Assert.InRange(StepsTo(1u << 4), 74, 76);
+
+            // timer 0's zero as its sync out (SYNCO_SEL 1) to timer 1 (SYNCISEL 1): timer 1's zero comes 750 µs after timer 0's
+            soc.Write32(0x3FF5E00C, 1u << 2);
+            soc.Write32(0x3FF5E034, 1u << 3);
+            soc.Write32(0x3FF5E008, 2 | 1u << 3);             // TIMER0: start, 400 µs off the other
+            soc.Run(240_000 * 3);
+            StepsTo(1u << 3);
+            Assert.InRange(StepsTo(1u << 4) + 0, 74, 76);
+
+            // the carrier on operator 0 (timer 0, A high on zero, low on compare 500: 50 %): 8 µs a carrier period
+            // (prescale 9 of 10 MHz), duty 4/8, first pulse two periods → 16 + 60 · 4 + 4 µs of 500 high: 26 % at 125 kHz
+            soc.Write32(0x3FF5E038, 0);
+            soc.Write32(0x3FF5E03C + 0x04, 500);
+            soc.Write32(0x3FF5E03C + 0x14, 2u | 1u << 4);
+            Assert.Equal(0.5, soc.McpwmOutput(0, 0, 0).Duty, 3);
+            soc.Write32(0x3FF5E03C + 0x28, 1u | 9u << 1 | 4u << 5 | 1u << 8);
+            var chopped = soc.McpwmOutput(0, 0, 0);
+            Assert.Equal(125_000, chopped.Frequency, 1);
+            Assert.Equal(0.26, chopped.Duty, 4);
+            soc.Write32(0x3FF5E03C + 0x28, 1u | 9u << 1 | 4u << 5 | 1u << 8 | 1u << 12);   // inverted after
+            Assert.Equal(0.74, soc.McpwmOutput(0, 0, 0).Duty, 4);
+            soc.Write32(0x3FF5E03C + 0x28, 0);
+            Assert.Equal(0.5, soc.McpwmOutput(0, 0, 0).Duty, 3);
+        }
+
+        [Fact]
         public void McpwmCaptureTimesTheChipsOwnPwmFedBack()
         {
             // LEDC's 5 kHz, 50 % on GPIO18, captured from the same pad: the edges at the PWM's own times

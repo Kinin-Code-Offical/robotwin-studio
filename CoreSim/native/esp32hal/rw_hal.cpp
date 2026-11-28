@@ -468,6 +468,7 @@ void hal_pin_changed(int gpio, int level, uint64_t time_ns) {
     hal_pcnt_edge(gpio, lv, time_ns);   // the pulse counters see the edge too
     hal_mcpwm_cap_edge(gpio, lv, time_ns);   // and the MCPWM's capture channels
     hal_mcpwm_fault_edge(gpio, lv);          // and its fault inputs
+    hal_mcpwm_sync_edge(gpio, lv, time_ns);  // and its sync inputs
     if (!s.isr_enabled || (!s.isr0 && !s.isr1)) return;
     int m = s.isr_mode;
     if ((m == RISING && lv) || (m == FALLING && !lv) || m == CHANGE) fire_isr(gpio);

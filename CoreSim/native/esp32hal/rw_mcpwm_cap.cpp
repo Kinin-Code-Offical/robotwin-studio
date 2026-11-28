@@ -25,6 +25,8 @@ struct mcpwm_cap_timer_t {
     bool running;
     double origin_ns;   // when the count was 0 (running)
     uint32_t frozen;    // the count while stopped
+    const void* sync_in;   // [sync] the source that loads its phase
+    uint32_t phase;
 };
 
 struct mcpwm_cap_channel_t {
@@ -174,6 +176,12 @@ void hal_mcpwm_cap_reset() {
     memset(g_pin_pwm_freq, 0, sizeof g_pin_pwm_freq);
     memset(g_pin_pwm_duty, 0, sizeof g_pin_pwm_duty);
     g_head = g_tail = 0;
+}
+
+/* [sync] A sync event: a running capture timer that takes it reads its phase from then on. */
+void hal_mcpwm_cap_sync(const void* sync, double at_ns) {
+    for (auto& t : g_cap_timers)
+        if (t.used && t.running && t.sync_in && t.sync_in == sync) t.origin_ns = at_ns - (double)t.phase * 1e9 / t.resolution;
 }
 
 void hal_mcpwm_cap_edge(int gpio, int level, uint64_t time_ns) {
@@ -357,6 +365,30 @@ extern "C" esp_err_t mcpwm_capture_timer_stop(mcpwm_cap_timer_handle_t cap_timer
 extern "C" esp_err_t mcpwm_capture_timer_get_resolution(mcpwm_cap_timer_handle_t cap_timer, uint32_t* out_resolution) {
     if (!cap_timer || !cap_timer->used || !out_resolution) return ESP_ERR_INVALID_ARG;
     *out_resolution = cap_timer->resolution;
+    return ESP_OK;
+}
+
+extern "C" esp_err_t mcpwm_capture_timer_set_phase_on_sync(mcpwm_cap_timer_handle_t cap_timer, const mcpwm_capture_timer_sync_phase_config_t* config) {
+    if (!cap_timer || !cap_timer->used || !config) {
+        cap_log("mcpwm_capture_timer_set_phase_on_sync", 253, "invalid argument");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (config->direction != MCPWM_TIMER_DIRECTION_UP) {
+        cap_log("mcpwm_capture_timer_set_phase_on_sync", 255, "MCPWM capture timer only supports counting up");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (config->sync_src) {
+        int group = hal_mcpwm_sync_group(config->sync_src, true, cap_timer->group);
+        if (group != cap_timer->group) {
+            cap_log("mcpwm_capture_timer_set_phase_on_sync", 262, "capture timer and sync source are not in the same group");
+            return ESP_ERR_INVALID_ARG;
+        }
+    }
+
+    cap_timer->sync_in = config->sync_src;
+    cap_timer->phase = config->count_value;
     return ESP_OK;
 }
 

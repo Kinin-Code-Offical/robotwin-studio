@@ -264,6 +264,84 @@ void loop() {
 ";
 
         [Esp32Fact]
+        public void McpwmSyncAndCarrierInTheFastMode()
+        {
+            // [motor] Timer B takes timer A's empty as its sync with phase 250: B's empty comes 750 us after A's. B's operator
+            // drives IO19 at 50 % through a 1 MHz carrier (IDF: the 80 MHz group clock / 8 / 10, a first pulse of two
+            // periods): 2 + 498 · 0.5 us high of 500, 25.1 % at the carrier's frequency, as the real chip build gives.
+            var w = new WorldDocument();
+            var esp = w.AddComponent(Lib, Esp32Parts.DevKitCId, new WorldPose());
+            esp.Firmware = new FirmwareSource { FileName = "sync.ino", Source = McpwmSyncSketch };
+            string dir = Path.Combine(Path.GetTempPath(), "robotwin-esp32-mcpwm-sync-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            var options = new RunnerOptions
+            {
+                Esp32Builder = src =>
+                {
+                    var build = new Esp32SketchCompiler().Compile(src, dir);
+                    Assert.True(build.Success, string.Join("\n", build.Diagnostics) + "\n" + build.Log);
+                    return build.DllPath;
+                }
+            };
+            using var runner = new WorldRunner(w, options);
+            runner.Step(0.6);
+            string text = string.Concat(runner.ReadSerial(null, false).Values);
+            _out.WriteLine(text);
+            Assert.Contains("SONUC phase=750", text);
+            var pin = runner.Compiled!.Circuit.Devices.OfType<RobotTwin.CoreSim.Analog.Devices.DigitalPin>().Single(p => p.Id.EndsWith(".IO19", StringComparison.Ordinal));
+            _out.WriteLine($"IO19 {pin.PwmFrequency} Hz {pin.PwmDuty:P1}");
+            Assert.Equal(1e6, pin.PwmFrequency, 1);
+            Assert.Equal(0.251, pin.PwmDuty, 4);
+        }
+
+        internal const string McpwmSyncSketch = @"
+#include ""driver/mcpwm_prelude.h""
+volatile int64_t tA = 0, tB = 0;
+static bool IRAM_ATTR onA(mcpwm_timer_handle_t, const mcpwm_timer_event_data_t*, void*) { tA = esp_timer_get_time(); return false; }
+static bool IRAM_ATTR onB(mcpwm_timer_handle_t, const mcpwm_timer_event_data_t*, void*) { tB = esp_timer_get_time(); return false; }
+void setup() {
+  Serial.begin(115200);
+  mcpwm_timer_config_t c = {};
+  c.group_id = 0; c.clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT; c.resolution_hz = 1000000; c.period_ticks = 1000; c.count_mode = MCPWM_TIMER_COUNT_MODE_UP;
+  mcpwm_timer_handle_t a = NULL, b = NULL;
+  ESP_ERROR_CHECK(mcpwm_new_timer(&c, &a));
+  ESP_ERROR_CHECK(mcpwm_new_timer(&c, &b));
+  mcpwm_timer_event_callbacks_t ca = {}; ca.on_empty = onA;
+  ESP_ERROR_CHECK(mcpwm_timer_register_event_callbacks(a, &ca, NULL));
+  mcpwm_timer_event_callbacks_t cb = {}; cb.on_empty = onB;
+  ESP_ERROR_CHECK(mcpwm_timer_register_event_callbacks(b, &cb, NULL));
+  mcpwm_sync_handle_t s = NULL;
+  mcpwm_timer_sync_src_config_t sc = {}; sc.timer_event = MCPWM_TIMER_EVENT_EMPTY;
+  ESP_ERROR_CHECK(mcpwm_new_timer_sync_src(a, &sc, &s));
+  mcpwm_timer_sync_phase_config_t ph = {}; ph.sync_src = s; ph.count_value = 250; ph.direction = MCPWM_TIMER_DIRECTION_UP;
+  ESP_ERROR_CHECK(mcpwm_timer_set_phase_on_sync(b, &ph));
+  mcpwm_oper_handle_t op = NULL;
+  mcpwm_operator_config_t oc = {}; oc.group_id = 0;
+  ESP_ERROR_CHECK(mcpwm_new_operator(&oc, &op));
+  ESP_ERROR_CHECK(mcpwm_operator_connect_timer(op, b));
+  mcpwm_cmpr_handle_t cmp = NULL;
+  mcpwm_comparator_config_t cc = {}; cc.flags.update_cmp_on_tez = true;
+  ESP_ERROR_CHECK(mcpwm_new_comparator(op, &cc, &cmp));
+  ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(cmp, 500));
+  mcpwm_gen_handle_t g = NULL;
+  mcpwm_generator_config_t gc = {}; gc.gen_gpio_num = 19;
+  ESP_ERROR_CHECK(mcpwm_new_generator(op, &gc, &g));
+  ESP_ERROR_CHECK(mcpwm_generator_set_action_on_timer_event(g, MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)));
+  ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(g, MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, cmp, MCPWM_GEN_ACTION_LOW)));
+  mcpwm_carrier_config_t k = {}; k.frequency_hz = 1000000; k.duty_cycle = 0.5; k.first_pulse_duration_us = 2;
+  ESP_ERROR_CHECK(mcpwm_operator_apply_carrier(op, &k));
+  ESP_ERROR_CHECK(mcpwm_timer_enable(a));
+  ESP_ERROR_CHECK(mcpwm_timer_enable(b));
+  ESP_ERROR_CHECK(mcpwm_timer_start_stop(b, MCPWM_TIMER_START_NO_STOP));
+  delayMicroseconds(300);
+  ESP_ERROR_CHECK(mcpwm_timer_start_stop(a, MCPWM_TIMER_START_NO_STOP));
+  delay(20);
+  int d = (int)((tB - tA) % 1000); if (d < 0) d += 1000;
+  Serial.printf(""SONUC phase=%d\n"", d);
+}
+void loop() { delay(100); }
+";
+
+        [Esp32Fact]
         public void ServoPulsesComeInTheLibrarysTimerTicks()
         {
             // As the ESP32Servo library the hardware build uses: a 10-bit LEDC timer at 50 Hz, the pulse in 19.53 us ticks,

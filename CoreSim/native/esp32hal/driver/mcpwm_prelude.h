@@ -230,6 +230,53 @@ esp_err_t mcpwm_operator_register_event_callbacks(mcpwm_oper_handle_t oper, cons
 esp_err_t mcpwm_generator_set_action_on_brake_event(mcpwm_gen_handle_t generator, mcpwm_gen_brake_event_action_t ev_act);
 esp_err_t mcpwm_generator_set_actions_on_brake_event(mcpwm_gen_handle_t generator, mcpwm_gen_brake_event_action_t ev_act, ...);
 
+/* ---- sync (driver/mcpwm_sync.h; rw_mcpwm.cpp): a sync reloads the timers (and capture timers) that take it with their phase */
+typedef struct {
+    mcpwm_timer_event_t timer_event;   /* the timer's sync out on its empty or full (INVALID: none) */
+    struct {
+        uint32_t propagate_input_sync : 1;   /* its own sync input passed on */
+    } flags;
+} mcpwm_timer_sync_src_config_t;
+typedef struct {
+    int group_id;
+    int gpio_num;
+    struct {
+        uint32_t active_neg : 1;   /* the falling edge syncs (by default the rising one) */
+        uint32_t io_loop_back : 1;
+        uint32_t pull_up : 1;
+        uint32_t pull_down : 1;
+    } flags;
+} mcpwm_gpio_sync_src_config_t;
+typedef struct {
+    int reserved;
+} mcpwm_soft_sync_config_t;
+typedef struct {
+    mcpwm_sync_handle_t sync_src;
+    uint32_t count_value;
+    mcpwm_timer_direction_t direction;
+} mcpwm_timer_sync_phase_config_t;
+
+esp_err_t mcpwm_new_timer_sync_src(mcpwm_timer_handle_t timer, const mcpwm_timer_sync_src_config_t* config, mcpwm_sync_handle_t* ret_sync);
+esp_err_t mcpwm_new_gpio_sync_src(const mcpwm_gpio_sync_src_config_t* config, mcpwm_sync_handle_t* ret_sync);
+esp_err_t mcpwm_new_soft_sync_src(const mcpwm_soft_sync_config_t* config, mcpwm_sync_handle_t* ret_sync);
+esp_err_t mcpwm_del_sync_src(mcpwm_sync_handle_t sync);
+esp_err_t mcpwm_soft_sync_activate(mcpwm_sync_handle_t sync);
+esp_err_t mcpwm_timer_set_phase_on_sync(mcpwm_timer_handle_t timer, const mcpwm_timer_sync_phase_config_t* config);
+
+/* ---- carrier (rw_mcpwm.cpp): chops an operator's outputs after dead time */
+typedef enum { MCPWM_CARRIER_CLK_SRC_PLL160M = 1, MCPWM_CARRIER_CLK_SRC_DEFAULT = 1 } mcpwm_carrier_clock_source_t;
+typedef struct {
+    mcpwm_carrier_clock_source_t clk_src;
+    uint32_t frequency_hz;
+    uint32_t first_pulse_duration_us;
+    float duty_cycle;
+    struct {
+        uint32_t invert_before_modulate : 1;
+        uint32_t invert_after_modulate : 1;
+    } flags;
+} mcpwm_carrier_config_t;
+esp_err_t mcpwm_operator_apply_carrier(mcpwm_oper_handle_t oper, const mcpwm_carrier_config_t* config);
+
 /* ---- capture (driver/mcpwm_cap.h; rw_mcpwm_cap.cpp) */
 typedef struct mcpwm_cap_timer_t* mcpwm_cap_timer_handle_t;
 typedef struct mcpwm_cap_channel_t* mcpwm_cap_channel_handle_t;
@@ -276,6 +323,12 @@ esp_err_t mcpwm_capture_timer_disable(mcpwm_cap_timer_handle_t cap_timer);
 esp_err_t mcpwm_capture_timer_start(mcpwm_cap_timer_handle_t cap_timer);
 esp_err_t mcpwm_capture_timer_stop(mcpwm_cap_timer_handle_t cap_timer);
 esp_err_t mcpwm_capture_timer_get_resolution(mcpwm_cap_timer_handle_t cap_timer, uint32_t* out_resolution);
+typedef struct {
+    mcpwm_sync_handle_t sync_src;
+    uint32_t count_value;
+    mcpwm_timer_direction_t direction;   /* the capture timer only counts up */
+} mcpwm_capture_timer_sync_phase_config_t;
+esp_err_t mcpwm_capture_timer_set_phase_on_sync(mcpwm_cap_timer_handle_t cap_timer, const mcpwm_capture_timer_sync_phase_config_t* config);
 esp_err_t mcpwm_new_capture_channel(mcpwm_cap_timer_handle_t cap_timer, const mcpwm_capture_channel_config_t* config, mcpwm_cap_channel_handle_t* ret_cap_channel);
 esp_err_t mcpwm_del_capture_channel(mcpwm_cap_channel_handle_t cap_channel);
 esp_err_t mcpwm_capture_channel_enable(mcpwm_cap_channel_handle_t cap_channel);
