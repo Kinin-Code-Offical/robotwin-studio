@@ -98,7 +98,11 @@ namespace RobotTwin.CoreSim.Analog
         private Part[]? _aloneLane;   // the parts with a device that runs alone (AnalogDevice.RunsBesideOthers), or null
 
         // [split] side by side or one after the other, whichever the last measurement found cheaper (the result is the same)
-        private const int MeasureCalls = 256, RemeasureEvery = 16384;
+        // The first calls are not measured (the code is still being compiled to its optimised tier, which made the first
+        // window's way look dearer than it is); after that each way is measured again every RemeasureEvery calls, and side
+        // by side is taken only when it is clearly cheaper (handing work to other cores has a price that varies).
+        private const int MeasureCalls = 256, RemeasureEvery = 4096, SettleCalls = 2048;
+        private const double SideBySideMargin = 0.9;
         private long _splitCalls;
         private double _costInTurn = double.NaN, _costSideBySide = double.NaN;   // stopwatch ticks per call
         private double _measured;
@@ -493,15 +497,17 @@ namespace RobotTwin.CoreSim.Analog
         {
             if (_lanes == null || _lanes.Length + (_aloneLane != null ? 1 : 0) < 2 || SubstepAccepted != null || WorkTeam.Shared.Workers == 0) return false;
             if (ForceSideBySide is { } forced) return forced;
+            if (_splitCalls < SettleCalls) return false;
             if (double.IsNaN(_costInTurn)) return false;
             if (double.IsNaN(_costSideBySide)) return true;
-            bool better = _costSideBySide < _costInTurn;
-            return _splitCalls % RemeasureEvery < MeasureCalls ? !better : better;
+            bool better = _costSideBySide < SideBySideMargin * _costInTurn;
+            return (_splitCalls - SettleCalls) % RemeasureEvery < MeasureCalls ? !better : better;
         }
 
         private void Measured(bool sideBySide, long ticks)
         {
             _splitCalls++;
+            if (_splitCalls <= SettleCalls) return;
             if (sideBySide != _measuringSideBySide)
             {
                 _measured = 0;

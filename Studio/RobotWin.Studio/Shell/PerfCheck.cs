@@ -34,22 +34,33 @@ namespace RobotWin.Studio.Shell
         }
 
         /// <summary>
-        /// The check runs in a process whose code is fully optimised from its first call: with .NET's tiered compilation a
-        /// world measured early in a run still ran partly unoptimised code (the car cost 277 ms per simulated second
-        /// measured alone, 103 after four other worlds), so a world's cost depended on what was measured before it. Unless
-        /// this already is that process, the app starts itself again with tiered compilation off and returns its exit code.
+        /// The check runs the code as the app does, tiered and with dynamic PGO, but in a process where methods start to be
+        /// counted for the optimising tier at once (no 100 ms delay), and each world is warmed up long enough to be measured
+        /// on its optimised code. With .NET's default delay a world measured early in a run still ran partly unoptimised
+        /// code (the car cost 277 ms per simulated second measured alone, 103 after four other worlds). The check once ran
+        /// with tiered compilation off instead; that is not how the app runs: without PGO .NET 10 ran our physics 26 % slower
+        /// than .NET 9, with it 32 % faster (the SCARA cell: 108, 87 and 59 ms per simulated second). Unless this already is
+        /// that process, the app starts itself again so and returns its exit code.
         /// </summary>
         public static int? RunFullyOptimised(string[] args)
         {
-            if (Environment.GetEnvironmentVariable("DOTNET_TieredCompilation") == "0" || Environment.ProcessPath is not { } exe) return null;
+            if (Environment.GetEnvironmentVariable(ChildMarker) == "1" || Environment.ProcessPath is not { } exe) return null;
             var start = new ProcessStartInfo(exe) { UseShellExecute = false };
             foreach (var a in args) start.ArgumentList.Add(a);
-            start.Environment["DOTNET_TieredCompilation"] = "0";
+            start.Environment[ChildMarker] = "1";
+            start.Environment["DOTNET_TieredPGO"] = "1";
+            start.Environment["DOTNET_TC_CallCountingDelayMs"] = "0";
+            start.Environment.Remove("DOTNET_TieredCompilation");
             using var child = Process.Start(start);
             if (child == null) return null;
             child.WaitForExit();
             return child.ExitCode;
         }
+
+        private const string ChildMarker = "ROBOTWIN_PERF_CHECK";
+
+        /// <summary>Simulated time each world runs before it is timed: its methods reach the optimising tier.</summary>
+        private const double WarmUp = 0.5;
 
         public static int Run(string reportPath, string? baselinePath, bool update, double seconds, double tolerance, IReadOnlyCollection<string>? only)
         {
@@ -60,8 +71,24 @@ namespace RobotWin.Studio.Shell
             report.AppendLine($"Kalibrasyon (64 kutu, 1 s fizik): {calibration.ToString("0.0", CultureInfo.InvariantCulture)} ms");
             Write(reportPath, report);
 
+            // Every world once, untimed, first: the code they share reaches the optimising tier before any is timed (that
+            // takes wall time, and a light world's warm-up is a few milliseconds of it), so a world's cost no longer depends
+            // on what was measured before it.
+            var chosen = Examples.WorldTemplates.All.Where(t => only == null || only.Contains(t.Id)).ToList();
+            foreach (var template in chosen)
+            {
+                try
+                {
+                    Measure(template, WarmUp);
+                }
+                catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is IOException || ex is KeyNotFoundException || ex is NotSupportedException || ex is ApiException)
+                {
+                }
+            }
+
+            System.Threading.Thread.Sleep(500);   // the optimising compiler works in the background
             var entries = new List<Entry>();
-            foreach (var template in Examples.WorldTemplates.All.Where(t => only == null || only.Contains(t.Id)))
+            foreach (var template in chosen)
             {
                 var e = new Entry { Id = template.Id };
                 entries.Add(e);
@@ -70,6 +97,10 @@ namespace RobotWin.Studio.Shell
                     double best = double.PositiveInfinity;
                     for (int rep = 0; rep < 2; rep++)
                     {
+                        // the worlds before leave garbage that the collector would otherwise sweep while this one is timed
+                        GC.Collect();
+                        GC.WaitForPendingFinalizers();
+                        GC.Collect();
                         var (ms, parts) = Measure(template, seconds);
                         if (ms >= best) continue;
                         best = ms;
@@ -142,7 +173,7 @@ namespace RobotWin.Studio.Shell
             // headless tool's boxes: what a world costs in the app.
             var world = template.Build();
             using var runner = new WorldRunner(world, options, Automation.StudioApiHost.SceneGeometry.For(world));
-            runner.Step(0.1);
+            runner.Step(WarmUp);
             var t = runner.Physics?.Times;
             double[] Physics() => t == null ? new double[8] : new[] { t.Bodies, t.Cables, t.Liquids, t.Thermal, t.Drives, t.Air, t.Scripts, t.Sensors };
             var before = Physics();
@@ -170,7 +201,7 @@ namespace RobotWin.Studio.Shell
         private static double Calibrate()
         {
             double best = double.PositiveInfinity;
-            for (int rep = 0; rep < 3; rep++)
+            for (int rep = 0; rep < 5; rep++)   // the first ones also bring its code to the optimising tier
             {
                 var s = new PhysicsScene { GroundMaterial = "wood" };
                 for (int i = 0; i < 64; i++)
