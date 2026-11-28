@@ -18,6 +18,88 @@ namespace RobotTwin.CoreSim.Tests
     /// <summary>Radio sketches compiled once for the class.</summary>
     public sealed class Esp32RadioFixture : IDisposable
     {
+        // [web] the core's WebServer and DNSServer on a soft AP, and a station asking it over the world's network
+        public const string WebServerSketch = @"
+#include <WiFi.h>
+#include <WebServer.h>
+#include <DNSServer.h>
+WebServer server(80);
+DNSServer dns;
+void setup() {
+  Serial.begin(115200);
+  WiFi.softAP(""RW-AP"", ""12345678"");
+  dns.start(53, ""*"", WiFi.softAPIP());
+  server.on(""/"", []() { server.send(200, ""text/plain"", ""merhaba""); });
+  server.on(""/led"", HTTP_GET, []() { server.send(200, ""text/plain"", ""on="" + server.arg(""on"") + "" name="" + server.arg(""name"") + "" n="" + String(server.args())); });
+  server.on(""/form"", HTTP_POST, []() { server.send(200, ""text/plain"", ""x="" + server.arg(""x"") + "" y="" + server.arg(""y"") + "" plain="" + server.arg(""plain"")); });
+  server.on(""/gizli"", []() {
+    if (!server.authenticate(""admin"", ""1234"")) return server.requestAuthentication();
+    server.send(200, ""text/plain"", ""icerde"");
+  });
+  server.on(""/parca"", []() {
+    server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+    server.send(200, ""text/plain"", """");
+    server.sendContent(""bir "");
+    server.sendContent(""iki"");
+  });
+  server.onNotFound([]() { server.send(404, ""text/plain"", ""yok: "" + server.uri()); });
+  server.begin();
+  Serial.println(""hazir "" + WiFi.softAPIP().toString());
+}
+void loop() {
+  server.handleClient();
+  dns.processNextRequest();
+  delay(1);
+}
+";
+
+        public const string WebClientSketch = @"
+#include <WiFi.h>
+#include <WiFiUdp.h>
+static String get(const char* request) {
+  WiFiClient c;
+  if (!c.connect(IPAddress(192, 168, 4, 1), 80)) return ""baglanamadi"";
+  c.print(request);
+  String r;
+  unsigned long t0 = millis();
+  while ((c.connected() || c.available()) && millis() - t0 < 2000) {
+    while (c.available()) r += (char)c.read();
+    delay(1);
+  }
+  c.stop();
+  int body = r.indexOf(""\r\n\r\n"");
+  String status = r.substring(0, r.indexOf(""\r\n""));
+  String rest = body < 0 ? String("""") : r.substring(body + 4);
+  rest.replace(""\r\n"", ""~"");
+  return status + "" | "" + rest;
+}
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(""RW-AP"", ""12345678"");
+  while (WiFi.status() != WL_CONNECTED) delay(50);
+  delay(200);
+  Serial.println(""R1 "" + get(""GET /led?on=1&name=r%C3%BCzgar HTTP/1.1\r\nHost: 192.168.4.1\r\nConnection: close\r\n\r\n""));
+  Serial.println(""R2 "" + get(""POST /form HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 10\r\n\r\nx=42&y=a+b""));
+  Serial.println(""R3 "" + get(""GET /yok HTTP/1.1\r\nHost: x\r\n\r\n""));
+  Serial.println(""R4 "" + get(""GET /gizli HTTP/1.1\r\nHost: x\r\nAuthorization: Basic YWRtaW46MTIzNA==\r\n\r\n""));
+  Serial.println(""R5 "" + get(""GET /gizli HTTP/1.1\r\nHost: x\r\n\r\n""));
+  Serial.println(""R6 "" + get(""GET /parca HTTP/1.1\r\nHost: x\r\n\r\n""));
+  WiFiUDP u;
+  u.begin(5353);
+  uint8_t qd[] = {0x12, 0x34, 0x01, 0x00, 0, 1, 0, 0, 0, 0, 0, 0, 5, 'r', 'o', 'b', 'o', 't', 5, 'l', 'o', 'c', 'a', 'l', 0, 0, 1, 0, 1};
+  u.beginPacket(IPAddress(192, 168, 4, 1), 53);
+  u.write(qd, sizeof qd);
+  u.endPacket();
+  unsigned long t0 = millis();
+  int got = 0;
+  while (millis() - t0 < 1000 && (got = u.parsePacket()) == 0) delay(5);
+  uint8_t a[128] = {0};
+  int n = got > 0 ? u.read(a, sizeof a) : 0;
+  Serial.printf(""DNS n=%d id=%02X%02X rcode=%d ip=%d.%d.%d.%d\n"", n, a[0], a[1], n > 3 ? (a[3] & 15) : -1, n >= 4 ? a[n - 4] : 0, n >= 4 ? a[n - 3] : 0, n >= 4 ? a[n - 2] : 0, n >= 4 ? a[n - 1] : 0);
+}
+void loop() { delay(100); }
+";
+
         public const string BleServer = @"
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -197,7 +279,9 @@ void loop() {
                 ["ble-scanner"] = BleScanner,
                 ["udp"] = UdpPing,
                 ["car"] = GamepadCar,
-                ["espnow"] = EspNow
+                ["espnow"] = EspNow,
+                ["web-server"] = WebServerSketch,
+                ["web-client"] = WebClientSketch
             };
             var compiler = new Esp32SketchCompiler();
             var results = new ConcurrentDictionary<string, Esp32BuildResult>();
@@ -467,6 +551,27 @@ void loop() {
             int rssi = int.Parse(la[7]);
             double expected = m.MeanRssi(b.Node, a.Node, RadioTech.WiFi);
             Assert.InRange(rssi, expected - 14, expected + 14);
+        }
+
+        [Esp32Fact]
+        public void AWebServerOnASoftApAnswersAnotherBoard()
+        {
+            var m = new RadioMedium();
+            m.ImplicitNetworkEnabled = false;
+            using var server = new Board(m, "server", new Vec3(0, 0, 0.05), _fx.Dll("web-server"));
+            using var client = new Board(m, "client", new Vec3(1.5, 0, 0.05), _fx.Dll("web-client"));
+            Run(m, 4.0, 1e-3, server, client);
+            string text = client.Serial.ToString();
+            _out.WriteLine(server.Serial.ToString());
+            _out.WriteLine(text);
+            Assert.Contains("hazir 192.168.4.1", server.Serial.ToString());
+            Assert.Contains("R1 HTTP/1.1 200 OK | on=1 name=rüzgar n=2", text);
+            Assert.Contains("R2 HTTP/1.1 200 OK | x=42 y=a b plain=x=42&y=a+b", text);
+            Assert.Contains("R3 HTTP/1.1 404 Not Found | yok: /yok", text);
+            Assert.Contains("R4 HTTP/1.1 200 OK | icerde", text);
+            Assert.Contains("R5 HTTP/1.1 401 Unauthorized |", text);
+            Assert.Contains("R6 HTTP/1.1 200 OK | 4~bir ~3~iki~0~~", text);   // chunked
+            Assert.Contains("DNS n=45 id=1234 rcode=0 ip=192.168.4.1", text);
         }
 
         [Esp32Fact]

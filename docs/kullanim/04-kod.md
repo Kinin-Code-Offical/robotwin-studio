@@ -278,6 +278,7 @@ Arduino'daki tablo gibi: her özelliğin iki modda çalışıp çalışmadığı
 | Derin / hafif uyku | ✓ | ✓ | iki kez 200 ms derin uyku, `RTC_DATA_ATTR` korunur; hafif uykuda 0,5 s, GPIO4 ile hemen uyanış | |
 | Preferences (NVS), LittleFS | ✓ | ✓ | açılış sayacı, dosya yazıp okuma | |
 | Wi-Fi istasyon ve softAP, UDP, TCP | ✓ (dünyanın sanal ağı) | ✓ (yazılımın kendi lwIP'si) | DHCP, iki yönde UDP, TCP istemci ve sunucu; softAP'ye katılan istasyon | İnternet yok: ağ dünyanın içindedir |
+| `WebServer`, `DNSServer` | ✓ (dünyanın TCP ve UDP'si üzerinde) | ✓ (çekirdeğin kütüphaneleri) | `Esp32RadioTests`: softAP'deki sunucuya bir istasyon GET, form POST, 404, Basic kimlik doğrulama (ve 401), parçalı yanıt gönderir; DNS sorusuna adres döner | hızlı modda dosya sunma ve yükleme, Digest kimlik doğrulama yok |
 | ESP-NOW, BLE | ✓ | — | `Esp32RadioTests` | bunları kullanan çizim hızlı modda çalışır |
 | Bluepad32 (PS4 / PS5 / Xbox kumandası) | ✓ | gerçek kart için derlenir (Bluepad32 çekirdeği); emülatörde hızlı modda çalışır | `GamepadCarTests`; *ps5-car* ve *ps5-plane* şablonlarının çizimleri Bluepad32 4.1.0 ile derlendi (718 / 749 KB) | gerçek kartta denenmedi (elde kart yok) |
 | TLS, mDNS | — | — | | henüz yok |
@@ -314,7 +315,7 @@ Popüler Arduino kütüphanelerinin her biri kendi küçük çizimiyle iki modda
 | RTClib | 2.1.4 | ✓ | ✓ | `begin=0 unix=1709209800 dow=4` | saat modülü takılı değil; tarih hesabı çalışır |
 | HX711 | 0.7.5 | ✓ | ✓ | `ready=1 raw=0` | çevirici takılı değil, veri ucu aşağı çekili |
 | U8g2 | 2.36.19 | ✓ | ✓ | `w=128` | ekran takılı değil: çizim çalışır |
-| WiFiManager | 2.0.17 | — | ✓ | `ok=1` | hızlı modda derlenmez: `esp_wifi.h`, WebServer ve DNSServer hızlı modda yok |
+| WiFiManager | 2.0.17 | — | ✓ | `ok=1` | hızlı modda derlenmez: `esp_wifi.h`, `Update.h`, NVS, mDNS ve Wi-Fi olay API'si orada yok (WebServer ve DNSServer var) |
 
 - **Değişken boyutlu diziler:** `unsigned int uS[it];` gibi bildirimleri (NewPing, MFRC522, IRremote ve çizimin kendi kodu) ESP32'nin GCC'si alır, hızlı modun MSVC'si almaz. Hızlı mod derleyicinin gösterdiği bildirimi kapsamı bitince kendini bırakan bir diziyle yeniden yazar ve yeniden derler; kütüphane kendi klasöründen değil derleme klasöründeki kopyasından derlenir, kendisine dokunulmaz. Dizinin `sizeof`'unu alan dosya olduğu gibi kalır.
 - **Ağ:** soketi Wi-Fi başlamadan açan çizim (`WiFi.begin` ya da `WiFi.mode` yokken `WiFiClient.connect`, `WiFiUDP.begin` …) gerçek yongada `assert failed: xQueueSemaphoreTake queue.c:1709` ile yeniden başlar (lwIP'nin çekirdek kilidi henüz yoktur); iki mod da öyle yapar. Önce Wi-Fi'yi başlatın.

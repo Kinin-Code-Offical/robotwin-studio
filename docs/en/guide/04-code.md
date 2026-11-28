@@ -278,6 +278,7 @@ Like the Arduino table: whether each feature works in the two modes, how it was 
 | Deep / light sleep | ✓ | ✓ | deep sleep twice for 200 ms with `RTC_DATA_ATTR` kept; light sleep 0.5 s, woken at once by GPIO4 | |
 | Preferences (NVS), LittleFS | ✓ | ✓ | a boot counter, a file written and read back | |
 | Wi-Fi station and softAP, UDP, TCP | ✓ (the world's virtual network) | ✓ (the firmware's own lwIP) | DHCP, UDP both ways, TCP client and server; a station joining the softAP | no Internet: the network is inside the world |
+| `WebServer`, `DNSServer` | ✓ (on the world's TCP and UDP) | ✓ (the core's libraries) | `Esp32RadioTests`: a station sends a server on a soft AP a GET, a form POST, a 404, Basic authentication (and a 401) and a chunked response; a DNS query gets its address | no file serving or uploads, no Digest authentication in the fast mode |
 | ESP-NOW, BLE | ✓ | — | `Esp32RadioTests` | a sketch using them runs in the fast mode |
 | Bluepad32 (PS4 / PS5 / Xbox gamepad) | ✓ | built for the real board (Bluepad32 core); runs in the fast mode on the emulator | `GamepadCarTests`; the *ps5-car* and *ps5-plane* templates' sketches built with Bluepad32 4.1.0 (718 / 749 KB) | not tried on a real board (none at hand) |
 | TLS, mDNS | — | — | | not yet |
@@ -314,7 +315,7 @@ Each popular Arduino library was built with a small sketch of its own in both mo
 | RTClib | 2.1.4 | ✓ | ✓ | `begin=0 unix=1709209800 dow=4` | no clock module fitted; date arithmetic works |
 | HX711 | 0.7.5 | ✓ | ✓ | `ready=1 raw=0` | no converter fitted, data pin pulled down |
 | U8g2 | 2.36.19 | ✓ | ✓ | `w=128` | no display fitted: drawing runs |
-| WiFiManager | 2.0.17 | — | ✓ | `ok=1` | does not build in the fast mode: `esp_wifi.h`, WebServer and DNSServer are not in it |
+| WiFiManager | 2.0.17 | — | ✓ | `ok=1` | does not build in the fast mode: `esp_wifi.h`, `Update.h`, NVS, mDNS and the Wi-Fi event API are not there (WebServer and DNSServer are) |
 
 - **Variable-length arrays:** declarations such as `unsigned int uS[it];` (NewPing, MFRC522, IRremote and a sketch's own code) are taken by the ESP32's GCC, not by the fast mode's MSVC. The fast mode rewrites a declaration where the compiler reports it into an array that frees itself at the end of its scope, and builds again; a library is built from a copy in the build folder, the library itself is not touched. A file that takes the array's `sizeof` is left as it is.
 - **Network:** a sketch that opens a socket before Wi-Fi is started (`WiFiClient.connect`, `WiFiUDP.begin` … without `WiFi.begin` or `WiFi.mode`) restarts the real chip with `assert failed: xQueueSemaphoreTake queue.c:1709` (lwIP's core lock does not exist yet); both modes do so. Start Wi-Fi first.
