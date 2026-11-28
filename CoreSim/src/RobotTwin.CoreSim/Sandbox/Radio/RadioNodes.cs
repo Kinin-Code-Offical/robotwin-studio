@@ -254,6 +254,10 @@ namespace RobotTwin.CoreSim.Sandbox.Radio
         public bool Scanning;
         public double ScanUntil;
 
+        // ---- [mdns] the fast mode's ESPmDNS: the name it answers to (without .local) and its services
+        public string? MdnsHost;
+        public readonly List<MdnsService> MdnsServices = new List<MdnsService>();
+
         // ---- [espnow] ESP-NOW
         public bool EspNowOn;
         public readonly Queue<EspNowFrame> EspNowInbox = new Queue<EspNowFrame>();
@@ -267,6 +271,8 @@ namespace RobotTwin.CoreSim.Sandbox.Radio
         internal void ResetRadio()
         {
             WifiMode = 0;
+            MdnsHost = null;
+            MdnsServices.Clear();
             EspNowOn = false;
             EspNowInbox.Clear();
             EspNowSentQueue.Clear();

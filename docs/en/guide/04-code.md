@@ -282,9 +282,11 @@ Like the Arduino table: whether each feature works in the two modes, how it was 
 | Preferences (NVS), LittleFS | ✓ | ✓ | a boot counter, a file written and read back | |
 | Wi-Fi station and softAP, UDP, TCP | ✓ (the world's virtual network) | ✓ (the firmware's own lwIP) | DHCP, UDP both ways, TCP client and server; a station joining the softAP | no Internet: the network is inside the world |
 | `WebServer`, `DNSServer` | ✓ (on the world's TCP and UDP) | ✓ (the core's libraries) | `Esp32RadioTests`: a station sends a server on a soft AP a GET, a form POST, a 404, Basic authentication (and a 401) and a chunked response; a DNS query gets its address | no file serving or uploads, no Digest authentication in the fast mode |
-| ESP-NOW, BLE | ✓ | — | `Esp32RadioTests` | a sketch using them runs in the fast mode |
+| ESP-NOW | ✓ | ✓ (the closed libespnow's API, the world's radio medium) | `Esp32RadioTests`; the *esp32-espnow* template gives the same 29 serial lines in both modes | |
+| mDNS (`ESPmDNS`) | ✓ (names and services kept by the medium) | ✓ (the firmware's own responder, the medium's multicast) | `Esp32RadioTests`; the *esp32-mdns* template gives the same lines in both modes and with the boards in different modes | |
+| BLE | ✓ | — | `Esp32RadioTests` | a sketch using it runs in the fast mode |
 | Bluepad32 (PS4 / PS5 / Xbox gamepad) | ✓ | built for the real board (Bluepad32 core); runs in the fast mode on the emulator | `GamepadCarTests`; the *ps5-car* and *ps5-plane* templates' sketches built with Bluepad32 4.1.0 (718 / 749 KB) | not tried on a real board (none at hand) |
-| TLS, mDNS | — | — | | not yet |
+| TLS | — | — | | not yet |
 | Floating point (FPU) | ✓ | ✓ (single-precision FPU; division, square root, 1/x and 1/√x too) | `XtensaCoreTests`; in a real-chip build `a / b`, `sqrtf`, `sinf`, `cosf`, `powf`, `atan2f`, `expf`, `logf`, `double` division, `printf("%f")`, `String(float)` | |
 | MAC16 (16-bit multiply-accumulate) | ✓ | ✓ (40-bit accumulator, M0–M3 and their auto-incrementing loads) | `XtensaCoreTests`: GCC's `mula.aa.ll` and esp-dsp's `mula.dd.ll.ldinc` form | |
 | Breakpoints, stepping | — | — | | Arduino Uno / Nano only |

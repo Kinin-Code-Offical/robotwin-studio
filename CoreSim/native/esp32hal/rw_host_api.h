@@ -124,6 +124,11 @@ typedef struct rw_host_api {
 #define RW_RADIO_PAD_DISCONNECT  0x44  /* in: i32 index */
 #define RW_RADIO_ESPNOW_INIT     0x50  /* in: i32 on; ret: 0, -2 while Wi-Fi is off */
 #define RW_RADIO_ESPNOW_SEND     0x51  /* in: u8 mac[6], payload (<= 250); ret: 0, -2 not initialised */
+#define RW_RADIO_MDNS_BEGIN      0x70  /* in: char host[64]; ret: 0, -1 */
+#define RW_RADIO_MDNS_END        0x71
+#define RW_RADIO_MDNS_ADD_SERVICE 0x72 /* in: char type[32], char proto[8], u16 port; ret: 0, -1 */
+#define RW_RADIO_MDNS_QUERY_HOST 0x73  /* in: char host[64]; out: u32 ip; ret: 1 found / 0 */
+#define RW_RADIO_MDNS_QUERY_SVC  0x74  /* in: char type[32], char proto[8]; out: n x (char host[64], u32 ip, u16 port, u16 0); ret: n */
 #define RW_RADIO_ESPNOW_POLL     0x52  /* out: u8 kind (1 rx, 2 sent), u8 status, i8 rssi, u8 0, u8 mac[6], u16 len, payload; ret: 1 / 0 */
 
 #pragma pack(push, 1)

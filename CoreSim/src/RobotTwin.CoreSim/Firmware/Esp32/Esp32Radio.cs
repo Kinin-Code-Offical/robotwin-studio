@@ -59,6 +59,14 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         public const int EspNowSend = 0x51;       // in: u8 mac[6], payload (≤ 250)   ret: 0, or −2 when not initialised
         public const int EspNowPoll = 0x52;       // out: u8 kind (1 received, 2 sent), u8 status (0 ok, 1 fail), i8 rssi, u8 0, u8 mac[6], u16 len, payload   ret: 1 / 0
 
+        // [mdns] ESPmDNS on the board's network.
+        public const int MdnsBegin = 0x70;        // in: char host[64]   ret: 0, −1
+        public const int MdnsEnd = 0x71;
+        public const int MdnsAddService = 0x72;   // in: char type[32], char proto[8], u16 port   ret: 0, −1
+        public const int MdnsQueryHost = 0x73;    // in: char host[64]   out: u32 ip   ret: 1 found / 0
+        public const int MdnsQueryService = 0x74; // in: char type[32], char proto[8]   out: n × (char host[64], u32 ip, u16 port, u16 0)   ret: n
+        public const int MdnsRecordSize = 72;
+
         // SPI master (handled by the board itself, not the radio medium).
         public const int SpiBegin = 0x60;         // in: i32 bus, i32 sck, i32 miso, i32 mosi, i32 ss   ret: 0
         public const int SpiTransfer = 0x61;      // in: i32 bus, u32 hz, u8 mode, u8 lsb_first, u16 n, n bytes   out: n bytes   ret: n

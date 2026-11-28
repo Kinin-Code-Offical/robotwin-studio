@@ -19,6 +19,39 @@ namespace RobotTwin.CoreSim.Tests
     public sealed class Esp32RadioFixture : IDisposable
     {
         // [web] the core's WebServer and DNSServer on a soft AP, and a station asking it over the world's network
+        /// <summary>[mdns] A soft-AP that answers to isik.local and offers _http._tcp on 80.</summary>
+        public const string MdnsHostSketch = @"
+#include <WiFi.h>
+#include <ESPmDNS.h>
+void setup() {
+  Serial.begin(115200);
+  WiFi.softAP(""RW-AP"", ""12345678"");
+  bool ok = MDNS.begin(""isik"");
+  MDNS.addService(""http"", ""tcp"", 80);
+  Serial.printf(""mdns %d\n"", ok);
+}
+void loop() { delay(100); }
+";
+
+        /// <summary>[mdns] A station on that AP asking for isik.local and the _http._tcp services.</summary>
+        public const string MdnsAskSketch = @"
+#include <WiFi.h>
+#include <ESPmDNS.h>
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(""RW-AP"", ""12345678"");
+  while (WiFi.status() != WL_CONNECTED) delay(20);
+  MDNS.begin(""soran"");
+  IPAddress ip = MDNS.queryHost(""isik"");
+  Serial.printf(""HOST %s\n"", ip.toString().c_str());
+  int n = MDNS.queryService(""http"", ""tcp"");
+  Serial.printf(""SVC %d %s %s %u\n"", n, MDNS.hostname(0).c_str(), MDNS.address(0).toString().c_str(), (unsigned)MDNS.port(0));
+  IPAddress none = MDNS.queryHost(""yok"", 200);
+  Serial.printf(""NONE %s\n"", none.toString().c_str());
+}
+void loop() { delay(100); }
+";
+
         public const string WebServerSketch = @"
 #include <WiFi.h>
 #include <WebServer.h>
@@ -281,7 +314,9 @@ void loop() {
                 ["car"] = GamepadCar,
                 ["espnow"] = EspNow,
                 ["web-server"] = WebServerSketch,
-                ["web-client"] = WebClientSketch
+                ["web-client"] = WebClientSketch,
+                ["mdns-host"] = MdnsHostSketch,
+                ["mdns-ask"] = MdnsAskSketch
             };
             var compiler = new Esp32SketchCompiler();
             var results = new ConcurrentDictionary<string, Esp32BuildResult>();
@@ -572,6 +607,24 @@ void loop() {
             Assert.Contains("R5 HTTP/1.1 401 Unauthorized |", text);
             Assert.Contains("R6 HTTP/1.1 200 OK | 4~bir ~3~iki~0~~", text);   // chunked
             Assert.Contains("DNS n=45 id=1234 rcode=0 ip=192.168.4.1", text);
+        }
+
+        /// <summary>[mdns] ESPmDNS between two fast-mode boards: the name and the service are found through the medium.</summary>
+        [Esp32Fact]
+        public void MdnsFindsANameAndAServiceOnTheNetwork()
+        {
+            var m = new RadioMedium();
+            m.ImplicitNetworkEnabled = false;
+            using var host = new Board(m, "host", new Vec3(0, 0, 0.05), _fx.Dll("mdns-host"));
+            using var ask = new Board(m, "ask", new Vec3(1.5, 0, 0.05), _fx.Dll("mdns-ask"));
+            Run(m, 5.0, 1e-3, host, ask);
+            string text = ask.Serial.ToString();
+            _out.WriteLine(host.Serial.ToString());
+            _out.WriteLine(text);
+            Assert.Contains("mdns 1", host.Serial.ToString());
+            Assert.Contains("HOST 192.168.4.1", text);
+            Assert.Contains("SVC 1 isik 192.168.4.1 80", text);
+            Assert.Contains("NONE 0.0.0.0", text);
         }
 
         [Esp32Fact]

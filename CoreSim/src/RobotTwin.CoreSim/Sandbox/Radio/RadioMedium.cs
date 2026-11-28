@@ -513,7 +513,9 @@ namespace RobotTwin.CoreSim.Sandbox.Radio
                 var net = NetworkOf(e);
                 if (net == null) return -2;
                 uint src = IpOn(e, net);
-                bool broadcast = dstIp == 0xFFFFFFFF || (dstIp >> 24) == 255;
+                // the subnet's broadcast, and [mdns] a multicast group (224–239.x.x.x): every member bound on the port
+                bool broadcast = dstIp == 0xFFFFFFFF || (dstIp >> 24) == 255 || (dstIp & 0xF0) == 0xE0;
+                if (dstIp == MdnsGroup && dstPort == MdnsPort) MdnsSeen(e, net, src, data, t);   // RadioMedium.Mdns.cs
                 e.Stats.Sent(t, data.Length);
                 Emit(e, RadioTech.WiFi, t, 0.05);
                 int addressed = 0;
@@ -927,6 +929,7 @@ namespace RobotTwin.CoreSim.Sandbox.Radio
             lock (_gate)
             {
                 foreach (var c in _ble.Values.Where(c => c.Open && (c.Client == e || c.Server == e)).ToList()) CloseBle(c.Id, t, "yeniden başladı");
+                _mdnsLearned.Remove(e);   // [mdns] its responder starts over
                 foreach (var s in _streams.Values.Where(s => s.A == e || s.B == e)) s.Open = false;
                 foreach (var p in _nodes.OfType<GamepadNode>().Where(p => p.Host == e || p.Connecting == e).ToList())
                 {

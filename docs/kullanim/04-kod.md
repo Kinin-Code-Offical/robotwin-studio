@@ -282,9 +282,11 @@ Arduino'daki tablo gibi: her özelliğin iki modda çalışıp çalışmadığı
 | Preferences (NVS), LittleFS | ✓ | ✓ | açılış sayacı, dosya yazıp okuma | |
 | Wi-Fi istasyon ve softAP, UDP, TCP | ✓ (dünyanın sanal ağı) | ✓ (yazılımın kendi lwIP'si) | DHCP, iki yönde UDP, TCP istemci ve sunucu; softAP'ye katılan istasyon | İnternet yok: ağ dünyanın içindedir |
 | `WebServer`, `DNSServer` | ✓ (dünyanın TCP ve UDP'si üzerinde) | ✓ (çekirdeğin kütüphaneleri) | `Esp32RadioTests`: softAP'deki sunucuya bir istasyon GET, form POST, 404, Basic kimlik doğrulama (ve 401), parçalı yanıt gönderir; DNS sorusuna adres döner | hızlı modda dosya sunma ve yükleme, Digest kimlik doğrulama yok |
-| ESP-NOW, BLE | ✓ | — | `Esp32RadioTests` | bunları kullanan çizim hızlı modda çalışır |
+| ESP-NOW | ✓ | ✓ (kapalı libespnow'un API'si, dünyanın radyo ortamı) | `Esp32RadioTests`; *esp32-espnow* şablonu iki modda 29 seri satırda birebir aynı | |
+| mDNS (`ESPmDNS`) | ✓ (ad ve servis kaydı ortamda) | ✓ (yazılımın kendi yanıtlayıcısı, ortamın çoklu yayını) | `Esp32RadioTests`; *esp32-mdns* şablonu iki modda ve kartlar ayrı modlardayken aynı | |
+| BLE | ✓ | — | `Esp32RadioTests` | kullanan çizim hızlı modda çalışır |
 | Bluepad32 (PS4 / PS5 / Xbox kumandası) | ✓ | gerçek kart için derlenir (Bluepad32 çekirdeği); emülatörde hızlı modda çalışır | `GamepadCarTests`; *ps5-car* ve *ps5-plane* şablonlarının çizimleri Bluepad32 4.1.0 ile derlendi (718 / 749 KB) | gerçek kartta denenmedi (elde kart yok) |
-| TLS, mDNS | — | — | | henüz yok |
+| TLS | — | — | | henüz yok |
 | Kayan nokta (FPU) | ✓ | ✓ (tek duyarlıklı FPU; bölme, karekök, 1/x ve 1/√x de) | `XtensaCoreTests`; gerçek yonga derlemesiyle `a / b`, `sqrtf`, `sinf`, `cosf`, `powf`, `atan2f`, `expf`, `logf`, `double` bölme, `printf("%f")`, `String(float)` | |
 | MAC16 (16 bitlik çarp-topla) | ✓ | ✓ (40 bitlik birikeç, M0–M3 ve otomatik artan yüklemeleri) | `XtensaCoreTests`: GCC'nin `mula.aa.ll`'si ve esp-dsp'nin `mula.dd.ll.ldinc` biçimi | |
 | Kesme noktası, adım adım | — | — | | yalnız Arduino Uno / Nano |

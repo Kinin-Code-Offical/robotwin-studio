@@ -93,6 +93,41 @@ namespace RobotTwin.CoreSim.Sandbox.Radio
                     return 4;
 
                 // ---------------------------------------------------- sockets
+                // ---------------------------------------------------- [mdns]
+                case Esp32RadioOp.MdnsBegin:
+                    return m.MdnsBegin(e, P.Str(i, 0, Math.Min(64, n))) ? 0 : -1;
+                case Esp32RadioOp.MdnsEnd:
+                    m.MdnsEnd(e);
+                    return 0;
+                case Esp32RadioOp.MdnsAddService:
+                    if (n < 42) return -1;
+                    return m.MdnsAddService(e, P.Str(i, 0, 32), P.Str(i, 32, 8), (ushort)(i[40] | i[41] << 8)) ? 0 : -1;
+                case Esp32RadioOp.MdnsQueryHost:
+                {
+                    uint ip = m.MdnsQueryHost(e, P.Str(i, 0, Math.Min(64, n)), t);
+                    if (ip == 0 || cap < 4) return 0;
+                    P.Put(o, 0, ip);
+                    return 1;
+                }
+
+                case Esp32RadioOp.MdnsQueryService:
+                {
+                    if (n < 40) return -1;
+                    var found = m.MdnsQueryService(e, P.Str(i, 0, 32), P.Str(i, 32, 8), t);
+                    int count = Math.Min(found.Count, cap / Esp32RadioOp.MdnsRecordSize);
+                    for (int k = 0; k < count; k++)
+                    {
+                        int at = k * Esp32RadioOp.MdnsRecordSize;
+                        var name = System.Text.Encoding.UTF8.GetBytes(found[k].Host);
+                        Array.Copy(name, 0, o, at, Math.Min(63, name.Length));
+                        o[at + Math.Min(63, name.Length)] = 0;
+                        P.Put(o, at + 64, found[k].Ip);
+                        P.Put16(o, at + 68, found[k].Port);
+                    }
+
+                    return count;
+                }
+
                 case Esp32RadioOp.EspNowInit:
                     return m.EspNowInit(e, n >= 4 && P.I32(i, 0) != 0) ? 0 : -2;
                 case Esp32RadioOp.EspNowSend:

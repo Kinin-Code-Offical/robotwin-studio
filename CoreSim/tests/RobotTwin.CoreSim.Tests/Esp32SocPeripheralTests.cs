@@ -658,7 +658,8 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <Wire.h>\nvoid setup() {}"));
             Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <WiFi.h>\n#include <WiFiUdp.h>\nvoid setup() { WiFi.begin(\"a\", \"b\"); }"));
             Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#  include <esp_now.h>"));   // [espnow] the emulator has it
-            Assert.Equal("Wi-Fi (ESPmDNS)", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <ESPmDNS.h>"));
+            Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <ESPmDNS.h>"));   // [mdns]
+            Assert.Equal("Wi-Fi (WiFiClientSecure)", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <WiFiClientSecure.h>"));
             Assert.Null(RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <WiFi.h>\nvoid setup() { WiFi.softAP(\"ap\"); }"));
             Assert.Equal("Wi-Fi (WiFiClientSecure)", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include <WiFiClientSecure.h>"));
             Assert.Equal("esp_camera", RobotTwin.CoreSim.Design.Esp32Parts.EmulatorGap("#include \"esp_camera.h\""));
