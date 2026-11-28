@@ -253,6 +253,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
             SamplePcnt();
             SampleMcpwmCapture();
+            SampleMcpwmFaults();
             UpdateGpioInterrupt();
         }
 

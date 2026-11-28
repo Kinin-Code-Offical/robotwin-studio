@@ -160,6 +160,60 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void McpwmFaultHandlerBrakesItsOperator()
+        {
+            // timer 0 up at 1 MHz (period 999 → 1 kHz), operator 0's A high on zero, low on compare 300; fault 0 from GPIO4,
+            // active high, one shot on operator 0 with A low (A_OST_U = 1)
+            var soc = Chip();
+            bool high = false;
+            soc.PadVoltage = gpio => gpio == 4 && high ? 3.3 : 0;
+            soc.Write32(0x3FF49048, 2u << 12 | 1u << 9);             // IO_MUX GPIO4: input
+            soc.Write32(0x3FF44130 + 34 * 4, 4u | 1u << 7);           // PWM0_F0 ← GPIO4
+            soc.Write32(0x3FF5E000, 15);                              // group prescale: 10 MHz
+            soc.Write32(0x3FF5E004, 9 | 999u << 8);                   // TIMER0: prescale 10 → 1 MHz, period 999
+            soc.Write32(0x3FF5E038, 0);                               // operators on timer 0
+            soc.Write32(0x3FF5E03C + 0x04, 300);                      // OP0 compare A
+            soc.Write32(0x3FF5E03C + 0x14, 2u | 1u << 4);             // GEN0_A: zero → high, UTEA → low
+            soc.Write32(0x3FF5E03C + 0x2C, 1u << 7 | 1u << 14);       // FH0: F0_OST, A_OST_U low
+            soc.Write32(0x3FF5E0E4, 1u | 1u << 3);                    // FAULT_DETECT: F0 on, active high
+            soc.Write32(0x3FF5E110, 1u << 9 | 1u << 12 | 1u << 24);   // INT_ENA: FAULT0, FAULT0_CLR, OP0_OST
+            soc.Write32(0x3FF5E008, 2 | 1u << 3);                     // TIMER0: start, counting up
+            soc.SamplePads();
+            Assert.Equal(0.3, soc.McpwmOutput(0, 0, 0).Duty, 3);
+            high = true;
+            soc.SamplePads();
+            Assert.False(soc.McpwmOutput(0, 0, 0).IsPwm);
+            Assert.False(soc.McpwmOutput(0, 0, 0).Level);             // braked low
+            Assert.Equal(2u, soc.Read32(0x3FF5E03C + 0x34) & 2);      // FH0_STATUS: OST_ON
+            Assert.NotEqual(0u, soc.Read32(0x3FF5E0E4) & (1u << 6));  // EVENT_F0
+            uint raw = soc.Read32(0x3FF5E114);
+            Assert.NotEqual(0u, raw & (1u << 9));
+            Assert.NotEqual(0u, raw & (1u << 24));
+            soc.Write32(0x3FF5E03C + 0x30, 1);                        // CLR_OST while the fault is present: no effect
+            Assert.Equal(2u, soc.Read32(0x3FF5E03C + 0x34) & 2);
+            high = false;
+            soc.SamplePads();
+            Assert.NotEqual(0u, soc.Read32(0x3FF5E114) & (1u << 12)); // FAULT0_CLR
+            Assert.Equal(0u, soc.Read32(0x3FF5E03C + 0x34) & 2);      // OST_ON: the fault is gone …
+            Assert.False(soc.McpwmOutput(0, 0, 0).IsPwm);             // … the trip holds until CLR_OST
+            soc.Write32(0x3FF5E03C + 0x30, 0);                        // CLR_OST takes a rising edge, as IDF writes it: 0, 1, 0
+            soc.Write32(0x3FF5E03C + 0x30, 1);                        // recovered
+            Assert.Equal(0u, soc.Read32(0x3FF5E03C + 0x34) & 2);
+            Assert.Equal(0.3, soc.McpwmOutput(0, 0, 0).Duty, 3);
+
+            // a software trip: SW_OST on, FORCE_OST toggled (IDF's mcpwm_soft_fault_activate); rewriting it unchanged does nothing
+            soc.Write32(0x3FF5E03C + 0x2C, 1u << 4 | 1u << 14);
+            soc.Write32(0x3FF5E03C + 0x30, 1u << 4);
+            Assert.False(soc.McpwmOutput(0, 0, 0).IsPwm);
+            soc.Write32(0x3FF5E03C + 0x30, 1u << 4);                  // (read-modify-write of the same value)
+            soc.Write32(0x3FF5E03C + 0x30, 1u << 4 | 0);
+            soc.Write32(0x3FF5E03C + 0x30, 1u << 4 | 1);              // CLR_OST
+            Assert.Equal(0.3, soc.McpwmOutput(0, 0, 0).Duty, 3);
+            soc.Write32(0x3FF5E03C + 0x30, 1u << 4 | 1);              // unchanged: no new trip
+            Assert.Equal(0.3, soc.McpwmOutput(0, 0, 0).Duty, 3);
+        }
+
+        [Fact]
         public void McpwmCaptureTimesTheChipsOwnPwmFedBack()
         {
             // LEDC's 5 kHz, 50 % on GPIO18, captured from the same pad: the edges at the PWM's own times

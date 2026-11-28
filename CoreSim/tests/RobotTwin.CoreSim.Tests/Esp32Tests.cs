@@ -538,6 +538,78 @@ void setup() {
 void loop() { delay(100); }
 ";
 
+        // [motor] the MCPWM's fault handler: a GPIO fault on GPIO4 (active low) trips two operators one shot; one is recovered once it is gone
+        public const string McpwmFault = @"
+#include ""driver/mcpwm_prelude.h""
+volatile int trips = 0, enters = 0, exits = 0;
+static bool IRAM_ATTR onEnter(mcpwm_fault_handle_t, const mcpwm_fault_event_data_t*, void*) { enters++; return false; }
+static bool IRAM_ATTR onExit(mcpwm_fault_handle_t, const mcpwm_fault_event_data_t*, void*) { exits++; return false; }
+static bool IRAM_ATTR onOst(mcpwm_oper_handle_t, const mcpwm_brake_event_data_t*, void*) { trips++; return false; }
+static mcpwm_oper_handle_t stage(mcpwm_timer_handle_t t, int gpio, mcpwm_fault_handle_t f) {
+  mcpwm_operator_config_t oc = {};
+  oc.group_id = 0;
+  mcpwm_oper_handle_t op = NULL;
+  ESP_ERROR_CHECK(mcpwm_new_operator(&oc, &op));
+  ESP_ERROR_CHECK(mcpwm_operator_connect_timer(op, t));
+  mcpwm_comparator_config_t cc = {};
+  mcpwm_cmpr_handle_t cmp = NULL;
+  ESP_ERROR_CHECK(mcpwm_new_comparator(op, &cc, &cmp));
+  ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(cmp, 300));
+  mcpwm_generator_config_t gc = {};
+  gc.gen_gpio_num = gpio;
+  mcpwm_gen_handle_t g = NULL;
+  ESP_ERROR_CHECK(mcpwm_new_generator(op, &gc, &g));
+  ESP_ERROR_CHECK(mcpwm_generator_set_action_on_timer_event(g, MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)));
+  ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(g, MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, cmp, MCPWM_GEN_ACTION_LOW)));
+  mcpwm_brake_config_t bc = {};
+  bc.fault = f;
+  bc.brake_mode = MCPWM_OPER_BRAKE_MODE_OST;
+  ESP_ERROR_CHECK(mcpwm_operator_set_brake_on_fault(op, &bc));
+  ESP_ERROR_CHECK(mcpwm_generator_set_actions_on_brake_event(g,
+    MCPWM_GEN_BRAKE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_OPER_BRAKE_MODE_OST, MCPWM_GEN_ACTION_LOW),
+    MCPWM_GEN_BRAKE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, MCPWM_OPER_BRAKE_MODE_OST, MCPWM_GEN_ACTION_LOW),
+    MCPWM_GEN_BRAKE_EVENT_ACTION_END()));
+  mcpwm_operator_event_callbacks_t cb = {};
+  cb.on_brake_ost = onOst;
+  ESP_ERROR_CHECK(mcpwm_operator_register_event_callbacks(op, &cb, NULL));
+  return op;
+}
+void setup() {
+  Serial.begin(115200);
+  mcpwm_timer_config_t tc = {};
+  tc.group_id = 0;
+  tc.clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT;
+  tc.resolution_hz = 1000000;
+  tc.count_mode = MCPWM_TIMER_COUNT_MODE_UP;
+  tc.period_ticks = 1000;
+  mcpwm_timer_handle_t t = NULL;
+  ESP_ERROR_CHECK(mcpwm_new_timer(&tc, &t));
+  mcpwm_gpio_fault_config_t fc = {};
+  fc.group_id = 0;
+  fc.gpio_num = 4;
+  fc.flags.active_level = 0;
+  fc.flags.pull_up = 1;
+  mcpwm_fault_handle_t f = NULL;
+  ESP_ERROR_CHECK(mcpwm_new_gpio_fault(&fc, &f));
+  mcpwm_fault_event_callbacks_t fcb = {};
+  fcb.on_fault_enter = onEnter;
+  fcb.on_fault_exit = onExit;
+  ESP_ERROR_CHECK(mcpwm_fault_register_event_callbacks(f, &fcb, NULL));
+  mcpwm_oper_handle_t a = stage(t, 18, f);
+  mcpwm_oper_handle_t b = stage(t, 19, f);
+  ESP_ERROR_CHECK(mcpwm_timer_enable(t));
+  ESP_ERROR_CHECK(mcpwm_timer_start_stop(t, MCPWM_TIMER_START_NO_STOP));
+  delay(25);   // the fault pin goes low (present) at 20 ms, high again at 40 ms
+  int during = mcpwm_operator_recover_from_fault(b, f);
+  delay(20);
+  int rec = mcpwm_operator_recover_from_fault(b, f);
+  delay(5);
+  (void)a;
+  Serial.printf(""SONUC trips=%d during=%d rec=%d enters=%d exits=%d\n"", trips, during, rec, enters, exits);
+}
+void loop() { delay(100); }
+";
+
         public Esp32SketchFixture()
         {
             Available = Esp32SketchCompiler.IsToolchainAvailable;
@@ -568,7 +640,8 @@ void loop() { delay(100); }
                 ["no-stack"] = NoStack,
                 ["capture"] = Capture,
                 ["mcpwm-events"] = McpwmEvents,
-                ["legacy-mcpwm"] = LegacyMcpwm
+                ["legacy-mcpwm"] = LegacyMcpwm,
+                ["mcpwm-fault"] = McpwmFault
             };
             var compiler = new Esp32SketchCompiler();
             var results = new ConcurrentDictionary<string, Esp32BuildResult>();
@@ -989,6 +1062,31 @@ void loop() { delay(100); }
             Assert.InRange(int.Parse(cap[2].Substring(7)), 40000 - 160, 40000 + 160);
             Assert.InRange(int.Parse(cap[3].Substring(5)), 12000 - 160, 12000 + 160);
             Assert.Contains(cap[4], new[] { "edge=1", "edge=2" });
+        }
+
+        [Esp32Fact]
+        public void AnMcpwmFaultBrakesTheOperatorsUntilTheyRecover()
+        {
+            // a 25 Hz square wave on GPIO4, high for 20 ms then low for 20 ms: the fault (active low) is there from 20 to 40 ms
+            var (sch, board) = NewBoard();
+            var gen = sch.AddPart(Lib, "signal-generator", new GridPoint(-40, 0));
+            gen.Parameters["frequency"] = "25";
+            gen.Parameters["duty"] = "0.5";
+            gen.Parameters["amplitude"] = "3.3";
+            gen.Parameters["rs"] = "0";
+            Label(sch, gen, "+", "SIG");
+            Label(sch, gen, "-", "GND");
+            Label(sch, board, "IO4", "SIG");
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            using var rig = new Rig(compiled, _fx.Dll("mcpwm-fault"), new Esp32Options { BootDelay = 0.002 });   // after the generator's first edge
+            rig.Run(0.055, 1e-4);   // before the next fault at 60 ms
+            string serial = rig.Serial.ToString();
+            _out.WriteLine(serial);
+            Assert.Contains("SONUC trips=2 during=259 rec=0 enters=1 exits=1", serial);   // 259: ESP_ERR_INVALID_STATE while present
+            var pins = compiled.Circuit.Devices.OfType<DigitalPin>().ToDictionary(p => p.Id.Substring(p.Id.LastIndexOf('.') + 1));
+            Assert.False(pins["IO18"].PwmActive);        // still tripped: its brake action, low
+            Assert.True(pins["IO19"].PwmActive);         // recovered
+            Assert.Equal(0.30, pins["IO19"].PwmDuty, 3);
         }
 
         [Esp32Fact]

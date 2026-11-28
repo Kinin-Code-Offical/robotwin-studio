@@ -8,7 +8,10 @@
  * same arithmetic as the Xtensa emulator's MCPWM (Esp32Soc.Mcpwm.cs). The event callbacks (a timer's on_full, on_empty
  * and on_stop, a comparator's on_reach) run in interrupt context at the ticks they happen on: from when the timer started,
  * each period has its zero and its peak and the comparison where the count passes the compare value (twice in up-down
- * mode), as the chip's TEZ, TEP and TEA / TEB interrupts come.
+ * mode), as the chip's TEZ, TEP and TEA / TEB interrupts come. The fault handler: a GPIO fault present while its pin is at its
+ * active level (or a software one, for an instant) brakes the operators set to it, cycle by cycle (CBC: while it is there)
+ * or one shot (OST: until mcpwm_operator_recover_from_fault with the fault gone); meanwhile each generator does its brake
+ * action (low, high, toggle or keep) for the counting direction, as the emulator's FH registers do (Esp32Soc.McpwmFault.cs).
  */
 #include "Arduino.h"
 #include "driver/mcpwm_prelude.h"
@@ -51,11 +54,24 @@ struct mcpwm_gen_t {
     bool invert;
     uint32_t actions;      // as GENn_A/B: up zero 1:0, peak 3:2, A 5:4, B 7:6; down from bit 12
     int force;             // -1 none, 0 low, 1 high
+    int brake_action[2][2];   // [CBC, OST][up, down]: a mcpwm_generator_action_t (KEEP: the wave goes on)
     bool dead_time;        // this output is another generator's wave through the dead-time module
     mcpwm_gen_t* dt_in;
     double red;            // ticks of the timer's resolution
     double fed;
     bool dt_invert;
+};
+
+struct mcpwm_fault_t {
+    bool used;
+    int group;
+    bool soft;
+    int gpio;
+    bool active_high;
+    bool present;          // a GPIO fault at its active level now
+    mcpwm_oper_t* bound;   // a software fault serves one operator
+    mcpwm_fault_event_cb_t on_enter, on_exit;
+    void* ctx;
 };
 
 struct mcpwm_oper_t {
@@ -64,12 +80,24 @@ struct mcpwm_oper_t {
     mcpwm_timer_t* timer;
     mcpwm_cmpr_t cmprs[2];
     mcpwm_gen_t gens[2];
+    // [fault] the brakes set on faults, and the brake now
+    struct Brake {
+        mcpwm_fault_t* fault;
+        mcpwm_operator_brake_mode_t mode;
+    } brakes[4];
+    int brake_count;
+    bool ost;              // tripped one shot
+    bool cbc;              // braking cycle by cycle
+    int cbc_soft_event;    // a software CBC brake ends with its period
+    mcpwm_brake_event_cb_t on_cbc, on_ost;
+    void* brake_ctx;
 };
 
 namespace {
 
 mcpwm_timer_t g_timers[2][3];
 mcpwm_oper_t g_opers[2][3];
+mcpwm_fault_t g_faults[2][4];   // three GPIO faults and a software one per group
 
 struct Wave {
     double frequency;   // 0: a constant level
@@ -181,10 +209,17 @@ Wave delayed(Wave w, double delay_s, bool rising) {
 
 Wave inverted(Wave w) { return Wave{w.frequency, 1.0 - w.duty}; }
 
-/* What a generator's pin carries: its own wave or another's through dead time, a force, the GPIO's inversion. */
+/* What a generator's pin carries: its own wave or another's through dead time, a brake, a force, the GPIO's inversion. */
 Wave output_wave(const mcpwm_gen_t& g) {
     Wave w;
-    if (g.force >= 0) {
+    const mcpwm_oper_t& op = *g.oper;
+    int brake = op.ost ? 1 : op.cbc ? 0 : -1;
+    int brake_act = brake < 0 ? 0 : g.brake_action[brake][op.timer && op.timer->mode == MCPWM_TIMER_COUNT_MODE_DOWN ? 1 : 0];
+    if (g.force < 0 && brake_act == MCPWM_GEN_ACTION_LOW) {
+        w = constant(false);
+    } else if (g.force < 0 && brake_act == MCPWM_GEN_ACTION_HIGH) {
+        w = constant(true);
+    } else if (g.force >= 0) {
         w = constant(g.force != 0);
     } else if (g.dead_time && g.dt_in) {
         const mcpwm_timer_t* t = g.oper->timer;
@@ -197,6 +232,7 @@ Wave output_wave(const mcpwm_gen_t& g) {
         w = generator_wave(g);
     }
 
+    if (g.force < 0 && brake_act == MCPWM_GEN_ACTION_TOGGLE) w = w.frequency > 0 ? inverted(w) : constant(w.duty < 0.5);
     return g.invert ? inverted(w) : w;
 }
 
@@ -438,6 +474,10 @@ void hal_mcpwm_reset() {
     for (auto& row : g_timers)
         for (auto& t : row)
             if (t.event_id) cancel_event(t.event_id);
+    for (auto& row : g_opers)
+        for (auto& op : row)
+            if (op.cbc_soft_event) cancel_event(op.cbc_soft_event);
+    memset(g_faults, 0, sizeof g_faults);
     memset(g_timers, 0, sizeof g_timers);
     memset(g_opers, 0, sizeof g_opers);
 }
@@ -782,4 +822,260 @@ extern "C" esp_err_t mcpwm_generator_set_dead_time(mcpwm_gen_handle_t in_generat
     out_generator->dt_invert = config->flags.invert_output != 0;
     update(out_generator->oper->group);
     return ESP_OK;
+}
+
+/* ---------------------------------------------------------------- faults and brakes */
+namespace {
+
+mcpwm_fault_t g_soft_faults[8];   // a software fault belongs to no group until an operator brakes on it
+
+void fault_enter(void* arg) {
+    auto* f = static_cast<mcpwm_fault_t*>(arg);
+    mcpwm_fault_event_data_t d{};
+    if (f->used && f->on_enter) f->on_enter(f, &d, f->ctx);
+}
+
+void fault_exit(void* arg) {
+    auto* f = static_cast<mcpwm_fault_t*>(arg);
+    mcpwm_fault_event_data_t d{};
+    if (f->used && f->on_exit) f->on_exit(f, &d, f->ctx);
+}
+
+void brake_cbc(void* arg) {
+    auto* op = static_cast<mcpwm_oper_t*>(arg);
+    mcpwm_brake_event_data_t d{};
+    if (op->used && op->on_cbc) op->on_cbc(op, &d, op->brake_ctx);
+}
+
+void brake_ost(void* arg) {
+    auto* op = static_cast<mcpwm_oper_t*>(arg);
+    mcpwm_brake_event_data_t d{};
+    if (op->used && op->on_ost) op->on_ost(op, &d, op->brake_ctx);
+}
+
+/* Every operator of the group: its brake from the faults present now (a one-shot trip latches, CBC follows them). */
+void evaluate_brakes(int group) {
+    for (auto& op : g_opers[group]) {
+        if (!op.used) continue;
+        bool cbc = op.cbc_soft_event != 0, ost = false;
+        for (int i = 0; i < op.brake_count; i++) {
+            const auto& b = op.brakes[i];
+            if (!b.fault || !b.fault->used || b.fault->soft || !b.fault->present) continue;
+            if (b.mode == MCPWM_OPER_BRAKE_MODE_OST) ost = true;
+            else cbc = true;
+        }
+
+        if (ost && !op.ost) {
+            op.ost = true;
+            raise_isr(brake_ost, &op);
+        }
+
+        if (cbc && !op.cbc) raise_isr(brake_cbc, &op);
+        op.cbc = cbc;
+    }
+
+    update(group);
+}
+
+void soft_cbc_end(void* arg) {
+    auto* op = static_cast<mcpwm_oper_t*>(arg);
+    op->cbc_soft_event = 0;
+    evaluate_brakes(op->group);
+}
+
+mcpwm_oper_t::Brake* brake_of(mcpwm_oper_t& op, mcpwm_fault_t* f) {
+    for (int i = 0; i < op.brake_count; i++)
+        if (op.brakes[i].fault == f) return &op.brakes[i];
+    return nullptr;
+}
+
+bool fault_ok(mcpwm_fault_handle_t f) { return f && f->used; }
+
+}  // namespace
+
+namespace rw {
+void hal_mcpwm_fault_edge(int gpio, int level) {
+    for (int g = 0; g < 2; g++) {
+        bool changed = false;
+        for (auto& f : g_faults[g]) {
+            if (!f.used || f.soft || f.gpio != gpio) continue;
+            bool present = (level != 0) == f.active_high;
+            if (present == f.present) continue;
+            f.present = present;
+            raise_isr(present ? fault_enter : fault_exit, &f);
+            changed = true;
+        }
+
+        if (changed) evaluate_brakes(g);
+    }
+}
+}  // namespace rw
+
+extern "C" esp_err_t mcpwm_new_gpio_fault(const mcpwm_gpio_fault_config_t* config, mcpwm_fault_handle_t* ret_fault) {
+    charge(cost(8000.0));
+    if (!config || !ret_fault || config->group_id < 0 || config->group_id > 1) {
+        mcpwm_log("mcpwm_new_gpio_fault", 104, "invalid argument");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!digitalPinIsValid(config->gpio_num)) {
+        mcpwm_log("mcpwm_new_gpio_fault", 106, "invalid GPIO number");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    for (int i = 0; i < 3; i++) {
+        mcpwm_fault_t& f = g_faults[config->group_id][i];
+        if (f.used) continue;
+        f = mcpwm_fault_t{};
+        f.used = true;
+        f.group = config->group_id;
+        f.gpio = config->gpio_num;
+        f.active_high = config->flags.active_level != 0;
+        uint8_t mode = INPUT;
+        if (config->flags.pull_up) mode |= PULLUP;
+        if (config->flags.pull_down) mode |= PULLDOWN;
+        if (!config->flags.io_loop_back) pinMode((uint8_t)f.gpio, mode);
+        int lv = hal_pin_level(f.gpio);
+        if (lv < 0) lv = config->flags.pull_up ? 1 : 0;   // not seen yet: what its pull holds
+        f.present = (lv != 0) == f.active_high;
+        *ret_fault = &f;
+        evaluate_brakes(f.group);
+        return ESP_OK;
+    }
+
+    mcpwm_log("mcpwm_gpio_fault_register_to_group", 59, "no free gpio fault in group (%d)", config->group_id);
+    return ESP_ERR_NOT_FOUND;
+}
+
+extern "C" esp_err_t mcpwm_new_soft_fault(const mcpwm_soft_fault_config_t* config, mcpwm_fault_handle_t* ret_fault) {
+    if (!config || !ret_fault) return ESP_ERR_INVALID_ARG;
+    for (auto& f : g_soft_faults) {
+        if (f.used) continue;
+        f = mcpwm_fault_t{};
+        f.used = true;
+        f.group = -1;
+        f.soft = true;
+        f.gpio = -1;
+        *ret_fault = &f;
+        return ESP_OK;
+    }
+
+    return ESP_ERR_NO_MEM;
+}
+
+extern "C" esp_err_t mcpwm_del_fault(mcpwm_fault_handle_t fault) {
+    if (!fault_ok(fault)) return ESP_ERR_INVALID_ARG;
+    fault->used = false;
+    for (int g = 0; g < 2; g++) evaluate_brakes(g);
+    return ESP_OK;
+}
+
+extern "C" esp_err_t mcpwm_fault_register_event_callbacks(mcpwm_fault_handle_t fault, const mcpwm_fault_event_callbacks_t* cbs, void* user_data) {
+    if (!fault_ok(fault) || !cbs) return ESP_ERR_INVALID_ARG;
+    if (fault->soft) {
+        mcpwm_log("mcpwm_fault_register_event_callbacks", 336, "soft fault doesn't support callbacks");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    fault->on_enter = cbs->on_fault_enter;
+    fault->on_exit = cbs->on_fault_exit;
+    fault->ctx = user_data;
+    return ESP_OK;
+}
+
+extern "C" esp_err_t mcpwm_soft_fault_activate(mcpwm_fault_handle_t fault) {
+    if (!fault_ok(fault) || !fault->soft) return ESP_ERR_INVALID_ARG;
+    for (int g = 0; g < 2; g++) {
+        for (auto& op : g_opers[g]) {
+            if (!op.used) continue;
+            auto* b = brake_of(op, fault);
+            if (!b) continue;
+            if (b->mode == MCPWM_OPER_BRAKE_MODE_OST) {
+                if (!op.ost) {
+                    op.ost = true;
+                    raise_isr(brake_ost, &op);
+                }
+            } else {
+                // a software CBC brake lasts its period
+                double period_s = op.timer && op.timer->resolution ? (double)op.timer->period_ticks / op.timer->resolution : 0;
+                if (op.cbc_soft_event) cancel_event(op.cbc_soft_event);
+                op.cbc_soft_event = schedule_event(now_ns() + (uint64_t)(period_s * 1e9) + 1, soft_cbc_end, &op);
+            }
+        }
+
+        evaluate_brakes(g);
+    }
+
+    return ESP_OK;
+}
+
+extern "C" esp_err_t mcpwm_operator_set_brake_on_fault(mcpwm_oper_handle_t oper, const mcpwm_brake_config_t* config) {
+    if (!oper || !oper->used || !config || !fault_ok(config->fault) || config->brake_mode >= MCPWM_OPER_BRAKE_MODE_INVALID) return ESP_ERR_INVALID_ARG;
+    if (!config->fault->soft && config->fault->group != oper->group) {
+        mcpwm_log("mcpwm_operator_set_brake_on_fault", 268, "fault and operator not in the same group");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (config->fault->soft) {
+        if (config->fault->bound && config->fault->bound != oper) {
+            mcpwm_log("mcpwm_operator_set_brake_on_fault", 290, "soft fault already used by another operator");
+            return ESP_ERR_INVALID_STATE;
+        }
+
+        config->fault->bound = oper;
+    }
+
+    auto* b = brake_of(*oper, config->fault);
+    if (!b) {
+        if (oper->brake_count >= 4) return ESP_ERR_NO_MEM;
+        b = &oper->brakes[oper->brake_count++];
+        b->fault = config->fault;
+    }
+
+    b->mode = config->brake_mode;
+    evaluate_brakes(oper->group);
+    return ESP_OK;
+}
+
+extern "C" esp_err_t mcpwm_operator_recover_from_fault(mcpwm_oper_handle_t oper, mcpwm_fault_handle_t fault) {
+    if (!oper || !oper->used || !fault_ok(fault)) return ESP_ERR_INVALID_ARG;
+    auto* b = brake_of(*oper, fault);
+    if (!b) return ESP_ERR_INVALID_ARG;
+    if (!fault->soft && fault->present) {
+        mcpwm_log("mcpwm_operator_recover_from_fault", 307, "recovery failed: the fault source is still active");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (b->mode == MCPWM_OPER_BRAKE_MODE_OST) oper->ost = false;   // the trip ends; another present fault trips it again
+    evaluate_brakes(oper->group);
+    return ESP_OK;
+}
+
+extern "C" esp_err_t mcpwm_operator_register_event_callbacks(mcpwm_oper_handle_t oper, const mcpwm_operator_event_callbacks_t* cbs, void* user_data) {
+    if (!oper || !oper->used || !cbs) return ESP_ERR_INVALID_ARG;
+    oper->on_cbc = cbs->on_brake_cbc;
+    oper->on_ost = cbs->on_brake_ost;
+    oper->brake_ctx = user_data;
+    return ESP_OK;
+}
+
+extern "C" esp_err_t mcpwm_generator_set_action_on_brake_event(mcpwm_gen_handle_t gen, mcpwm_gen_brake_event_action_t ev) {
+    if (!gen_ok(gen) || ev.brake_mode >= MCPWM_OPER_BRAKE_MODE_INVALID) return ESP_ERR_INVALID_ARG;
+    gen->brake_action[ev.brake_mode == MCPWM_OPER_BRAKE_MODE_OST ? 1 : 0][ev.direction == MCPWM_TIMER_DIRECTION_DOWN ? 1 : 0] = (int)ev.action;
+    update(gen->oper->group);
+    return ESP_OK;
+}
+
+extern "C" esp_err_t mcpwm_generator_set_actions_on_brake_event(mcpwm_gen_handle_t gen, mcpwm_gen_brake_event_action_t ev, ...) {
+    if (!gen_ok(gen)) return ESP_ERR_INVALID_ARG;
+    va_list ap;
+    va_start(ap, ev);
+    esp_err_t rc = ESP_OK;
+    for (mcpwm_gen_brake_event_action_t e = ev; e.brake_mode != MCPWM_OPER_BRAKE_MODE_INVALID; e = va_arg(ap, mcpwm_gen_brake_event_action_t)) {
+        rc = mcpwm_generator_set_action_on_brake_event(gen, e);
+        if (rc != ESP_OK) break;
+    }
+
+    va_end(ap);
+    return rc;
 }

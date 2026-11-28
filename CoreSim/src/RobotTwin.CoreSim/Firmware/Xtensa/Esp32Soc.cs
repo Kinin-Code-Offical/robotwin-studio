@@ -419,6 +419,16 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 case 0x3FF53004:
                 case 0x3FF67004:
                     return 1u << 5;
+                case 0x3FF5E0E8:   // MCPWM CAP_TIMER_CFG: CAP_SYNC_SW
+                case 0x3FF6C0E8:
+                    return 1u << 5;
+                case 0x3FF5E0F0:   // MCPWM CAP_CHn_CFG: CAPn_SW
+                case 0x3FF5E0F4:
+                case 0x3FF5E0F8:
+                case 0x3FF6C0F0:
+                case 0x3FF6C0F4:
+                case 0x3FF6C0F8:
+                    return 1u << 12;
                 default:
                     // RMT CHnCONF1: TX_START and the memory pointer resets (MEM_WR_RST, MEM_RD_RST, APB_MEM_RST). Kept, a
                     // driver's later read-modify-write of the register (its idle level, a pointer reset) started the

@@ -96,6 +96,7 @@ void hal_gpio_driver_reset();
 void hal_mcpwm_reset();
 void hal_mcpwm_cap_reset();                                /* every capture timer and channel released (rw_mcpwm_cap.cpp) */
 void hal_mcpwm_cap_edge(int gpio, int level, uint64_t time_ns);   /* an input pin's edge, for the capture channels on it */
+void hal_mcpwm_fault_edge(int gpio, int level);            /* and for the MCPWM's GPIO faults on it (rw_mcpwm.cpp) */
 void hal_mcpwm_cap_pwm(int gpio, double frequency, double duty, uint64_t now_ns);   /* a pin's own PWM changed */
 /* [legacy] the legacy MCPWM driver (rw_mcpwm_legacy.cpp) on the new driver's model, in plain types (its own types clash
    with the new driver's): timer n with operator n (rw_mcpwm.cpp), the group's capture (rw_mcpwm_cap.cpp) */

@@ -103,6 +103,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             int unit = register >= McpwmBase[0] && register < McpwmBase[0] + 0x130 ? 0 : register >= McpwmBase[1] && register < McpwmBase[1] + 0x130 ? 1 : -1;
             if (unit < 0) return false;
             uint offset = register - McpwmBase[unit];
+            if (ReadMcpwmFault(unit, offset, out value)) return true;
             if (offset == McpwmIntRaw) value = _mcpwmIntRaw[unit];
             else if (offset == McpwmIntSt) value = _mcpwmIntRaw[unit] & Reg(McpwmBase[unit] + McpwmIntEna);
             else _registers.TryGetValue(register, out value);

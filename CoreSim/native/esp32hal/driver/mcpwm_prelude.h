@@ -172,6 +172,64 @@ esp_err_t mcpwm_generator_set_action_on_compare_event(mcpwm_gen_handle_t gen, mc
 esp_err_t mcpwm_generator_set_actions_on_compare_event(mcpwm_gen_handle_t gen, mcpwm_gen_compare_event_action_t ev_act, ...);
 esp_err_t mcpwm_generator_set_dead_time(mcpwm_gen_handle_t in_generator, mcpwm_gen_handle_t out_generator, const mcpwm_dead_time_config_t* config);
 
+/* ---- fault and brake (driver/mcpwm_fault.h; rw_mcpwm.cpp) */
+typedef struct {
+    int group_id;
+    int intr_priority;
+    int gpio_num;
+    struct {
+        uint32_t active_level : 1;   /* 1: the fault is present while the GPIO is high */
+        uint32_t io_loop_back : 1;
+        uint32_t pull_up : 1;
+        uint32_t pull_down : 1;
+    } flags;
+} mcpwm_gpio_fault_config_t;
+typedef struct {
+    int reserved;
+} mcpwm_soft_fault_config_t;
+typedef struct {
+    int reserved;
+} mcpwm_fault_event_data_t;
+typedef bool (*mcpwm_fault_event_cb_t)(mcpwm_fault_handle_t fault, const mcpwm_fault_event_data_t* edata, void* user_ctx);
+typedef struct {
+    mcpwm_fault_event_cb_t on_fault_enter;
+    mcpwm_fault_event_cb_t on_fault_exit;
+} mcpwm_fault_event_callbacks_t;
+typedef struct {
+    mcpwm_fault_handle_t fault;
+    mcpwm_operator_brake_mode_t brake_mode;
+    struct {
+        uint32_t cbc_recover_on_tez : 1;
+        uint32_t cbc_recover_on_tep : 1;
+    } flags;
+} mcpwm_brake_config_t;
+typedef struct {
+    int reserved;
+} mcpwm_brake_event_data_t;
+typedef bool (*mcpwm_brake_event_cb_t)(mcpwm_oper_handle_t oper, const mcpwm_brake_event_data_t* edata, void* user_ctx);
+typedef struct {
+    mcpwm_brake_event_cb_t on_brake_cbc;
+    mcpwm_brake_event_cb_t on_brake_ost;
+} mcpwm_operator_event_callbacks_t;
+typedef struct {
+    mcpwm_timer_direction_t direction;
+    mcpwm_operator_brake_mode_t brake_mode;
+    mcpwm_generator_action_t action;
+} mcpwm_gen_brake_event_action_t;
+#define MCPWM_GEN_BRAKE_EVENT_ACTION(dir, mode, act) (mcpwm_gen_brake_event_action_t{(dir), (mode), (act)})
+#define MCPWM_GEN_BRAKE_EVENT_ACTION_END() (mcpwm_gen_brake_event_action_t{MCPWM_TIMER_DIRECTION_UP, MCPWM_OPER_BRAKE_MODE_INVALID, MCPWM_GEN_ACTION_KEEP})
+
+esp_err_t mcpwm_new_gpio_fault(const mcpwm_gpio_fault_config_t* config, mcpwm_fault_handle_t* ret_fault);
+esp_err_t mcpwm_new_soft_fault(const mcpwm_soft_fault_config_t* config, mcpwm_fault_handle_t* ret_fault);
+esp_err_t mcpwm_del_fault(mcpwm_fault_handle_t fault);
+esp_err_t mcpwm_soft_fault_activate(mcpwm_fault_handle_t fault);
+esp_err_t mcpwm_fault_register_event_callbacks(mcpwm_fault_handle_t fault, const mcpwm_fault_event_callbacks_t* cbs, void* user_data);
+esp_err_t mcpwm_operator_set_brake_on_fault(mcpwm_oper_handle_t oper, const mcpwm_brake_config_t* config);
+esp_err_t mcpwm_operator_recover_from_fault(mcpwm_oper_handle_t oper, mcpwm_fault_handle_t fault);
+esp_err_t mcpwm_operator_register_event_callbacks(mcpwm_oper_handle_t oper, const mcpwm_operator_event_callbacks_t* cbs, void* user_data);
+esp_err_t mcpwm_generator_set_action_on_brake_event(mcpwm_gen_handle_t generator, mcpwm_gen_brake_event_action_t ev_act);
+esp_err_t mcpwm_generator_set_actions_on_brake_event(mcpwm_gen_handle_t generator, mcpwm_gen_brake_event_action_t ev_act, ...);
+
 /* ---- capture (driver/mcpwm_cap.h; rw_mcpwm_cap.cpp) */
 typedef struct mcpwm_cap_timer_t* mcpwm_cap_timer_handle_t;
 typedef struct mcpwm_cap_channel_t* mcpwm_cap_channel_handle_t;

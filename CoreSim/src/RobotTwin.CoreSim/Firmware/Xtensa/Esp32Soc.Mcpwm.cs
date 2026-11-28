@@ -13,8 +13,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
     /// as on the chip; a continuous software force holds an output low or high. Each output goes to the GPIO matrix
     /// (PWM0_OUT0A–2B 32–37, PWM1_OUT0A–2B 108–113) as the PWM the circuit drives: its frequency and duty, worked out from
     /// one period of the generator's events (two when a toggle doubles it). The capture unit and its interrupts are in
-    /// Esp32Soc.McpwmCapture.cs, the timer and operator interrupts in Esp32Soc.McpwmEvents.cs; carrier and fault are not
-    /// modelled.
+    /// Esp32Soc.McpwmCapture.cs, the timer and operator interrupts in Esp32Soc.McpwmEvents.cs, the fault handler in
+    /// Esp32Soc.McpwmFault.cs; the carrier and the timers' sync are not modelled.
     /// </summary>
     public sealed partial class Esp32Soc
     {
@@ -58,6 +58,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (unit < 0) return false;
             uint offset = register - McpwmBase[unit];
             if (WriteMcpwmCapture(unit, offset, value)) return true;
+            if (WriteMcpwmFault(unit, offset, value)) return true;
             if (offset >= 0x08 && offset <= 0x28 && (offset - 0x08) % 0x10 == 0)
             {
                 // TIMERn_CFG1: TIMER_START (self-clearing on the chip) is a command; its effect is kept here.
@@ -122,6 +123,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if ((dt & (1u << 9)) != 0) outA = outB;    // A_OUTSWAP
             if ((dt & (1u << 10)) != 0) outB = (dt & (1u << 15)) != 0 ? genA : redPath;
             var wave = output == 0 ? outA : outB;
+            if (McpwmBrakeLevel(unit, op, output, mode, wave) is bool braked) return new McpwmWave(braked);   // a fault's brake (Esp32Soc.McpwmFault.cs)
 
             // A continuous software force (GENn_FORCE: A in 7:6, B in 9:8; 1 low, 2 high).
             int force = (int)((Reg(opBase + 0x10) >> (output == 0 ? 6 : 8)) & 3);
