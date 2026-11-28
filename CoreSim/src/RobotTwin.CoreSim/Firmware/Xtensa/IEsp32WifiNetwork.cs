@@ -53,5 +53,17 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
         int StreamReceive(int id, byte[] into, double t);
 
         void StreamClose(int id);
+
+        /// <summary>[espnow] ESP-NOW on or off; false while the Wi-Fi is off (it rides on the Wi-Fi radio).</summary>
+        bool EspNowInit(bool on) => false;
+
+        /// <summary>[espnow] One frame to a MAC (FF:FF:FF:FF:FF:FF: everyone on the channel); false when ESP-NOW is off.</summary>
+        bool EspNowSend(byte[] destination, byte[] data, double t) => false;
+
+        /// <summary>[espnow] The next frame that has arrived by now: sender, data, signal.</summary>
+        (byte[] Source, byte[] Data, int Rssi)? EspNowReceive(double t) => null;
+
+        /// <summary>[espnow] The next send whose outcome is known by now: to whom, acknowledged or not.</summary>
+        (byte[] Destination, bool Delivered)? EspNowSendDone(double t) => null;
     }
 }

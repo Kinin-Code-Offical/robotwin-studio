@@ -116,7 +116,7 @@ namespace RobotWin.Studio
                 // [esp32hw] stage 6: every ESP32 world template in both modes, the differences in a markdown report
                 // 8 s by default: long enough for the templates' setup (the quad calibrates its IMU for 2 s, takes off at 4 s).
                 double seconds = double.TryParse(Arg("--esp32-seconds"), NumberStyles.Float, CultureInfo.InvariantCulture, out var s) && s > 0 ? s : 8.0;
-                Shutdown(Firmware.Esp32ModeComparison.Run(compareReport, seconds));
+                Shutdown(Firmware.Esp32ModeComparison.Run(compareReport, seconds, Arg("--esp32-compare-filter")));
                 return;
             }
 

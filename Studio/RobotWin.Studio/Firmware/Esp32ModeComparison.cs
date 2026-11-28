@@ -39,7 +39,8 @@ namespace RobotWin.Studio.Firmware
 
         private static readonly Regex Number = new Regex(@"-?\d+(\.\d+)?", RegexOptions.Compiled);
 
-        public static int Run(string reportPath, double seconds)
+        /// <param name="filter">Only the templates whose id holds one of these (comma separated), or null for all.</param>
+        public static int Run(string reportPath, double seconds, string? filter = null)
         {
             var md = new StringBuilder();
             md.AppendLine("# ESP32 mod karşılaştırması: hızlı simülasyon ↔ donanım uyumlu (Xtensa emülatörü)");
@@ -57,8 +58,10 @@ namespace RobotWin.Studio.Firmware
             var rows = new List<string>();
             var details = new StringBuilder();
             int compared = 0, differing = 0;
+            var only = filter?.Split(',').Select(x => x.Trim()).Where(x => x.Length > 0).ToArray();
             foreach (var template in Examples.WorldTemplates.All)
             {
+                if (only is { Length: > 0 } && !only.Any(x => template.Id.Contains(x, StringComparison.OrdinalIgnoreCase))) continue;
                 WorldDocument probe;
                 try
                 {

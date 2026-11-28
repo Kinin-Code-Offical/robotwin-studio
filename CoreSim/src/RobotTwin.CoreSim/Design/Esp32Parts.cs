@@ -79,7 +79,7 @@ namespace RobotTwin.CoreSim.Design
                 : parameters != null && parameters.TryGetValue(ModeKey, out var mode) && mode == HardwareMode;
 
         /// <summary>A hardware-compatible board running on the Xtensa emulator: what it models and what not yet.</summary>
-        public const string HardwareModeRunning = "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, DAC, dokunma, zamanlayıcılar, bekçiler, Serial/Serial1/Serial2, I2C (Wire), SPI, RMT (NeoPixel), darbe sayıcı (enkoder), MCPWM, flaş (Preferences, LittleFS), derin ve hafif uyku, Wi-Fi (istasyon ve erişim noktası, UDP/TCP) modellendi; Bluetooth, ESP-NOW ve TLS henüz yok.";
+        public const string HardwareModeRunning = "Donanım uyumlu mod: gerçek yonga için derlenen yazılım RobotWin'in Xtensa emülatöründe çalışıyor. GPIO, LEDC, ADC, DAC, dokunma, zamanlayıcılar, bekçiler, Serial/Serial1/Serial2, I2C (Wire), SPI, RMT (NeoPixel), darbe sayıcı (enkoder), MCPWM, flaş (Preferences, LittleFS), derin ve hafif uyku, Wi-Fi (istasyon ve erişim noktası, UDP/TCP) ve ESP-NOW modellendi; Bluetooth ve TLS henüz yok.";
 
         /// <summary>A hardware-compatible board whose real-chip build is not there yet: it is being built, this run is fast mode.</summary>
         /// <summary>The real-chip build finished while the run went on in the fast mode ({0}: seconds it took).</summary>
@@ -94,8 +94,8 @@ namespace RobotTwin.CoreSim.Design
         public const string HardwareModeGapNotice = "Donanım uyumlu mod: bu çizim {0} kullanıyor, Xtensa emülatöründe henüz yok; bu kart hızlı modda çalışıyor.";
 
         /// <summary>
-        /// [esp32hw] What a sketch uses that the Xtensa emulator does not model yet: the camera (esp_camera), Wi-Fi (WiFi,
-        /// ESP-NOW, HTTP and web servers) or Bluetooth (BLE, Bluetooth Serial, Bluepad32); null when nothing. Such a board
+        /// [esp32hw] What a sketch uses that the Xtensa emulator does not model yet: the camera (esp_camera), Wi-Fi's TLS,
+        /// mDNS, OTA and AsyncTCP or Bluetooth (BLE, Bluetooth Serial, Bluepad32); null when nothing. Such a board
         /// runs in the fast mode, which has them.
         /// </summary>
         public static string? EmulatorGap(string source)
@@ -103,9 +103,9 @@ namespace RobotTwin.CoreSim.Design
             if (string.IsNullOrEmpty(source)) return null;
             if (Includes(source, "esp_camera.h")) return "esp_camera";
             // The station, the soft-AP, UDP and TCP (WiFi, WiFiUdp, WiFiClient/Server, WebServer, HTTPClient to an address) run
-            // on the emulator with the firmware's own lwIP; TLS (the crypto accelerators), ESP-NOW (vendor frames), mDNS, OTA
-            // and AsyncTCP not yet.
-            foreach (var header in new[] { "WiFiClientSecure.h", "esp_now.h", "ESPmDNS.h", "ArduinoOTA.h", "AsyncTCP.h", "NetworkClientSecure.h" })
+            // on the emulator with the firmware's own lwIP, ESP-NOW through the radio medium (Esp32Soc.EspNow.cs); TLS (the
+            // crypto accelerators), mDNS, OTA and AsyncTCP not yet.
+            foreach (var header in new[] { "WiFiClientSecure.h", "ESPmDNS.h", "ArduinoOTA.h", "AsyncTCP.h", "NetworkClientSecure.h" })
                 if (Includes(source, header)) return "Wi-Fi (" + header.Replace(".h", string.Empty) + ")";
             foreach (var header in new[] { "BLEDevice.h", "BluetoothSerial.h", "NimBLEDevice.h", "Bluepad32.h", "esp_bt.h", "BleGamepad.h" })
                 if (Includes(source, header)) return "Bluetooth";

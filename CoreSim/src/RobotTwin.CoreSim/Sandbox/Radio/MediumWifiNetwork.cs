@@ -39,6 +39,16 @@ namespace RobotTwin.CoreSim.Sandbox.Radio
 
         public void Mode(int mode) => _m.WifiMode(_e, mode);
 
+        public bool EspNowInit(bool on) => _m.EspNowInit(_e, on);
+
+        public bool EspNowSend(byte[] destination, byte[] data, double t) => _m.EspNowSend(_e, destination, data, _world(t));
+
+        public (byte[] Source, byte[] Data, int Rssi)? EspNowReceive(double t) =>
+            _m.EspNowReceive(_e, _world(t)) is { } f ? (f.Source, f.Data, (int)Math.Round(f.Rssi)) : ((byte[], byte[], int)?)null;
+
+        public (byte[] Destination, bool Delivered)? EspNowSendDone(double t) =>
+            _m.EspNowSendDone(_e, _world(t)) is { } s ? (s.Destination, s.Delivered) : ((byte[], bool)?)null;
+
         public void Begin(string ssid, string password, double t) => _m.WifiBegin(_e, ssid, password, _world(t));
 
         public void Disconnect() => _m.WifiDisconnect(_e);

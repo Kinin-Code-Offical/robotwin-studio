@@ -278,10 +278,11 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 },
             };
 
+            AddEspNow(handlers);   // [espnow] Esp32Soc.EspNow.cs
             foreach (var (name, address) in code)
             {
                 Func<XtensaCore, bool>? serve = handlers.TryGetValue(name, out var h) ? h
-                    : name.StartsWith("esp_wifi_", StringComparison.Ordinal) && !WifiOpenCode.Contains(name) ? c => Return(c, EspOk)
+                    : (name.StartsWith("esp_wifi_", StringComparison.Ordinal) && !WifiOpenCode.Contains(name)) || name.StartsWith("esp_now_", StringComparison.Ordinal) ? c => Return(c, EspOk)
                     : null;
                 if (serve == null) continue;
                 foreach (var core in new[] { Pro, App }) core.AddAppTrap(address, serve);
@@ -498,6 +499,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 _rxBusy[slot] = true;
                 CallFirmware(_rxCallback[ifx], null, at, (uint)f.Length, at);
             }
+
+            ServiceEspNow(t);   // [espnow]
         }
     }
 }
