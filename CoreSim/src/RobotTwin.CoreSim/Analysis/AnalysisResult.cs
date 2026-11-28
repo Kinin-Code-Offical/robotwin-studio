@@ -188,6 +188,9 @@ namespace RobotTwin.CoreSim.Analysis
 
         public List<StressFrame> Frames { get; } = new List<StressFrame>();
 
+        /// <summary>[fatigue] The S-N fatigue check over the frames, or null when there were too few.</summary>
+        public Fem.FatigueResult? Fatigue { get; set; }
+
         /// <summary>Body centre relative to the object origin (object frame): the mesh nodes are in the body frame.</summary>
         public Vec3 BodyOffset { get; set; }
 

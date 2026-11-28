@@ -80,6 +80,7 @@ Every other block of the stack is 2 mm off centre, so no interface is symmetric.
 | Plate with a hole, stress concentration Kt (Peterson, finite width) | 3.133 | 2.946 | −0.187 | −6.0 % | ±8 % |
 | Freely accelerating bar (inertia relief), mid stress | 250.00 kPa | 250.00 kPa | 0 kPa | ≈0 % | ±10 % |
 | The part editor's static analysis: cantilever tip deflection (fixture and force picked on faces, 2.5 mm elements; the analysis's reference solution) | 0.2015 mm | 0.1995 mm | −0.0020 mm | −1.0 % | ±5 % |
+| Fatigue: rainflow counting, the ASTM E1049-85 example history (−2, 1, −3, 5, −1, 3, −4, 4, −2) | range 3/4/6/8/9: 0.5/1.5/0.5/1/0.5 cycles | the same | 0 | 0 | exact match |
 | The same study, cantilever under a uniform pressure (10 kPa, aluminium) | 21.74 µm | 21.84 µm | +0.10 µm | +0.5 % | −10 / +20 % |
 
 **Test, source, conditions and validity:** `FemValidationTests`, `PartStudyTests`, `GridConvergenceTests`. References: beam theory (Euler–Bernoulli and Timoshenko), F/A and F·L/(E·A), Peterson's stress-concentration charts for a plate with a hole of finite width, the inertial balance of an accelerating bar. Conditions: material, size and load in the rows; quadratic T10 elements. Validity: linear elastic material and small displacements; beyond yield and buckling lie outside this table.

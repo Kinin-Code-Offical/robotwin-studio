@@ -186,7 +186,16 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
                 if (s.StressMeshCheck) MeshConvergence(part, mat, s, result, critCase, relief, P98(result.Frames[ci].VonMises), cancel);
             }
 
+            AddFatigue(mat, result);
             return result;
+        }
+
+        /// <summary>[fatigue] The part's S-N fatigue over the run's frames (Analysis/Fem/Fatigue.cs), in the report's notes.</summary>
+        private static void AddFatigue(StructuralMaterial mat, StressResult result)
+        {
+            if (result.Frames.Count < 2) return;
+            result.Fatigue = Fatigue.Evaluate(mat, result);
+            result.Notes.Add(Fatigue.Describe(mat, result.Fatigue));
         }
 
         /// <summary>98th percentile of nodal von Mises: the peak away from point-load singularities.</summary>
@@ -353,6 +362,7 @@ namespace RobotTwin.CoreSim.Analysis.Jobs
                 progress?.Invoke((k + 1.0) / instants.Count);
             }
 
+            AddFatigue(mat, result);
             return result;
         }
     }

@@ -156,7 +156,7 @@ Bu sayfa, bir sonraki büyük sürüme kadar yapılacak işlerin canlı listesid
 
 ### P2: sonraki aşama
 
-- [ ] Hidrolik, esnek yapılar ve yorulma.
+- [~] Hidrolik, esnek yapılar ve yorulma. Yorulma yapıldı (2026-11-28): gerilme analizinde her düğümün von Mises geçmişi rainflow ile sayılıyor (ASTM E1049), S-N doğrusu (10³'te UTS'nin %90'ı, 10⁷'de yorulma dayanımı, çelikte dayanım sınırı) ve Miner toplamı, parça notunda en kötü düğümün hasarı ve ömrü; `FatigueTests`. Kalan: hidrolik, esnek yapılar.
 - [x] Gelişmiş motor ve rulman ısı modelleri: motorun iki düğümlü (sargı, gövde) modeli ve mıknatıs sıcaklık katsayısı (`MotorThermalTests`); rulman sürtünmesinin ısısı dünyanın ısı ağında, eklemin iki parçasına (`BearingHeatTests`).
 - [x] FEM ağ ve CFD ızgara yakınsaması: üç ağlı Richardson ekstrapolasyonu (`Analysis/Numerics/GridConvergence.cs`: gözlenen mertebe, ağdan bağımsız değer, Roache'un üç ağlı GCI'ı, tekdüze/salınımlı/ıraksak ayrımı); gerilme analizi kullanıcının ağını iki kaba ağla, rüzgâr tüneli Cd'yi üç ızgarayla denetliyor. Ankastre kirişte ekstrapole uç sehim Timoshenko'dan %0,7 içinde (`GridConvergenceTests`).
 - [ ] Yeni MCU aileleri.

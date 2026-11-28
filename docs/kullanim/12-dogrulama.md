@@ -80,6 +80,7 @@ Yığında bloklar ikide bir 2 mm kaydırılmıştır, hiçbir arayüz simetrik 
 | Delikli plaka gerilme yığılması Kt (Peterson, sonlu genişlik) | 3,133 | 2,946 | −0,187 | −6,0 % | ±8 % |
 | Serbest ivmelenen çubuk (atalet dengesi), orta gerilme | 250,00 kPa | 250,00 kPa | 0 kPa | ≈0 % | ±10 % |
 | Parça düzenleyicinin statik analizi: konsol uç sehimi (yüz seçimiyle sabitleme ve kuvvet, 2,5 mm eleman; analizin referans çözümü) | 0,2015 mm | 0,1995 mm | −0,0020 mm | −1,0 % | ±5 % |
+| Yorulma: rainflow sayımı, ASTM E1049-85 örnek geçmişi (−2, 1, −3, 5, −1, 3, −4, 4, −2) | aralık 3/4/6/8/9: 0,5/1,5/0,5/1/0,5 döngü | aynı | 0 | 0 | tam eşleşme |
 | Aynı çalışmada düzgün basınçlı konsol (10 kPa, alüminyum) | 21,74 µm | 21,84 µm | +0,10 µm | +0,5 % | −10 / +20 % |
 
 **Test, kaynak, koşullar ve geçerlilik:** `FemValidationTests`, `PartStudyTests`, `GridConvergenceTests`. Referanslar: kiriş teorisi (Euler–Bernoulli ve Timoshenko), F/A ve F·L/(E·A), sonlu genişlikte delikli plaka için Peterson'un gerilme yığılması tabloları, ivmelenen çubukta atalet dengesi. Koşullar: malzeme, boyut ve yük satırlarda; ikinci derece T10 elemanlar. Geçerlilik: doğrusal elastik malzeme ve küçük yer değiştirme; akmanın ötesi ve burkulma bu tablonun dışında.
