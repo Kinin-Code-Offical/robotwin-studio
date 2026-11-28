@@ -86,6 +86,7 @@ namespace RobotTwin.CoreSim.Mechanics
         /// </summary>
         private void AddTread(int a, int b, ref TreadPoints t, double radius, double halfWidth, int featureBase, double h)
         {
+            var nw = Narrow;
             if (t.Count == 0) return;
             if (t.Count == 1)
             {
@@ -100,20 +101,20 @@ namespace RobotTwin.CoreSim.Mechanics
             var centre = (t.P0 * w0 + t.P1 * w1 + t.P2 * w2) / sw;
             var normal = (t.N0 * w0 + t.N1 * w1 + t.N2 * w2).Normalized();
             double sep = (t.S0 * w0 + t.S1 * w1 + t.S2 * w2) / sw;
-            int first = _contactCount;
+            int first = nw.Count;
             AddContact(a, b, t.P0, t.N0, t.S0, t.F0, t.Props, radius, h);
             AddContact(a, b, t.P1, t.N1, t.S1, t.F1, t.Props, radius, h);
             if (t.Count > 2) AddContact(a, b, t.P2, t.N2, t.S2, t.F2, t.Props, radius, h);
-            for (int i = first; i < _contactCount; i++)
+            for (int i = first; i < nw.Count; i++)
             {
-                _contacts[i].Mu = 0;   // their friction is the patch's
-                _contacts[i].SpinR = 0;
+                nw.Contacts[i].Mu = 0;   // their friction is the patch's
+                nw.Contacts[i].SpinR = 0;
             }
 
-            int count = _contactCount - first;
+            int count = nw.Count - first;
             // Rolling resistance on every contact: each takes its share of the load, together the whole.
             AddContact(a, b, centre, normal, sep, featureBase + 15, t.Props, radius, h);
-            ref var c = ref _contacts[_contactCount - 1];
+            ref var c = ref nw.Contacts[nw.Count - 1];
             c.TreadFirst = first;
             c.TreadCount = count;
             // The patch also resists turning on the spot (scrub): a line of uniform pressure across the tread, μ·N·w/4.

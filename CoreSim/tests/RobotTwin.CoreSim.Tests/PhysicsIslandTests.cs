@@ -12,7 +12,7 @@ namespace RobotTwin.CoreSim.Tests
     /// </summary>
     public class PhysicsIslandTests
     {
-        /// <summary>Six towers of boxes, three driven gear pairs and three pendulums, apart from each other on one floor.</summary>
+        /// <summary>Six towers of boxes, three driven gear pairs, three pendulums and four rolling wheels, apart on one floor.</summary>
         private static PhysicsScene Yard(out List<SceneBody> watched)
         {
             var scene = new PhysicsScene { GroundMaterial = "wood" };
@@ -49,6 +49,16 @@ namespace RobotTwin.CoreSim.Tests
                 watched.Add(bob);
             }
 
+            for (int w = 0; w < 4; w++)
+            {
+                // wheels rolling on the floor: a tread's contacts name their patch by index
+                var wheel = SceneBody.Cylinder($"w{w}", 0.04, 0.02, 0.2, new Vec3(-0.5, 0.25 * w, 0.0401), "rubber");
+                wheel.Orientation = Quat.FromAxisAngle(Vec3.UnitX, Math.PI / 2);
+                wheel.AngularVelocity = new Vec3(0, 10 + w, 0);
+                scene.AddBody(wheel);
+                watched.Add(wheel);
+            }
+
             return scene;
         }
 
@@ -56,20 +66,21 @@ namespace RobotTwin.CoreSim.Tests
         {
             var scene = Yard(out var watched);
             scene.ForceIslandsSideBySide = sideBySide;
+            scene.ForceNarrowSideBySide = sideBySide;
             islands = 0;
             used = false;
             for (int i = 0; i < 400; i++)
             {
                 scene.Step(2e-3);
                 islands = Math.Max(islands, scene.IslandCount);
-                used |= scene.IslandsSideBySide;
+                used |= scene.IslandsSideBySide && scene.NarrowSideBySide;
             }
 
             return watched.Select(b => (b.Position, b.Orientation, b.Velocity)).ToList();
         }
 
         [Fact]
-        public void IslandsSolvedSideBySideMoveBitForBitAsAllTogether()
+        public void IslandsAndContactTestsSideBySideMoveBitForBitAsAllTogether()
         {
             var apart = Run(true, out int islands, out bool used);
             var together = Run(false, out _, out bool usedTogether);

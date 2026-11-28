@@ -64,19 +64,16 @@ namespace RobotTwin.CoreSim.Mechanics
         /// they are still apart and are not tested again. Relative, so two parts of a flying plane that never touch stay
         /// settled at any speed. Forgotten when the bodies change.
         /// </summary>
-        private readonly Dictionary<(long Pair, int Piece), ApartMemo> _apart = new Dictionary<(long Pair, int Piece), ApartMemo>();
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<(long Pair, int Piece), ApartMemo> _apart =
+            new System.Collections.Concurrent.ConcurrentDictionary<(long Pair, int Piece), ApartMemo>();   // the narrow phase may run on several cores
         private int _apartBodies = -1;
+        private int _apartChecks;
 
         /// <summary>Whether the pair is known or proved apart now (and remembered so); false: test it.</summary>
         private bool StillApart(int a, int b, CollisionShape sa, Vec3 xa, Quat qa, CollisionShape sb, Vec3 xb, Quat qb, double margin)
         {
-            if (_apartBodies != Bodies.Count || _apart.Count > 4096 + 16 * Bodies.Count)
-            {
-                _apart.Clear();
-                _apartBodies = Bodies.Count;
-            }
-
-            var key = (PairKey(a, b), _featureBase);
+            var nw = Narrow;
+            var key = (PairKey(a, b), nw.FeatureBase);
             if (_apart.TryGetValue(key, out var m))
             {
                 bool same = m.A == a;
@@ -98,7 +95,7 @@ namespace RobotTwin.CoreSim.Mechanics
                 return true;
             }
 
-            _apart.Remove(key);
+            _apart.TryRemove(key, out _);
             return false;
         }
 

@@ -14,7 +14,6 @@ namespace RobotTwin.CoreSim.Mechanics
         }
 
         private readonly Dictionary<SceneBody, SoilState> _soil = new Dictionary<SceneBody, SoilState>();
-        private SoilState? _groundSoil;
         private readonly Dictionary<int, (double N, Vec3 P)> _soilLoad = new Dictionary<int, (double N, Vec3 P)>();
 
         /// <summary>Time constant (s) with which a body settles into / rises out of loose ground.</summary>
@@ -26,15 +25,17 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Ground collision of one body with its soil state applied to the contacts.</summary>
         private void CollideGroundSoil(int a, double h)
         {
-            _groundSoil = _soil.Count > 0 && _soil.TryGetValue(Bodies[a], out var s) && s.Active ? s : null;
+            var nw = Narrow;
+            nw.GroundSoil = _soil.Count > 0 && _soil.TryGetValue(Bodies[a], out var s) && s.Active ? s : null;
             CollideGround(a, h);
-            _groundSoil = null;
+            nw.GroundSoil = null;
         }
 
         /// <summary>Extra separation of a ground contact point: the body has sunk into the loose layer there.</summary>
         private double SoilSink(Vec3 p)
         {
-            var s = _groundSoil;
+            var nw = Narrow;
+            var s = nw.GroundSoil;
             if (s == null || s.Sink <= 0 || Terrain is not TerrainSurface ts) return 0;
             double share = ts.LooseFraction(p.X, p.Y, out _);
             return share <= 1e-4 ? 0 : s.Sink * share;
@@ -43,8 +44,9 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Contact on the painted surface, with the soil's traction and compaction resistance for a sunk body.</summary>
         private ContactProperties SoilContact(TerrainSurface surface, int bodyMaterial, double x, double y, bool caster)
         {
+            var nw = Narrow;
             var props = surface.Contact(bodyMaterial, x, y, caster);
-            var s = _groundSoil;
+            var s = nw.GroundSoil;
             if (s == null || caster || !s.Active) return props;
             double share = surface.LooseFraction(x, y, out _);
             if (share <= 1e-4) return props;

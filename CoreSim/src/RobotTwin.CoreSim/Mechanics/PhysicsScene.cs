@@ -494,7 +494,6 @@ namespace RobotTwin.CoreSim.Mechanics
         private readonly List<PhysicsEvent> _events = new List<PhysicsEvent>();
         private readonly Dictionary<RigidBody, double> _lastImpactReport = new Dictionary<RigidBody, double>();
         private readonly List<int> _nearby = new List<int>();
-        private readonly Vec3[] _candidates = new Vec3[16];
         private double _h;
 
         public Vec3 Gravity { get; set; } = new Vec3(0, 0, -9.81);
@@ -1074,11 +1073,31 @@ namespace RobotTwin.CoreSim.Mechanics
                 _order[j + 1] = key;
             }
 
+            // (the concurrent dictionary's Count takes all its locks: looked at now and then)
+            if (_apartBodies != Bodies.Count || ((++_apartChecks & 511) == 0 && _apart.Count > 4096 + 16 * Bodies.Count))
+            {
+                _apart.Clear();   // [perf] remembered gaps of other bodies (PhysicsScene.Apart.cs)
+                _apartBodies = Bodies.Count;
+            }
+
+            // [islands] the work in order: tested here one after the other, or listed and tested side by side on the cores
+            // (PhysicsScene.Narrow.cs); the contacts come out the same, in the same order
+            var main = _narrowMain;
+            main.Contacts = _contacts;
+            main.Count = _contactCount;
+            bool sideBySide = NarrowBesideEachOther(m);
+            long started = System.Diagnostics.Stopwatch.GetTimestamp();
+            _narrowOpCount = 0;
             for (int ii = 0; ii < m; ii++)
             {
                 int a = _order[ii];
                 var ba = Bodies[a];
-                if (!ba.IsStatic && GroundEnabled && !Asleep(a)) CollideGroundSoil(a, h); // [phys] [terrain] soil state of the body
+                if (!ba.IsStatic && GroundEnabled && !Asleep(a)) // [phys] [terrain] soil state of the body
+                {
+                    if (sideBySide) AddNarrowOp(a, -1, 0);
+                    else CollideGroundSoil(a, h);
+                }
+
                 double maxX = _hi[a].X;
                 for (int jj = ii + 1; jj < m; jj++)
                 {
@@ -1090,10 +1109,18 @@ namespace RobotTwin.CoreSim.Mechanics
                     if (!LayersMeet(ba, bb)) continue;   // [layers]
                     if (_noCollide.Count > 0 && _noCollide.Contains(PairKey(a, b))) continue;
                     if (SameWeldGroup(a, b)) continue;   // [weld] parts of one rigid body do not collide with each other
-                    if (ba.IsStatic || (Asleep(a) && !bb.IsStatic)) CollidePair(b, a, h); // [phys]
+                    bool swap = ba.IsStatic || (Asleep(a) && !bb.IsStatic); // [phys]
+                    if (sideBySide) AddNarrowOp(a, b, swap ? (byte)2 : (byte)1);
+                    else if (swap) CollidePair(b, a, h);
                     else CollidePair(a, b, h);
                 }
             }
+
+            if (sideBySide) RunNarrowOps(h);
+            _contacts = main.Contacts;
+            _contactCount = main.Count;
+            NarrowSideBySide = sideBySide;
+            NoteNarrowCost(m, sideBySide, System.Diagnostics.Stopwatch.GetTimestamp() - started);
         }
 
         private double TerrainSeparation(Vec3 p, out Vec3 normal)
@@ -1109,6 +1136,7 @@ namespace RobotTwin.CoreSim.Mechanics
 
         private void CollideGround(int a, double h)
         {
+            var nw = Narrow;
             var body = Bodies[a];
             var shape = _shapes[a]!;
             double margin = Margin(a, -1, h);
@@ -1134,12 +1162,12 @@ namespace RobotTwin.CoreSim.Mechanics
                 {
                     TerrainSeparation(x, out var n0);
                     var dirLocal = q.InverseRotate(-n0);
-                    int k = shape.CylinderCandidates(dirLocal, _candidates);
+                    int k = shape.CylinderCandidates(dirLocal, nw.Candidates);
                     bool support = Math.Sqrt(dirLocal.X * dirLocal.X + dirLocal.Y * dirLocal.Y) > 1e-6 * dirLocal.Length;
                     var tread = new TreadPoints();
                     for (int i = 0; i < k; i++)
                     {
-                        var p = x + q.Rotate(_candidates[i]);
+                        var p = x + q.Rotate(nw.Candidates[i]);
                         double sep = TerrainSeparation(p, out var n);
                         if (sep >= margin) continue;
                         var props = GroundProperties(body.MaterialIndex, p.X, p.Y);
@@ -1179,11 +1207,9 @@ namespace RobotTwin.CoreSim.Mechanics
         }
 
         /// <summary>Narrow phase between dynamic body a and body b (dynamic or static). Normals point from b to a.</summary>
-        /// <summary>Added to contact feature ids while a pair of convex pieces of concave bodies is tested (keeps warm starts apart).</summary>
-        private int _featureBase;
-
         private void CollidePair(int a, int b, double h)
         {
+            var nw = Narrow;
             var pa = Bodies[a].Pieces;
             var pb = Bodies[b].Pieces;
             if (pa == null && pb == null)
@@ -1199,12 +1225,12 @@ namespace RobotTwin.CoreSim.Mechanics
             var A = Bodies[a];
             var B = Bodies[b];
             double margin = Margin(a, b, h);
-            int first = _contactCount;
-            if (_pieceCentres.Length < nb) _pieceCentres = new Vec3[nb * 2];
+            int first = nw.Count;
+            if (nw.PieceCentres.Length < nb) nw.PieceCentres = new Vec3[nb * 2];
             for (int j = 0; j < nb; j++)
             {
                 var sj = pb != null ? pb[j] : _shapes[b]!;
-                _pieceCentres[j] = B.Position + B.Orientation.Rotate(sj.LocalCentre);
+                nw.PieceCentres[j] = B.Position + B.Orientation.Rotate(sj.LocalCentre);
             }
 
             for (int i = 0; i < na; i++)
@@ -1215,17 +1241,16 @@ namespace RobotTwin.CoreSim.Mechanics
                 {
                     var sj = pb != null ? pb[j] : _shapes[b]!;
                     double reach = si.LocalRadius + sj.LocalRadius + margin;
-                    if ((ci - _pieceCentres[j]).LengthSquared > reach * reach) continue;
-                    _featureBase = (i * nb + j + 1) << 13;
+                    if ((ci - nw.PieceCentres[j]).LengthSquared > reach * reach) continue;
+                    nw.FeatureBase = (i * nb + j + 1) << 13;
                     CollideShapes(a, b, si, sj, h);
                 }
             }
 
-            _featureBase = 0;
+            nw.FeatureBase = 0;
             MergeCoincident(first);
         }
 
-        private Vec3[] _pieceCentres = Array.Empty<Vec3>();
 
         /// <summary>[perf] A solid whose contact test is dear enough to be settled first by <see cref="Apart"/> (not a sphere, not a mesh).</summary>
         private static bool Heavy(CollisionShape s) => s.Kind == ShapeKind.Box || s.Kind == ShapeKind.Cylinder || s.Kind == ShapeKind.ConvexHull || s.Kind == ShapeKind.Points;
@@ -1239,10 +1264,11 @@ namespace RobotTwin.CoreSim.Mechanics
         /// </summary>
         private void MergeCoincident(int first)
         {
-            int end = _contactCount;
+            var nw = Narrow;
+            int end = nw.Count;
             if (end - first < 2) return;
             for (int i = first; i < end; i++)
-                if (_contacts[i].TreadCount != 0)
+                if (nw.Contacts[i].TreadCount != 0)
                     return;
             const double same2 = 1e-5 * 1e-5;   // 10 µm
             int kept = first;
@@ -1251,8 +1277,8 @@ namespace RobotTwin.CoreSim.Mechanics
                 bool merged = false;
                 for (int j = first; j < kept; j++)
                 {
-                    ref var k = ref _contacts[j];
-                    ref var c = ref _contacts[i];
+                    ref var k = ref nw.Contacts[j];
+                    ref var c = ref nw.Contacts[i];
                     if (k.SA != c.SA || k.SB != c.SB || (k.RA - c.RA).LengthSquared > same2 || k.N.Dot(c.N) < 0.9999) continue;
                     if (c.Sep < k.Sep) k = c;
                     merged = true;
@@ -1260,11 +1286,11 @@ namespace RobotTwin.CoreSim.Mechanics
                 }
 
                 if (merged) continue;
-                if (kept != i) _contacts[kept] = _contacts[i];
+                if (kept != i) nw.Contacts[kept] = nw.Contacts[i];
                 kept++;
             }
 
-            _contactCount = kept;
+            nw.Count = kept;
         }
 
         private void CollideShapes(int a, int b, CollisionShape sa, CollisionShape sb, double h)
@@ -1338,9 +1364,6 @@ namespace RobotTwin.CoreSim.Mechanics
 
         private static bool IsPolyhedral(CollisionShape s) => s.Kind == ShapeKind.Box || s.Kind == ShapeKind.ConvexHull || s.Kind == ShapeKind.Points;
 
-        private Vec3[] _va = new Vec3[32], _vb = new Vec3[32];
-        private Vec3[] _na = new Vec3[32], _nb = new Vec3[32];
-        private double[] _oa = new double[32], _ob = new double[32];
 
         private static int Transform(CollisionShape s, SceneBody b, ref Vec3[] verts, ref Vec3[] normals, ref double[] offsets, out int planes)
         {
@@ -1373,18 +1396,19 @@ namespace RobotTwin.CoreSim.Mechanics
         /// </summary>
         private void PolyPoly(int a, int b, CollisionShape sa, SceneBody A, CollisionShape sb, SceneBody B, double margin, in ContactProperties props, double h)
         {
-            int nva = Transform(sa, A, ref _va, ref _na, ref _oa, out int npa);
-            int nvb = Transform(sb, B, ref _vb, ref _nb, ref _ob, out int npb);
+            var nw = Narrow;
+            int nva = Transform(sa, A, ref nw.Va, ref nw.Na, ref nw.Oa, out int npa);
+            int nvb = Transform(sb, B, ref nw.Vb, ref nw.Nb, ref nw.Ob, out int npb);
             double best = double.NegativeInfinity;
             var n = Vec3.UnitZ;
             // B's faces: axis from B to A along +n_B.
             for (int f = 0; f < npb; f++)
             {
                 if (sb.FloorPlane[f]) continue;
-                var nf = _nb[f];
+                var nf = nw.Nb[f];
                 double min = double.PositiveInfinity;
-                for (int i = 0; i < nva; i++) min = Math.Min(min, nf.Dot(_va[i]));
-                double sep = min - _ob[f];
+                for (int i = 0; i < nva; i++) min = Math.Min(min, nf.Dot(nw.Va[i]));
+                double sep = min - nw.Ob[f];
                 if (sep > margin) return;
                 if (sep > best)
                 {
@@ -1397,10 +1421,10 @@ namespace RobotTwin.CoreSim.Mechanics
             for (int f = 0; f < npa; f++)
             {
                 if (sa.FloorPlane[f]) continue;
-                var nf = _na[f];
+                var nf = nw.Na[f];
                 double min = double.PositiveInfinity;
-                for (int i = 0; i < nvb; i++) min = Math.Min(min, nf.Dot(_vb[i]));
-                double sep = min - _oa[f];
+                for (int i = 0; i < nvb; i++) min = Math.Min(min, nf.Dot(nw.Vb[i]));
+                double sep = min - nw.Oa[f];
                 if (sep > margin) return;
                 if (sep > best + 1e-5)
                 {
@@ -1411,28 +1435,28 @@ namespace RobotTwin.CoreSim.Mechanics
 
             if (double.IsNegativeInfinity(best)) return;
             double supB = double.NegativeInfinity, supA = double.PositiveInfinity;
-            for (int i = 0; i < nvb; i++) supB = Math.Max(supB, n.Dot(_vb[i]));
-            for (int i = 0; i < nva; i++) supA = Math.Min(supA, n.Dot(_va[i]));
+            for (int i = 0; i < nvb; i++) supB = Math.Max(supB, n.Dot(nw.Vb[i]));
+            for (int i = 0; i < nva; i++) supA = Math.Min(supA, n.Dot(nw.Va[i]));
             const double lateral = 5e-4;
-            int first = _contactCount;
+            int first = nw.Count;
             for (int i = 0; i < nva; i++)
             {
-                var v = _va[i];
-                double s = Gap(v, -n, _nb, _ob, npb, sb.FloorPlane, n.Dot(v) - supB);
-                if (s >= margin || !WithinSides(v, n, _nb, _ob, npb, sb.FloorPlane, lateral)) continue;
+                var v = nw.Va[i];
+                double s = Gap(v, -n, nw.Nb, nw.Ob, npb, sb.FloorPlane, n.Dot(v) - supB);
+                if (s >= margin || !WithinSides(v, n, nw.Nb, nw.Ob, npb, sb.FloorPlane, lateral)) continue;
                 AddContact(a, b, v, n, s, i, props, 0, h);
             }
 
-            int fromA = _contactCount;
+            int fromA = nw.Count;
             for (int i = 0; i < nvb; i++)
             {
-                var u = _vb[i];
-                double s = Gap(u, n, _na, _oa, npa, sa.FloorPlane, supA - n.Dot(u));
-                if (s >= margin || !WithinSides(u, n, _na, _oa, npa, sa.FloorPlane, lateral)) continue;
+                var u = nw.Vb[i];
+                double s = Gap(u, n, nw.Na, nw.Oa, npa, sa.FloorPlane, supA - n.Dot(u));
+                if (s >= margin || !WithinSides(u, n, nw.Na, nw.Oa, npa, sa.FloorPlane, lateral)) continue;
                 bool duplicate = false;
                 for (int c = first; c < fromA; c++)
                 {
-                    if ((_state[_contacts[c].SA].X + _contacts[c].RA - u).LengthSquared < 1e-6)
+                    if ((_state[nw.Contacts[c].SA].X + nw.Contacts[c].RA - u).LengthSquared < 1e-6)
                     {
                         duplicate = true;
                         break;
@@ -1482,6 +1506,7 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Contact candidates of body i (shape si) against the solid of body k; flip = normals reversed (i is the "B" side).</summary>
         private void Candidates(int i, int k, CollisionShape si, SceneBody bi, CollisionShape sk, SceneBody bk, double margin, in ContactProperties props, double h, bool flip)
         {
+            var nw = Narrow;
             var xi = bi.Position;
             var qi = bi.Orientation;
             var xk = bk.Position;
@@ -1523,12 +1548,12 @@ namespace RobotTwin.CoreSim.Mechanics
                 }
 
                 var dl = qi.InverseRotate(dirW);
-                int nc = si.CylinderCandidates(dl, _candidates);
+                int nc = si.CylinderCandidates(dl, nw.Candidates);
                 bool support = Math.Sqrt(dl.X * dl.X + dl.Y * dl.Y) > 1e-6;
                 var tread = new TreadPoints();
                 for (int c = 0; c < nc; c++)
                 {
-                    var p = xi + qi.Rotate(_candidates[c]);
+                    var p = xi + qi.Rotate(nw.Candidates[c]);
                     if (!sk.SignedDistance(qk.InverseRotate(p - xk), margin, out double d, out var nl)) continue;
                     if (d >= margin) continue;
                     var n = qk.Rotate(nl);
@@ -1568,11 +1593,12 @@ namespace RobotTwin.CoreSim.Mechanics
 
         private void AddContact(int a, int b, Vec3 p, Vec3 n, double sep, int feature, in ContactProperties props, double rollRadius, double h)
         {
-            if (_contactCount == _contacts.Length) Array.Resize(ref _contacts, _contacts.Length * 2);
-            ref var c = ref _contacts[_contactCount++];
+            var nw = Narrow;
+            if (nw.Count == nw.Contacts.Length) Array.Resize(ref nw.Contacts, nw.Contacts.Length * 2);
+            ref var c = ref nw.Contacts[nw.Count++];
             c.A = a;
             c.B = b;
-            long key = ((long)(a + 1) << 42) | ((long)(b + 2) << 21) | (uint)((feature + _featureBase) & 0x1FFFFF);
+            long key = ((long)(a + 1) << 42) | ((long)(b + 2) << 21) | (uint)((feature + nw.FeatureBase) & 0x1FFFFF);
             a = SolverIndex(a);   // [weld] the contact acts on the welded group, from its centre of mass
             b = SolverIndex(b);
             c.SA = a;
