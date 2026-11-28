@@ -152,6 +152,58 @@ namespace RobotWin.Studio.Simulation
             probeRow.Children.Add(detach);
             probeRow.Children.Add(probeLabel);
             _root.Children.Add(probeRow);
+            // [scope] the channel's own name (on the scale row and in the CSV header) and colour
+            var nameRow = Row();
+            nameRow.Children.Add(new TextBlock { Text = "Ad", Width = 72, Style = Res("Text.Caption"), VerticalAlignment = VerticalAlignment.Center });
+            var title = new TextBox { Width = 150, ToolTip = "Kanalın adı: ölçek satırında ve CSV başlığında görünür; Enter ile uygula" };
+            void ApplyTitle()
+            {
+                Selected.Title = title.Text.Trim();
+                Changed();
+            }
+
+            title.KeyDown += (_, e) =>
+            {
+                if (e.Key == System.Windows.Input.Key.Enter) ApplyTitle();
+            };
+            title.LostKeyboardFocus += (_, _) => ApplyTitle();
+            nameRow.Children.Add(title);
+            _refresh.Add(() =>
+            {
+                if (!title.IsKeyboardFocusWithin) title.Text = Selected.Title;
+            });
+            _root.Children.Add(nameRow);
+            var colorRow = Row();
+            colorRow.Children.Add(new TextBlock { Text = "Renk", Width = 72, Style = Res("Text.Caption"), VerticalAlignment = VerticalAlignment.Center });
+            var swatches = new List<ToggleButton>();
+            foreach (var color in ScopeView.Palette)
+            {
+                var c = color;
+                var sw = new ToggleButton
+                {
+                    Style = Res("Chip"),
+                    Margin = new Thickness(0, 0, 4, 0),
+                    Padding = new Thickness(5, 3, 5, 3),
+                    ToolTip = "Kanal rengi",
+                    Content = new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(2), Background = new SolidColorBrush(c) }
+                };
+                sw.Click += (_, _) =>
+                {
+                    int rgb = c.R << 16 | c.G << 8 | c.B;
+                    var own = ScopeView.ChannelColors[Selected.Index];
+                    Selected.ColorRgb = c == own ? -1 : rgb;
+                    Changed();
+                };
+                swatches.Add(sw);
+                colorRow.Children.Add(sw);
+            }
+
+            _refresh.Add(() =>
+            {
+                var now = ScopeView.ColorOf(Selected.Index);
+                foreach (var (sw, c) in swatches.Zip(ScopeView.Palette)) sw.IsChecked = c == now;
+            });
+            _root.Children.Add(colorRow);
 
             // ---- display
             Section("Ekran ve ölçüm");
@@ -261,6 +313,8 @@ namespace RobotWin.Studio.Simulation
             var save = Btn("Kaydı kaydet (.rwsim)", () => (Window.GetWindow(this) as MainWindow)?.SaveRecording(), ghost: true);
             save.ToolTip = "Kanallar, olaylar, seri çıktı, araç yörüngesi ve proje tek dosyada";
             bottom.Children.Add(save);
+            bottom.Children.Add(Btn("CSV", ExportCsv, ghost: true, tip: "Ekrandaki örnekler CSV olarak: zaman ve her kanal, adı ve birimiyle"));
+            bottom.Children.Add(Btn("PNG", ExportPng, ghost: true, tip: "Osiloskop ekranının görüntüsü PNG olarak"));
             _root.Children.Add(bottom);
 
             Sim.InstrumentsChanged += (_, _) => Refresh();
@@ -269,6 +323,50 @@ namespace RobotWin.Studio.Simulation
                 if (e.PropertyName == nameof(SimulationSession.State)) Refresh();
             };
             Loaded += (_, _) => Refresh();
+        }
+
+        /// <summary>[scope] The screen's samples to a CSV file (RobotTwin.CoreSim.Instruments.ScopeExport).</summary>
+        private void ExportCsv()
+        {
+            if (Scope.Frame is not { Length: > 0 } frame)
+            {
+                Workspace.Current.Status = "Dışa aktarılacak bir ekran yok: önce bir dalga yakalayın";
+                return;
+            }
+
+            var dlg = new Microsoft.Win32.SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = "osiloskop.csv" };
+            if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
+            System.IO.File.WriteAllText(dlg.FileName, RobotTwin.CoreSim.Instruments.ScopeExport.ToCsv(frame), new System.Text.UTF8Encoding(true));
+            Workspace.Current.Status = "Osiloskop verisi kaydedildi: " + System.IO.Path.GetFileName(dlg.FileName);
+        }
+
+        /// <summary>[scope] The scope's screen as it is drawn now, to a PNG file at the display's own scale.</summary>
+        private void ExportPng()
+        {
+            if (_view.ActualWidth < 1 || _view.ActualHeight < 1)
+            {
+                Workspace.Current.Status = "Osiloskop ekranı görünmüyor";
+                return;
+            }
+
+            var dlg = new Microsoft.Win32.SaveFileDialog { Filter = "PNG (*.png)|*.png", FileName = "osiloskop.png" };
+            if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
+            SaveScreen(_view, dlg.FileName);
+            Workspace.Current.Status = "Osiloskop görüntüsü kaydedildi: " + System.IO.Path.GetFileName(dlg.FileName);
+        }
+
+        /// <summary>A view drawn into a PNG at its display's DPI.</summary>
+        internal static void SaveScreen(FrameworkElement view, string path)
+        {
+            var dpi = VisualTreeHelper.GetDpi(view);
+            var bmp = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)Math.Ceiling(view.ActualWidth * dpi.DpiScaleX), (int)Math.Ceiling(view.ActualHeight * dpi.DpiScaleY),
+                dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+            bmp.Render(view);
+            var png = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            png.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bmp));
+            using var file = System.IO.File.Create(path);
+            png.Save(file);
         }
 
         private static SimulationSession Sim => Workspace.Current.Simulation;
@@ -378,9 +476,11 @@ namespace RobotWin.Studio.Simulation
                 };
                 if (colored)
                 {
-                    var c = index < 4 ? ScopeView.ColorOf(index) : ScopeView.MathColor;
-                    b.Foreground = new SolidColorBrush(Shell.Themes.Readable(c));   // [theme] a yellow CH1 read 1.1:1 on the light themes
-                    Shell.Themes.Changed += () => b.Foreground = new SolidColorBrush(Shell.Themes.Readable(c));
+                    // [theme] a yellow CH1 read 1.1:1 on the light themes; the colour follows one the user picks
+                    void Paint() => b.Foreground = new SolidColorBrush(Shell.Themes.Readable(index < 4 ? ScopeView.ColorOf(index) : ScopeView.MathColor));
+                    Paint();
+                    Shell.Themes.Changed += Paint;
+                    _refresh.Add(Paint);
                 }
 
                 b.Click += (_, _) =>

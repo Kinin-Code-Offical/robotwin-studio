@@ -76,6 +76,12 @@ namespace RobotTwin.CoreSim.Instruments
         /// <summary>What the probe is attached to ("ÇIKIŞ", "R1 akımı").</summary>
         public string Label { get; set; } = string.Empty;
 
+        /// <summary>The name the user gives the channel ("Motor akımı"); empty: none, the channel's number alone.</summary>
+        public string Title { get; set; } = string.Empty;
+
+        /// <summary>The colour the user picked for the channel as 0xRRGGBB; -1: the channel's own.</summary>
+        public int ColorRgb { get; set; } = -1;
+
         /// <summary>"V" for voltage probes, "A" for a current probe.</summary>
         public string Unit { get; set; } = "V";
 

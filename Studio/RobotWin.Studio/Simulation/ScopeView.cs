@@ -109,7 +109,20 @@ namespace RobotWin.Studio.Simulation
             return p;
         }
 
-        public static Color ColorOf(int channel) => channel >= 0 && channel < ChannelColors.Length ? ChannelColors[channel] : MathColor;
+        /// <summary>A channel's colour: the one the user picked for it (ScopeChannel.ColorRgb), else its own.</summary>
+        public static Color ColorOf(int channel)
+        {
+            if (channel < 0 || channel >= ChannelColors.Length) return MathColor;
+            int rgb = Workspace.Current?.Simulation?.Scope?.Channels[channel].ColorRgb ?? -1;
+            return rgb < 0 ? ChannelColors[channel] : Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+        }
+
+        /// <summary>The colours a channel may take: the four of its own, then green, red, white; all read on the dark screen.</summary>
+        public static readonly Color[] Palette =
+        {
+            ChannelColors[0], ChannelColors[1], ChannelColors[2], ChannelColors[3],
+            Color.FromRgb(0x5B, 0xD1, 0x6A), Color.FromRgb(0xFF, 0x6B, 0x6B), Color.FromRgb(0xE8, 0xE8, 0xEC)
+        };
 
         /// <summary>[mask] The band of ±<paramref name="divisions"/> about a kept trace, as a flat translucent fill.</summary>
         private static void DrawMaskBand(DrawingContext dc, Rect plot, ScopeFrame frame, ScopeTrace trace, double divisions, Color color)
@@ -338,7 +351,7 @@ namespace RobotWin.Studio.Simulation
                 string coupling = ch.Coupling == ScopeCoupling.GND ? "⏚" : ch.Coupling.ToString();
                 string text = ch.Source == null
                     ? $"{ch.Index + 1}  —"
-                    : $"{ch.Index + 1} {SiValue.Format(ch.Scale, ch.Unit)}/div {coupling}{(ch.IsCurrent ? " " + Shell.Lang.T("akım") : $" {ch.ProbeAttenuation:0}×")}{(ch.BandwidthLimit ? " BW" : "")}{(ch.Invert ? " INV" : "")}";
+                    : $"{ch.Index + 1}{(ch.Title.Length > 0 ? " " + ch.Title : "")} {SiValue.Format(ch.Scale, ch.Unit)}/div {coupling}{(ch.IsCurrent ? " " + Shell.Lang.T("akım") : $" {ch.ProbeAttenuation:0}×")}{(ch.BandwidthLimit ? " BW" : "")}{(ch.Invert ? " INV" : "")}";
                 var ft = Label(text.Replace(" ", " "), color, 10.5);
                 var box = new Rect(x, y, ft.Width + 10, ft.Height + 4);
                 dc.DrawRoundedRectangle(null, Pen(ch.Index == Sim.SelectedScopeChannel ? color : Color.FromArgb(0x50, color.R, color.G, color.B), 1), box, 3, 3);

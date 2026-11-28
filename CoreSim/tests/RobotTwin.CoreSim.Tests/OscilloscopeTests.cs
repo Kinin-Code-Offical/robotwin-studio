@@ -51,6 +51,22 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void TheScreenExportsAsCsvWithTheChannelsNames()
+        {
+            // [scope] the time column and each trace on the screen, headed by channel, name and unit; invariant numbers
+            var scope = Scope(Sampled(Sine, 0.03, 4e-6, 14e-6), 200e-6, 0.5);
+            scope.Channels[0].Title = "Motor, akım";
+            var frame = scope.Acquire(0.02)!;
+            string csv = ScopeExport.ToCsv(frame);
+            var lines = csv.TrimEnd('\n').Split('\n');
+            Assert.Equal("t (s),\"CH1 Motor, akım (V)\"", lines[0]);
+            Assert.Equal(frame.Length + 1, lines.Length);
+            var cells = lines[1].Split(',');
+            Assert.Equal(frame.TimeAt(0), double.Parse(cells[0], System.Globalization.CultureInfo.InvariantCulture), 12);
+            Assert.Equal(frame.Traces[0].Values[0], double.Parse(cells[1], System.Globalization.CultureInfo.InvariantCulture), 12);
+        }
+
+        [Fact]
         public void TriggeredDisplayIsStableFromFrameToFrame()
         {
             var src = Sampled(Sine, 0.06, 4e-6, 14e-6);
