@@ -845,7 +845,7 @@ Kartta yazılım yoksa **Olaylar** sekmesine "Yüklü yazılım yok (kart boşta
 Gerçek zamanlı çalıştırma ekrana yetişmek zorundadır. **Render** ise bir kaydı ekrandan bağımsız olarak, seçtiğiniz doğrulukta baştan sona yeniden hesaplar ve sonra video gibi oynatır.
 
 1. Araç çubuğunda **● Kayıt**'a basın (Ctrl+R). Dünya baştan çalışmaya başlar.
-2. İstediğiniz an **Kaydı bitir**'e basın. Render penceresi açılır ve bu süre hesaplanmaya başlar. **Simülasyon › Render** (Ctrl+F5) ile süreyi kendiniz de girebilirsiniz.
+2. İstediğiniz an **Kaydı bitir**'e basın. Render penceresi açılır ve önce canlı koşunun kendi kaydını gösterir: zaman çizelgesi (kartların pin kenarları ve kesmeleri, seri satırları, olaylar), devre ve hareket kanalları, oynatma; bunlar dünya çalışırken kaydedilir, render beklenmez. Ardından bu süre tam fizikle (gerilme, akış, ısı) hesaplanmaya başlar ve bitince kaydın yerini alır. **Simülasyon › Render** (Ctrl+F5) ile süreyi kendiniz de girebilirsiniz.
 
 ![Render: gerilme, kuvvetler ve hava akışı](../images/world-render.png)
 

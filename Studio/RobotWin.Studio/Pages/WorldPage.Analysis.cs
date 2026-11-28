@@ -39,6 +39,7 @@ namespace RobotWin.Studio.Pages
 
         private bool _recording;
         private double _recordStart;
+        private RobotTwin.CoreSim.Analysis.Recording.LiveRecorder? _liveRecording;   // [unified-timeline] the timeline, recorded as the world runs
 
         private void OnRecord(object sender, RoutedEventArgs e)
         {
@@ -50,6 +51,7 @@ namespace RobotWin.Studio.Pages
                 _recording = _session.State != SimState.Stopped;
                 _recordStart = _session.Time;
                 if (_recording) _session.BeginJournal();   // [replay] controller reports and interventions, time-stamped
+                if (_recording) _liveRecording = new RobotTwin.CoreSim.Analysis.Recording.LiveRecorder(_session);   // [unified-timeline] no render needed for it
                 if (_recording) Shell.Workspace.Current.Status = "Kayıt alınıyor: kumanda ve müdahaleler de kaydediliyor. Bitirmek için Kayıt düğmesine yeniden basın.";
             }
             else
@@ -57,8 +59,11 @@ namespace RobotWin.Studio.Pages
                 double end = _session.Time;
                 _recording = false;
                 var inputs = _session.EndJournal();
+                _session.Pause();   // the world stops stepping: the recording ends where it is
+                var live = _liveRecording?.Finish();
+                _liveRecording = null;
                 StopSimulation();
-                OpenRender(Math.Max(0.05, end - _recordStart), autoStart: true, inputs);
+                OpenRender(Math.Max(0.05, end - _recordStart), autoStart: true, inputs, live);
             }
 
             RecordButton.IsChecked = _recording;
@@ -67,7 +72,9 @@ namespace RobotWin.Studio.Pages
         }
 
         /// <summary>Opens the render window on a private copy of the world (later edits do not affect it).</summary>
-        public RenderWindow? OpenRender(double duration = 2, bool autoStart = false, RobotTwin.CoreSim.Automation.InputJournal? inputs = null)
+        /// <param name="live">[unified-timeline] The run's own recording: shown at once, while the render recomputes it.</param>
+        public RenderWindow? OpenRender(double duration = 2, bool autoStart = false, RobotTwin.CoreSim.Automation.InputJournal? inputs = null,
+            RobotTwin.CoreSim.Analysis.AnalysisResult? live = null)
         {
             var world = World;
             if (world == null)
@@ -99,6 +106,7 @@ namespace RobotWin.Studio.Pages
                 c => Scene.CablePinsOf(world.Cables.FirstOrDefault(x => x.Id == c.Id) ?? c));
             var w = new RenderWindow(copy, geometry, duration, Scene.Library, Scene.MassOf) { Owner = Window.GetWindow(this), Inputs = inputs };
             w.Show();
+            if (live != null) w.ShowLive(live);
             if (autoStart) _ = w.RenderNow();
             return w;
         }

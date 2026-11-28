@@ -846,7 +846,7 @@ If a board has no firmware, the **Events** tab says "No firmware loaded (the boa
 Real-time running has to keep up with the screen. A **render** recomputes a recording from start to end at the accuracy you choose, independent of the screen, then plays it like a video.
 
 1. Press **● Record** on the toolbar (Ctrl+R). The world restarts from the beginning.
-2. Press **Stop recording** whenever you like. The render window opens and starts computing that span. You can also enter the duration yourself with **Simulation → Render: full physics, stress, flow, heat…** (Ctrl+F5).
+2. Press **Stop recording** whenever you like. The render window opens and first shows the live run's own recording: the timeline (the boards' pin edges and interrupts, serial lines, events), the circuit and motion channels and the replay, recorded as the world ran, with no render to wait for. Then it starts computing that span with full physics (stress, flow, heat), which takes the recording's place when done. You can also enter the duration yourself with **Simulation → Render: full physics, stress, flow, heat…** (Ctrl+F5).
 
 ![Render: stress, forces and air flow](../../images/world-render.png)
 

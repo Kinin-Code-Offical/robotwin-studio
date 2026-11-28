@@ -95,6 +95,7 @@ namespace RobotWin.Studio.World
             _impactLogged = 0;
             _serial.Clear();
             SerialTotal = 0;
+            ProbeReset();   // [unified-timeline]
             _failedObjects.Clear();
             world = world.ForRun();   // [active] [empty] switched-off objects (and what rides on them) are not in the run
             World = world;
@@ -261,6 +262,7 @@ namespace RobotWin.Studio.World
         /// <summary>A log line from wherever the run is advancing: on the simulation thread it waits for the next frame.</summary>
         private void AddLog(SimLogEntry entry)
         {
+            ProbeLog(entry);   // [unified-timeline] and its events
             if (SimThread.OnSimThread || System.Threading.Tasks.Task.CurrentId != null)
             {
                 lock (_boardOutput) _logFromThread.Add(entry);   // [bigscene] a board on a worker thread too
@@ -493,6 +495,7 @@ namespace RobotWin.Studio.World
                         t1 = Lap(ref _costPhysics, t1);
                         AdvanceSense(dt);   // [sense] line sensors, LiDAR, GPS, IMU, compass, encoders
                         Lap(ref _costSense, t1);
+                        Sliced?.Invoke(dt);   // [unified-timeline] a live recording samples here, on this thread
                         covered += dt;
                         _simulated += dt;
                     }
@@ -800,6 +803,7 @@ namespace RobotWin.Studio.World
 
         private void AppendSerialCore(string source, string text)
         {
+            ProbeSerial(source, text);   // [unified-timeline] a live recording's serial lines
             if (source != _serialSource)
             {
                 int before = _serial.Length;

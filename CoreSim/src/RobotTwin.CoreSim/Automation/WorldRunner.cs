@@ -32,8 +32,37 @@ namespace RobotTwin.CoreSim.Automation
     /// stepped deterministically. Radio links (IR/RF/Wi-Fi between boards), sounds and the USB-cable
     /// serial gating of the app are not part of the headless run.
     /// </summary>
-    public sealed class WorldRunner : SimRunner
+    public sealed class WorldRunner : SimRunner, RobotTwin.CoreSim.Analysis.Recording.IProbeSource
     {
+        // [unified-timeline] the probe's view of the run's boards: one ProbeBoard for each, kept
+        private readonly Dictionary<BoardInfo, RobotTwin.CoreSim.Analysis.Recording.ProbeBoard> _probeBoards =
+            new Dictionary<BoardInfo, RobotTwin.CoreSim.Analysis.Recording.ProbeBoard>();
+
+        IReadOnlyList<RobotTwin.CoreSim.Analysis.Recording.ProbeBoard> RobotTwin.CoreSim.Analysis.Recording.IProbeSource.ProbeBoards
+        {
+            get
+            {
+                var list = new List<RobotTwin.CoreSim.Analysis.Recording.ProbeBoard>(Boards.Count);
+                foreach (var b in Boards)
+                {
+                    if (!_probeBoards.TryGetValue(b, out var p)) _probeBoards[b] = p = new RobotTwin.CoreSim.Analysis.Recording.ProbeBoard();
+                    p.ObjectId = b.ObjectId;
+                    p.RefDes = b.RefDes;
+                    p.Name = b.Name;
+                    p.Running = b.Running;
+                    p.Avr = b.Avr;
+                    p.Esp32 = b.Esp32;
+                    list.Add(p);
+                }
+
+                return list;
+            }
+        }
+
+        IReadOnlyDictionary<string, string> RobotTwin.CoreSim.Analysis.Recording.IProbeSource.TakeSerial() => ReadSerial(null, true);
+
+        IReadOnlyList<RunnerEvent> RobotTwin.CoreSim.Analysis.Recording.IProbeSource.TakeEvents() => DrainEvents();
+
         private enum PortMode
         {
             Voltage,

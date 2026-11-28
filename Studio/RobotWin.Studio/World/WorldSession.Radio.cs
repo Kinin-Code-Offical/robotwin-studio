@@ -78,6 +78,7 @@ namespace RobotWin.Studio.World
         /// <summary>Hook from the firmware attach paths: remembers which object a co-simulation belongs to and plugs ESP32s into the medium.</summary>
         private void TrackBoard(object cosim, WorldProgrammable prog)
         {
+            ProbeTrack(cosim, prog);   // [unified-timeline]
             _boardObject[cosim] = prog.ObjectId;
             if (cosim is Esp32CoSimulation esp && Radio != null && World != null && WorldRadio.NodeOf(Radio, prog, World) is { } node)
             {

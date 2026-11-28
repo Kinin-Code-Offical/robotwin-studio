@@ -8,7 +8,8 @@ using RobotTwin.CoreSim.Sandbox;
 namespace RobotTwin.CoreSim.Analysis.Recording
 {
     /// <summary>
-    /// [analysis] Samples every signal of a running <see cref="WorldRunner"/> into a <see cref="ChannelStore"/>:
+    /// [analysis] Samples every signal of a running world (an <see cref="IProbeSource"/>: a headless
+    /// <see cref="WorldRunner"/>, or the app's live session) into a <see cref="ChannelStore"/>:
     /// rigid bodies (pose, velocity, acceleration, net contact force, energy), joints (angle, speed,
     /// reaction force/torque, drive torque), every analog device signal (currents, voltages, power,
     /// temperatures, speeds …), named circuit nodes, scene totals, firmware serial and events — and the
@@ -32,7 +33,7 @@ namespace RobotTwin.CoreSim.Analysis.Recording
             public Channel Angle = null!, Speed = null!, Fx = null!, Fy = null!, Fz = null!, F = null!, T = null!, Drive = null!, Power = null!;
         }
 
-        private readonly WorldRunner _runner;
+        private readonly IProbeSource _runner;
         private readonly AnalysisSettings _settings;
         private readonly AnalysisResult _result;
         private readonly ChannelStore _store;
@@ -45,7 +46,7 @@ namespace RobotTwin.CoreSim.Analysis.Recording
         private Channel? _ke, _pe, _et, _nc, _pc;
         private readonly Dictionary<string, Channel> _signals = new Dictionary<string, Channel>(StringComparer.Ordinal);
 
-        public WorldProbe(WorldRunner runner, AnalysisSettings settings, AnalysisResult result, IEnumerable<string> loadBodies)
+        public WorldProbe(IProbeSource runner, AnalysisSettings settings, AnalysisResult result, IEnumerable<string> loadBodies)
         {
             _runner = runner;
             _settings = settings;
@@ -289,13 +290,13 @@ namespace RobotTwin.CoreSim.Analysis.Recording
                 foreach (var (node, ch) in _nodes) _store.Set(ch, sim.NodeVoltage(node));
             }
 
-            foreach (var kv in _runner.ReadSerial(null, true))
+            foreach (var kv in _runner.TakeSerial())
             {
                 if (kv.Value.Length > 0) _result.Serial.Add(new SerialLine { Time = t, Board = kv.Key, Text = kv.Value });
             }
 
             TapFirmware();   // [unified-timeline]
-            foreach (var e in _runner.DrainEvents())
+            foreach (var e in _runner.TakeEvents())
             {
                 if (_result.Events.Count < 20000) _result.Events.Add(new EventLine { Time = e.Time, Source = e.Source, Kind = e.Kind.ToString().ToLowerInvariant(), Message = e.Message });
             }
@@ -305,7 +306,7 @@ namespace RobotTwin.CoreSim.Analysis.Recording
 
         private sealed class FirmwareTap
         {
-            public FirmwareTap(BoardInfo board, Firmware.FirmwareCoSimulation avr, Firmware.McuTrace trace, string name)
+            public FirmwareTap(ProbeBoard board, Firmware.FirmwareCoSimulation avr, Firmware.McuTrace trace, string name)
             {
                 Board = board;
                 Avr = avr;
@@ -313,7 +314,7 @@ namespace RobotTwin.CoreSim.Analysis.Recording
                 Name = name;
             }
 
-            public BoardInfo Board { get; }
+            public ProbeBoard Board { get; }
             public Firmware.FirmwareCoSimulation Avr { get; }
             public Firmware.McuTrace Trace { get; }
             public string Name { get; }
@@ -336,7 +337,7 @@ namespace RobotTwin.CoreSim.Analysis.Recording
         /// </summary>
         private void TapFirmware()
         {
-            foreach (var b in _runner.Boards)
+            foreach (var b in _runner.ProbeBoards)
             {
                 if (b.RefDes.Length > 0 && !_result.BoardNames.ContainsKey(b.RefDes)) _result.BoardNames[b.RefDes] = string.IsNullOrWhiteSpace(b.Name) ? b.RefDes : b.Name;
                 if (b.Esp32 is { } esp && !_espTaps.Any(x => ReferenceEquals(x.Board, esp))) TapEsp32(esp, string.IsNullOrWhiteSpace(b.Name) ? b.RefDes : b.Name);

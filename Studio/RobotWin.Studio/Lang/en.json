@@ -4328,6 +4328,8 @@
   "Render alınamadı: ": "Render failed: ",
   "Render alınınca kayıt burada saniye saniye oynatılır.": "Once rendered, the recording plays back here second by second.",
   "Render başlıyor…": "Starting render…",
+  "Canlı koşunun kendi kaydı: {…} s, {…} kare, {…} seri satırı, {…} pin izi. Render tam fizikle (gerilme, akış, ısı) yeniden hesaplar.": "The live run's own recording: {0} s, {1} frames, {2} serial lines, {3} pin traces. The render recomputes it with full physics (stress, flow, heat).",
+  "Canlı koşudan doğrudan kayıt: {…} s, {…} örnek ({…} Hz'e kadar), {…} seri satırı, {…} olay; tam fizik (gerilme, akış, ısı) yok.": "Recorded straight from the live run: {0} s, {1} samples (up to {2} Hz), {3} serial lines, {4} events; no full physics (stress, flow, heat).",
   "Render için önce bir dünya açın.": "Open a world first to render.",
   "Render: tam fizik, gerilme, akış, ısı…": "Render: full physics, stress, flow, heat…",
   "Rengin kendisi: 0 kırmızı, 30 turuncu, 60 sarı, 120 yeşil, 200 mavi, 270 mor, 330 pembe": "The colour itself: 0 red, 30 orange, 60 yellow, 120 green, 200 blue, 270 purple, 330 pink",

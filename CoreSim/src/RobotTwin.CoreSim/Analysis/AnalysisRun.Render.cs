@@ -19,7 +19,7 @@ namespace RobotTwin.CoreSim.Analysis
     /// </summary>
     public static partial class AnalysisRun
     {
-        private sealed class PoseChannels
+        internal sealed class PoseChannels
         {
             public string Id = string.Empty;
             public Channel Px = null!, Py = null!, Pz = null!, Qw = null!, Qx = null!, Qy = null!, Qz = null!, Port = null!, Temp = null!;
@@ -28,7 +28,7 @@ namespace RobotTwin.CoreSim.Analysis
             public Channel? ChuteOpen, ChuteX, ChuteY, ChuteZ;   // [launch]
         }
 
-        private static List<PoseChannels> PoseRecorder(WorldDocument world, ChannelStore store)
+        internal static List<PoseChannels> PoseRecorder(WorldDocument world, ChannelStore store)
         {
             var list = new List<PoseChannels>();
             foreach (var o in world.Objects)
@@ -85,7 +85,7 @@ namespace RobotTwin.CoreSim.Analysis
             return list;
         }
 
-        private static void RecordPoses(WorldPhysics? physics, ChannelStore store, List<PoseChannels> list, WorldDocument world)
+        internal static void RecordPoses(WorldPhysics? physics, ChannelStore store, List<PoseChannels> list, WorldDocument world)
         {
             foreach (var p in list)
             {

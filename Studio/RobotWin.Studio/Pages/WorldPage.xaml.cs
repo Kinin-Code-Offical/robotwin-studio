@@ -227,6 +227,8 @@ namespace RobotWin.Studio.Pages
 
         public void StopSimulation()
         {
+            _liveRecording?.Cancel();   // [unified-timeline] a recording stopped before it ended is dropped
+            _liveRecording = null;
             _session.Stop();
             Scene.ClearEffects();
             UpdateRunButton();

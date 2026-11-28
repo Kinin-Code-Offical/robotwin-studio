@@ -1357,6 +1357,16 @@ namespace RobotWin.Studio.Analysis
             return brush;
         }
 
+        /// <summary>
+        /// [unified-timeline] Shows a live run's own recording (its timeline, serial lines, the boards' pins and interrupts,
+        /// the poses for the replay), made as it ran: at once, before a render recomputes the run with full physics.
+        /// </summary>
+        public void ShowLive(AnalysisResult r)
+        {
+            Show(r);
+            _status.Text = $"Canlı koşunun kendi kaydı: {r.SimulatedSeconds:0.###} s, {r.Channels.Count} kare, {r.Serial.Count} seri satırı, {r.Logic.Count} pin izi. Render tam fizikle (gerilme, akış, ısı) yeniden hesaplar.";
+        }
+
         /// <summary>Shows a saved render of this world (its poses are matched to the world's objects by id).</summary>
         public void ShowSaved(AnalysisResult r)
         {
