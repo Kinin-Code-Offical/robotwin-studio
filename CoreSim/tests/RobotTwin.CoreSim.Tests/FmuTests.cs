@@ -32,9 +32,10 @@ namespace RobotTwin.CoreSim.Tests
         private static readonly Lazy<byte[]> Lowpass = new Lazy<byte[]>(() => Build("lowpass"));
         private static readonly Lazy<byte[]> Ball = new Lazy<byte[]>(() => Build("ball"));   // [fmi-me]
         private static readonly Lazy<byte[]> Lag = new Lazy<byte[]>(() => Build("lag"));   // [fmi-me]
+        private static readonly Lazy<byte[]> Lowpass3 = new Lazy<byte[]>(() => Build("lowpass3", "x86_64-windows"));   // [fmi3]
 
         /// <summary>A test FMU: its C source compiled with MSVC and packed with its description, as an FMU is shipped.</summary>
-        private static byte[] Build(string name)
+        private static byte[] Build(string name, string platform = "win64")
         {
             string fixtures = Path.Combine(AppContext.BaseDirectory, "Fixtures", "fmu");
             string dir = Path.Combine(Path.GetTempPath(), "robotwin-fmu-build-" + Guid.NewGuid().ToString("N").Substring(0, 8));
@@ -47,7 +48,7 @@ namespace RobotTwin.CoreSim.Tests
             using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
             {
                 zip.CreateEntryFromFile(Path.Combine(fixtures, name + ".xml"), "modelDescription.xml");
-                zip.CreateEntryFromFile(Path.Combine(dir, name + ".dll"), $"binaries/win64/{name}.dll");
+                zip.CreateEntryFromFile(Path.Combine(dir, name + ".dll"), $"binaries/{platform}/{name}.dll");
             }
 
             return ms.ToArray();
@@ -119,7 +120,7 @@ namespace RobotTwin.CoreSim.Tests
                 for (int i = 0; i < 100; i++) sim.Step(0.001);
                 double expected = 2 * (1 - Math.Exp(-0.1 / 0.05)) * 1000 / 1001;
                 double v = sim.NodeVoltage(output);
-                _out.WriteLine($"out {v:0.0000} V at 100 ms (expected {expected:0.0000} V); integrator steps {block.Instance.IntegratorSteps}");
+                _out.WriteLine($"out {v:0.0000} V at 100 ms (expected {expected:0.0000} V); integrator steps {((Fmu2Instance)block.Instance).IntegratorSteps}");
                 Assert.InRange(v, expected * 0.98, expected * 1.001);
             }
 
@@ -139,7 +140,66 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal(new[] { "k", "tau", "limit" }, d.Parameters.Select(v => v.Name));
             Assert.Equal(FmuType.Boolean, d.Find("saturated")!.Type);
             Assert.Equal(0.01, d.Find("tau")!.Start);
-            Assert.Throws<NotSupportedException>(() => FmuDescription.Parse("<fmiModelDescription fmiVersion=\"3.0\" modelName=\"x\"/>"));
+            Assert.Throws<NotSupportedException>(() => FmuDescription.Parse("<fmiModelDescription fmiVersion=\"4.0\" modelName=\"x\"/>"));
+        }
+
+        /// <summary>[fmi3] An FMI 3.0 description: the token, the typed variables (Float64, Float32, Int32, Boolean), the outputs.</summary>
+        [Fact]
+        public void AnFmi3DescriptionIsRead()
+        {
+            var d = FmuDescription.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "fmu", "lowpass3.xml")));
+            Assert.True(d.IsFmi3);
+            Assert.Equal("{3c1e9b2a-5d7f-4e21-9a43-lowpass3}", d.Guid);
+            Assert.Equal("lowpass3", d.CoSimulationId);
+            Assert.Equal(new[] { "u" }, d.Inputs.Select(v => v.Name));
+            Assert.Equal(new[] { "y", "steps", "saturated" }, d.Outputs.Select(v => v.Name));
+            Assert.Equal(new[] { "k", "tau", "limit", "gain32" }, d.Parameters.Select(v => v.Name));
+            Assert.Equal("Float32", d.Find("gain32")!.Fmi3Type);
+            Assert.Equal(FmuType.Integer, d.Find("steps")!.Type);
+            Assert.Equal(FmuType.Boolean, d.Find("saturated")!.Type);
+            Assert.Equal(0.01, d.Find("tau")!.Start);
+        }
+
+        /// <summary>[fmi3] An FMI 3.0 co-simulation FMU on its own and in the circuit, as the 2.0 one: the exact lag.</summary>
+        [MsvcFact]
+        public void AnFmi3FmuRunsAloneAndInTheCircuit()
+        {
+            var fmu = FmuArchive.Open(Lowpass3.Value);
+            var d = fmu.Description;
+            using (var a = FmuInstance.Open(fmu, "a"))
+            {
+                Assert.IsType<Fmu3Instance>(a);
+                a.Initialise(0, new Dictionary<string, double> { ["k"] = 2, ["tau"] = 0.05, ["gain32"] = 0.5 });
+                a.Set(d.Find("u")!, 3);
+                for (int i = 0; i < 100; i++) a.Step(0.001);
+                Assert.Equal(3 * (1 - Math.Exp(-2)), a.Get(d.Find("y")!), 9);   // k · gain32 · u = 3
+                Assert.Equal(100, a.Get(d.Find("steps")!));
+                Assert.Equal(0, a.Get(d.Find("saturated")!));
+                Assert.Equal(0.5, a.Get(d.Find("gain32")!), 6);
+                Assert.Equal(0.1, a.Time, 9);
+                Assert.Contains(a.Messages, m => m.Contains("lowpass3 ready"));
+            }
+
+            var c = new AnalogCircuit();
+            int input = c.Node("in"), output = c.Node("out");
+            c.Add(new VoltageSource("V1", input, AnalogCircuit.Ground, 1.0));
+            c.Add(new Resistor("RL", output, AnalogCircuit.Ground, 1000));
+            var block = c.Add(new FmuBlock("U1", FmuInstance.Open(fmu, "U1"), AnalogCircuit.Ground,
+                new[] { (d.Find("u")!, input) }, new[] { (d.Find("y")!, output) },
+                new Dictionary<string, double> { ["k"] = 2, ["tau"] = 0.05 }));
+            using (block)
+            {
+                var sim = new AnalogSimulator(c);
+                sim.Initialize(InitialState.OperatingPoint);
+                for (int i = 0; i < 100; i++) sim.Step(0.001);
+                double expected = 2 * (1 - Math.Exp(-0.1 / 0.05)) * 1000 / 1001;
+                double v = sim.NodeVoltage(output);
+                _out.WriteLine($"FMI 3.0: out {v:0.0000} V at 100 ms (expected {expected:0.0000} V)");
+                Assert.InRange(v, expected * 0.98, expected * 1.001);
+            }
+
+            var part = FmuImport.ToCustomPart(Lowpass3.Value);   // a part in the library too
+            Assert.Equal(new[] { "u", "y", "steps", "saturated", "REF" }, part.Definition!.Pins.Select(p => p.Name));
         }
 
         [MsvcFact]

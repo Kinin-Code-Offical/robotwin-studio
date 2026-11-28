@@ -415,7 +415,7 @@ Ayrıntılı anlatım: [docs/kullanim/07-dunya.md](docs/kullanim/07-dunya.md).
 ### Köprüler
 
 - **KiCad:** şemayı açıp simüle etme (bağlantılar kicad-cli ile birebir), KiCad 8 projesi dışa aktarma, yerleşimi geri alma.
-- **FMU (FMI 2.0):** başka araçların modelleri devrede bir blok olarak çalışır.
+- **FMU (FMI 2.0 ve 3.0):** başka araçların modelleri devrede bir blok olarak çalışır.
 - **STEP ve IGES** (Open CASCADE), STL/OBJ/PLY.
 
 ### Pencere ve gezinme

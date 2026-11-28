@@ -37,7 +37,7 @@ namespace RobotWin.Studio.Pages
             Item("SPICE model dosyaları (.lib, .mod, .cir, .sub)…", () => PickFiles("SPICE (*.lib, *.mod, *.cir, *.sub, *.sp, *.spi)|*.lib;*.mod;*.cir;*.sub;*.sp;*.spi;*.inc|Tüm dosyalar (*.*)|*.*", paths => ShowImport(new SpiceAdapter(SpiceImportSession.Open(paths)))),
                 ".model kartları ve .subckt alt devreleri");
             Item("Fritzing parçaları (.fzpz)…", () => PickFiles("Fritzing parçası (*.fzpz, *.fzp)|*.fzpz;*.fzp", paths => ShowImport(new FritzingAdapter(paths))));
-            Item("FMU (FMI 2.0, .fmu)…", () => PickFiles("FMU (*.fmu)|*.fmu", ImportFmus),
+            Item("FMU (FMI 2.0 / 3.0, .fmu)…", () => PickFiles("FMU (*.fmu)|*.fmu", ImportFmus),
                 "Modelica, Simulink, 20-sim … modelleri: ortak benzetim (Co-Simulation) FMU'su, girişleri ve çıkışları pin olan bir parça olur");
             menu.Items.Add(new Separator());
             Item("Arduino kütüphanesi (.zip)…", () => PickFiles("Arduino kütüphanesi (*.zip)|*.zip", paths => ShowImport(new ArduinoAdapter(paths))), "library.properties içeren .zip; Kod sayfasının derleyicisi bulur");

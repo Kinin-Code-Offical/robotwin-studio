@@ -30,7 +30,8 @@ namespace RobotTwin.CoreSim.Fmi
             get
             {
                 if (Description.BinaryId.Length == 0) return null;
-                string path = Path.Combine(Folder, "binaries", "win64", Description.BinaryId + ".dll");
+                // [fmi3] FMI 3.0 names the platform x86_64-windows; 2.0 win64
+                string path = Path.Combine(Folder, "binaries", Description.IsFmi3 ? "x86_64-windows" : "win64", Description.BinaryId + ".dll");
                 return File.Exists(path) ? path : null;
             }
         }

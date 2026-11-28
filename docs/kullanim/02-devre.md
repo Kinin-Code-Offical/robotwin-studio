@@ -167,14 +167,14 @@ Alternatifler parçaları adlarıyla değil kimlikleriyle izler: bir parçanın 
 
 ![KiCad şemasından açılan devre](../images/kicad-schematic-import.png)
 
-## FMU modelleri (FMI 2.0)
+## FMU modelleri (FMI 2.0 ve 3.0)
 
-Modelica, Simulink, 20-sim, OpenModelica gibi araçlardan dışa aktarılan bir **FMU** (`.fmu`, FMI 2.0 ortak benzetim ya da model değişimi) devrede bir blok olarak çalışır.
+Modelica, Simulink, 20-sim, OpenModelica gibi araçlardan dışa aktarılan bir **FMU** (`.fmu`: FMI 2.0 ortak benzetim ya da model değişimi, FMI 3.0 ortak benzetim) devrede bir blok olarak çalışır.
 
-- **Dosya → Aç…** bir `.fmu`'yu bloğu yerleşmiş yeni bir devre olarak açar; **Kütüphane** sayfasının üst çubuğundaki dış kütüphane simgesinin menüsünden **FMU (FMI 2.0, .fmu)…** onu kütüphanenize parça olarak ekler. FMU dosyası parçanın içindedir: projeyle birlikte taşınır.
+- **Dosya → Aç…** bir `.fmu`'yu bloğu yerleşmiş yeni bir devre olarak açar; **Kütüphane** sayfasının üst çubuğundaki dış kütüphane simgesinin menüsünden **FMU (FMI 2.0 / 3.0, .fmu)…** onu kütüphanenize parça olarak ekler. FMU dosyası parçanın içindedir: projeyle birlikte taşınır.
 - Bloğun her **girişi** solda, her **çıkışı** sağda bir pindir; **REF** gerilimlerin ölçüldüğü ve sürüldüğü referanstır (çoğunlukla GND'ye bağlanır). Giriş, pinin REF'e göre gerilimini okur; çıkış, değerini 1 Ω'luk iç dirençle pine sürer.
 - FMU'nun parametreleri parçanın parametreleridir (başlangıç değerleriyle); **İletişim adımı**, devre ile FMU'nun buluştuğu aralıktır (öntanımlı FMU'nun kendi adımı, yoksa 1 ms). Her adımda girişler verilir, FMU kendi çözücüsüyle ilerler, çıkışlar bir sonraki adıma kadar tutulur.
-- 64 bit Windows ikilisi (`binaries/win64`) olan FMU'lar çalışır. Ortak benzetim (Co-Simulation) FMU'su kendi çözücüsüyle ilerler. Yalnız model değişimi (Model Exchange) olan FMU'nun durumlarını RobotWin'in kendi tümleyicisi çözer. Bu tümleyici uyarlamalı Dormand–Prince 5(4) yöntemidir; zaman olayları ve durum olayları (bir olay göstergesinin işaret değiştirdiği an, ikiye bölmeyle bulunur) FMI 2.0'ın istediği gibi işlenir.
+- 64 bit Windows ikilisi olan FMU'lar çalışır (FMI 2.0'da `binaries/win64`, FMI 3.0'da `binaries/x86_64-windows`). FMI 3.0'ın türlü değişkenleri (Float64, Float32, Int8–UInt64, Boolean, Enumeration) kendi işlevleriyle okunup yazılır; dizi değişkenleri ve saatler devreyle değiş tokuş edilmez, yalnız model değişimi olan FMI 3.0 FMU'su henüz çalışmaz. Ortak benzetim (Co-Simulation) FMU'su kendi çözücüsüyle ilerler. Yalnız model değişimi (Model Exchange) olan FMU'nun durumlarını RobotWin'in kendi tümleyicisi çözer. Bu tümleyici uyarlamalı Dormand–Prince 5(4) yöntemidir; zaman olayları ve durum olayları (bir olay göstergesinin işaret değiştirdiği an, ikiye bölmeyle bulunur) FMI 2.0'ın istediği gibi işlenir.
 - Devre ile FMU yalnız iletişim noktalarında buluşur: girişler o anki gerilimlerdir, çıkışlar bir sonraki noktaya kadar sabit tutulur (sıfırıncı derece tutma).
 
 ![FMU bloğu](../images/fmu-block.png)

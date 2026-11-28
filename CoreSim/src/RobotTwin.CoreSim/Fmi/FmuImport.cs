@@ -33,7 +33,7 @@ namespace RobotTwin.CoreSim.Fmi
             if (d.BinaryId.Length == 0)
                 throw new NotSupportedException($"{d.ModelName}: FMU'nun ne ortak benzetim ne model değişimi arabirimi var.");
             if (fmu.BinaryPath == null)
-                throw new NotSupportedException($"{d.ModelName}: FMU'da 64 bit Windows ikilisi yok (binaries/win64/{d.BinaryId}.dll).");
+                throw new NotSupportedException($"{d.ModelName}: FMU'da 64 bit Windows ikilisi yok (binaries/{(d.IsFmi3 ? "x86_64-windows" : "win64")}/{d.BinaryId}.dll).");
             if (!d.Inputs.Concat(d.Outputs).Any(Numeric))
                 throw new NotSupportedException($"{d.ModelName}: FMU'nun sayısal girişi ya da çıkışı yok; devreye bağlanacak bir şey yok.");
 
@@ -93,7 +93,7 @@ namespace RobotTwin.CoreSim.Fmi
             var parameters = new Dictionary<string, double>();
             foreach (var v in d.Parameters.Where(Numeric))
                 if (ctx.Text(v.Name).Length > 0) parameters[v.Name] = ctx.Num(v.Name, v.Start ?? 0);
-            var block = new FmuBlock(ctx.RefDes, new Fmu2Instance(fmu, ctx.RefDes), pin(ReferencePin),
+            var block = new FmuBlock(ctx.RefDes, FmuInstance.Open(fmu, ctx.RefDes), pin(ReferencePin),
                 d.Inputs.Where(Numeric).Select(v => (v, pin(v.Name))),
                 d.Outputs.Where(Numeric).Select(v => (v, pin(v.Name))),
                 parameters);

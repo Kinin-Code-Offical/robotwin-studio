@@ -10,14 +10,15 @@ namespace RobotTwin.CoreSim.Fmi
     /// reference pin), each output drives a pin as a source behind a small resistance. The circuit and the FMU meet at
     /// communication points (every <see cref="CommunicationStep"/>, also a breakpoint of the circuit's solver): the inputs
     /// the circuit has reached go in, <c>fmi2DoStep</c> runs the FMU's own solver over the interval, and the outputs it
-    /// gives drive the circuit until the next point (a zero-order hold, as co-simulation masters do).
+    /// gives drive the circuit until the next point (a zero-order hold, as co-simulation masters do). FMI 2.0 and [fmi3] 3.0
+    /// FMUs alike (<see cref="FmuInstance.Open"/>).
     /// </summary>
     public sealed class FmuBlock : AnalogDevice, IDisposable
     {
         /// <summary>[split] Native FMU code is solved one at a time (an FMU may keep state outside its instance).</summary>
         protected internal override bool RunsBesideOthers => false;
 
-        private readonly Fmu2Instance _fmu;
+        private readonly IFmuInstance _fmu;
         private readonly int _reference;
         private readonly List<(FmuVariable Var, int Node)> _inputs;
         private readonly List<(FmuVariable Var, int Node)> _outputs;
@@ -25,7 +26,7 @@ namespace RobotTwin.CoreSim.Fmi
         private readonly IReadOnlyDictionary<string, double> _parameters;
         private bool _started;
 
-        public FmuBlock(string id, Fmu2Instance fmu, int reference, IEnumerable<(FmuVariable Var, int Node)> inputs,
+        public FmuBlock(string id, IFmuInstance fmu, int reference, IEnumerable<(FmuVariable Var, int Node)> inputs,
             IEnumerable<(FmuVariable Var, int Node)> outputs, IReadOnlyDictionary<string, double>? parameters = null)
             : base(id)
         {
@@ -44,7 +45,7 @@ namespace RobotTwin.CoreSim.Fmi
         /// <summary>The resistance each output drives its pin through, Ω.</summary>
         public double OutputResistance { get; set; } = 1.0;
 
-        public Fmu2Instance Instance => _fmu;
+        public IFmuInstance Instance => _fmu;
 
         /// <summary>The value each output drives now (what the FMU gave at the last communication point).</summary>
         public IReadOnlyList<double> Drive => _drive;

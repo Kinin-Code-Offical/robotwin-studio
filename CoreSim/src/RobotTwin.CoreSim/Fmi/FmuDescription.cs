@@ -40,6 +40,9 @@ namespace RobotTwin.CoreSim.Fmi
         public string Unit { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
 
+        /// <summary>[fmi3] The FMI 3.0 type as named (Float64, Float32, Int8 … UInt64, Boolean, Enumeration), or empty in 2.0.</summary>
+        public string Fmi3Type { get; set; } = string.Empty;
+
         public override string ToString() => $"{Name} ({Causality}, {Type}, vr {ValueReference})";
     }
 
@@ -50,6 +53,9 @@ namespace RobotTwin.CoreSim.Fmi
     public sealed class FmuDescription
     {
         public string FmiVersion { get; set; } = string.Empty;
+
+        /// <summary>[fmi3] An FMI 3.0 description (its binary is binaries/x86_64-windows, its token the instantiation token).</summary>
+        public bool IsFmi3 => FmiVersion.StartsWith("3.", StringComparison.Ordinal);
         public string ModelName { get; set; } = string.Empty;
         public string Guid { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
@@ -117,8 +123,9 @@ namespace RobotTwin.CoreSim.Fmi
                 Author = A(root, "author"),
                 GenerationTool = A(root, "generationTool")
             };
+            if (d.IsFmi3) return ParseFmi3(root, d, A, N);
             if (!d.FmiVersion.StartsWith("2.", StringComparison.Ordinal))
-                throw new NotSupportedException($"FMI {d.FmiVersion}: yalnız FMI 2.0 destekleniyor.");
+                throw new NotSupportedException($"FMI {d.FmiVersion}: FMI 2.0 ve 3.0 destekleniyor.");
 
             var cs = root.Element("CoSimulation");
             if (cs != null)
@@ -180,6 +187,91 @@ namespace RobotTwin.CoreSim.Fmi
                     else if (double.TryParse(start, NumberStyles.Float, CultureInfo.InvariantCulture, out double s)) v.Start = s;
                 }
 
+                d.Variables.Add(v);
+            }
+
+            return d;
+        }
+
+        /// <summary>
+        /// [fmi3] An FMI 3.0 description: the instantiation token in place of the GUID, the interfaces' model identifiers, the
+        /// states and event indicators counted in ModelStructure, and the variables as typed elements (Float64, Int32,
+        /// Boolean …) straight under ModelVariables. Arrays (a Dimension) are left out: the block exchanges scalars.
+        /// </summary>
+        private static FmuDescription ParseFmi3(XElement root, FmuDescription d, Func<XElement, string, string> A, Func<XElement?, string, double?> N)
+        {
+            d.Guid = A(root, "instantiationToken");
+            var cs = root.Element("CoSimulation");
+            if (cs != null)
+            {
+                d.CoSimulationId = A(cs, "modelIdentifier");
+                d.CanHandleVariableStep = string.Equals(A(cs, "canHandleVariableCommunicationStepSize"), "true", StringComparison.OrdinalIgnoreCase);
+            }
+            else d.ModelExchangeOnly = root.Element("ModelExchange") != null;
+
+            if (root.Element("ModelExchange") is { } me) d.ModelExchangeId = A(me, "modelIdentifier");
+            var structure = root.Element("ModelStructure");
+            d.ContinuousStates = structure?.Elements("ContinuousStateDerivative").Count() ?? 0;
+            d.EventIndicators = structure?.Elements("EventIndicator").Count() ?? 0;
+            var experiment = root.Element("DefaultExperiment");
+            d.DefaultStep = N(experiment, "stepSize");
+            d.DefaultStop = N(experiment, "stopTime");
+            foreach (var e in root.Element("ModelVariables")?.Elements() ?? Enumerable.Empty<XElement>())
+            {
+                string kind = e.Name.LocalName;
+                if (e.Element("Dimension") != null) continue;
+                FmuType type;
+                switch (kind)
+                {
+                    case "Float64":
+                    case "Float32":
+                        type = FmuType.Real;
+                        break;
+                    case "Int8":
+                    case "UInt8":
+                    case "Int16":
+                    case "UInt16":
+                    case "Int32":
+                    case "UInt32":
+                    case "Int64":
+                    case "UInt64":
+                        type = FmuType.Integer;
+                        break;
+                    case "Boolean":
+                        type = FmuType.Boolean;
+                        break;
+                    case "Enumeration":
+                        type = FmuType.Enumeration;
+                        break;
+                    case "String":
+                        type = FmuType.String;
+                        break;
+                    default:
+                        continue;   // Binary, Clock: not exchanged with the circuit
+                }
+
+                var v = new FmuVariable
+                {
+                    Name = A(e, "name"),
+                    ValueReference = uint.TryParse(A(e, "valueReference"), NumberStyles.Integer, CultureInfo.InvariantCulture, out uint vr) ? vr : 0,
+                    Variability = A(e, "variability") is { Length: > 0 } va ? va : (type == FmuType.Real ? "continuous" : "discrete"),
+                    Description = A(e, "description"),
+                    Causality = A(e, "causality") switch
+                    {
+                        "parameter" or "structuralParameter" => FmuCausality.Parameter,
+                        "calculatedParameter" => FmuCausality.CalculatedParameter,
+                        "input" => FmuCausality.Input,
+                        "output" => FmuCausality.Output,
+                        "independent" => FmuCausality.Independent,
+                        _ => FmuCausality.Local
+                    },
+                    Type = type,
+                    Fmi3Type = kind,
+                    Unit = A(e, "unit")
+                };
+                string start = A(e, "start");
+                if (type == FmuType.Boolean && start.Length > 0) v.Start = start is "true" or "1" ? 1 : 0;
+                else if (double.TryParse(start, NumberStyles.Float, CultureInfo.InvariantCulture, out double sv)) v.Start = sv;
                 d.Variables.Add(v);
             }
 

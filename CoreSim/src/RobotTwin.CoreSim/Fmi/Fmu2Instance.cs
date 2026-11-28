@@ -11,7 +11,7 @@ namespace RobotTwin.CoreSim.Fmi
     /// the parameters and start values, then stepped: inputs set, <c>fmi2DoStep</c>, outputs read. Each instance loads its
     /// own copy of the binary when another already has it, since an FMU's globals are not always per instance.
     /// </summary>
-    public sealed partial class Fmu2Instance : IDisposable
+    public sealed partial class Fmu2Instance : IFmuInstance
     {
         private const int Fmi2CoSimulation = 1;
 
