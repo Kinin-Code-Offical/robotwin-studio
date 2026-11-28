@@ -15,6 +15,8 @@ Her düğümün gerilimi ve gerilim kaynaklarının (pil, regülatör çıkış�
 
 $`G`$ iletkenlik matrisi, $`B, C`$ kaynakların bağlandığı düğümler, $`\mathbf{i}_s`$ akım kaynakları, $`\mathbf{e}`$ kaynak gerilimleridir. Her eleman bu matrise kendi katkısını "damgalar" (stamp): bir direnç $`R`$ iki düğümü arasına $`1/R`$ ekler.
 
+Matris seyrektir (bir düğüm yalnız komşularına dokunur) ve seyrek LU ile çözülür: pivot sırası bir kez Markowitz kuralı ve eşikli pivotlamayla (sütunun en büyük girdisinin en az onda biri, en az yeni girdi doğuran önce) seçilir ve bir pivot fazla küçülene dek her Newton yinelemesinde ve zaman adımında yeniden kullanılır. Hem seçim hem matrisin dizini yalnız var olan girdilerle çalışır; binlerce düğümlü bir devre bir anda başlar.
+
 ## Doğrusal olmayan elemanlar: Newton-Raphson
 
 Diyot, transistör, MOSFET, motor sürücü gibi elemanların akımı gerilime doğrusal bağlı değildir. Her adımda sistem $`\mathbf{F}(\mathbf{x}) = 0`$ Newton-Raphson ile çözülür:
@@ -52,6 +54,10 @@ Adım boyu yerel kesme hatasına göre ayarlanır. Trapez kuralında hata, geril
 | Sakin devre | Trapez | 1 ms'ye kadar |
 | Hızlı değişim, PWM kenarı | Trapez, küçülen adım | µs mertebesi |
 | Anahtar / arıza sonrası | Geri Euler (birkaç adım) | en küçük adım |
+
+### Bağımsız parçalar
+
+Bir dünyada devrenin yalnız referansı paylaşan kısımları (her biri kendi pili ve kartıyla iki robot) matriste hiç buluşmaz. Böyle her parça kendi matrisi, adım boyu, hata geçmişi ve yeniden başlamasıyla çözülür; birindeki bir kenar ötekinin adımını kısaltmaz. Bütün parçalar, kartların ve mekaniğin çalıştığı her dilimin sonunda buluşur. Bir parça, bir cihazın birbirine bağladığı her şeydir: yazdığı ve okuduğu düğümler, kendi kol akımları ve onu oluşturan cihazlar (rölenin bobini ve kontakları tek parça). Sonradan başka bir parçaya uzanan cihaz (beslemesini sürmeye başlayan pin, başka bir ağa kapanan anahtar) iki parçayı, yeniden ayrı çözülmeden önce birleştirir. Parçalar birden çok çekirdekte yan yana çözülebilir; sonuç iki durumda da aynıdır.
 
 ## Eleman modelleri (seçme)
 

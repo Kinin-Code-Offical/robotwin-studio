@@ -51,7 +51,20 @@ namespace RobotTwin.CoreSim.Analog
 
         private double[] _x = Array.Empty<double>();
 
-        // Analysis work space (dense, only touched when the pivot order is rebuilt).
+        // [bigscene] Analysis work space: the active submatrix as a pool of entries listed by row and by column (only
+        // touched when the pivot order is rebuilt). It was a dense n × n array searched whole at every pivot: n³ work, half
+        // a second for a world of 25 robots (850 unknowns) and minutes for thousands.
+        private int[] _eRow = Array.Empty<int>();
+        private int[] _eCol = Array.Empty<int>();
+        private double[] _eVal = Array.Empty<double>();
+        private int _entries;
+        private int[][] _byRow = Array.Empty<int[]>();
+        private int[][] _byCol = Array.Empty<int[]>();
+        private int[] _rowLen = Array.Empty<int>();
+        private int[] _colLen = Array.Empty<int>();
+        private int[] _mark = Array.Empty<int>();
+
+        // The dense reference analysis (tests compare the sparse one against it).
         private double[] _w = Array.Empty<double>();
         private bool[] _s = Array.Empty<bool>();
         private int[] _rowCount = Array.Empty<int>();
@@ -74,6 +87,255 @@ namespace RobotTwin.CoreSim.Analog
             IsAnalyzed = false;
             _n = n;
             EnsureCapacity(n);
+            EnsureAnalysis(n, nnz);
+            _entries = 0;
+            for (int i = 0; i < n; i++)
+            {
+                _rowLen[i] = 0;
+                _colLen[i] = 0;
+                _rowCount[i] = 0;
+                _colCount[i] = 0;
+                _rowRank[i] = -1;
+                _colRank[i] = -1;
+                _mark[i] = -1;
+            }
+
+            for (int e = 0; e < nnz; e++) NewEntry(rows[e], cols[e], values[e]);   // MnaSystem gives each (row, col) once
+
+            var pivotCols = new int[16];
+            var pivotVals = new double[16];
+            for (int k = 0; k < n; k++)
+            {
+                // The same choice as the dense search (AnalyzeDense): columns in order, the lowest Markowitz cost among
+                // entries within the threshold of their column, a diagonal before others, then the largest ratio; equal
+                // candidates go to the lowest column, then the lowest row (the dense scan's first).
+                int bestRow = -1, bestCol = -1;
+                long bestCost = long.MaxValue;
+                double bestRatio = 0.0;
+                bool bestDiagonal = false;
+                for (int j = 0; j < n; j++)
+                {
+                    if (_colRank[j] >= 0) continue;
+                    var list = _byCol[j];
+                    int len = _colLen[j];
+                    double colMax = 0.0;
+                    for (int t = 0; t < len; t++)
+                    {
+                        int e = list[t];
+                        if (_rowRank[_eRow[e]] >= 0) continue;
+                        double a = Math.Abs(_eVal[e]);
+                        if (a > colMax) colMax = a;
+                    }
+
+                    if (!(colMax > AbsolutePivot) || double.IsInfinity(colMax)) return false;
+
+                    double limit = AnalysisThreshold * colMax;
+                    long colCost = _colCount[j] - 1;
+                    for (int t = 0; t < len; t++)
+                    {
+                        int e = list[t];
+                        int i = _eRow[e];
+                        if (_rowRank[i] >= 0) continue;
+                        double a = Math.Abs(_eVal[e]);
+                        if (a < limit || !(a > AbsolutePivot)) continue;
+                        long cost = (_rowCount[i] - 1) * colCost;
+                        double ratio = a / colMax;
+                        bool diagonal = i == j;
+                        bool better = cost < bestCost ||
+                                      (cost == bestCost && diagonal && !bestDiagonal) ||
+                                      (cost == bestCost && diagonal == bestDiagonal && ratio > bestRatio) ||
+                                      (cost == bestCost && diagonal == bestDiagonal && ratio == bestRatio && j == bestCol && i < bestRow);
+                        if (!better) continue;
+                        bestCost = cost;
+                        bestRow = i;
+                        bestCol = j;
+                        bestRatio = ratio;
+                        bestDiagonal = diagonal;
+                    }
+                }
+
+                if (bestRow < 0) return false;
+
+                int p = bestRow, q = bestCol;
+                _p[k] = p;
+                _q[k] = q;
+                _rowRank[p] = k;
+                _colRank[q] = k;
+
+                // The pivot row and column leave the active submatrix; the pivot row's active part is kept for the update.
+                double pivot = 0.0;
+                int pivotLen = 0;
+                for (int t = 0, len = _rowLen[p]; t < len; t++)
+                {
+                    int e = _byRow[p][t];
+                    int j = _eCol[e];
+                    if (j == q) pivot = _eVal[e];
+                    if (_colRank[j] >= 0) continue;
+                    _colCount[j]--;
+                    if (pivotLen == pivotCols.Length)
+                    {
+                        Array.Resize(ref pivotCols, pivotLen * 2);
+                        Array.Resize(ref pivotVals, pivotLen * 2);
+                    }
+
+                    pivotCols[pivotLen] = j;
+                    pivotVals[pivotLen++] = _eVal[e];
+                }
+
+                for (int t = 0, len = _colLen[q]; t < len; t++)
+                {
+                    int i = _eRow[_byCol[q][t]];
+                    if (_rowRank[i] < 0) _rowCount[i]--;
+                }
+
+                // Right-looking elimination of the active submatrix (values and fill-in), as the dense one does it.
+                for (int t = 0, len = _colLen[q]; t < len; t++)
+                {
+                    int eq = _byCol[q][t];
+                    int i = _eRow[eq];
+                    if (_rowRank[i] >= 0) continue;
+                    double factor = _eVal[eq] / pivot;
+                    var row = _byRow[i];
+                    int rowLen = _rowLen[i];
+                    for (int r = 0; r < rowLen; r++) _mark[_eCol[row[r]]] = row[r];
+                    for (int c = 0; c < pivotLen; c++)
+                    {
+                        int j = pivotCols[c];
+                        int f = _mark[j];
+                        if (f >= 0) _eVal[f] -= factor * pivotVals[c];
+                        else NewEntry(i, j, 0.0 - factor * pivotVals[c]);
+                    }
+
+                    row = _byRow[i];
+                    for (int r = 0, end = _rowLen[i]; r < end; r++) _mark[_eCol[row[r]]] = -1;
+                }
+            }
+
+            BuildPatternFromEntries(n, nnz, rows, cols);
+            IsAnalyzed = true;
+            return true;
+        }
+
+        /// <summary>Adds entry (row, col) to the analysis' active submatrix; counts it in its row and column.</summary>
+        private int NewEntry(int row, int col, double value)
+        {
+            int e = _entries++;
+            if (e == _eRow.Length)
+            {
+                int capacity = Math.Max(16, e * 2);
+                Array.Resize(ref _eRow, capacity);
+                Array.Resize(ref _eCol, capacity);
+                Array.Resize(ref _eVal, capacity);
+            }
+
+            _eRow[e] = row;
+            _eCol[e] = col;
+            _eVal[e] = value;
+            Append(ref _byRow[row], ref _rowLen[row], e);
+            Append(ref _byCol[col], ref _colLen[col], e);
+            _rowCount[row]++;
+            _colCount[col]++;
+            return e;
+        }
+
+        private static void Append(ref int[] list, ref int length, int value)
+        {
+            if (length == list.Length) Array.Resize(ref list, Math.Max(4, length * 2));
+            list[length++] = value;
+        }
+
+        private void EnsureAnalysis(int n, int nnz)
+        {
+            if (_byRow.Length < n)
+            {
+                var byRow = new int[n][];
+                var byCol = new int[n][];
+                for (int i = 0; i < n; i++)
+                {
+                    byRow[i] = i < _byRow.Length ? _byRow[i] : new int[4];
+                    byCol[i] = i < _byCol.Length ? _byCol[i] : new int[4];
+                }
+
+                _byRow = byRow;
+                _byCol = byCol;
+                _rowLen = new int[n];
+                _colLen = new int[n];
+                _mark = new int[n];
+            }
+
+            if (_eRow.Length < nnz)
+            {
+                _eRow = new int[nnz * 2];
+                _eCol = new int[nnz * 2];
+                _eVal = new double[nnz * 2];
+            }
+        }
+
+        /// <summary>L and U by column from the analysis' entries (every one the elimination made), rows ascending.</summary>
+        private void BuildPatternFromEntries(int n, int nnz, int[] rows, int[] cols)
+        {
+            BuildPermutedA(n, nnz, rows, cols);
+            int uCount = 0, lCount = 0;
+            for (int c = 0; c < n; c++)
+            {
+                int q = _q[c];
+                for (int t = 0, len = _colLen[q]; t < len; t++)
+                {
+                    int r = _rowRank[_eRow[_byCol[q][t]]];
+                    if (r < c) uCount++;
+                    else if (r > c) lCount++;
+                }
+            }
+
+            if (_uRow.Length < uCount)
+            {
+                _uRow = new int[uCount];
+                _uVal = new double[uCount];
+            }
+
+            if (_lRow.Length < lCount)
+            {
+                _lRow = new int[lCount];
+                _lVal = new double[lCount];
+            }
+
+            int u = 0, l = 0;
+            for (int c = 0; c < n; c++)
+            {
+                _uPtr[c] = u;
+                _lPtr[c] = l;
+                int q = _q[c];
+                int uFrom = u, lFrom = l;
+                for (int t = 0, len = _colLen[q]; t < len; t++)
+                {
+                    int r = _rowRank[_eRow[_byCol[q][t]]];
+                    if (r < c) _uRow[u++] = r;
+                    else if (r > c) _lRow[l++] = r;
+                }
+
+                Array.Sort(_uRow, uFrom, u - uFrom);
+                Array.Sort(_lRow, lFrom, l - lFrom);
+            }
+
+            _uPtr[n] = u;
+            _lPtr[n] = l;
+        }
+
+        /// <summary>
+        /// [test] The dense analysis the sparse one replaced: the same pivots and pattern from an n × n work space searched
+        /// whole at every step. Kept only to check <see cref="Analyze"/> against.
+        /// </summary>
+        internal bool AnalyzeDense(int n, int nnz, int[] rows, int[] cols, double[] values)
+        {
+            IsAnalyzed = false;
+            _n = n;
+            EnsureCapacity(n);
+            if (_w.Length < n * n)
+            {
+                _w = new double[n * n];
+                _s = new bool[n * n];
+            }
+
             Array.Clear(_w, 0, n * n);
             Array.Clear(_s, 0, n * n);
             Array.Clear(_rowCount, 0, n);
@@ -183,7 +445,16 @@ namespace RobotTwin.CoreSim.Analog
             return true;
         }
 
-        private void BuildPattern(int n, int nnz, int[] rows, int[] cols)
+        /// <summary>[test] The pivot sequence: step k eliminates row PivotRows[k] and column PivotColumns[k].</summary>
+        internal int[] PivotRows => _p[.._n];
+
+        internal int[] PivotColumns => _q[.._n];
+
+        /// <summary>[test] The L and U pattern: (column, row) of each entry in permuted order.</summary>
+        internal (int[] UPtr, int[] URow, int[] LPtr, int[] LRow) Pattern =>
+            (_uPtr[..(_n + 1)], _uRow[.._uPtr[_n]], _lPtr[..(_n + 1)], _lRow[.._lPtr[_n]]);
+
+        private void BuildPermutedA(int n, int nnz, int[] rows, int[] cols)
         {
             // Permuted A by column.
             Array.Clear(_aPtr, 0, n + 1);
@@ -204,6 +475,11 @@ namespace RobotTwin.CoreSim.Analog
                 _aSlot[at] = e;
                 _aRow[at] = _rowRank[rows[e]];
             }
+        }
+
+        private void BuildPattern(int n, int nnz, int[] rows, int[] cols)
+        {
+            BuildPermutedA(n, nnz, rows, cols);
 
             // L and U pattern of the permuted matrix, read off the elimination's structure.
             int uCount = 0, lCount = 0;
@@ -386,12 +662,6 @@ namespace RobotTwin.CoreSim.Analog
                 _aPtr = new int[n + 1];
                 _uPtr = new int[n + 1];
                 _lPtr = new int[n + 1];
-            }
-
-            if (_w.Length < n * n)
-            {
-                _w = new double[n * n];
-                _s = new bool[n * n];
             }
         }
     }

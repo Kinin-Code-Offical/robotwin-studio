@@ -15,6 +15,8 @@ The unknowns are every node voltage and the current of every voltage source (bat
 
 $`G`$ is the conductance matrix, $`B, C`$ connect the sources to their nodes, $`\mathbf{i}_s`$ are current sources and $`\mathbf{e}`$ source voltages. Every device "stamps" its contribution into this matrix: a resistor $`R`$ adds $`1/R`$ between its two nodes.
 
+The matrix is sparse (a node touches only its neighbours) and is solved with a sparse LU: the pivot order is chosen once by the Markowitz rule with threshold pivoting (a pivot at least a tenth of its column's largest entry, the fewest new entries first) and reused for every Newton iteration and time step until a pivot becomes too small. Both the choice and the matrix's index work on the entries that exist, so a circuit of thousands of nodes starts in moments.
+
 ## Nonlinear devices: Newton-Raphson
 
 Diodes, transistors, MOSFETs and motor drivers are not linear. Every step solves $`\mathbf{F}(\mathbf{x}) = 0`$ by Newton-Raphson:
@@ -52,6 +54,10 @@ The step size follows the local truncation error, estimated for the trapezoidal 
 | Quiet circuit | Trapezoidal | up to 1 ms |
 | Fast change, PWM edge | Trapezoidal, shrinking step | microseconds |
 | After a switch / failure | Backward Euler (a few steps) | smallest step |
+
+### Independent parts
+
+In a world, parts of the circuit that share only the reference (two robots, each with its own battery and board) never meet in the matrix. Each such part is solved with its own matrix, step size, error history and restarts, so an edge in one does not shorten the steps of the other; all parts meet at the end of every slice the boards and the mechanics work in. A part is everything a device ties together: the nodes it stamps and reads, its own branch currents, and the devices it consists of (a relay's coil and its contacts are one part). A device that later reaches into another part (a pin that starts to drive its supply, a switch closing onto another net) joins the two before they are solved apart again. The parts may be solved side by side on several cores; the result is the same either way.
 
 ## Device models (a selection)
 

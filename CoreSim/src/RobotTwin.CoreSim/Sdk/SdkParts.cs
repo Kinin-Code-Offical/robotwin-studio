@@ -39,6 +39,9 @@ namespace RobotTwin.CoreSim.Sdk
         public double Min { get; set; }
         public double Max { get; set; } = 5.0;
 
+        /// <summary>[split] A plugin's own subclass runs its code alone; the ready part runs beside the others.</summary>
+        protected internal override bool RunsBesideOthers => GetType() == typeof(SensorDevice);
+
         /// <summary>Output resistance (Ω).</summary>
         public double OutputResistance { get; set; } = 100.0;
 

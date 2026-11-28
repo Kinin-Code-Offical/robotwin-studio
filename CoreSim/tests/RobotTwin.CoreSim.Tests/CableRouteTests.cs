@@ -95,6 +95,48 @@ namespace RobotTwin.CoreSim.Tests
             Assert.True(rope.KeepOutDepth() < 1e-4, $"after settling the wire still lies {rope.KeepOutDepth() * 1000:F2} mm in the disc");
         }
 
+        /// <summary>
+        /// [perf] Cables stepped side by side on the cores move exactly as one after the other: each reads the scene only,
+        /// and its pulls on the parts (here loose blocks it drags about) are handed over in the cables' order.
+        /// </summary>
+        [Fact]
+        public void CablesSteppedSideBySideMoveBitForBitAsInTurn()
+        {
+            (System.Collections.Generic.List<Vec3> Points, System.Collections.Generic.List<Vec3> Bodies) Run(bool sideBySide)
+            {
+                var w = new WorldDocument();
+                var blocks = Enumerable.Range(0, 6).Select(i =>
+                {
+                    var b = w.AddBody("box", 0.02, 0.02, 0.01, new WorldPose { X = 0.04 * (i % 3), Y = 0.05 * (i / 3) }, "PLA");
+                    b.MassKg = 0.01;
+                    return b;
+                }).ToList();
+                var cables = Enumerable.Range(0, 6).Select(i => w.Connect(new CableEnd { ObjectId = blocks[i].Id, Pin = "1" }, new CableEnd { ObjectId = blocks[(i + 2) % 6].Id, Pin = "1" }, 26)).ToList();
+                var p = WorldPhysics.Build(w, Geometry, null);
+                int before = WorldPhysics.CablesSideBySideFrom;
+                WorldPhysics.CablesSideBySideFrom = sideBySide ? 2 : int.MaxValue;
+                try
+                {
+                    p.AttachCables(w, c => Pins(w, c), 50);
+                    for (int i = 0; i < 300; i++) p.Advance(1e-3, null);
+                }
+                finally
+                {
+                    WorldPhysics.CablesSideBySideFrom = before;
+                }
+
+                var points = cables.SelectMany(c => p.CablePoints(c.Id)!).ToList();
+                var bodies = blocks.Select(b => p.PoseOf(b.Id)!.Value.Position).ToList();
+                return (points, bodies);
+            }
+
+            var apart = Run(true);
+            var inTurn = Run(false);
+            Assert.Equal(inTurn.Points, apart.Points);
+            Assert.Equal(inTurn.Bodies, apart.Bodies);
+            Assert.True(inTurn.Bodies.Count == 6 && inTurn.Points.Count > 6 * 4);
+        }
+
         [Fact]
         public void AWireBetweenTwoPartsInAClosedBoxStaysInside()
         {

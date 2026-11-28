@@ -335,13 +335,40 @@ namespace RobotTwin.CoreSim.Sandbox
                 ? JointKind.Ball
                 : kind;
 
+        /// <summary>[perf] From this many cables they are stepped side by side on the cores (each against the same scene).</summary>
+        internal static int CablesSideBySideFrom = 4;
+
         private void StepCables(double dt)
         {
             long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
-            foreach (var c in _cables)
+            if (_cables.Count >= CablesSideBySideFrom && Mechanics.WorkTeam.Shared.Workers > 0)
             {
-                c.Rope.Step(Scene, dt, true);
-                UpdateContacts(c);
+                // [perf] Each rope moves against the scene as it stands, reading it only; what a rope does to the bodies and
+                // the plugs it pulls out wait, and are handed over rope by rope in the cables' order afterwards: the same
+                // forces in the same order as one rope after the other.
+                foreach (var c in _cables) c.Rope.Deferred = true;
+                try
+                {
+                    Mechanics.WorkTeam.Each(_cables.Count, i => _cables[i].Rope.Step(Scene, dt, true));
+                }
+                finally
+                {
+                    foreach (var c in _cables) c.Rope.Deferred = false;
+                }
+
+                foreach (var c in _cables)
+                {
+                    c.Rope.Flush();
+                    UpdateContacts(c);
+                }
+            }
+            else
+            {
+                foreach (var c in _cables)
+                {
+                    c.Rope.Step(Scene, dt, true);
+                    UpdateContacts(c);
+                }
             }
 
             CableSeconds += (System.Diagnostics.Stopwatch.GetTimestamp() - t0) / (double)System.Diagnostics.Stopwatch.Frequency;

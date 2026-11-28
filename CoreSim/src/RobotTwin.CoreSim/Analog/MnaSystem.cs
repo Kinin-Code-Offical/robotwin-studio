@@ -15,7 +15,14 @@ namespace RobotTwin.CoreSim.Analog
     public sealed class MnaSystem
     {
         // Assembled matrix in coordinate form: entry e is (_rows[e], _cols[e]) with value _vals[e].
+        // [bigscene] Where each (row, col) is kept: a dense size × size table up to DenseIndexLimit unknowns, a hash beyond
+        // (the table alone was 1.6 GB at 20 000 unknowns, and row × size overflowed past 46 340).
+        private const int DenseIndexLimit = 1024;
+        private bool _dense = true;
         private int[] _slotOf = Array.Empty<int>();
+        private long[] _hashKey = Array.Empty<long>();
+        private int[] _hashSlot = Array.Empty<int>();
+        private int _hashShift;
         private int[] _rows = Array.Empty<int>();
         private int[] _cols = Array.Empty<int>();
         private double[] _vals = Array.Empty<double>();
@@ -35,6 +42,12 @@ namespace RobotTwin.CoreSim.Analog
 
         public int Size => _size;
 
+        /// <summary>
+        /// [split] When the circuit is solved in parts: each device's additions are checked to fall inside this part and
+        /// taken to its own numbering (<see cref="UnknownWatch"/>); null when this system holds the whole circuit.
+        /// </summary>
+        internal UnknownWatch? Watch { get; set; }
+
         /// <summary>Always use the dense LU (reference path for tests and diagnostics).</summary>
         internal bool UseDenseSolver { get; set; }
 
@@ -51,8 +64,18 @@ namespace RobotTwin.CoreSim.Analog
         {
             if (size < 0) throw new ArgumentOutOfRangeException(nameof(size));
             _size = size;
-            if (_slotOf.Length < size * size) _slotOf = new int[size * size];
-            for (int i = 0; i < size * size; i++) _slotOf[i] = -1;
+            _dense = size <= DenseIndexLimit;
+            if (_dense)
+            {
+                if (_slotOf.Length < size * size) _slotOf = new int[size * size];
+                for (int i = 0; i < size * size; i++) _slotOf[i] = -1;
+            }
+            else
+            {
+                int bits = 6;
+                while ((1 << bits) < 8 * size) bits++;
+                ResetHash(bits);
+            }
             if (_diagSlot.Length < size) _diagSlot = new int[size];
             for (int i = 0; i < size; i++) _diagSlot[i] = -1;
             _nnz = 0;
@@ -79,7 +102,8 @@ namespace RobotTwin.CoreSim.Analog
         public void Add(int row, int col, double value)
         {
             if (row < 0 || col < 0) return;
-            int slot = _slotOf[row * _size + col];
+            if (Watch != null && !Watch.Map(ref row, ref col)) return;
+            int slot = _dense ? _slotOf[row * _size + col] : Find(row, col);
             if (slot < 0) slot = NewSlot(row, col);
             _vals[slot] += value;
         }
@@ -90,31 +114,83 @@ namespace RobotTwin.CoreSim.Analog
         /// </summary>
         internal void AddConductance(int ra, int rb, double g)
         {
-            int n = _size;
+            if (Watch != null && !Watch.MapPair(ref ra, ref rb)) return;
             int slot;
             if (ra >= 0)
             {
-                slot = _slotOf[ra * n + ra];
+                slot = _diagSlot[ra];
                 if (slot < 0) slot = NewSlot(ra, ra);
                 _vals[slot] += g;
             }
 
             if (rb >= 0)
             {
-                slot = _slotOf[rb * n + rb];
+                slot = _diagSlot[rb];
                 if (slot < 0) slot = NewSlot(rb, rb);
                 _vals[slot] += g;
             }
 
             if (ra >= 0 && rb >= 0)
             {
-                slot = _slotOf[ra * n + rb];
+                slot = Slot(ra, rb);
                 if (slot < 0) slot = NewSlot(ra, rb);
                 _vals[slot] -= g;
-                slot = _slotOf[rb * n + ra];
+                slot = Slot(rb, ra);
                 if (slot < 0) slot = NewSlot(rb, ra);
                 _vals[slot] -= g;
             }
+        }
+
+        private int Slot(int row, int col) => _dense ? _slotOf[row * _size + col] : Find(row, col);
+
+        private int Find(int row, int col)
+        {
+            long key = (long)row * _size + col;
+            int mask = _hashKey.Length - 1;
+            for (int h = Hash(key); ; h = (h + 1) & mask)
+            {
+                long k = _hashKey[h];
+                if (k == key) return _hashSlot[h];
+                if (k < 0) return -1;
+            }
+        }
+
+        private int Hash(long key) => (int)((ulong)(key * unchecked((long)0x9E3779B97F4A7C15UL)) >> _hashShift);
+
+        private void ResetHash(int bits)
+        {
+            _hashShift = 64 - bits;
+            _hashKey = new long[1 << bits];
+            _hashSlot = new int[1 << bits];
+            for (int i = 0; i < _hashKey.Length; i++) _hashKey[i] = -1;
+        }
+
+        private void Remember(int row, int col, int slot)
+        {
+            if (_dense)
+            {
+                _slotOf[row * _size + col] = slot;
+                return;
+            }
+
+            if (2 * (_nnz + 1) > _hashKey.Length)
+            {
+                // keep it at most half full: everything in again, in a table twice the size
+                ResetHash(65 - _hashShift);
+                for (int e = 0; e < _nnz; e++)
+                    if (e != slot) Insert((long)_rows[e] * _size + _cols[e], e);
+            }
+
+            Insert((long)row * _size + col, slot);
+        }
+
+        private void Insert(long key, int slot)
+        {
+            int mask = _hashKey.Length - 1;
+            int h = Hash(key);
+            while (_hashKey[h] >= 0) h = (h + 1) & mask;
+            _hashKey[h] = key;
+            _hashSlot[h] = slot;
         }
 
         /// <summary>Adds <paramref name="value"/> to the first <paramref name="count"/> diagonal entries.</summary>
@@ -138,12 +214,24 @@ namespace RobotTwin.CoreSim.Analog
         public void AddRhs(int row, double value)
         {
             if (row < 0) return;
+            if (Watch != null && !Watch.Map(ref row)) return;
             _b[row] += value;
         }
 
+        /// <summary>[split] An addition of the simulator's own (a reference tie, a shunt), already in this system's numbering.</summary>
+        internal void AddOwn(int row, int col, double value)
+        {
+            int slot = Slot(row, col);
+            if (slot < 0) slot = NewSlot(row, col);
+            _vals[slot] += value;
+        }
+
+        /// <summary>[split] A right-hand side of the simulator's own, already in this system's numbering.</summary>
+        internal void AddOwnRhs(int row, double value) => _b[row] += value;
+
         public double Get(int row, int col)
         {
-            int slot = _slotOf[row * _size + col];
+            int slot = Slot(row, col);
             return slot < 0 ? 0.0 : _vals[slot];
         }
 
@@ -233,7 +321,7 @@ namespace RobotTwin.CoreSim.Analog
             _rows[slot] = row;
             _cols[slot] = col;
             _vals[slot] = 0.0;
-            _slotOf[row * _size + col] = slot;
+            Remember(row, col, slot);
             if (row == col) _diagSlot[row] = slot;
             _patternChanged = true;
             return slot;
@@ -264,8 +352,12 @@ namespace RobotTwin.CoreSim.Analog
             // Numerically singular (or not finite) for the sparse path: the dense LU
             // decides, exactly as it always has, and reports the singular unknown.
             _sparse.Invalidate();
+            if (n > DenseFallbackLimit) return false;   // [bigscene] too big to hold dense: singular, unknown not named
             return SolveDense(x, out singularIndex);
         }
+
+        /// <summary>[bigscene] The dense LU takes n² doubles: 128 MB at this size, so not beyond.</summary>
+        private const int DenseFallbackLimit = 4096;
 
         private bool SolveDense(double[] x, out int singularIndex)
         {

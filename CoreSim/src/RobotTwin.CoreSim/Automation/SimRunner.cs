@@ -270,7 +270,12 @@ namespace RobotTwin.CoreSim.Automation
             foreach (var e in Esp) e.Dispose();
             Esp.Clear();
             Avr.Clear();
-            if (Simulator != null) Simulator.SubstepAccepted = null;
+            if (Simulator != null)
+            {
+                Simulator.SubstepAccepted = null;
+                Simulator.ClearObservers();
+            }
+
             Simulator = null;
             Compiled = null;
         }
@@ -281,14 +286,16 @@ namespace RobotTwin.CoreSim.Automation
             GC.SuppressFinalize(this);
         }
 
-        protected AnalogSimulator StartSolver(AnalogCircuit circuit, double ambientC)
+        /// <param name="split">[split] Solve parts that share only the reference apart, as the app's world does.</param>
+        protected AnalogSimulator StartSolver(AnalogCircuit circuit, double ambientC, bool split = false)
         {
             var sim = new AnalogSimulator(circuit, new AnalogOptions
             {
                 MaxStep = Options.MaxStep,
                 RelTol = Options.RelTol,
                 AmbientTempC = ambientC,
-                EnableDamage = Options.EnableDamage
+                EnableDamage = Options.EnableDamage,
+                SplitIndependentParts = split
             });
             try
             {
@@ -299,11 +306,21 @@ namespace RobotTwin.CoreSim.Automation
                 sim.Initialize(InitialState.Zero);
             }
 
-            sim.SubstepAccepted = t =>
-            {
-                for (int i = 0; i < Esp.Count; i++) Esp[i].OnSubstep(t);
-            };
+            // split: each board hears the steps of its own pins' part(s) (ObserveBoard)
+            if (!split)
+                sim.SubstepAccepted = t =>
+                {
+                    for (int i = 0; i < Esp.Count; i++) Esp[i].OnSubstep(t);
+                };
             return sim;
+        }
+
+        /// <summary>[split] A board added to a split circuit time-stamps its input edges at its own pins' steps.</summary>
+        private void ObserveBoard(IEsp32Board board)
+        {
+            if (Simulator == null || Compiled == null || !Simulator.Options.SplitIndependentParts) return;
+            string prefix = board.BoardRefDes + ".";
+            Simulator.Observe(Compiled.NodeByPin.Where(kv => kv.Value > 0 && kv.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Value), board.OnSubstep);
         }
 
         // ================================================================ stepping
@@ -455,6 +472,7 @@ namespace RobotTwin.CoreSim.Automation
                 string key = board.RefDes;
                 cosim.SerialOutput += text => AppendSerial(key, text);
                 Esp.Add(cosim);
+                ObserveBoard(cosim);
                 board.Esp = cosim;
                 board.Esp32 = cosim;
                 board.Running = true;
@@ -494,6 +512,7 @@ namespace RobotTwin.CoreSim.Automation
                 emulated.SerialOutput += text => AppendSerial(key, text);
                 emulated.Log += m => AddEvent(new RunnerEvent(Simulator?.Time ?? 0, board.Name, RunnerEventKind.Info, m));
                 Esp.Add(emulated);
+                ObserveBoard(emulated);
                 board.Esp32 = emulated;
                 board.Running = true;
                 board.Mcu = "esp32 (emülatör)";

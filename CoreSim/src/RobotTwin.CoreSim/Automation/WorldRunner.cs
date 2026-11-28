@@ -94,7 +94,7 @@ namespace RobotTwin.CoreSim.Automation
 
             Compiled = Circuit.Compiled;
             foreach (var w in Compiled.Warnings) AddEvent(new RunnerEvent(0, "derleyici", RunnerEventKind.Warning, w));
-            Simulator = StartSolver(Compiled.Circuit, World.Environment.AmbientC);
+            Simulator = StartSolver(Compiled.Circuit, World.Environment.AmbientC, split: true);   // [split] as the app's world
             AttachFirmware();
             try
             {

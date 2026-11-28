@@ -32,6 +32,13 @@ namespace RobotTwin.CoreSim.Analog
 
         public string Id { get; }
 
+        /// <summary>
+        /// [split] The component the device was built for (a schematic part's designator), set by the compilers. The devices
+        /// of one component are solved in one part of the circuit: they may reach each other's state directly (an encoder
+        /// that reads its motor's shaft), which the solver cannot see.
+        /// </summary>
+        internal string? Group;
+
         /// <summary>Number of extra MNA unknowns (branch currents etc.).</summary>
         public virtual int BranchCount => 0;
 
@@ -97,6 +104,13 @@ namespace RobotTwin.CoreSim.Analog
 
         /// <summary>Return to the power-on state (history cleared, damage kept).</summary>
         public virtual void Reset() { }
+
+        /// <summary>
+        /// [split] Whether the device's code may run while another part of the circuit is being solved on another core
+        /// (<see cref="AnalogOptions.SplitIndependentParts"/>). The simulator's own devices may; a device of a plugin or of
+        /// the app, and native FMU code, are solved one at a time, on one thread with each other.
+        /// </summary>
+        protected internal virtual bool RunsBesideOthers => GetType().Assembly == typeof(AnalogDevice).Assembly;
     }
 
     public readonly struct StepInfo
@@ -149,6 +163,7 @@ namespace RobotTwin.CoreSim.Analog
     {
         internal MnaSystem Mna = null!;
         internal double[] X = Array.Empty<double>();
+        internal UnknownWatch? Watch;   // [split] what the devices read is checked too
 
         public double Time { get; internal set; }
         public double Dt { get; internal set; }
@@ -161,11 +176,20 @@ namespace RobotTwin.CoreSim.Analog
         /// <summary>Set by a device that had to limit a junction voltage; forces another iteration.</summary>
         public bool LimitingApplied { get; set; }
 
-        public double V(int node) => node <= 0 ? 0.0 : X[node - 1];
+        public double V(int node)
+        {
+            if (node <= 0) return 0.0;
+            Watch?.Read(node - 1);
+            return X[node - 1];
+        }
 
         public double V(int a, int b) => V(a) - V(b);
 
-        public double Unknown(int index) => X[index];
+        public double Unknown(int index)
+        {
+            Watch?.Read(index);
+            return X[index];
+        }
 
         /// <summary>Conductance g between nodes a and b.</summary>
         public void AddConductance(int a, int b, double g) => Mna.AddConductance(a - 1, b - 1, g);
@@ -218,6 +242,7 @@ namespace RobotTwin.CoreSim.Analog
     public sealed class AcceptContext
     {
         internal double[] X = Array.Empty<double>();
+        internal UnknownWatch? Watch;   // [split]
         private bool _discontinuity;
 
         public double Time { get; internal set; }
@@ -227,11 +252,20 @@ namespace RobotTwin.CoreSim.Analog
         public bool EnableDamage { get; internal set; } = true;
         public List<AnalogEvent> Events { get; } = new List<AnalogEvent>();
 
-        public double V(int node) => node <= 0 ? 0.0 : X[node - 1];
+        public double V(int node)
+        {
+            if (node <= 0) return 0.0;
+            Watch?.Read(node - 1);
+            return X[node - 1];
+        }
 
         public double V(int a, int b) => V(a) - V(b);
 
-        public double Unknown(int index) => X[index];
+        public double Unknown(int index)
+        {
+            Watch?.Read(index);
+            return X[index];
+        }
 
         /// <summary>A device changed state abruptly; the next step restarts with a small backward-Euler step.</summary>
         public void RequestDiscontinuity() => _discontinuity = true;

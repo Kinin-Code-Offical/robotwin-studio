@@ -69,7 +69,7 @@ flowchart LR
 ```
 
 1. `Design/CircuitCompiler` turns a `Schematic` into an analog netlist (`AnalogCircuit`) using each part's simulation model from the `PartLibrary`. Tolerances (`Design/Tolerances.cs`) can perturb values with a fixed seed.
-2. `Analog/AnalogSimulator` solves it: modified nodal analysis, Newton-Raphson for non-linear devices, trapezoidal / backward-Euler integration, adaptive sub-stepping, sparse LU (`SparseLu`) with dense fallback, a thermal model and part damage (burn, blown fuse, breakdown). It is deterministic. The maths: [Circuit solver](en/physics/01-circuit.md).
+2. `Analog/AnalogSimulator` solves it: modified nodal analysis, Newton-Raphson for non-linear devices, trapezoidal / backward-Euler integration, adaptive sub-stepping, sparse LU (`SparseLu`) with dense fallback, a thermal model and part damage (burn, blown fuse, breakdown). It is deterministic. In a world it solves the parts of the circuit that share only the reference apart, each at its own step, side by side on the cores (`AnalogSimulator.Split.cs`, on the solvers' `Mechanics/WorkTeam.cs`). The maths: [Circuit solver](en/physics/01-circuit.md).
 3. `Studio/Simulation/SimulationSession` drives the simulator from the WPF render loop at the selected speed, samples probes at every accepted solver step for the oscilloscope and multimeter, raises failure events and records `.rwsim` files.
 4. When the project has a mechanical assembly, `Mechanics/Mechatronics` couples motors and propellers to a rigid-body vehicle or drone both ways: the circuit drives the motors, the load torque comes back.
 

@@ -254,6 +254,7 @@ namespace RobotTwin.CoreSim.Sandbox
                         compiled.Warnings.Add($"{u.Object.Name} {part.RefDes}: modellenemedi ({ex.Message}).");
                     }
 
+                    foreach (var d in devices) d.Group = fullRef;   // [split] one component, one part of the circuit
                     compiled.DevicesByPart[fullRef] = devices;
 
                     if (def.Symbol == SymbolKind.Board)

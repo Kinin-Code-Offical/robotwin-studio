@@ -11,8 +11,10 @@ namespace RobotTwin.CoreSim.Mechanics
     /// moment after a pass and pick up the next one at once, then sleep when the solver stops handing out work.
     /// Work is taken in chunks from a shared counter, so slower cores (efficiency cores) simply take fewer chunks.
     /// One caller at a time: a second caller (another thread, or a pass inside a pass) is told to do it another way.
+    /// [split] The circuit's independent parts and a big scene's Unos go through it too, every slice: a job of 26 items of
+    /// 4 µs costs ~14 µs here, ~40 µs through Parallel.For.
     /// </summary>
-    internal sealed class WorkTeam
+    public sealed class WorkTeam
     {
         /// <summary>The process's team: a worker for every core but the caller's own.</summary>
         public static readonly WorkTeam Shared = new WorkTeam(Environment.ProcessorCount - 1);
@@ -91,6 +93,31 @@ namespace RobotTwin.CoreSim.Mechanics
             {
                 Volatile.Write(ref _busy, 0);
             }
+        }
+
+        /// <summary>
+        /// [split] <paramref name="body"/>(i) for every i in [0, <paramref name="count"/>), one at a time as threads take
+        /// them, on the shared team; in order on the caller's thread when the team is busy (another caller, or a job
+        /// started from inside an item). The first exception is rethrown as it was.
+        /// </summary>
+        public static void Each(int count, Action<int> body)
+        {
+            bool shared;
+            try
+            {
+                shared = count > 1 && Shared.TryRun(count, 1, (from, to) =>
+                {
+                    for (int i = from; i < to; i++) body(i);
+                });
+            }
+            catch (AggregateException ex) when (ex.InnerExceptions.Count == 1)
+            {
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerExceptions[0]).Throw();
+                throw;
+            }
+
+            if (shared) return;
+            for (int i = 0; i < count; i++) body(i);
         }
 
         /// <summary>

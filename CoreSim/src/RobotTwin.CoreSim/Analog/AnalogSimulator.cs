@@ -42,6 +42,16 @@ namespace RobotTwin.CoreSim.Analog
 
         /// <summary>Parts overheat, burn out or break down when driven outside their ratings.</summary>
         public bool EnableDamage { get; set; } = true;
+
+        /// <summary>
+        /// [split] Parts of the circuit that share nothing but the reference (two robots in one world, each with its own
+        /// battery) are solved on their own, each at its own step, and side by side on the cores when there are enough of
+        /// them: an edge in one no longer cuts the step of all. The parts are found from what the devices touch in the
+        /// operating point and the first step, and joined again when a device reaches into another part later.
+        /// <see cref="AnalogSimulator.SubstepAccepted"/> then comes once per accepted step of each part (times rise within a
+        /// part, not across parts); an instrument that samples nodes uses <see cref="AnalogSimulator.Observe"/>.
+        /// </summary>
+        public bool SplitIndependentParts { get; set; }
     }
 
     public sealed class StepStatistics
@@ -61,6 +71,16 @@ namespace RobotTwin.CoreSim.Analog
             ForcedSteps = 0;
             SmallestStep = double.PositiveInfinity;
         }
+
+        /// <summary>[split] Adds a part's counts to the whole call's.</summary>
+        internal void Add(StepStatistics part)
+        {
+            Substeps += part.Substeps;
+            NewtonIterations += part.NewtonIterations;
+            RejectedSteps += part.RejectedSteps;
+            ForcedSteps += part.ForcedSteps;
+            if (part.SmallestStep < SmallestStep) SmallestStep = part.SmallestStep;
+        }
     }
 
     public sealed class AnalogSimulationException : Exception
@@ -77,45 +97,30 @@ namespace RobotTwin.CoreSim.Analog
     public sealed partial class AnalogSimulator : ISignalSink
     {
         private readonly AnalogCircuit _circuit;
-        private readonly MnaSystem _mna = new MnaSystem();
+        private readonly MnaSystem _mna = new MnaSystem();   // the whole circuit: operating point, AC, and the transient when not split
         private readonly StampContext _stamp = new StampContext();
         private readonly AcceptContext _accept = new AcceptContext();
-        private readonly Dictionary<string, double> _signals =
-            new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        private readonly SignalTable _signals = new SignalTable();   // [perf] by slot, not by name, each step
         private readonly List<AnalogEvent> _events = new List<AnalogEvent>();
         private readonly SignalKeyCache _signalKeys = new SignalKeyCache();
-        private string[] _netSignalKeys = Array.Empty<string>();
+        private int[] _netSlots = Array.Empty<int>();
 
         private AnalogDevice[] _devices = Array.Empty<AnalogDevice>();
         private double[] _x = Array.Empty<double>();
         private double[] _xNew = Array.Empty<double>();
         private double[] _xPrev = Array.Empty<double>();
         private double[] _xPrev2 = Array.Empty<double>();
-        private double[] _scratch = Array.Empty<double>();
         private bool _floatingReported;
 
-        // [islands] One reference per part of the circuit that has no path to ground (Newton, FindIslandTies).
-        private bool _islandsStale = true;
-        private readonly List<(int Node, double G)> _ties = new List<(int Node, double G)>();
         private int _nodeCount;
         private int _size;
-        private bool _hasNonlinear;
         private bool _initialized;
-        private bool _forceBackwardEuler = true;
-        private int _stepsSinceDiscontinuity;
-        private double _hPrev2;
-        private double _hNext;
-        private double _hPrev;
 
         /// <summary>
-        /// [perf] The step the circuit was going at before its last discontinuity: a restart begins at a hundredth of it
-        /// (never below <see cref="AnalogOptions.RestartStep"/>). A fixed 0.1 µs restart made every edge of a circuit that
-        /// otherwise strides along climb back over a dozen steps: the ESP32 quadcopter's circuit took 20 500 steps per
-        /// simulated second, 14 200 now.
+        /// The whole circuit as one part: the operating point and the AC analysis always, the transient while it is not
+        /// split (<see cref="AnalogOptions.SplitIndependentParts"/>). Its arrays are the simulator's own.
         /// </summary>
-        private double _hCruise;
-
-        private double RestartAfterDiscontinuity() => Math.Min(Math.Max(Options.RestartStep, _hCruise * 0.01), Options.MaxStep);
+        private Part _whole = new Part();
 
         public AnalogSimulator(AnalogCircuit circuit, AnalogOptions? options = null)
         {
@@ -129,6 +134,8 @@ namespace RobotTwin.CoreSim.Analog
         /// Called after every accepted internal time step with the new time. Node
         /// voltages and device state are current at that point, which lets
         /// instruments sample waveforms at the solver's own resolution (edges included).
+        /// [split] When the circuit is solved in parts, once per accepted step of each part, the parts one after the other
+        /// (never two at once): times rise within a part, not across parts.
         /// </summary>
         public Action<double>? SubstepAccepted { get; set; }
 
@@ -159,24 +166,55 @@ namespace RobotTwin.CoreSim.Analog
         public void Initialize(InitialState state = InitialState.Zero)
         {
             // Setup may append child devices (body diodes, gate capacitors...), so walk by index.
+            // [split] A device added by another's Setup is of its family (a relay's coil and contacts): one part.
+            var family = new List<int>();
             for (int i = 0; i < _circuit.Devices.Count; i++)
             {
+                while (family.Count < _circuit.Devices.Count) family.Add(-1);
+                int before = _circuit.Devices.Count;
                 _circuit.Devices[i].Setup(_circuit);
+                for (int k = before; k < _circuit.Devices.Count; k++) family.Add(i);
             }
 
             _devices = new AnalogDevice[_circuit.Devices.Count];
             for (int i = 0; i < _devices.Length; i++) _devices[i] = _circuit.Devices[i];
+            while (family.Count < _devices.Length) family.Add(-1);
+            // a second Initialize adds no children (Setup ran already): the children keep their parent's id before a '#'
+            Dictionary<string, int>? byId = null;
+            for (int i = 0; i < _devices.Length; i++)
+            {
+                string id = _devices[i].Id;
+                if (family[i] >= 0 || id.IndexOf('#') < 0) continue;
+                if (byId == null)
+                {
+                    byId = new Dictionary<string, int>(StringComparer.Ordinal);
+                    for (int k = 0; k < _devices.Length; k++) byId[_devices[k].Id] = k;
+                }
+
+                for (int cut = id.LastIndexOf('#'); cut > 0; cut = id.LastIndexOf('#', cut - 1))
+                {
+                    if (byId.TryGetValue(id.Substring(0, cut), out int parent) && parent != i)
+                    {
+                        family[i] = parent;
+                        break;
+                    }
+                }
+            }
+
+            _family = family.ToArray();
 
             _nodeCount = _circuit.NodeCount;
-            _netSignalKeys = new string[_nodeCount + 1];
-            for (int n = 1; n <= _nodeCount; n++) _netSignalKeys[n] = "NET:" + _circuit.NodeNames[n];
+            _signals.Clear();
+            _signalKeys.Clear();
+            _netSlots = new int[_nodeCount + 1];
+            for (int n = 1; n <= _nodeCount; n++) _netSlots[n] = _signals.Slot("NET:" + _circuit.NodeNames[n]);
             int branch = _nodeCount;
-            _hasNonlinear = false;
+            bool nonlinear = false;
             foreach (var device in _devices)
             {
                 device.BranchBase = device.BranchCount > 0 ? branch : -1;
                 branch += device.BranchCount;
-                if (device.IsNonlinear) _hasNonlinear = true;
+                if (device.IsNonlinear) nonlinear = true;
             }
 
             _size = branch;
@@ -185,18 +223,28 @@ namespace RobotTwin.CoreSim.Analog
             _xNew = new double[_size];
             _xPrev = new double[_size];
             _xPrev2 = new double[_size];
-            _scratch = new double[_size];
+
+            var all = new int[_size];
+            for (int i = 0; i < _size; i++) all[i] = i;
+            _whole = new Part
+            {
+                Unknowns = all,
+                NodeCount = _nodeCount,
+                Devices = _devices,
+                Mna = _mna,
+                Scratch = new double[_size],
+                HasNonlinear = nonlinear,
+                Stamp = _stamp,
+                Accept = _accept,
+                Stats = Statistics,
+                Events = _events,
+                HNext = Options.RestartStep
+            };
 
             Time = 0.0;
-            _hNext = Options.RestartStep;
-            _hPrev = 0.0;
-            _hCruise = 0.0;
-            _forceBackwardEuler = true;
-            _stepsSinceDiscontinuity = 0;
             _events.Clear();
-            _signals.Clear();
             _floatingReported = false;
-            _islandsStale = true;
+            StartRecording();   // [split] what the devices touch from here to the end of the first step
 
             foreach (var device in _devices) device.Reset();
             _initialized = true;
@@ -233,15 +281,14 @@ namespace RobotTwin.CoreSim.Analog
                 : throw new KeyNotFoundException($"'{deviceId}:{key}' sinyali yayımlanmıyor.");
 
         void ISignalSink.Write(string deviceId, string key, double value) =>
-            _signals[_signalKeys.Get(deviceId, key)] = value;
+            _signals.Set(_signalKeys.Slot(deviceId, key, _signals), value);
 
         /// <summary>Tells the simulator that something outside changed abruptly (used by hosts that edit devices directly).</summary>
         public void NotifyDiscontinuity()
         {
-            _islandsStale = true;   // [islands] a switch may have joined or cut off a part of the circuit
-            _forceBackwardEuler = true;
-            _stepsSinceDiscontinuity = 0;
-            _hNext = Math.Min(_hNext, RestartAfterDiscontinuity());
+            _whole.Restart(Options);   // [islands] a switch may have joined or cut off a part of the circuit
+            if (_parts != null)
+                foreach (var p in _parts) p.Restart(Options);
         }
 
         /// <summary>Advances simulated time by exactly <paramref name="dt"/> seconds.</summary>
@@ -254,43 +301,62 @@ namespace RobotTwin.CoreSim.Analog
             double tEnd = Time + dt;
             double timeEps = Math.Max(1e-15, Math.Abs(tEnd) * 1e-13);
 
+            if (_parts == null) StepWhole(tEnd, timeEps, dt);
+            else StepParts(tEnd, timeEps, dt);   // [split] AnalogSimulator.Split.cs
+
+            Time = tEnd;
+            if (_parts == null) PublishSignals();   // [split] the parts publish their own, side by side
+            return Statistics;
+        }
+
+        private void StepWhole(double tEnd, double timeEps, double dt)
+        {
             foreach (var device in _devices)
             {
                 if (device.ConsumeDiscontinuity()) NotifyDiscontinuity();
             }
 
+            _whole.Time = Time;
+            Advance(_whole, tEnd, timeEps, dt);
+            if (_recording != null) Split();   // [split] the operating point and the first step decide the parts
+        }
+
+        /// <summary>Takes one part of the circuit (or all of it) from its time to <paramref name="tEnd"/>.</summary>
+        private void Advance(Part p, double tEnd, double timeEps, double dt)
+        {
+            var stats = p.Stats;
             int guard = 0;
-            while (tEnd - Time > timeEps)
+            while (tEnd - p.Time > timeEps)
             {
                 if (++guard > MaxSubstepsPerCall)
                 {
                     throw new AnalogSimulationException(
-                        $"Zaman adımı çöktü: t = {Time:G6} s anında {dt:G3} s'lik adım için {MaxSubstepsPerCall} alt adımdan fazlası gerekti.");
+                        $"Zaman adımı çöktü: t = {p.Time:G6} s anında {dt:G3} s'lik adım için {MaxSubstepsPerCall} alt adımdan fazlası gerekti.");
                 }
 
-                double planned = Math.Min(_hNext, Options.MaxStep);
-                double h = Math.Min(planned, tEnd - Time);
+                double planned = Math.Min(p.HNext, Options.MaxStep);
+                double h = Math.Min(planned, tEnd - p.Time);
                 // [perf] No sliver before the end of the call: a full step that would leave less than a quarter of itself
                 // becomes two even ones (a host slicing time in 50 µs pieces otherwise took a 0.1 µs step at the end of
                 // most of them, and the next piece had to climb back from it).
-                double rest = tEnd - Time - h;
-                if (rest > timeEps && rest < 0.25 * h) h = (tEnd - Time) / 2;
+                double rest = tEnd - p.Time - h;
+                if (rest > timeEps && rest < 0.25 * h) h = (tEnd - p.Time) / 2;
                 bool cut = h < planned * (1 - 1e-9);   // shortened to end the call where asked, not by the error
                 bool hitsBreakpoint = false;
-                double breakpoint = NextBreakpoint(Time);
-                if (breakpoint - Time > timeEps && breakpoint < Time + h - timeEps)
+                double breakpoint = NextBreakpoint(p, p.Time);
+                if (breakpoint - p.Time > timeEps && breakpoint < p.Time + h - timeEps)
                 {
-                    h = breakpoint - Time;
+                    h = breakpoint - p.Time;
                     hitsBreakpoint = true;
                 }
-                else if (Math.Abs(breakpoint - (Time + h)) <= timeEps)
+                else if (Math.Abs(breakpoint - (p.Time + h)) <= timeEps)
                 {
                     hitsBreakpoint = true;
                 }
 
-                bool trapezoidal = Options.Method == IntegrationMethod.Trapezoidal && !_forceBackwardEuler;
-                bool converged = SolveStep(Time + h, h, trapezoidal, out int iterations);
-                Statistics.NewtonIterations += iterations;
+                bool trapezoidal = Options.Method == IntegrationMethod.Trapezoidal && !p.ForceBackwardEuler;
+                bool converged = SolveStep(p, p.Time + h, h, trapezoidal, out int iterations);
+                stats.NewtonIterations += iterations;
 
                 bool forced = false;
                 if (!converged)
@@ -299,32 +365,32 @@ namespace RobotTwin.CoreSim.Analog
                     {
                         // Nothing smaller to try: accept the best iterate and report it.
                         forced = true;
-                        Statistics.ForcedSteps++;
-                        _events.Add(new AnalogEvent(Time + h, "solver", AnalogEventKind.Warning,
+                        stats.ForcedSteps++;
+                        p.Events.Add(new AnalogEvent(p.Time + h, "solver", AnalogEventKind.Warning,
                             "Newton yinelemesi en küçük zaman adımında yakınsamadı."));
                     }
                     else
                     {
-                        Statistics.RejectedSteps++;
-                        _hNext = Math.Max(h * 0.25, Options.MinStep);
-                        _forceBackwardEuler = true;
+                        stats.RejectedSteps++;
+                        p.HNext = Math.Max(h * 0.25, Options.MinStep);
+                        p.ForceBackwardEuler = true;
                         continue;
                     }
                 }
 
-                double growth = _stepsSinceDiscontinuity < 2 && iterations <= 4 ? 4.0 : 2.0;
-                if (!forced && Options.ErrorControl && _stepsSinceDiscontinuity >= 2 && _hPrev > 0.0)
+                double growth = p.StepsSinceDiscontinuity < 2 && iterations <= 4 ? 4.0 : 2.0;
+                if (!forced && Options.ErrorControl && p.StepsSinceDiscontinuity >= 2 && p.HPrev > 0.0)
                 {
                     // Local truncation error from divided differences; the step size follows
                     // h·ratio^(-1/(order+1)), so steps settle where the error is just inside
                     // tolerance instead of oscillating between doubling and rejection.
-                    double ratio = EstimateErrorRatio(h, trapezoidal);
-                    double exponent = trapezoidal && _stepsSinceDiscontinuity >= 3 ? 1.0 / 3.0 : 0.5;
+                    double ratio = EstimateErrorRatio(p, h, trapezoidal);
+                    double exponent = trapezoidal && p.StepsSinceDiscontinuity >= 3 ? 1.0 / 3.0 : 0.5;
                     double factor = ratio > 1e-12 ? 0.9 * Math.Pow(ratio, -exponent) : 4.0;
                     if (ratio > 1.0 && h > Options.MinStep * 4.0)
                     {
-                        Statistics.RejectedSteps++;
-                        _hNext = Math.Max(h * Math.Max(0.2, Math.Min(0.9, factor)), Options.MinStep);
+                        stats.RejectedSteps++;
+                        p.HNext = Math.Max(h * Math.Max(0.2, Math.Min(0.9, factor)), Options.MinStep);
                         continue;
                     }
 
@@ -334,60 +400,86 @@ namespace RobotTwin.CoreSim.Analog
                 if (iterations > 12) growth = Math.Min(growth, 1.0);
 
                 // Commit the step.
-                Array.Copy(_xPrev, _xPrev2, _size);
-                Array.Copy(_x, _xPrev, _size);
-                Array.Copy(_xNew, _x, _size);
-                _hPrev2 = _hPrev;
-                _hPrev = h;
-                Time += h;
-                Statistics.Substeps++;
-                if (h < Statistics.SmallestStep) Statistics.SmallestStep = h;
-
-                _accept.X = _x;
-                _accept.Time = Time;
-                _accept.Dt = h;
-                _accept.IsDc = false;
-                _accept.AmbientTempC = Options.AmbientTempC;
-                _accept.EnableDamage = Options.EnableDamage;
-                foreach (var device in _devices) device.Accept(_accept);
-                if (_accept.Events.Count > 0)
+                var u = p.Unknowns;
+                for (int i = 0; i < u.Length; i++)
                 {
-                    _events.AddRange(_accept.Events);
-                    _accept.Events.Clear();
+                    int k = u[i];
+                    _xPrev2[k] = _xPrev[k];
+                    _xPrev[k] = _x[k];
+                    _x[k] = _xNew[k];
                 }
 
-                SubstepAccepted?.Invoke(Time);
+                p.HPrev2 = p.HPrev;
+                p.HPrev = h;
+                p.Time += h;
+                stats.Substeps++;
+                if (h < stats.SmallestStep) stats.SmallestStep = h;
 
-                bool discontinuity = _accept.ConsumeDiscontinuity() || hitsBreakpoint;
-                foreach (var device in _devices)
+                var accept = p.Accept;
+                accept.X = _x;
+                accept.Time = p.Time;
+                accept.Dt = h;
+                accept.IsDc = false;
+                accept.AmbientTempC = Options.AmbientTempC;
+                accept.EnableDamage = Options.EnableDamage;
+                AcceptAll(p, accept);
+                if (accept.Events.Count > 0)
+                {
+                    p.Events.AddRange(accept.Events);
+                    accept.Events.Clear();
+                }
+
+                if (p.Observers != null)
+                    foreach (var o in p.Observers) o(p.Time);   // [split] instruments and boards on this part's nodes
+                SubstepAccepted?.Invoke(p.Time);
+
+                bool discontinuity = accept.ConsumeDiscontinuity() || hitsBreakpoint;
+                foreach (var device in p.Devices)
                 {
                     if (device.ConsumeDiscontinuity()) discontinuity = true;
                 }
 
                 if (discontinuity)
                 {
-                    _islandsStale = true;   // [islands]
-                    _forceBackwardEuler = true;
-                    _stepsSinceDiscontinuity = 0;
-                    _hNext = RestartAfterDiscontinuity();
+                    p.IslandsStale = true;   // [islands]
+                    p.ForceBackwardEuler = true;
+                    p.StepsSinceDiscontinuity = 0;
+                    p.HNext = p.RestartStep(Options);
                 }
                 else
                 {
-                    _forceBackwardEuler = false;
-                    _stepsSinceDiscontinuity++;
+                    p.ForceBackwardEuler = false;
+                    p.StepsSinceDiscontinuity++;
                     // Never below the floor: a step accepted at the minimum because the error could not be met there would
                     // otherwise halve on every step, down to 1e-21 s where the companion models are all round-off.
-                    _hNext = Math.Min(Math.Max(h * growth, Options.MinStep), Options.MaxStep);
+                    p.HNext = Math.Min(Math.Max(h * growth, Options.MinStep), Options.MaxStep);
                     // [perf] a step cut short only to end the call, with the error allowing all the growth there is: the next
                     // call goes on at the step that was planned, not at four times the cut one
-                    if (cut && !hitsBreakpoint && growth >= 4.0 - 1e-9) _hNext = Math.Max(_hNext, planned);
-                    if (_stepsSinceDiscontinuity >= 3) _hCruise = _hNext;   // settled: the pace a restart starts from
+                    if (cut && !hitsBreakpoint && growth >= 4.0 - 1e-9) p.HNext = Math.Max(p.HNext, planned);
+                    if (p.StepsSinceDiscontinuity >= 3) p.HCruise = p.HNext;   // settled: the pace a restart starts from
                 }
             }
 
-            Time = tEnd;
-            PublishSignals();
-            return Statistics;
+            p.Time = tEnd;
+        }
+
+        /// <summary>Every device of the part takes the accepted step; while the parts are being found, each one's reads are told apart.</summary>
+        private void AcceptAll(Part p, AcceptContext accept)
+        {
+            var devices = p.Devices;
+            if (_recording != null && ReferenceEquals(p, _whole))
+            {
+                for (int i = 0; i < devices.Length; i++)
+                {
+                    _recording.Device = i;
+                    devices[i].Accept(accept);
+                }
+
+                _recording.Device = -1;
+                return;
+            }
+
+            foreach (var device in devices) device.Accept(accept);
         }
 
         /// <summary>Solves the DC operating point and loads it as the present state.</summary>
@@ -410,14 +502,16 @@ namespace RobotTwin.CoreSim.Analog
                 if (!changed) break;
             }
 
-            _forceBackwardEuler = true;
-            _stepsSinceDiscontinuity = 0;
+            _whole.ForceBackwardEuler = true;
+            _whole.StepsSinceDiscontinuity = 0;
+            if (_parts != null)
+                foreach (var p in _parts) p.Restart(Options);   // [split] every part starts again from the new state
             return true;
         }
 
         private bool SolveOperatingPointOnce()
         {
-            _islandsStale = true;   // [islands] devices may have changed state since the last pass
+            _whole.IslandsStale = true;   // [islands] devices may have changed state since the last pass
             bool ok = SolveDc(Options.Gmin, 1.0);
 
             if (!ok)
@@ -465,7 +559,7 @@ namespace RobotTwin.CoreSim.Analog
             _accept.IsDc = true;
             _accept.AmbientTempC = Options.AmbientTempC;
             _accept.EnableDamage = false;
-            foreach (var device in _devices) device.Accept(_accept);
+            AcceptAll(_whole, _accept);
             _accept.Events.Clear();
             return true;
         }
@@ -498,13 +592,13 @@ namespace RobotTwin.CoreSim.Analog
             var info = new StepInfo(Time, 0.0, true, false);
             foreach (var device in _devices) device.BeginStep(info);
             Array.Copy(_x, _xNew, _size);
-            ConfigureStamp(Time, 0.0, true, false, gmin, sourceScale);
+            ConfigureStamp(_whole, Time, 0.0, true, false, gmin, sourceScale);
             _shunt = shunt;
             _shuntAnchor = anchor;
             bool ok;
             try
             {
-                ok = Newton(Options.MaxNewtonIterations * 3, out _);
+                ok = Newton(_whole, Options.MaxNewtonIterations * 3, out _);
             }
             finally
             {
@@ -519,25 +613,27 @@ namespace RobotTwin.CoreSim.Analog
         private double _shunt;
         private double[]? _shuntAnchor;
 
-        private bool SolveStep(double time, double h, bool trapezoidal, out int iterations)
+        private bool SolveStep(Part p, double time, double h, bool trapezoidal, out int iterations)
         {
             var info = new StepInfo(time, h, false, trapezoidal);
-            foreach (var device in _devices) device.BeginStep(info);
-            Array.Copy(_x, _xNew, _size);
-            ConfigureStamp(time, h, false, trapezoidal, Options.Gmin, 1.0);
-            return Newton(Options.MaxNewtonIterations, out iterations);
+            foreach (var device in p.Devices) device.BeginStep(info);
+            var u = p.Unknowns;
+            for (int i = 0; i < u.Length; i++) _xNew[u[i]] = _x[u[i]];
+            ConfigureStamp(p, time, h, false, trapezoidal, Options.Gmin, 1.0);
+            return Newton(p, Options.MaxNewtonIterations, out iterations);
         }
 
-        private void ConfigureStamp(double time, double h, bool isDc, bool trapezoidal, double gmin, double sourceScale)
+        private void ConfigureStamp(Part p, double time, double h, bool isDc, bool trapezoidal, double gmin, double sourceScale)
         {
-            _stamp.Mna = _mna;
-            _stamp.Time = time;
-            _stamp.Dt = h;
-            _stamp.IsDc = isDc;
-            _stamp.Trapezoidal = trapezoidal;
-            _stamp.Gmin = gmin;
-            _stamp.SourceScale = sourceScale;
-            _stamp.AmbientTempC = Options.AmbientTempC;
+            var stamp = p.Stamp;
+            stamp.Mna = p.Mna;
+            stamp.Time = time;
+            stamp.Dt = h;
+            stamp.IsDc = isDc;
+            stamp.Trapezoidal = trapezoidal;
+            stamp.Gmin = gmin;
+            stamp.SourceScale = sourceScale;
+            stamp.AmbientTempC = Options.AmbientTempC;
         }
 
         /// <summary>
@@ -548,15 +644,15 @@ namespace RobotTwin.CoreSim.Analog
         /// node a designer would call its ground ("GND…", then "-"), as strong as its own conductances. One connection to a
         /// part that has no other carries no current, so nothing in it changes but its level, which is now 0 V there.
         /// </summary>
-        private void FindIslandTies()
+        private void FindIslandTies(Part p)
         {
-            _ties.Clear();
-            foreach (var (nodes, scale) in _mna.FloatingIslands(_nodeCount))
+            p.Ties.Clear();
+            foreach (var (nodes, scale) in p.Mna.FloatingIslands(p.NodeCount))
             {
                 int best = nodes[0], bestScore = -1;
                 foreach (int k in nodes)
                 {
-                    int score = ReferenceScore(_circuit.NodeNames[k + 1]);
+                    int score = ReferenceScore(_circuit.NodeNames[p.Unknowns[k] + 1]);
                     if (score > bestScore)
                     {
                         best = k;
@@ -564,7 +660,7 @@ namespace RobotTwin.CoreSim.Analog
                     }
                 }
 
-                _ties.Add((best, Math.Max(scale, 1e-3)));
+                p.Ties.Add((best, Math.Max(scale, 1e-3)));
             }
         }
 
@@ -578,32 +674,36 @@ namespace RobotTwin.CoreSim.Analog
             return pin == "K" || pin == "E" || pin == "S" ? 1 : 0;
         }
 
-        /// <summary>Newton-Raphson on the iterate held in <c>_xNew</c>.</summary>
-        private bool Newton(int maxIterations, out int iterations)
+        /// <summary>Newton-Raphson on the part's unknowns of the iterate held in <c>_xNew</c>.</summary>
+        private bool Newton(Part p, int maxIterations, out int iterations)
         {
-            var scratch = _scratch;
+            var scratch = p.Scratch;
+            var mna = p.Mna;
+            var stamp = p.Stamp;
+            var u = p.Unknowns;
+            int size = u.Length, nodes = p.NodeCount;
 
             for (iterations = 1; iterations <= maxIterations; iterations++)
             {
-                _mna.Clear();
-                _stamp.X = _xNew;
-                _stamp.LimitingApplied = false;
-                foreach (var device in _devices) device.Stamp(_stamp);
-                if (_islandsStale)
+                mna.Clear();
+                stamp.X = _xNew;
+                stamp.LimitingApplied = false;
+                StampAll(p, stamp);
+                if (p.IslandsStale)
                 {
-                    FindIslandTies();
-                    _islandsStale = false;
+                    FindIslandTies(p);
+                    p.IslandsStale = false;
                 }
 
-                foreach (var (node, g) in _ties) _mna.Add(node, node, g);
-                _mna.AddDiagonal(_nodeCount, _stamp.Gmin);
+                foreach (var (node, g) in p.Ties) mna.AddOwn(node, node, g);
+                mna.AddDiagonal(nodes, stamp.Gmin);
                 if (_shunt > 0.0 && _shuntAnchor != null)
                 {
-                    _mna.AddDiagonal(_nodeCount, _shunt);
-                    for (int n = 0; n < _nodeCount; n++) _mna.AddRhs(n, _shunt * _shuntAnchor[n]);
+                    mna.AddDiagonal(nodes, _shunt);
+                    for (int n = 0; n < nodes; n++) mna.AddOwnRhs(n, _shunt * _shuntAnchor[u[n]]);
                 }
 
-                if (!_mna.Solve(scratch, out int singular))
+                if (!mna.Solve(scratch, out int singular))
                 {
                     // Floating islands (parts whose pins go nowhere) have no DC reference.
                     // Tie every node to ground through a growing shunt before giving up;
@@ -611,28 +711,30 @@ namespace RobotTwin.CoreSim.Analog
                     bool solved = false;
                     for (double shunt = 1e-9; shunt <= 1e-3 && !solved; shunt *= 1000.0)
                     {
-                        _mna.AddDiagonal(_nodeCount, shunt);
-                        solved = _mna.Solve(scratch, out singular);
+                        mna.AddDiagonal(nodes, shunt);
+                        solved = mna.Solve(scratch, out singular);
                     }
 
-                    if (!solved) throw new AnalogSimulationException(DescribeSingular(singular));
-                    if (!_floatingReported)
+                    if (!solved) throw new AnalogSimulationException(DescribeSingular(p, singular));
+                    if (!_floatingReported && !p.FloatingReported)
                     {
-                        _floatingReported = true;
-                        _events.Add(new AnalogEvent(_stamp.Time, "solver", AnalogEventKind.Warning,
+                        // [split] said once per part, so parts solved side by side decide it alone (deterministic)
+                        p.FloatingReported = true;
+                        if (ReferenceEquals(p, _whole)) _floatingReported = true;
+                        p.Events.Add(new AnalogEvent(stamp.Time, "solver", AnalogEventKind.Warning,
                             "Devrede referanssız (boşta) kısımlar var; toprağa yüksek dirençle bağlanarak çözüldü."));
                     }
                 }
 
-                bool converged = !_stamp.LimitingApplied;
-                if (converged && _hasNonlinear)
+                bool converged = !stamp.LimitingApplied;
+                if (converged && p.HasNonlinear)
                 {
                     double relTol = Options.RelTol, voltageTol = Options.VoltageTol, currentTol = Options.CurrentTol;
-                    for (int i = 0; i < _size; i++)
+                    for (int i = 0; i < size; i++)
                     {
-                        double a = scratch[i], b = _xNew[i];
+                        double a = scratch[i], b = _xNew[u[i]];
                         double tol = relTol * Math.Max(Math.Abs(a), Math.Abs(b)) +
-                                     (i < _nodeCount ? voltageTol : currentTol);
+                                     (i < nodes ? voltageTol : currentTol);
                         if (Math.Abs(a - b) > tol)
                         {
                             converged = false;
@@ -641,8 +743,8 @@ namespace RobotTwin.CoreSim.Analog
                     }
                 }
 
-                Array.Copy(scratch, _xNew, _size);
-                if (!_hasNonlinear) return true;
+                for (int i = 0; i < size; i++) _xNew[u[i]] = scratch[i];
+                if (!p.HasNonlinear) return true;
                 if (converged && iterations > 1) return true;
             }
 
@@ -650,23 +752,40 @@ namespace RobotTwin.CoreSim.Analog
             return false;
         }
 
-        /// <summary>
-        /// Ratio of the deviation from linear extrapolation to the allowed error,
-        /// evaluated on node voltages. Above 1 the step is too coarse.
-        /// </summary>
+        /// <summary>Every device of the part stamps; while the parts are being found, each one's touches are told apart.</summary>
+        private void StampAll(Part p, StampContext stamp)
+        {
+            var devices = p.Devices;
+            if (_recording != null && ReferenceEquals(p, _whole))
+            {
+                for (int i = 0; i < devices.Length; i++)
+                {
+                    _recording.Device = i;
+                    devices[i].Stamp(stamp);
+                }
+
+                _recording.Device = -1;
+                return;
+            }
+
+            foreach (var device in devices) device.Stamp(stamp);
+        }
+
         /// <summary>
         /// Worst ratio of the estimated local truncation error to the allowed error over
-        /// all node voltages. Trapezoidal: LTE ≈ h³·x‴/12 from the third divided difference
-        /// of the last four points; backward Euler: LTE ≈ h²·x″/2 from the second.
+        /// the part's node voltages. Trapezoidal: LTE ≈ h³·x‴/12 from the third divided difference
+        /// of the last four points; backward Euler: LTE ≈ h²·x″/2 from the second. Above 1 the step is too coarse.
         /// </summary>
-        private double EstimateErrorRatio(double h, bool trapezoidal)
+        private double EstimateErrorRatio(Part p, double h, bool trapezoidal)
         {
             double worst = 0.0;
             double relTol = Options.ErrorRelTol, absTol = Options.ErrorAbsTol;
-            double h1 = _hPrev, h2 = _hPrev2;
-            bool third = trapezoidal && h2 > 0.0 && _stepsSinceDiscontinuity >= 3;
-            for (int i = 0; i < _nodeCount; i++)
+            double h1 = p.HPrev, h2 = p.HPrev2;
+            bool third = trapezoidal && h2 > 0.0 && p.StepsSinceDiscontinuity >= 3;
+            var u = p.Unknowns;
+            for (int j = 0; j < p.NodeCount; j++)
             {
+                int i = u[j];
                 double xn = _xNew[i], x0 = _x[i], x1 = _xPrev[i];
                 double d1a = (xn - x0) / h, d1b = (x0 - x1) / h1;
                 double d2a = (d1a - d1b) / (h + h1);
@@ -691,10 +810,10 @@ namespace RobotTwin.CoreSim.Analog
             return worst;
         }
 
-        private double NextBreakpoint(double time)
+        private static double NextBreakpoint(Part p, double time)
         {
             double next = double.PositiveInfinity;
-            foreach (var device in _devices)
+            foreach (var device in p.Devices)
             {
                 double candidate = device.NextBreakpoint(time);
                 if (candidate < next) next = candidate;
@@ -707,23 +826,24 @@ namespace RobotTwin.CoreSim.Analog
         {
             for (int n = 1; n <= _nodeCount; n++)
             {
-                _signals[_netSignalKeys[n]] = _x[n - 1];
+                _signals.Set(_netSlots[n], _x[n - 1]);
             }
 
             _signalKeys.Rewind();
             foreach (var device in _devices) device.Report(this);
         }
 
-        private string DescribeSingular(int index)
+        private string DescribeSingular(Part p, int index)
         {
-            if (index >= 0 && index < _nodeCount)
+            if (index >= 0 && index < p.NodeCount)
             {
-                return $"Devre matrisi '{_circuit.NodeNames[index + 1]}' düğümünde tekil (çözülemiyor).";
+                return $"Devre matrisi '{_circuit.NodeNames[p.Unknowns[index] + 1]}' düğümünde tekil (çözülemiyor).";
             }
 
-            foreach (var device in _devices)
+            int unknown = index >= 0 && index < p.Unknowns.Length ? p.Unknowns[index] : -1;
+            foreach (var device in p.Devices)
             {
-                if (device.BranchBase >= 0 && index >= device.BranchBase && index < device.BranchBase + device.BranchCount)
+                if (device.BranchBase >= 0 && unknown >= device.BranchBase && unknown < device.BranchBase + device.BranchCount)
                 {
                     return $"Devre matrisi '{device.Id}' parçasında tekil (çözülemiyor); " +
                            "büyük olasılıkla gerilim kaynakları ya da bobinler bir döngü oluşturuyor.";

@@ -451,6 +451,7 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
             if (State == Esp32BoardState.Running && _module != null)
             {
                 SampleInputs(now);
+                SortEdges();
                 foreach (var e in _edges) _module.PinChanged(e.Gpio, e.Level ? 1 : 0, Ns(e.Time));
                 _edges.Clear();
                 DeliverSerial(now, end);
@@ -655,6 +656,27 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         // ------------------------------------------------------------------ inputs / outputs
 
         private static ulong Ns(double seconds) => seconds <= 0.0 ? 0UL : (ulong)Math.Round(seconds * 1e9);
+
+        /// <summary>
+        /// [split] The edges in time order: a circuit solved in parts reports each part's steps in turn, so two pins in two
+        /// parts may come out of order (each pin's own edges are always in order). Stable: equal times keep theirs.
+        /// </summary>
+        private void SortEdges()
+        {
+            for (int i = 1; i < _edges.Count; i++)
+            {
+                var e = _edges[i];
+                int j = i - 1;
+                if (_edges[j].Time <= e.Time) continue;
+                while (j >= 0 && _edges[j].Time > e.Time)
+                {
+                    _edges[j + 1] = _edges[j];
+                    j--;
+                }
+
+                _edges[j + 1] = e;
+            }
+        }
 
         private void SampleInputs(double time)
         {

@@ -147,6 +147,31 @@ namespace RobotTwin.CoreSim.Mechanics
         /// <summary>Raised when a plug is pulled out (end, force in N).</summary>
         public event Action<RopeEnd, double>? Unplugged;
 
+        /// <summary>
+        /// [perf] While on (the cables stepped side by side on the cores), what the rope does to the scene waits, in order,
+        /// for <see cref="Flush"/>: the forces on bodies and the plugs it pulls out. Its own motion is the same either way,
+        /// and flushed rope by rope in the cables' order, every body gets the same forces added in the same order.
+        /// </summary>
+        internal bool Deferred { get; set; }
+
+        private readonly List<(SceneBody Body, Vec3 Force, Vec3 At)> _forces = new List<(SceneBody Body, Vec3 Force, Vec3 At)>();
+        private readonly List<(RopeEnd End, double Force)> _releases = new List<(RopeEnd End, double Force)>();
+
+        /// <summary>[perf] Hands the scene what waited while <see cref="Deferred"/>: the forces, then the plugs that came out.</summary>
+        internal void Flush()
+        {
+            foreach (var (body, force, at) in _forces) body.AddForceAtPoint(force, at);
+            _forces.Clear();
+            foreach (var (end, force) in _releases) Unplugged?.Invoke(end, force);
+            _releases.Clear();
+        }
+
+        private void Push(SceneBody body, Vec3 force, Vec3 at)
+        {
+            if (Deferred) _forces.Add((body, force, at));
+            else body.AddForceAtPoint(force, at);
+        }
+
         public static double CrossSection(double awg)
         {
             double d = 0.127e-3 * Math.Pow(92.0, (36.0 - awg) / 39.0);
@@ -635,14 +660,15 @@ namespace RobotTwin.CoreSim.Mechanics
             double len = d.Length;
             if (len < 1e-9) return;
             double f = Math.Min(end.Tension, PullOutForce * 1.2);
-            end.Body.AddForceAtPoint(d / len * f, end.World);
+            Push(end.Body, d / len * f, end.World);
         }
 
         private void Release(RopeEnd end, double force)
         {
             end.Attached = false;
             end.Tension = 0;
-            Unplugged?.Invoke(end, force);
+            if (Deferred) _releases.Add((end, force));
+            else Unplugged?.Invoke(end, force);
         }
 
         /// <summary>Pulls a plug out by hand (or by a failure elsewhere).</summary>
@@ -986,7 +1012,7 @@ namespace RobotTwin.CoreSim.Mechanics
             }
 
             if (_coupleDt > 0 && !b.IsStatic && (InternalTo == null || !InternalTo.Contains(b)))
-                b.AddForceAtPoint(moved * (-1.0 / (h * h) * (h / _coupleDt)), (_x[i] + _x[j]) * 0.5);   // [phys] reaction on the body
+                Push(b, moved * (-1.0 / (h * h) * (h / _coupleDt)), (_x[i] + _x[j]) * 0.5);   // [phys] reaction on the body
         }
 
         /// <summary>[phys] Continuous collision again after the last length pass, which also moves particles.</summary>
@@ -1051,7 +1077,7 @@ namespace RobotTwin.CoreSim.Mechanics
             x = b.Position + b.Orientation.Rotate(stopped);
             _x[i] = x;
             if (_coupleDt > 0 && !b.IsStatic && _w[i] > 0 && (InternalTo == null || !InternalTo.Contains(b)))
-                b.AddForceAtPoint((before - x) * (1.0 / _w[i] / (h * h) * (h / _coupleDt)), x);
+                Push(b, (before - x) * (1.0 / _w[i] / (h * h) * (h / _coupleDt)), x);
         }
 
         private void PushOut(SceneBody b, ref Vec3 x, int i, double h, double scale)
@@ -1071,7 +1097,7 @@ namespace RobotTwin.CoreSim.Mechanics
             // [phys] Newton's third law: the push that kept this bit of wire out of the body (and the friction that
             // dragged it along) pushes the body back, as an average force over the outer step.
             if (_coupleDt > 0 && !b.IsStatic && _w[i] > 0 && (InternalTo == null || !InternalTo.Contains(b)))
-                b.AddForceAtPoint((before - x) * (1.0 / _w[i] / (h * h) * (h / _coupleDt)), x);
+                Push(b, (before - x) * (1.0 / _w[i] / (h * h) * (h / _coupleDt)), x);
         }
 
         /// <summary>Positional Coulomb friction: tangential slip relative to the surface is cancelled up to μ·penetration.</summary>

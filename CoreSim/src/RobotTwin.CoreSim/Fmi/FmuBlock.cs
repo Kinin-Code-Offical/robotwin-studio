@@ -14,6 +14,9 @@ namespace RobotTwin.CoreSim.Fmi
     /// </summary>
     public sealed class FmuBlock : AnalogDevice, IDisposable
     {
+        /// <summary>[split] Native FMU code is solved one at a time (an FMU may keep state outside its instance).</summary>
+        protected internal override bool RunsBesideOthers => false;
+
         private readonly Fmu2Instance _fmu;
         private readonly int _reference;
         private readonly List<(FmuVariable Var, int Node)> _inputs;

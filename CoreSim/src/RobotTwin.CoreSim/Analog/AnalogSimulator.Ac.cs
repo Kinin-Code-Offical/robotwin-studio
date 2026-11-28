@@ -62,7 +62,7 @@ namespace RobotTwin.CoreSim.Analog
             }
 
             // The device states the two stamps set up are the next real step's to set again.
-            _forceBackwardEuler = true;
+            ForceBackwardEulerEverywhere();
             var result = new List<AcPoint>();
             foreach (double f in frequencies)
             {
@@ -92,7 +92,7 @@ namespace RobotTwin.CoreSim.Analog
         {
             var info = new StepInfo(Time, h, false, false);
             foreach (var device in _devices) device.BeginStep(info);
-            ConfigureStamp(Time, h, false, false, Options.Gmin, 1.0);
+            ConfigureStamp(_whole, Time, h, false, false, Options.Gmin, 1.0);
             _mna.Clear();
             _stamp.X = _x;
             foreach (var device in _devices) device.Stamp(_stamp);

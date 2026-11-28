@@ -45,8 +45,9 @@ namespace RobotWin.Studio.Pages
             ((Shell.ISolverCosts)_session).Costs(costs);
             double sim = ((Shell.ISolverCosts)_session).SimulatedSeconds, total = costs.Sum(c => c.Seconds);
             if (sim <= 0 || total <= 0) return "—";
+            string parts = _session.Simulator is { } circuit ? $" · devre {circuit.PartCount} parçada" + (circuit.Rejoins > 0 ? $", {circuit.Rejoins} birleşme" : string.Empty) : string.Empty;   // [split]
             return string.Join(" · ", costs.Where(c => c.Seconds > 0).OrderByDescending(c => c.Seconds)
-                .Select(c => string.Format(CultureInfo.InvariantCulture, "{0} {1:0} ms/s ({2:0}%)", c.Name, c.Seconds * 1000 / sim, 100 * c.Seconds / total)));
+                .Select(c => string.Format(CultureInfo.InvariantCulture, "{0} {1:0} ms/s ({2:0}%)", c.Name, c.Seconds * 1000 / sim, 100 * c.Seconds / total))) + parts;
         }
 
         /// <summary>[perf] Simulated time of the run (for --bench).</summary>

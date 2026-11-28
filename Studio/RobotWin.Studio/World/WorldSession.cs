@@ -116,7 +116,8 @@ namespace RobotWin.Studio.World
                 MaxStep = settings.MaxStep,
                 RelTol = settings.RelTol,
                 AmbientTempC = world.Environment.AmbientC,
-                EnableDamage = settings.EnableDamage
+                EnableDamage = settings.EnableDamage,
+                SplitIndependentParts = true   // [split] robots that share only the reference are solved apart, each at its own step
             });
             try
             {
@@ -163,10 +164,8 @@ namespace RobotWin.Studio.World
                 }
             }
 
-            Simulator.SubstepAccepted = t =>
-            {
-                for (int i = 0; i < _esp.Count; i++) _esp[i].OnSubstep(t);
-            };
+            // [split] each ESP32 board time-stamps its input edges at the steps of the part(s) its pins are in
+            foreach (var board in _esp) Simulator.Observe(BoardNodes(board.BoardRefDes), board.OnSubstep);
             StartSense();   // [sense] World/WorldSession.Sense.cs
             StartSupply();   // [supply] World/WorldSession.Supply.cs
             AttachRos();   // [ros] a connection made before the run: its link to this physics
@@ -227,7 +226,7 @@ namespace RobotWin.Studio.World
             StopSdk();   // [sdk]
             _rosLink = null;   // [ros] the connection stays for the next run
             StopModbus();   // [modbus]
-            if (Simulator != null) Simulator.SubstepAccepted = null;
+            Simulator?.ClearObservers();
             Simulator = null;
             Circuit = null;
             Physics = null;
@@ -464,7 +463,7 @@ namespace RobotWin.Studio.World
                         // [bigscene] Each Uno runs its own chip on its own pins and only reads the circuit, so within one slice
                         // they are independent: spread over the cores (no breakpoints here, so none stops inside the slice).
                         double slice = dt, at = Simulator.Time;
-                        System.Threading.Tasks.Parallel.For(0, _avr.Count, BoardThreads, i => _avr[i].Advance(slice, at));
+                        RobotTwin.CoreSim.Mechanics.WorkTeam.Each(_avr.Count, i => _avr[i].Advance(slice, at));
                     }
                     else
                     {
@@ -777,7 +776,6 @@ namespace RobotWin.Studio.World
         /// <summary>[bigscene] From how many Unos their slices run in parallel (below it, the hand-over costs more than it saves).</summary>
         public const int ParallelBoardsFrom = 4;
 
-        private static readonly System.Threading.Tasks.ParallelOptions BoardThreads = new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) };
 
         /// <summary>The serial monitor and the log, written by boards running side by side.</summary>
         private readonly object _boardOutput = new object();
@@ -1092,6 +1090,15 @@ namespace RobotWin.Studio.World
         }
 
         public double Voltage(CableEnd end) => Circuit == null || Simulator == null ? double.NaN : Circuit.Voltage(Simulator, end);
+
+        /// <summary>[split] The circuit nodes of a board's pins.</summary>
+        private IEnumerable<int> BoardNodes(string refDes)
+        {
+            if (Circuit == null) yield break;
+            string prefix = refDes + ".";
+            foreach (var kv in Circuit.Compiled.NodeByPin)
+                if (kv.Value > 0 && kv.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) yield return kv.Value;
+        }
 
         /// <summary>Live screen of a display object (OLED framebuffer / LCD text), if any.</summary>
         /// <summary>[neopixel] The WS2812B strip a component object is, while the world runs (null otherwise).</summary>

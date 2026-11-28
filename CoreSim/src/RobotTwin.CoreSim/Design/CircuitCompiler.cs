@@ -135,6 +135,7 @@ namespace RobotTwin.CoreSim.Design
                     compiled.Warnings.Add($"{refDes}: modellenemedi ({ex.Message}).");
                 }
 
+                foreach (var d in devices) d.Group = refDes;   // [split] one component, one part of the circuit
                 compiled.DevicesByPart[refDes] = devices;
             }
 
