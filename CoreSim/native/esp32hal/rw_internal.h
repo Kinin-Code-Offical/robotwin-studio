@@ -26,6 +26,8 @@ uint64_t tick_deadline(uint32_t ticks);
    host's slice blocks here until the host advances; may also switch to the ISR/system
    task or round-robin to another task. No-op off the sketch threads. */
 void charge(uint64_t ns);
+extern bool g_port_registers_used;   /* a library holds a port register pointer: charge() settles the copies (rw_hal.cpp) */
+void hal_port_settle();
 /* delay()/vTaskDelay(): block the calling task until the given absolute time. */
 void sleep_until(uint64_t at_ns);
 /* yield(): let other ready tasks run. */

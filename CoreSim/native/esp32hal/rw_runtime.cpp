@@ -451,9 +451,12 @@ uint64_t cost(double ns) {
     return v <= 0.0 ? 0 : (uint64_t)(v + 0.5);
 }
 
+bool g_port_registers_used = false;
+
 void charge(uint64_t ns) {
     Task* t = t_self;
     if (!t) return;
+    if (g_port_registers_used) hal_port_settle();   // what a library wrote through a port register pointer, onto the pins
     touch_watchdog();
     g_now += ns;
     if (t->is_sys) return;  // interrupt handlers never switch away

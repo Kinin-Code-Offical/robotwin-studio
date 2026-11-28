@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using RobotWin.Studio.Editor;
@@ -82,6 +83,20 @@ namespace RobotWin.Studio.Firmware
         public static bool UsesBluepad32(string source) =>
             source.Contains("<Bluepad32.h>", StringComparison.Ordinal) || source.Contains("\"Bluepad32.h\"", StringComparison.Ordinal);
 
+        // [esp32hw] a call only the 2.x core has: LEDC by channel, the 2.x timers (three arguments to timerBegin and
+        // timerAttachInterrupt, the alarm calls), the IDF 4.4 task watchdog's esp_task_wdt_init(seconds, panic)
+        private static readonly Regex V2Call = new Regex(
+            @"\b(ledcSetup|ledcAttachPin|ledcDetachPin|timerAlarmWrite|timerAlarmEnable|timerAlarmDisable|timerAlarmEnabled|timerAlarmRead)\s*\(" +
+            @"|\b(timerBegin|timerAttachInterrupt)\s*\([^(),;]*,[^(),;]*," +
+            @"|\besp_task_wdt_init\s*\(\s*[^&(),;\s][^(),;]*,",
+            RegexOptions.Compiled);
+
+        /// <summary>
+        /// [esp32hw] The sketch makes a call of the 2.x core (written for it, as most examples are): its real-chip build on
+        /// the 3.x core then takes the 2.x calls through rw_esp32_v2.h, as the fast mode does.
+        /// </summary>
+        public static bool UsesV2Calls(string source) => V2Call.IsMatch(source);
+
         /// <summary>
         /// Why a sketch cannot be built for the real chip yet, or null: one using Bluepad32 needs Bluepad32's core, which is
         /// installed apart (Kod → Gerçek kart → Bluepad32 çekirdeğini kur); the fast mode runs it either way.
@@ -135,16 +150,19 @@ namespace RobotWin.Studio.Firmware
         }
 
         /// <summary>
-        /// [bluepad32] The 3.x LEDC calls a sketch makes (ledcAttach / ledcWrite by pin) on Bluepad32's 2.x core: a header
-        /// written beside the sketch and included by its own file only (one line on top, taken off the messages' line numbers).
+        /// The other core generation's calls: [bluepad32] rw_esp32_v3.h, the 3.x LEDC calls (ledcAttach / ledcWrite by pin)
+        /// on Bluepad32's 2.x core; [esp32hw] rw_esp32_v2.h, the 2.x calls (LEDC by channel, the 2.x timers, the IDF 4.4 task
+        /// watchdog) on the 3.x core. A header written beside the sketch and included by its own file only (one line on top,
+        /// taken off the messages' line numbers); false when it is not there to add.
         /// </summary>
-        private static void AddV3Compat(string sketchDir)
+        private static bool AddCompatHeader(string sketchDir, string name)
         {
-            string header = Path.Combine(AppContext.BaseDirectory, "Firmware", "rw_esp32_v3.h");
-            if (!File.Exists(header)) return;
-            File.Copy(header, Path.Combine(sketchDir, "rw_esp32_v3.h"), true);
+            string header = Path.Combine(AppContext.BaseDirectory, "Firmware", name);
+            if (!File.Exists(header)) return false;
+            File.Copy(header, Path.Combine(sketchDir, name), true);
             string main = Path.Combine(sketchDir, "sketch.ino");
-            File.WriteAllText(main, "#include \"rw_esp32_v3.h\"\n" + File.ReadAllText(main), new UTF8Encoding(false));
+            File.WriteAllText(main, "#include \"" + name + "\"\n" + File.ReadAllText(main), new UTF8Encoding(false));
+            return true;
         }
 
         /// <summary>The build marks which core made it (the upload goes with the same core's esptool).</summary>
@@ -333,7 +351,8 @@ namespace RobotWin.Studio.Firmware
             }
 
             WriteSketch(source, sketchDir);
-            if (bluepad) AddV3Compat(sketchDir);
+            // [bluepad32] its 2.x core takes the 3.x LEDC calls; [esp32hw] the 3.x core the 2.x calls
+            bool shifted = bluepad ? AddCompatHeader(sketchDir, "rw_esp32_v3.h") : UsesV2Calls(source) && AddCompatHeader(sketchDir, "rw_esp32_v2.h");
             var args = new List<string> { "compile", "--fqbn", bluepad ? Esp32Bluepad32Fqbn : Esp32HardwareFqbn, "--output-dir", outDir, "--warnings", "default", "--no-color", sketchDir };
             foreach (var root in LibraryRoots.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
             {
@@ -357,9 +376,9 @@ namespace RobotWin.Studio.Firmware
             result.Success = code == 0;
             result.Log = log.ToString();
             ReadLog(result);
-            if (bluepad)
+            if (shifted)
             {
-                // [bluepad32] the compat header's line on top of the sketch's own file: its messages back to the sketch's lines
+                // the compat header's line on top of the sketch's own file: its messages back to the sketch's lines
                 var moved = result.Diagnostics.Select(d => d.File == "sketch.ino" && d.Line > 1 ? new CodeDiagnostic(d.Line - 1, d.Column, d.IsError, d.Message, d.File) : d).ToList();
                 result.Diagnostics.Clear();
                 result.Diagnostics.AddRange(moved);

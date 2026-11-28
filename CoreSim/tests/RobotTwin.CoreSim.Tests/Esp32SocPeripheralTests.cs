@@ -28,6 +28,31 @@ namespace RobotTwin.CoreSim.Tests
         }
 
         [Fact]
+        public void AnRtcPadTakesItsPullsFromItsRtcIoRegister()
+        {
+            // ESP-IDF's gpio_pullup_en(4) on the ESP32 sets TOUCH_PAD0's RUE (rtc_gpio_pullup_en), not IO_MUX's FUN_WPU:
+            // Arduino's pinMode(4, INPUT_PULLUP) left GPIO4 floating in the emulator (Bounce2 read 0 there)
+            var soc = new Esp32Soc();
+            soc.Write32(0x3FF49048, 2u << 12 | 1u << 9);            // IO_MUX GPIO4: GPIO function, input on, no pulls
+            Assert.False(soc.PadDrive(4).PullUp);
+            soc.Write32(0x3FF48494, 1u << 27);                      // RTC_IO_TOUCH_PAD0: RUE
+            Assert.True(soc.PadDrive(4).PullUp);
+            Assert.False(soc.PadDrive(4).PullDown);
+            soc.Write32(0x3FF48494, 1u << 28);                      // RDE
+            Assert.False(soc.PadDrive(4).PullUp);
+            Assert.True(soc.PadDrive(4).PullDown);
+            soc.Write32(0x3FF49048, 2u << 12 | 1u << 9 | 1u << 8);  // FUN_WPU does not reach an RTC pad
+            soc.Write32(0x3FF48494, 0);
+            Assert.False(soc.PadDrive(4).PullUp);
+
+            soc.Write32(0x3FF4908C, 2u << 12 | 1u << 9 | 1u << 8);  // GPIO23, no RTC function: IO_MUX's FUN_WPU
+            Assert.True(soc.PadDrive(23).PullUp);
+            soc.Write32(0x3FF4848C, 1u << 22);                      // XTAL_32K_PAD X32P_RUE: GPIO32
+            Assert.True(soc.PadDrive(32).PullUp);
+            Assert.False(soc.PadDrive(33).PullUp);
+        }
+
+        [Fact]
         public void ClockFollowsTheClockRegisters()
         {
             var soc = new Esp32Soc();

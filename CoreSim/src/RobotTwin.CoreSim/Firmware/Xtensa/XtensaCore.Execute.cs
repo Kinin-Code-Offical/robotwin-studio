@@ -137,9 +137,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
                 case 2: return LoadStore(t, s, r, imm8);
                 case 3: return LoadStoreFloat(t, s, r, imm8);
-                case 4:
-                    Illegal();   // MAC16 (not emitted by the ESP32's compiler)
-                    return 1;
+                case 4: return Mac16(t, s, r, op1, op2);   // MAC16 (XtensaCore.Mac16.cs)
                 case 5:
                 {
                     // CALL0 / CALL4 / CALL8 / CALL12
@@ -849,7 +847,7 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                 case 5: Litbase = value; return;
                 case 12: Scompare1 = value; return;
                 case 16: AccLo = value; return;
-                case 17: AccHi = value & 0xFF; return;
+                case 17: AccHi = (uint)(sbyte)(byte)value; return;   // the accumulator's top 8 bits, read back sign-extended
                 case 32: case 33: case 34: case 35: M[sr - 32] = value; return;
                 case 72: WindowBase = (int)(value & 15); return;
                 case 73: WindowStart = value & 0xFFFF; return;

@@ -120,6 +120,14 @@ namespace RobotWin.Studio
                 return;
             }
 
+            if (Arg("--esp32-libs") is { } libsReport && Arg("--esp32-libroot") is { } libRoot)
+            {
+                // [libs] popular third-party libraries on the ESP32, built and run in both modes; the table in a markdown report
+                double seconds = double.TryParse(Arg("--esp32-seconds"), NumberStyles.Float, CultureInfo.InvariantCulture, out var s) && s > 0 ? s : 6.0;
+                Shutdown(Firmware.Esp32LibraryMatrix.Run(libsReport, Path.GetFullPath(libRoot), seconds, Arg("--esp32-libs-filter")));
+                return;
+            }
+
             if (Arg("--perf-check") is { } perfReport)
             {
                 // [perf] every world template headless, its cost per simulated second against a baseline; 1 = a regression

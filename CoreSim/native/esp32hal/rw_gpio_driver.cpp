@@ -6,6 +6,7 @@
  */
 #include "Arduino.h"
 #include "driver/gpio.h"
+#include "driver/rtc_io.h"
 #include "rw_internal.h"
 
 using namespace rw;
@@ -237,6 +238,48 @@ extern "C" esp_err_t gpio_isr_handler_remove(gpio_num_t gpio_num) {
     g_conf[gpio_num].isr = nullptr;
     detachInterrupt((uint8_t)gpio_num);
     return ESP_OK;
+}
+
+/* ---------------------------------------------------------------- RTC GPIO (driver/rtc_io.h) */
+namespace {
+
+bool rtc_valid(int n, const char* func, int line) {
+    if (rtc_gpio_is_valid_gpio((gpio_num_t)n)) return true;
+    rw::log(RW_LOG_ERROR, "E (%lu) rtc_io: %s(%d): RTCIO number error", (unsigned long)(uptime_ns() / 1000000ull), func, line);
+    return false;
+}
+
+}  // namespace
+
+extern "C" bool rtc_gpio_is_valid_gpio(gpio_num_t n) {
+    return n == 0 || n == 2 || n == 4 || (n >= 12 && n <= 15) || (n >= 25 && n <= 27) || (n >= 32 && n <= 39);
+}
+
+extern "C" esp_err_t rtc_gpio_init(gpio_num_t n) { return rtc_valid(n, "rtc_gpio_init", 42) ? ESP_OK : ESP_ERR_INVALID_ARG; }
+extern "C" esp_err_t rtc_gpio_deinit(gpio_num_t n) { return rtc_valid(n, "rtc_gpio_deinit", 56) ? ESP_OK : ESP_ERR_INVALID_ARG; }
+extern "C" uint32_t rtc_gpio_get_level(gpio_num_t n) { return rtc_valid(n, "rtc_gpio_get_level", 82) ? (uint32_t)gpio_get_level(n) : 0; }
+
+extern "C" esp_err_t rtc_gpio_set_level(gpio_num_t n, uint32_t level) {
+    return rtc_valid(n, "rtc_gpio_set_level", 70) ? gpio_set_level(n, level) : ESP_ERR_INVALID_ARG;
+}
+
+extern "C" esp_err_t rtc_gpio_set_direction(gpio_num_t n, rtc_gpio_mode_t mode) {
+    if (!rtc_valid(n, "rtc_gpio_set_direction", 110)) return ESP_ERR_INVALID_ARG;
+    static const gpio_mode_t as_gpio[] = {GPIO_MODE_INPUT, GPIO_MODE_OUTPUT, GPIO_MODE_INPUT_OUTPUT, GPIO_MODE_DISABLE, GPIO_MODE_OUTPUT_OD, GPIO_MODE_INPUT_OUTPUT_OD};
+    if ((int)mode < 0 || (int)mode > RTC_GPIO_MODE_INPUT_OUTPUT_OD) return ESP_ERR_INVALID_ARG;
+    return gpio_set_direction(n, as_gpio[mode]);
+}
+
+extern "C" esp_err_t rtc_gpio_pullup_en(gpio_num_t n) { return rtc_valid(n, "rtc_gpio_pullup_en", 126) ? gpio_pullup_en(n) : ESP_ERR_INVALID_ARG; }
+extern "C" esp_err_t rtc_gpio_pullup_dis(gpio_num_t n) { return rtc_valid(n, "rtc_gpio_pullup_dis", 133) ? gpio_pullup_dis(n) : ESP_ERR_INVALID_ARG; }
+extern "C" esp_err_t rtc_gpio_pulldown_en(gpio_num_t n) { return rtc_valid(n, "rtc_gpio_pulldown_en", 140) ? gpio_pulldown_en(n) : ESP_ERR_INVALID_ARG; }
+extern "C" esp_err_t rtc_gpio_pulldown_dis(gpio_num_t n) { return rtc_valid(n, "rtc_gpio_pulldown_dis", 147) ? gpio_pulldown_dis(n) : ESP_ERR_INVALID_ARG; }
+
+extern "C" esp_err_t rtc_gpio_isolate(gpio_num_t n) {
+    if (!rtc_valid(n, "rtc_gpio_isolate", 180)) return ESP_ERR_INVALID_ARG;
+    gpio_pullup_dis(n);
+    gpio_pulldown_dis(n);
+    return gpio_set_direction(n, GPIO_MODE_DISABLE);
 }
 
 namespace rw {

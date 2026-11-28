@@ -313,6 +313,70 @@ void loop() {
 }
 ";
 
+        // [libs] what third-party libraries reach for below Arduino's API: the GPIO register file (OneWire's bit-banged bus),
+        // port register pointers (Adafruit BusIO's software SPI), the Client / UDP interfaces (PubSubClient, NTPClient), the
+        // RTC GPIO driver, GCC's bit built-ins (FastLED) and a C++11-or-later __cplusplus (MFRC522)
+        public const string Registers = @"
+#include <soc/gpio_struct.h>
+#include <driver/rtc_io.h>
+#include <Client.h>
+#include <Udp.h>
+#include <WiFi.h>
+#include <WiFiUdp.h>
+
+static int takesClient(Client& c) { return c.connected(); }
+static int takesUdp(UDP& u) { return u.begin(1234); }
+WiFiClient net;
+WiFiUDP udp;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(18, OUTPUT);
+  GPIO.out_w1ts = 1u << 18;
+  int a = (GPIO.out >> 18) & 1;
+  int high = digitalRead(18);
+  GPIO.out_w1tc = 1u << 18;
+  int low = digitalRead(18);
+  GPIO.enable_w1tc = 1u << 18;
+  int en = (GPIO.enable >> 18) & 1;
+  GPIO.enable_w1ts = 1u << 18;
+  GPIO.out1_w1ts.val = 1u << (33 - 32);
+  int high33 = (GPIO.out1.val >> 1) & 1;
+
+  pinMode(21, OUTPUT);
+  volatile uint32_t* out = portOutputRegister(digitalPinToPort(21));
+  uint32_t mask = digitalPinToBitMask(21);
+  *out |= mask;
+  delay(1);
+  int set = digitalRead(21);
+  *out &= ~mask;
+  delay(1);
+  int cleared = digitalRead(21);
+
+  Serial.printf(""REGS a=%d high=%d low=%d en=%d high33=%d set=%d cleared=%d\n"", a, high, low, en, high33, set, cleared);
+  Serial.printf(""BITS pop=%d clz=%d ctz=%d clz0=%d cpp=%d\n"", __builtin_popcount(0xF0F0u), __builtin_clz(1u), __builtin_ctz(8u),
+                __builtin_clz(0u), __cplusplus >= 201103L ? 1 : 0);
+  WiFi.mode(WIFI_STA);   // the network stack first, as on the chip
+  Serial.printf(""NET client=%d udp=%d rtc4=%d rtc5=%d\n"", takesClient(net), takesUdp(udp), (int)rtc_gpio_is_valid_gpio(GPIO_NUM_4),
+                (int)rtc_gpio_is_valid_gpio(GPIO_NUM_5));
+}
+
+void loop() { delay(100); }
+";
+
+        // [esp32] a socket before Wi-Fi is started: the chip's lwIP asserts on its missing core lock and restarts
+        public const string NoStack = @"
+#include <WiFi.h>
+WiFiClient c;
+void setup() {
+  Serial.begin(115200);
+  Serial.println(""start"");
+  c.connect(IPAddress(10, 0, 0, 1), 80);
+  Serial.println(""after"");
+}
+void loop() { delay(10); }
+";
+
         public Esp32SketchFixture()
         {
             Available = Esp32SketchCompiler.IsToolchainAvailable;
@@ -338,7 +402,9 @@ void loop() {
                 ["rtos"] = Rtos,
                 ["memory"] = Memory,
                 ["pcnt-filter"] = PcntFilter,
-                ["pcnt-ledc"] = PcntLedc
+                ["pcnt-ledc"] = PcntLedc,
+                ["registers"] = Registers,
+                ["no-stack"] = NoStack
             };
             var compiler = new Esp32SketchCompiler();
             var results = new ConcurrentDictionary<string, Esp32BuildResult>();
@@ -661,6 +727,34 @@ void loop() {
             double expected = 2 * 0.5 / 343.0 * 1e6;   // 2915 us
             Assert.All(widths, w => Assert.InRange(w, expected - 3, expected + 3));
             Assert.Contains("dist=50.0", serial);
+        }
+
+        [Esp32Fact]
+        public void LibrariesReachTheRegistersAndInterfacesBelowArduinosApi()
+        {
+            var (sch, _) = NewBoard();
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            using var rig = new Rig(compiled, _fx.Dll("registers"));
+            rig.Run(0.3, 1e-3);
+            string serial = rig.Serial.ToString();
+            _out.WriteLine(serial);
+            Assert.Contains("REGS a=1 high=1 low=0 en=0 high33=1 set=1 cleared=0", serial);
+            Assert.Contains("BITS pop=8 clz=31 ctz=3 clz0=32 cpp=1", serial);
+            Assert.Contains("NET client=0 udp=1 rtc4=1 rtc5=0", serial);
+        }
+
+        [Esp32Fact]
+        public void ASocketBeforeWifiRestartsTheChipAsItsLwipDoes()
+        {
+            var (sch, _) = NewBoard();
+            var compiled = CircuitCompiler.Compile(sch, Lib);
+            using var rig = new Rig(compiled, _fx.Dll("no-stack"));
+            rig.Run(1.0, 1e-3);
+            string serial = rig.Serial.ToString();
+            _out.WriteLine(serial);
+            Assert.Contains("assert failed: xQueueSemaphoreTake queue.c:1709 (( pxQueue ))", serial);
+            Assert.DoesNotContain("after", serial);
+            Assert.True(serial.Split('\n').Count(l => l.Trim() == "start") >= 2, "the sketch did not start again");
         }
 
         [Esp32Fact]

@@ -82,7 +82,12 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
         /// <summary>[isolation] The sketch host: a plain console program on the static runtime, nothing else to load.</summary>
         private const string HostFlags = "/nologo /O2 /EHsc /std:c++17 /utf-8 /MT /W3";
 
-        private const string CommonFlags = "/nologo /O2 /EHsc /std:c++17 /utf-8 /MT /W3 /wd4996 /wd4244 /wd4267 /wd4305 /wd4018 /wd4838 /wd4309 /wd4068 /diagnostics:column";
+        // [libs] what the Arduino builder puts on every file's command line, ahead of any header: a library's own .cpp
+        // tests ARDUINO >= 100 before it includes Arduino.h (Adafruit's, AccelStepper, OneWire ...), else it reaches for the
+        // pre-1.0 WProgram.h. The same values as Arduino.h's, so its own definitions repeat them.
+        private const string BoardDefines = " /DARDUINO=10819 /DARDUINO_ARCH_ESP32=1 /DESP32=1 /DARDUINO_ESP32_DEV=1";
+
+        private const string CommonFlags = "/nologo /O2 /EHsc /std:c++17 /Zc:__cplusplus /utf-8 /MT /W3 /wd4996 /wd4244 /wd4267 /wd4305 /wd4018 /wd4838 /wd4309 /wd4068 /diagnostics:column";
 
         private static readonly object ShimGate = new object();
 
@@ -170,6 +175,23 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                 if (first != null) return Compile(first, outputDir);
             }
 
+            var result = CompileOnce(sketchSourceOrPath, outputDir, null);
+            // [libs] GCC's variable-length arrays, which MSVC refuses (C2131): the reported declarations rewritten, built again
+            Esp32VlaRewrite? vla = null;
+            for (int attempt = 0; attempt < 3 && !result.Success; attempt++)
+            {
+                vla ??= new Esp32VlaRewrite();
+                string source = sketchSourceOrPath;
+                bool inMemory = !(LooksLikePath(source) && File.Exists(source));
+                if (!vla.Learn(result.Log, path => inMemory && path == "sketch.ino" ? source : File.Exists(path) ? File.ReadAllText(path) : null)) break;
+                result = CompileOnce(sketchSourceOrPath, outputDir, vla);
+            }
+
+            return result;
+        }
+
+        private Esp32BuildResult CompileOnce(string sketchSourceOrPath, string outputDir, Esp32VlaRewrite? vla)
+        {
             var result = new Esp32BuildResult();
             var log = new StringBuilder();
             var total = Stopwatch.StartNew();
@@ -212,6 +234,10 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                     sketchName = "sketch";
                     files.Add(new SketchSourceFile("sketch.ino", sketchSourceOrPath));
                 }
+
+                if (vla != null)
+                    for (int i = 0; i < files.Count; i++)
+                        files[i] = new SketchSourceFile(files[i].Path, vla.Rewrite(files[i].Path, files[i].Text));
 
                 // ---- toolchain
                 var setup = Stopwatch.StartNew();
@@ -258,9 +284,11 @@ namespace RobotTwin.CoreSim.Firmware.Esp32
                     foreach (var lib in result.Libraries) log.AppendLine("kütüphane: " + lib.Name + " (" + lib.Folder + ", " + lib.Sources.Count.ToString(CultureInfo.InvariantCulture) + " kaynak)");
                 }
 
+                if (vla != null) vla.Overlay(result.Libraries, Path.Combine(buildDir, "vla"), log);
                 var libIncludes = new StringBuilder();
                 foreach (var dir in result.Libraries.SelectMany(l => l.IncludeDirs)) libIncludes.Append(" /I\"").Append(dir).Append('"');
-                var defines = new StringBuilder();
+                var defines = new StringBuilder(BoardDefines);
+                if (vla != null && vla.Any) defines.Append(" /FI\"rw_vla.h\"");   // the rewritten declarations' type
                 foreach (var d in Defines) defines.Append(" /D\"").Append(d).Append('"');
 
                 var objects = new List<string>();

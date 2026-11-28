@@ -259,7 +259,8 @@ Like the Arduino table: whether each feature works in the two modes, how it was 
 
 | Feature | Fast mode | Hardware-compatible | How it was tried | Known limit |
 | --- | --- | --- | --- | --- |
-| GPIO, `attachInterrupt` | ✓ | ✓ (GPIO matrix, Schmitt input, IDF's GPIO ISR service) | `Esp32EmulatedBoardTests`: ten rising edges on GPIO4 counted exactly | |
+| GPIO, `attachInterrupt` | ✓ | ✓ (GPIO matrix, Schmitt input, IDF's GPIO ISR service; the RTC pads' pulls from their RTC_IO registers) | `Esp32EmulatedBoardTests`: ten rising edges on GPIO4 counted exactly; `Esp32SocPeripheralTests`: GPIO4's pull | |
+| GPIO registers (`GPIO.out_w1ts` …), port register pointers | ✓ | ✓ | `Esp32Tests`: OneWire's and BusIO's way | in the fast mode what is written through a pointer reaches the pin at the sketch's next HAL call |
 | `analogRead` (ADC) | ✓ (ideal line) | ✓ (Espressif's characterisation) | the dimmer reads a 10k/4.7k divider within 5 mV | the two modes give different raw codes for the same voltage (fast mode 1.0 V → 1241); the calibrated voltage is the same |
 | `ledc*`, `analogWrite`, `Servo` | ✓ | ✓ (LEDC registers, hardware fade) | the dimmer's 5 kHz PWM; servo pulses in the library's ticks | |
 | `dacWrite`, `touchRead` | ✓ | ✓ | 75 untouched, 13 with a finger (through IDF's software filter) | |
@@ -277,9 +278,55 @@ Like the Arduino table: whether each feature works in the two modes, how it was 
 | ESP-NOW, BLE | ✓ | — | `Esp32RadioTests` | a sketch using them runs in the fast mode |
 | Bluepad32 (PS4 / PS5 / Xbox gamepad) | ✓ | built for the real board (Bluepad32 core); runs in the fast mode on the emulator | `GamepadCarTests`; the *ps5-car* and *ps5-plane* templates' sketches built with Bluepad32 4.1.0 (718 / 749 KB) | not tried on a real board (none at hand) |
 | TLS, mDNS | — | — | | not yet |
-| Floating point (FPU) | ✓ | ✓ (single-precision FPU; division, square root, 1/x and 1/√x too) | `XtensaCoreTests`; in a real-chip build `a / b`, `sqrtf`, `sinf`, `cosf`, `powf`, `atan2f`, `expf`, `logf`, `double` division, `printf("%f")`, `String(float)` | the emulator lacks MAC16 (esp-dsp's hand-written routines) |
+| Floating point (FPU) | ✓ | ✓ (single-precision FPU; division, square root, 1/x and 1/√x too) | `XtensaCoreTests`; in a real-chip build `a / b`, `sqrtf`, `sinf`, `cosf`, `powf`, `atan2f`, `expf`, `logf`, `double` division, `printf("%f")`, `String(float)` | |
+| MAC16 (16-bit multiply-accumulate) | ✓ | ✓ (40-bit accumulator, M0–M3 and their auto-incrementing loads) | `XtensaCoreTests`: GCC's `mula.aa.ll` and esp-dsp's `mula.dd.ll.ldinc` form | |
 | Breakpoints, stepping | — | — | | Arduino Uno / Nano only |
 | Upload to a real board | ✓ | ✓ | **Upload to the real board → COMx** | |
+
+#### Third-party libraries
+
+Each popular Arduino library was built with a small sketch of its own in both modes and run for a few seconds on a lone ESP32 DevKitC (nothing else connected): the table gives the version tried, whether it builds and prints the expected line in each mode, and what it printed. A sensor, display or reader library says what it should with nothing fitted (not found, NaN, 0 devices); the network libraries join the world's virtual network, which has no broker or time server. `--esp32-libs report.md --esp32-libroot folder` makes the table again (see [Tools](../../TOOLS.md)); the libraries are installed in the folder with arduino-cli.
+
+| Library | Version | Fast mode | Hardware-compatible | Printed | Note |
+| --- | --- | --- | --- | --- | --- |
+| Arduino-ESP32 2.x calls | — | ✓ | ✓ | `duty=512 freq=5000 ticks=10` | a sketch written for the 2.x core (see Core versions) |
+| ArduinoJson | 7.4.3 | ✓ | ✓ | `{"a":1,"b":[2,3],"c":4.5}` |  |
+| PubSubClient | 2.8 | ✓ | ✓ | `wifi=1 connect=0 state=-2` | no MQTT broker in the world: joins Wi-Fi, cannot reach the broker |
+| Adafruit SSD1306 (+ GFX, BusIO) | 2.5.18 | ✓ | ✓ | `begin=1 w=128` | no display fitted: drawing runs, I²C unanswered |
+| DHT sensor library | 1.4.7 | ✓ | ✓ | NaN | no sensor fitted |
+| DallasTemperature (+ OneWire) | 4.0.6 | ✓ | ✓ | 0 devices | no sensor fitted |
+| AccelStepper | 1.64 | ✓ | ✓ | `pos=400` | 400 steps: fast 595 ms, hardware 598 ms |
+| FastLED | 3.10.10 | — | ✓ | `r0=255 g0=1` | does not build in the fast mode: its ESP32 layer assumes 32-bit pointer types, the fast mode builds 64-bit on the PC (Adafruit_NeoPixel and `rgbLedWrite` work there) |
+| TinyGPSPlus | 1.0.3 | ✓ | ✓ | `lat=48.1173 lng=11.5167 sats=8` | position from NMEA sentences |
+| Bounce2 | 2.71 | ✓ | ✓ | `read=1` | a free input with its pull-up |
+| Adafruit MPU6050 | 2.2.9 | ✓ | ✓ | `begin=0` | no sensor fitted: not found |
+| Adafruit BME280 | 2.3.0 | ✓ | ✓ | `begin=0` | no sensor fitted: not found |
+| MFRC522 | 1.4.12 | ✓ | ✓ | `ver=FF` | no reader fitted |
+| LiquidCrystal I2C | 1.1.2 | ✓ | ✓ | `ok=1` | the library declares AVR only; no display fitted |
+| NewPing | 1.9.7 | ✓ | ✓ | `cm=0` | no sensor fitted: no echo |
+| IRremote | 4.7.1 | ✓ | ✓ | `sent=1` | an NEC send |
+| PID | 1.2.0 | ✓ | ✓ | `out=10.03` | one step |
+| NTPClient | 3.2.1 | ✓ | ✓ | `wifi=1 update=0` | no time server in the world: joins Wi-Fi, does not update |
+| Keypad | 3.1.1 | ✓ | ✓ | `key=0` | no keypad fitted |
+| RTClib | 2.1.4 | ✓ | ✓ | `begin=0 unix=1709209800 dow=4` | no clock module fitted; date arithmetic works |
+| HX711 | 0.7.5 | ✓ | ✓ | `ready=1 raw=0` | no converter fitted, data pin pulled down |
+| U8g2 | 2.36.19 | ✓ | ✓ | `w=128` | no display fitted: drawing runs |
+| WiFiManager | 2.0.17 | — | ✓ | `ok=1` | does not build in the fast mode: `esp_wifi.h`, WebServer and DNSServer are not in it |
+
+- **Variable-length arrays:** declarations such as `unsigned int uS[it];` (NewPing, MFRC522, IRremote and a sketch's own code) are taken by the ESP32's GCC, not by the fast mode's MSVC. The fast mode rewrites a declaration where the compiler reports it into an array that frees itself at the end of its scope, and builds again; a library is built from a copy in the build folder, the library itself is not touched. A file that takes the array's `sizeof` is left as it is.
+- **Network:** a sketch that opens a socket before Wi-Fi is started (`WiFiClient.connect`, `WiFiUDP.begin` … without `WiFi.begin` or `WiFi.mode`) restarts the real chip with `assert failed: xQueueSemaphoreTake queue.c:1709` (lwIP's core lock does not exist yet); both modes do so. Start Wi-Fi first.
+
+#### Core versions
+
+The real-chip build uses Arduino-ESP32 3.3.13; a sketch using Bluepad32 uses Bluepad32's core, built on 2.x. The fast mode takes both generations' calls. Sketches written for the 2.x core (most examples and tutorials) make calls the 3.x core no longer has: LEDC by channel (`ledcSetup`, `ledcAttachPin`, `ledcWrite(channel, …)`), the 2.x timers (`timerBegin(0, 80, true)`, `timerAttachInterrupt(t, f, true)`, `timerAlarmWrite`, `timerAlarmEnable` / `Disable`) and IDF 4.4's `esp_task_wdt_init(seconds, panic)`. Built for the real chip, such a sketch gets `rw_esp32_v2.h` in its own file, and the calls are taken on the 3.x core as in the fast mode: `ledcWrite` and its kin take a pin once a 3.x attach has been made for it, otherwise a channel set up with `ledcSetup`. Both modes give the same result, as the table's first row shows (`duty=512 freq=5000`, 10 interrupts in 105 ms from a 10 ms alarm). The other way round too: on Bluepad32's 2.x core the 3.x LEDC calls work through `rw_esp32_v3.h`.
+
+| Call | Fast mode | Hardware-compatible (3.3.13) | Note |
+| --- | --- | --- | --- |
+| 2.x LEDC (`ledcSetup`, `ledcAttachPin`, `ledcWrite` / `ledcRead` / `ledcWriteTone` by channel) | ✓ | ✓ (`rw_esp32_v2.h`) | |
+| 2.x timers (`timerBegin(num, divider, countUp)`, `timerAlarmWrite`, `timerAlarmEnable` / `Disable`) | ✓ | ✓ (`rw_esp32_v2.h`) | counting down (`countUp = false`) is not in 3.x: it counts up |
+| `esp_task_wdt_init(seconds, panic)` | ✓ | ✓ (`rw_esp32_v2.h`) | reconfigures the running watchdog, the idle tasks it watches stay |
+| `hallRead` | ✓ | — | the 3.x core dropped the hall sensor |
+| `SYSTEM_EVENT_*` Wi-Fi event names | — | — | both modes have the 3.x names: `ARDUINO_EVENT_*` |
 
 ## Code of boards in the world
 

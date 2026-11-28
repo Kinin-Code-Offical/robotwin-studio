@@ -6,6 +6,7 @@
  * (valid pins, input-only pads, ADC2 vs Wi-Fi, LEDC channels...).
  */
 #include "Arduino.h"
+#include "soc/gpio_struct.h"
 #include "rw_internal.h"
 
 using namespace rw;
@@ -576,6 +577,176 @@ extern "C" int digitalRead(uint8_t pin) {
     if ((s.mode & 0x02) && !(s.mode & OPEN_DRAIN) && s.ledc < 0 && !s.dac) return s.out;
     if ((s.mode & OPEN_DRAIN) && !s.out) return 0;
     return host_read(pin);
+}
+
+/* ============================================================ GPIO registers (soc/gpio_struct.h) */
+/* A pin's output latch, as digitalWrite sets it (no checks: a register write is not refused). */
+static void reg_latch(int pin, uint8_t level) {
+    if (!output_pin(pin)) return;
+    PinState& s = g_pins[pin];
+    if (s.out == level) return;
+    s.out = level;
+    host_write(pin, level);
+}
+
+/* A pin's output driver on or off; its input and pulls stay as pinMode left them. */
+static void reg_enable(int pin, bool on) {
+    if (on && !output_pin(pin)) return;
+    PinState& s = g_pins[pin];
+    uint8_t mode = on ? (uint8_t)(s.mode | OUTPUT) : (uint8_t)(s.mode & ~(0x02 | OPEN_DRAIN));
+    if (!on && (mode & (INPUT | PULLUP | PULLDOWN)) == 0) mode = INPUT;   // a disabled driver leaves the pad an input
+    if (mode == s.mode) return;
+    s.mode = mode;
+    host_pin_mode(pin, mode);
+}
+
+/* ---- port registers (portOutputRegister ...): copies a library writes through a pointer, settled into the pins at
+   each HAL call (charge), and the input copy refreshed then */
+namespace {
+volatile uint32_t g_port[3][2];   // [output, input, enable][GPIO0-31, GPIO32-39]
+uint32_t g_port_seen[3][2];       // each copy as the pins were when last settled
+bool g_port_used[3][2];
+bool g_port_settling;
+}  // namespace
+
+static uint32_t port_from_pins(int kind, int port) {
+    uint32_t mask = 0xFFFFFFFFu;
+    if (kind == 1) {
+        // only the input pins: what drives an output is in the output copy
+        mask = 0;
+        for (int b = 0; b < 32; b++) {
+            int pin = port * 32 + b;
+            if (valid_pin(pin) && !(g_pins[pin].mode & 0x02)) mask |= 1u << b;
+        }
+    }
+
+    uint32_t v = 0;
+    for (int b = 0; b < 32; b++) {
+        if ((mask >> b & 1) == 0) continue;
+        int pin = port * 32 + b;
+        if (!valid_pin(pin)) continue;
+        const PinState& s = g_pins[pin];
+        bool bit = kind == 0 ? s.out != 0 : kind == 2 ? (s.mode & 0x02) != 0 : host_read(pin) != 0;
+        if (bit) v |= 1u << b;
+    }
+
+    return v;
+}
+
+extern "C" volatile uint32_t* rw_port_register(int kind, int port) {
+    if (kind < 0 || kind > 2) kind = 0;
+    port = port ? 1 : 0;
+    uint32_t now = port_from_pins(kind, port);
+    g_port[kind][port] = now;
+    g_port_seen[kind][port] = now;
+    g_port_used[kind][port] = true;
+    g_port_registers_used = true;
+    return &g_port[kind][port];
+}
+
+namespace rw {
+void hal_port_settle() {
+    if (g_port_settling) return;
+    g_port_settling = true;
+    for (int port = 0; port < 2; port++) {
+        for (int kind = 0; kind < 3; kind++) {
+            if (!g_port_used[kind][port]) continue;
+            if (kind != 1) {
+                // the bits the library changed since the last settle go to the pins; the copy then shows the pins again
+                uint32_t v = g_port[kind][port], changed = v ^ g_port_seen[kind][port];
+                for (int b = 0; b < 32 && changed != 0; b++) {
+                    if ((changed >> b & 1) == 0) continue;
+                    int pin = port * 32 + b;
+                    if (!valid_pin(pin)) continue;
+                    bool bit = (v >> b & 1) != 0;
+                    if (kind == 0) reg_latch(pin, bit ? 1 : 0);
+                    else reg_enable(pin, bit);
+                }
+            }
+
+            uint32_t now = port_from_pins(kind, port);
+            g_port[kind][port] = now;
+            g_port_seen[kind][port] = now;
+        }
+    }
+
+    g_port_settling = false;
+}
+}  // namespace rw
+
+extern "C" uint32_t rw_gpio_reg_read(int reg, uint32_t mask) {
+    charge(cost(kCostDigitalRead));
+    bool high = reg == rw_gpio::Out1 || reg == rw_gpio::Enable1 || reg == rw_gpio::In1;
+    uint32_t v = 0;
+    for (int b = 0; b < 32; b++) {
+        if ((mask >> b & 1) == 0) continue;
+        int pin = (high ? 32 : 0) + b;
+        if (!valid_pin(pin)) continue;
+        const PinState& s = g_pins[pin];
+        bool bit = false;
+        switch (reg) {
+            case rw_gpio::In:
+            case rw_gpio::In1:
+                // as digitalRead: a push-pull output reads back what it drives, an open drain driving low reads low
+                if ((s.mode & 0x02) && !(s.mode & OPEN_DRAIN) && s.ledc < 0 && !s.dac) bit = s.out != 0;
+                else if ((s.mode & OPEN_DRAIN) && !s.out) bit = false;
+                else bit = host_read(pin) != 0;
+                break;
+            case rw_gpio::Out:
+            case rw_gpio::Out1:
+                bit = s.out != 0;
+                break;
+            case rw_gpio::Enable:
+            case rw_gpio::Enable1:
+                bit = (s.mode & 0x02) != 0;
+                break;
+            default:
+                break;   // the set / clear registers read 0
+        }
+
+        if (bit) v |= 1u << b;
+    }
+
+    return v;
+}
+
+extern "C" void rw_gpio_reg_write(int reg, uint32_t value) {
+    charge(cost(kCostDigitalWrite));
+    bool high = reg == rw_gpio::Out1 || reg == rw_gpio::Out1Set || reg == rw_gpio::Out1Clear ||
+                reg == rw_gpio::Enable1 || reg == rw_gpio::Enable1Set || reg == rw_gpio::Enable1Clear;
+    for (int b = 0; b < 32; b++) {
+        int pin = (high ? 32 : 0) + b;
+        if (!valid_pin(pin)) continue;
+        bool bit = (value >> b & 1) != 0;
+        switch (reg) {
+            case rw_gpio::Out:
+            case rw_gpio::Out1:
+                reg_latch(pin, bit ? 1 : 0);
+                break;
+            case rw_gpio::OutSet:
+            case rw_gpio::Out1Set:
+                if (bit) reg_latch(pin, 1);
+                break;
+            case rw_gpio::OutClear:
+            case rw_gpio::Out1Clear:
+                if (bit) reg_latch(pin, 0);
+                break;
+            case rw_gpio::Enable:
+            case rw_gpio::Enable1:
+                reg_enable(pin, bit);
+                break;
+            case rw_gpio::EnableSet:
+            case rw_gpio::Enable1Set:
+                if (bit) reg_enable(pin, true);
+                break;
+            case rw_gpio::EnableClear:
+            case rw_gpio::Enable1Clear:
+                if (bit) reg_enable(pin, false);
+                break;
+            default:
+                return;   // the input registers are read-only
+        }
+    }
 }
 
 extern "C" void attachInterruptArg(uint8_t pin, voidFuncPtrArg handler, void* arg, int mode) {

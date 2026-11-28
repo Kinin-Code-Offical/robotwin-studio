@@ -49,13 +49,35 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
     /// [esp32emu] The GPIO controller (0x3FF44000) and the IO_MUX (0x3FF49000): the output and output-enable registers
     /// (with their write-1-to-set/clear twins), the GPIO matrix that routes any of 256 peripheral signals to any pad
     /// (FUNC_OUT_SEL, signal 256 = the GPIO_OUT bit) and any pad to a peripheral's input (FUNC_IN_SEL), each pad's
-    /// function select, pulls and input enable, open drain (PAD_DRIVER), the input register read from the circuit through
+    /// function select, pulls (an RTC pad's in its RTC_IO register) and input enable, open drain (PAD_DRIVER), the input register read from the circuit through
     /// a Schmitt trigger (VIL 0.25·VDD, VIH 0.75·VDD, as fast mode), and the per-pin interrupts (rising, falling, any,
     /// low, high) on source 22. <see cref="PadDrive"/> is what the board applies to the circuit.
     /// </summary>
     public sealed partial class Esp32Soc
     {
-        private const uint Gpio = 0x3FF44000, IoMux = 0x3FF49000;
+        private const uint Gpio = 0x3FF44000, IoMux = 0x3FF49000, RtcIo = 0x3FF48400;
+
+        /// <summary>
+        /// [esp32hw] Where an RTC pad's pulls are: on the ESP32 the pads that also have an RTC function (GPIO0, 2, 4, 12–15,
+        /// 25–27, 32, 33) take their pull-up and pull-down from their RTC_IO register's RUE / RDE bits, which ESP-IDF's
+        /// gpio_pullup_en / gpio_pulldown_en set for them (rtc_gpio_pullup_en), not from IO_MUX's; null for the other pads.
+        /// </summary>
+        private static (uint Register, uint Up, uint Down)? RtcPull(int gpio) => gpio switch
+        {
+            4 => (RtcIo + 0x94, 1u << 27, 1u << 28),    // TOUCH_PAD0
+            0 => (RtcIo + 0x98, 1u << 27, 1u << 28),    // TOUCH_PAD1
+            2 => (RtcIo + 0x9C, 1u << 27, 1u << 28),    // TOUCH_PAD2
+            15 => (RtcIo + 0xA0, 1u << 27, 1u << 28),   // TOUCH_PAD3
+            13 => (RtcIo + 0xA4, 1u << 27, 1u << 28),   // TOUCH_PAD4
+            12 => (RtcIo + 0xA8, 1u << 27, 1u << 28),   // TOUCH_PAD5
+            14 => (RtcIo + 0xAC, 1u << 27, 1u << 28),   // TOUCH_PAD6
+            27 => (RtcIo + 0xB0, 1u << 27, 1u << 28),   // TOUCH_PAD7
+            25 => (RtcIo + 0x84, 1u << 27, 1u << 28),   // PAD_DAC1
+            26 => (RtcIo + 0x88, 1u << 27, 1u << 28),   // PAD_DAC2
+            32 => (RtcIo + 0x8C, 1u << 22, 1u << 23),   // XTAL_32K_PAD, X32P
+            33 => (RtcIo + 0x8C, 1u << 27, 1u << 28),   // XTAL_32K_PAD, X32N
+            _ => null
+        };
         private const int GpioInterruptSource = 22;
         private const int SignalGpioOut = 256;
 
@@ -93,6 +115,13 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             if (DacOutput(gpio) is { } volts) return new Esp32PadDrive(false, false, false, false, false, false, double.NaN, 0, true, volts);
             uint mux = Reg(IoMux + IoMuxOffset[gpio]);
             bool pullUp = (mux & (1u << 8)) != 0, pullDown = (mux & (1u << 7)) != 0, inputEnabled = (mux & (1u << 9)) != 0;
+            if (RtcPull(gpio) is { } rtc)
+            {
+                uint pad = Reg(rtc.Register);
+                pullUp = (pad & rtc.Up) != 0;
+                pullDown = (pad & rtc.Down) != 0;
+            }
+
             bool openDrain = (_gpioPin[gpio] & (1u << 2)) != 0;
             int function = (int)((mux >> 12) & 7);
             double frequency = double.NaN, duty = 0;
@@ -375,8 +404,8 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             foreach (var name in new[] { "gpio_pad_select_gpio", "esp_rom_gpio_pad_select_gpio" })
                 Rom(name, c => Return(c, SetPad(c.Argument(0), m => (m & ~(7u << 12)) | 2u << 12)));
             foreach (var name in new[] { "gpio_pad_pullup", "esp_rom_gpio_pad_pullup_only" })
-                Rom(name, c => Return(c, SetPad(c.Argument(0), m => (m & ~(1u << 7)) | 1u << 8)));
-            Rom("gpio_pad_pulldown", c => Return(c, SetPad(c.Argument(0), m => (m & ~(1u << 8)) | 1u << 7)));
+                Rom(name, c => Return(c, SetPull(c.Argument(0), true)));
+            Rom("gpio_pad_pulldown", c => Return(c, SetPull(c.Argument(0), false)));
             Rom("gpio_pad_hold", c => Return(c, 0));
             Rom("gpio_pad_unhold", c => Return(c, 0));
             foreach (var name in new[] { "gpio_pad_set_drv", "esp_rom_gpio_pad_set_drv" })
@@ -393,6 +422,14 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             }
 
             Rom("gpio_input_get", c => Return(c, (uint)_gpioInput));
+        }
+
+        /// <summary>The ROM's pad pull: one pull on, the other off, where the pad has them (IO_MUX, and an RTC pad's RTC_IO).</summary>
+        private uint SetPull(uint gpio, bool up)
+        {
+            if (gpio < 40 && RtcPull((int)gpio) is { } rtc)
+                _registers[rtc.Register] = (Reg(rtc.Register) & ~(rtc.Up | rtc.Down)) | (up ? rtc.Up : rtc.Down);
+            return SetPad(gpio, m => (m & ~(1u << 7 | 1u << 8)) | (up ? 1u << 8 : 1u << 7));
         }
 
         private uint SetPad(uint gpio, Func<uint, uint> change)

@@ -446,6 +446,88 @@ fib:
         }
 
         [XtensaAsmFact]
+        public void Mac16MultipliesIntoTheAccumulator()
+        {
+            // GCC's 16-bit multiply-accumulate (maddhisi4) is MULA.AA.LL: Adafruit SSD1306 stopped on it (IllegalInstruction)
+            var (c, _) = XtensaAsm.Run(@"
+    movi a2, 3
+    movi a3, -4
+    mul.aa.ll a2, a3        # -12
+    rsr.acclo a4
+    rsr.acchi a5            # sign-extended
+    movi a6, 1000
+    mula.aa.ll a6, a6       # -12 + 1 000 000
+    muls.aa.ll a2, a2       # - 9 = 999 979
+    rsr.acclo a7
+    movi a8, -1
+    slli a8, a8, 16         # 0xFFFF0000
+    movi a9, 2
+    umul.aa.hl a8, a9       # 0xFFFF * 2, unsigned
+    rsr.acclo a10
+    rsr.acchi a13
+");
+            Assert.Equal(0, c.IllegalInstructions);
+            Assert.Equal(unchecked((uint)-12), c.A(4));
+            Assert.Equal(0xFFFFFFFFu, c.A(5));
+            Assert.Equal(999979u, c.A(7));
+            Assert.Equal(0x1FFFEu, c.A(10));
+            Assert.Equal(0u, c.A(13));
+        }
+
+        [XtensaAsmFact]
+        public void Mac16DataRegistersLoadAsTheyMultiply()
+        {
+            // esp-dsp's form: MULA.DD with LDINC, the accumulator's 40 bits wrapping into ACCHI
+            var (c, _) = XtensaAsm.Run(@"
+    addi a11, a1, -32
+    movi a12, 7
+    s32i a12, a11, 4
+    movi a12, 3
+    slli a12, a12, 16
+    addi a12, a12, 5
+    s32i a12, a11, 8        # 0x00030005
+    movi a12, -2
+    slli a12, a12, 16
+    addi a12, a12, 2
+    s32i a12, a11, 12       # 0xFFFE0002
+    ldinc m0, a11           # 7
+    ldinc m2, a11           # 0x00030005
+    mul.dd.lh m0, m2        # 7 * 3 = 21
+    mula.dd.ll.ldinc m3, a11, m0, m2    # + 7 * 5 = 56, then m3 = 0xFFFE0002
+    rsr.acclo a2
+    mula.dd.lh m0, m3       # + 7 * -2 = 42
+    rsr.acclo a3
+    lddec m1, a11           # back to 0x00030005
+    rsr.m1 a4
+    rsr.m3 a5
+    sub a6, a11, a1         # -24
+    movi a7, 3
+    mul.da.hl m1, a7        # 3 * 3
+    rsr.acclo a8
+    mul.ad.ll a7, m3        # 3 * 2
+    rsr.acclo a9
+    movi a10, 0x7F
+    wsr.acchi a10
+    movi a10, -1
+    wsr.acclo a10
+    movi a12, 1
+    mula.aa.ll a12, a12     # 0x7F_FFFFFFFF + 1
+    rsr.acclo a13
+    rsr.acchi a14
+");
+            Assert.Equal(0, c.IllegalInstructions);
+            Assert.Equal(56u, c.A(2));
+            Assert.Equal(42u, c.A(3));
+            Assert.Equal(0x00030005u, c.A(4));
+            Assert.Equal(0xFFFE0002u, c.A(5));
+            Assert.Equal(unchecked((uint)-24), c.A(6));
+            Assert.Equal(9u, c.A(8));
+            Assert.Equal(6u, c.A(9));
+            Assert.Equal(0u, c.A(13));
+            Assert.Equal(0xFFFFFF80u, c.A(14));
+        }
+
+        [XtensaAsmFact]
         public void DivideByZeroRaisesItsException()
         {
             var (c, _) = XtensaAsm.Run(@"

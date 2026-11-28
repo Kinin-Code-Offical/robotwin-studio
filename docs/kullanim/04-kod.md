@@ -259,7 +259,8 @@ Arduino'daki tablo gibi: her özelliğin iki modda çalışıp çalışmadığı
 
 | Özellik | Hızlı mod | Donanım uyumlu | Nasıl denendi | Bilinen sınır |
 | --- | --- | --- | --- | --- |
-| GPIO, `attachInterrupt` | ✓ | ✓ (GPIO matrisi, Schmitt girişi, IDF'nin GPIO ISR hizmeti) | `Esp32EmulatedBoardTests`: GPIO4'teki on yükselen kenar tam sayılır | |
+| GPIO, `attachInterrupt` | ✓ | ✓ (GPIO matrisi, Schmitt girişi, IDF'nin GPIO ISR hizmeti; RTC pedlerinin çekme dirençleri RTC_IO yazmaçlarından) | `Esp32EmulatedBoardTests`: GPIO4'teki on yükselen kenar tam sayılır; `Esp32SocPeripheralTests`: GPIO4'ün çekmesi | |
+| GPIO yazmaçları (`GPIO.out_w1ts` …), port yazmacı işaretçileri | ✓ | ✓ | `Esp32Tests`: OneWire'ın ve BusIO'nun yolu | hızlı modda işaretçiyle yazılan, çizimin sonraki HAL çağrısında pine geçer |
 | `analogRead` (ADC) | ✓ (ideal doğru) | ✓ (Espressif'in karakterizasyonu) | dimmer 10k/4,7k bölücüyü 5 mV içinde okur | iki mod aynı gerilimde farklı ham kod verir (hızlı mod 1,0 V → 1241); kalibre gerilim aynıdır |
 | `ledc*`, `analogWrite`, `Servo` | ✓ | ✓ (LEDC yazmaçları, donanım geçişi) | dimmer 5 kHz PWM; servo darbeleri kütüphanenin tikleriyle | |
 | `dacWrite`, `touchRead` | ✓ | ✓ | dokunmadan 75, parmakla 13 (IDF'nin yazılım süzgeciyle) | |
@@ -277,9 +278,55 @@ Arduino'daki tablo gibi: her özelliğin iki modda çalışıp çalışmadığı
 | ESP-NOW, BLE | ✓ | — | `Esp32RadioTests` | bunları kullanan çizim hızlı modda çalışır |
 | Bluepad32 (PS4 / PS5 / Xbox kumandası) | ✓ | gerçek kart için derlenir (Bluepad32 çekirdeği); emülatörde hızlı modda çalışır | `GamepadCarTests`; *ps5-car* ve *ps5-plane* şablonlarının çizimleri Bluepad32 4.1.0 ile derlendi (718 / 749 KB) | gerçek kartta denenmedi (elde kart yok) |
 | TLS, mDNS | — | — | | henüz yok |
-| Kayan nokta (FPU) | ✓ | ✓ (tek duyarlıklı FPU; bölme, karekök, 1/x ve 1/√x de) | `XtensaCoreTests`; gerçek yonga derlemesiyle `a / b`, `sqrtf`, `sinf`, `cosf`, `powf`, `atan2f`, `expf`, `logf`, `double` bölme, `printf("%f")`, `String(float)` | emülatörde MAC16 (esp-dsp'nin el yazısı rutinleri) eksik |
+| Kayan nokta (FPU) | ✓ | ✓ (tek duyarlıklı FPU; bölme, karekök, 1/x ve 1/√x de) | `XtensaCoreTests`; gerçek yonga derlemesiyle `a / b`, `sqrtf`, `sinf`, `cosf`, `powf`, `atan2f`, `expf`, `logf`, `double` bölme, `printf("%f")`, `String(float)` | |
+| MAC16 (16 bitlik çarp-topla) | ✓ | ✓ (40 bitlik birikeç, M0–M3 ve otomatik artan yüklemeleri) | `XtensaCoreTests`: GCC'nin `mula.aa.ll`'si ve esp-dsp'nin `mula.dd.ll.ldinc` biçimi | |
 | Kesme noktası, adım adım | — | — | | yalnız Arduino Uno / Nano |
 | Gerçek karta yükleme | ✓ | ✓ | **Gerçek karta yükle → COMx** | |
+
+#### Üçüncü taraf kütüphaneler
+
+Popüler Arduino kütüphanelerinin her biri kendi küçük çizimiyle iki modda derlendi ve boş bir ESP32 DevKitC üzerinde (başka parça bağlı değilken) birkaç saniye çalıştırıldı: tabloda denenen sürüm, iki modda derlenip beklenen satırı basıp basmadığı ve bastığı var. Duyarga, ekran ya da okuyucu kütüphaneleri parça takılı olmadığında söylemeleri gerekeni söyler (bulunamadı, NaN, 0 aygıt); ağ kütüphaneleri dünyanın sanal ağına katılır, ama dünyada aracı ya da saat sunucusu yoktur. Tablo `--esp32-libs rapor.md --esp32-libroot klasör` ile yeniden üretilir (bkz. [Araçlar](../gelistirici/ARACLAR.md)); kütüphaneler klasöre arduino-cli ile kurulur.
+
+| Kütüphane | Sürüm | Hızlı mod | Donanım uyumlu | Bastığı | Not |
+| --- | --- | --- | --- | --- | --- |
+| Arduino-ESP32 2.x çağrıları | — | ✓ | ✓ | `duty=512 freq=5000 ticks=10` | çekirdek 2.x için yazılmış çizim (bkz. Çekirdek sürümleri) |
+| ArduinoJson | 7.4.3 | ✓ | ✓ | `{"a":1,"b":[2,3],"c":4.5}` |  |
+| PubSubClient | 2.8 | ✓ | ✓ | `wifi=1 connect=0 state=-2` | dünyada MQTT aracısı yok: Wi-Fi'ye bağlanır, aracıya bağlanamaz |
+| Adafruit SSD1306 (+ GFX, BusIO) | 2.5.18 | ✓ | ✓ | `begin=1 w=128` | ekran takılı değil: çizim çalışır, I²C yanıtsız |
+| DHT sensor library | 1.4.7 | ✓ | ✓ | NaN | duyarga takılı değil |
+| DallasTemperature (+ OneWire) | 4.0.6 | ✓ | ✓ | 0 aygıt | duyarga takılı değil |
+| AccelStepper | 1.64 | ✓ | ✓ | `pos=400` | 400 adım: hızlı 595 ms, donanım 598 ms |
+| FastLED | 3.10.10 | — | ✓ | `r0=255 g0=1` | hızlı modda derlenmez: ESP32 katmanı 32 bitlik işaretçi türlerini varsayar, hızlı mod bilgisayarda 64 bit derler (hızlı modda Adafruit_NeoPixel ve `rgbLedWrite` çalışır) |
+| TinyGPSPlus | 1.0.3 | ✓ | ✓ | `lat=48.1173 lng=11.5167 sats=8` | NMEA cümlelerinden konum |
+| Bounce2 | 2.71 | ✓ | ✓ | `read=1` | çekme dirençli boştaki giriş |
+| Adafruit MPU6050 | 2.2.9 | ✓ | ✓ | `begin=0` | duyarga takılı değil: bulunamaz |
+| Adafruit BME280 | 2.3.0 | ✓ | ✓ | `begin=0` | duyarga takılı değil: bulunamaz |
+| MFRC522 | 1.4.12 | ✓ | ✓ | `ver=FF` | okuyucu takılı değil |
+| LiquidCrystal I2C | 1.1.2 | ✓ | ✓ | `ok=1` | kütüphane yalnız AVR'yi bildirir; ekran takılı değil |
+| NewPing | 1.9.7 | ✓ | ✓ | `cm=0` | duyarga takılı değil: yankı yok |
+| IRremote | 4.7.1 | ✓ | ✓ | `sent=1` | NEC gönderimi |
+| PID | 1.2.0 | ✓ | ✓ | `out=10.03` | bir adım |
+| NTPClient | 3.2.1 | ✓ | ✓ | `wifi=1 update=0` | dünyada saat sunucusu yok: Wi-Fi'ye bağlanır, güncellenmez |
+| Keypad | 3.1.1 | ✓ | ✓ | `key=0` | tuş takımı takılı değil |
+| RTClib | 2.1.4 | ✓ | ✓ | `begin=0 unix=1709209800 dow=4` | saat modülü takılı değil; tarih hesabı çalışır |
+| HX711 | 0.7.5 | ✓ | ✓ | `ready=1 raw=0` | çevirici takılı değil, veri ucu aşağı çekili |
+| U8g2 | 2.36.19 | ✓ | ✓ | `w=128` | ekran takılı değil: çizim çalışır |
+| WiFiManager | 2.0.17 | — | ✓ | `ok=1` | hızlı modda derlenmez: `esp_wifi.h`, WebServer ve DNSServer hızlı modda yok |
+
+- **Değişken boyutlu diziler:** `unsigned int uS[it];` gibi bildirimleri (NewPing, MFRC522, IRremote ve çizimin kendi kodu) ESP32'nin GCC'si alır, hızlı modun MSVC'si almaz. Hızlı mod derleyicinin gösterdiği bildirimi kapsamı bitince kendini bırakan bir diziyle yeniden yazar ve yeniden derler; kütüphane kendi klasöründen değil derleme klasöründeki kopyasından derlenir, kendisine dokunulmaz. Dizinin `sizeof`'unu alan dosya olduğu gibi kalır.
+- **Ağ:** soketi Wi-Fi başlamadan açan çizim (`WiFi.begin` ya da `WiFi.mode` yokken `WiFiClient.connect`, `WiFiUDP.begin` …) gerçek yongada `assert failed: xQueueSemaphoreTake queue.c:1709` ile yeniden başlar (lwIP'nin çekirdek kilidi henüz yoktur); iki mod da öyle yapar. Önce Wi-Fi'yi başlatın.
+
+#### Çekirdek sürümleri
+
+Gerçek kart derlemesi Arduino-ESP32 3.3.13 ile yapılır; Bluepad32 kullanan çizim Bluepad32'nin 2.x tabanlı çekirdeğiyle. Hızlı mod iki kuşağın çağrılarını da alır. Çekirdek 2.x için yazılmış çizimler (örneklerin ve anlatımların çoğu) 3.x'te olmayan çağrılar yapar: LEDC kanalla (`ledcSetup`, `ledcAttachPin`, `ledcWrite(kanal, …)`), 2.x zamanlayıcıları (`timerBegin(0, 80, true)`, `timerAttachInterrupt(t, f, true)`, `timerAlarmWrite`, `timerAlarmEnable` / `Disable`) ve IDF 4.4'ün `esp_task_wdt_init(saniye, panik)`'i. Böyle bir çizim gerçek kart için derlenirken kendi dosyasına `rw_esp32_v2.h` eklenir; çağrılar 3.x çekirdeğinde hızlı moddaki gibi karşılanır: `ledcWrite` ve benzerleri, 3.x biçimiyle bağlanmış bir pin için pini, yoksa `ledcSetup` ile kurulan kanalı alır. Tabloda ilk satırdaki gibi iki mod aynı sonucu verir (`duty=512 freq=5000`, 10 ms'lik alarmla 105 ms'de 10 kesme). Tersi de vardır: Bluepad32'nin 2.x çekirdeğinde 3.x LEDC çağrıları `rw_esp32_v3.h` ile çalışır.
+
+| Çağrı | Hızlı mod | Donanım uyumlu (3.3.13) | Not |
+| --- | --- | --- | --- |
+| 2.x LEDC (`ledcSetup`, `ledcAttachPin`, kanalla `ledcWrite` / `ledcRead` / `ledcWriteTone`) | ✓ | ✓ (`rw_esp32_v2.h`) | |
+| 2.x zamanlayıcıları (`timerBegin(num, bölen, ileri)`, `timerAlarmWrite`, `timerAlarmEnable` / `Disable`) | ✓ | ✓ (`rw_esp32_v2.h`) | geri sayma (`countUp = false`) 3.x'te yok: ileri sayar |
+| `esp_task_wdt_init(saniye, panik)` | ✓ | ✓ (`rw_esp32_v2.h`) | çalışan bekçiyi yeniden kurar, izlenen boşta görevleri kalır |
+| `hallRead` | ✓ | — | 3.x çekirdeği hall duyargasını kaldırdı |
+| `SYSTEM_EVENT_*` Wi-Fi olay adları | — | — | iki modda da 3.x adları: `ARDUINO_EVENT_*` |
 
 ## Dünyadaki kartların kodu
 

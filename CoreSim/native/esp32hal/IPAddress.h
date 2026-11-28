@@ -38,6 +38,7 @@ public:
 
     size_t printTo(Print& p) const override;
     String toString() const;
+    uint8_t* raw_address() { return _addr.bytes; }   // the four bytes, for Client / UDP
 
 private:
     union {

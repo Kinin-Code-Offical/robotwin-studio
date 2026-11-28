@@ -72,6 +72,40 @@
 #ifndef __attribute__
 #define __attribute__(x)
 #endif
+
+/* GCC's bit built-ins, which libraries call directly (FastLED's bitsets, CRC and fixed-point code ...): MSVC's own
+   intrinsics, the same results (a zero argument to clz / ctz gives the width, as the Xtensa build's NSAU does). */
+#if defined(_MSC_VER) && !defined(__clang__)
+#include <intrin.h>
+#ifdef __cplusplus
+static inline int __builtin_popcount(unsigned int x) { return (int)__popcnt(x); }
+static inline int __builtin_popcountl(unsigned long x) { return (int)__popcnt((unsigned int)x); }
+static inline int __builtin_popcountll(unsigned long long x) { return (int)__popcnt64(x); }
+static inline int __builtin_parity(unsigned int x) { return (int)(__popcnt(x) & 1); }
+static inline int __builtin_parityll(unsigned long long x) { return (int)(__popcnt64(x) & 1); }
+static inline int __builtin_clz(unsigned int x) { unsigned long i; return _BitScanReverse(&i, x) ? 31 - (int)i : 32; }
+static inline int __builtin_clzl(unsigned long x) { return __builtin_clz((unsigned int)x); }
+static inline int __builtin_clzll(unsigned long long x) { unsigned long i; return _BitScanReverse64(&i, x) ? 63 - (int)i : 64; }
+static inline int __builtin_ctz(unsigned int x) { unsigned long i; return _BitScanForward(&i, x) ? (int)i : 32; }
+static inline int __builtin_ctzl(unsigned long x) { return __builtin_ctz((unsigned int)x); }
+static inline int __builtin_ctzll(unsigned long long x) { unsigned long i; return _BitScanForward64(&i, x) ? (int)i : 64; }
+static inline int __builtin_ffs(int x) { unsigned long i; return _BitScanForward(&i, (unsigned int)x) ? (int)i + 1 : 0; }
+static inline int __builtin_ffsl(long x) { return __builtin_ffs((int)x); }
+static inline int __builtin_ffsll(long long x) { unsigned long i; return _BitScanForward64(&i, (unsigned long long)x) ? (int)i + 1 : 0; }
+static inline unsigned short __builtin_bswap16(unsigned short x) { return _byteswap_ushort(x); }
+static inline unsigned int __builtin_bswap32(unsigned int x) { return (unsigned int)_byteswap_ulong(x); }
+static inline unsigned long long __builtin_bswap64(unsigned long long x) { return _byteswap_uint64(x); }
+#endif
+#ifndef __builtin_expect
+#define __builtin_expect(x, expected) (x)
+#endif
+#ifndef __builtin_unreachable
+#define __builtin_unreachable() __assume(0)
+#endif
+#ifndef __builtin_constant_p
+#define __builtin_constant_p(x) 0   /* "not known while compiling": the library takes its general path */
+#endif
+#endif
 #define IRAM_ATTR
 #define DRAM_ATTR
 #define EXT_RAM_ATTR
@@ -158,6 +192,25 @@ typedef int esp_err_t;
 #define digitalPinToAnalogChannel(pin) rw_digital_pin_to_analog_channel(pin)
 #define digitalPinToTouchChannel(pin) rw_digital_pin_to_touch_channel(pin)
 #define digitalPinToDacChannel(pin) (((pin) == 25) ? 0 : ((pin) == 26) ? 1 : -1)
+#define digitalPinToGPIONumber(pin) (pin)
+
+/* Port registers, as the core gives them (GPIO0-31 port 0, GPIO32-39 port 1): a library that switches pins through a
+   pointer to the output, input or enable register (Adafruit BusIO's software SPI, display drivers ...) gets a copy the HAL
+   keeps. What it writes there goes to the pins at its next HAL call (each call settles them first); the input copy is
+   refreshed then, for the input pins of that port. kind: 0 output, 1 input, 2 enable. */
+#ifdef __cplusplus
+extern "C" {
+#endif
+volatile uint32_t* rw_port_register(int kind, int port);
+#ifdef __cplusplus
+}
+#endif
+#define digitalPinToPort(pin) (((pin) > 31) ? 1 : 0)
+#define digitalPinToBitMask(pin) (1UL << (digitalPinToGPIONumber(pin) % 32))
+#define digitalPinToTimer(pin) (0)
+#define portOutputRegister(port) rw_port_register(0, (port))
+#define portInputRegister(port) rw_port_register(1, (port))
+#define portModeRegister(port) rw_port_register(2, (port))
 
 /* ---------------------------------------------------------------- macros */
 #define _min(a, b) ((a) < (b) ? (a) : (b))

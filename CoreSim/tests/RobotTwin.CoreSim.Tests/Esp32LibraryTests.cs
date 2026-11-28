@@ -145,6 +145,47 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Contains("toplam=14 sol=11 sag=22", text);   // 1 + 4 + 9 through Yanip → Sayac → utility/yardim
         }
 
+        [Fact]
+        public void AVariableLengthArrayDeclarationIsRewrittenWhereItIsReported()
+        {
+            Assert.Equal("  rw::vla<unsigned int> uS((size_t)(it)); unsigned int last;",
+                Esp32VlaRewrite.RewriteLine("  unsigned int uS[it], last;", 22, "x"));
+            Assert.Equal("\trw::vla<byte> outBuffer((size_t)(send->inf.size + 5)); // PCB",
+                Esp32VlaRewrite.RewriteLine("\tbyte outBuffer[send->inf.size + 5]; // PCB", 20, "x"));
+            Assert.Equal("    rw::vla<std::pair<int, int>> p((size_t)(n));", Esp32VlaRewrite.RewriteLine("    std::pair<int, int> p[n];", 25, "x"));
+            // what the array's sizeof would read differently, a static array, and what is not a declaration stay
+            Assert.Null(Esp32VlaRewrite.RewriteLine("  uint8_t b[n];", 13, "uint8_t b[n]; memset(b, 0, sizeof(b));"));
+            Assert.Null(Esp32VlaRewrite.RewriteLine("  static int t[n];", 15, "x"));
+            Assert.Null(Esp32VlaRewrite.RewriteLine("  return buf[i];", 14, "x"));
+        }
+
+        [Esp32Fact]
+        public void ALibrarysVariableLengthArraysBuildFromACopy()
+        {
+            // GCC takes `uint8_t b[n + 1];` and MSVC does not: NewPing, MFRC522 and IRremote stopped on it
+            Write("Dizi/library.properties", "name=Dizi\nversion=1.0.0\narchitectures=*\n");
+            Write("Dizi/src/Dizi.h", "#pragma once\n#include <Arduino.h>\nint dizi_topla(int n);\n#include \"dizi_ic.hpp\"\n");
+            Write("Dizi/src/dizi_ic.hpp", "#pragma once\ninline int dizi_kare(int n) {\n  int k[n], t = 0;\n  for (int i = 0; i < n; i++) k[i] = i * i;\n  for (int i = 0; i < n; i++) t += k[i];\n  return t;\n}\n");
+            string cpp = "#include \"Dizi.h\"\nint dizi_topla(int n) {\n  uint8_t b[n + 1];\n  memset(b, 1, n + 1);\n  int t = 0;\n  for (int i = 0; i <= n; i++) t += b[i];\n  return t;\n}\n";
+            Write("Dizi/src/Dizi.cpp", cpp);
+            var compiler = new Esp32SketchCompiler();
+            compiler.LibraryRoots.Add(_libs);
+            const string sketch = "#include <Dizi.h>\nvoid setup() {\n  Serial.begin(115200);\n  int n = (int)(millis() % 1) + 4;\n  int yerel[n];\n  for (int i = 0; i < n; i++) yerel[i] = i;\n  Serial.printf(\"dizi=%d kare=%d yerel=%d\\n\", dizi_topla(n), dizi_kare(n), yerel[n - 1]);\n}\nvoid loop() { delay(100); }\n";
+            var build = compiler.Compile(sketch, Path.Combine(_root, "dizi"));
+            Assert.True(build.Success, string.Join("\n", build.Diagnostics) + "\n" + build.Log);
+            Assert.Equal(cpp, File.ReadAllText(Path.Combine(_libs, "Dizi", "src", "Dizi.cpp")));   // the library itself is not touched
+
+            var w = new WorldDocument();
+            var esp = w.AddComponent(PartLibrary.Default, Esp32Parts.DevKitCId, new WorldPose());
+            esp.IsStatic = true;
+            esp.Firmware = new FirmwareSource { BoardRefDes = "U1", Target = "esp32-hal", FileName = "dizi.ino", Source = sketch };
+            using var runner = new WorldRunner(w, new RunnerOptions { Esp32Builder = _ => build.DllPath });
+            runner.Step(0.5);
+            string text = string.Concat(runner.ReadSerial(null, false).Values);
+            _out.WriteLine(text);
+            Assert.Contains("dizi=5 kare=14 yerel=3", text);
+        }
+
         [Esp32Fact]
         public void ALibraryThatDoesNotBuildIsNamed()
         {

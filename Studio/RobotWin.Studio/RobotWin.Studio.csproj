@@ -21,7 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="Firmware\*.hex;Firmware\*.ino;Firmware\rw_esp32_v3.h" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Firmware\*.hex;Firmware\*.ino;Firmware\rw_esp32_v3.h;Firmware\rw_esp32_v2.h" CopyToOutputDirectory="PreserveNewest" />
     <!-- [occt] The Open CASCADE bridge for STEP / IGES (third_party/occt, built by tools/scripts/build_occt.bat): beside the app in occt\ -->
     <Content Include="..\..\third_party\occt\win-x64\*.dll" LinkBase="occt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>

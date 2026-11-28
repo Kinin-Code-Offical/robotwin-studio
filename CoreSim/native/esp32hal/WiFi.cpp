@@ -48,11 +48,24 @@ struct WifiStatusOut {
 #pragma pack(pop)
 
 bool med() { return rw::radio_available(); }
+
+/* lwIP's TCP/IP task: the 3.x core starts it with the first Wi-Fi mode (Network.begin, through WiFi.mode, begin or softAP). */
+bool g_stack_up = false;
 }  // namespace
+
+/* A socket before the stack is up: on the chip lwIP takes its core lock, which does not exist yet, and FreeRTOS's assert
+   restarts the chip; the real-chip build prints this (in the hardware-compatible mode too). */
+static void need_stack() {
+    if (g_stack_up) return;
+    rw::log(RW_LOG_ERROR, "\r\nassert failed: xQueueSemaphoreTake queue.c:1709 (( pxQueue ))\r\n\r\n\r\nBacktrace: 0x40087b6c:0x3ffb1db0 "
+            "0x40087b31:0x3ffb1dd0 0x4008e179:0x3ffb1df0 0x400884d2:0x3ffb1f30 0x400f2a9d:0x3ffb1f70\r\n\r\nRebooting...");
+    rw::system_restart(ESP_RST_PANIC);
+}
 
 namespace rw {
 void hal_wifi_reset() {
     WiFi = WiFiClass();
+    g_stack_up = false;
     radio_reset();
 }
 }  // namespace rw
@@ -126,6 +139,7 @@ void WiFiClass::refresh() {
 bool WiFiClass::mode(wifi_mode_t m) {
     rw::charge(rw::cost(1000000.0));
     _mode = m;
+    if (m != WIFI_OFF) g_stack_up = true;
     if (!(m & WIFI_MODE_STA)) _began = false;
     if (med()) {
         int32_t v = (int32_t)m;
@@ -153,6 +167,7 @@ wl_status_t WiFiClass::begin(const char* ssid, const char* passphrase, int32_t, 
     strncpy_s(_ssid, sizeof _ssid, ssid, _TRUNCATE);
     strncpy_s(_psk, sizeof _psk, passphrase ? passphrase : "", _TRUNCATE);
     if (!(_mode & WIFI_MODE_STA)) _mode = (wifi_mode_t)(_mode | WIFI_MODE_STA);
+    g_stack_up = true;
     setRadio();
     if (connect) {
         _began = true;
@@ -303,6 +318,7 @@ int32_t WiFiClass::channel() {
 
 bool WiFiClass::softAP(const char* ssid, const char* passphrase, int channel, int, int max_connection, bool) {
     stub_notice();
+    g_stack_up = true;   // enableAP starts the stack before the arguments are checked
     if (!ssid || !*ssid) return false;
     if (passphrase && *passphrase && strlen(passphrase) < 8) {
         rw::log(RW_LOG_ERROR, "[%6lu][E][WiFiAP.cpp:180] softAP(): passphrase too short!", (unsigned long)(rw::uptime_ns() / 1000000ull));
@@ -416,6 +432,7 @@ uint8_t* WiFiClass::BSSID(uint8_t i, uint8_t* bssid) {
 String WiFiClass::BSSIDstr(uint8_t i) { return mac_string(BSSID(i, nullptr)); }
 
 int WiFiClass::hostByName(const char* host, IPAddress& result) {
+    need_stack();
     result = IPAddress();
     if (host && result.fromString(host)) return 1;
     rw::log_once(0x720, RW_LOG_WARN, "[%6lu][W][WiFiGeneric.cpp] hostByName(): no DNS in the simulated world (use IP addresses)",
@@ -443,6 +460,7 @@ struct TcpStateOut {
 #pragma pack(pop)
 
 int WiFiClient::connect(IPAddress ip, uint16_t port) {
+    need_stack();
     if (!med()) {
         network_notice();
         rw::sleep_until(rw::now_ns() + 3000000000ull);  // connection timeout
@@ -543,6 +561,7 @@ uint16_t WiFiClient::remotePort() {
 }
 
 void WiFiServer::begin(uint16_t port) {
+    need_stack();
     if (port) _port = port;
     if (!med()) {
         network_notice();
@@ -582,6 +601,7 @@ WiFiClient WiFiServer::accept() {
 
 /* ---------------------------------------------------------------- UDP */
 uint8_t WiFiUDP::begin(uint16_t port) {
+    need_stack();
     _port = port;
     if (!med()) return 1;
     uint16_t in[2] = {port, 1};
@@ -599,6 +619,7 @@ void WiFiUDP::stop() {
 }
 
 int WiFiUDP::beginPacket(IPAddress ip, uint16_t port) {
+    need_stack();
     if (!med()) return 0;
     _txIp = (uint32_t)ip;
     _txPort = port;

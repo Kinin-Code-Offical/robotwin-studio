@@ -16,6 +16,8 @@
 #define RW_WIFI_H
 #include "Arduino.h"
 #include "IPAddress.h"
+#include "Client.h"
+#include "Udp.h"
 
 typedef enum {
     WL_NO_SHIELD = 255,
@@ -173,12 +175,12 @@ private:
 extern WiFiClass WiFi;
 
 /* ---- TCP-like stream between ESP32s of the same world (reliable, ordered, with link latency) ---- */
-class WiFiClient : public Stream {
+class WiFiClient : public Client {
 public:
     WiFiClient() {}
     explicit WiFiClient(int id) : _id(id) {}
-    int connect(IPAddress ip, uint16_t port);
-    int connect(const char* host, uint16_t port);
+    int connect(IPAddress ip, uint16_t port) override;
+    int connect(const char* host, uint16_t port) override;
     int connect(IPAddress ip, uint16_t port, int32_t) { return connect(ip, port); }
     int connect(const char* host, uint16_t port, int32_t) { return connect(host, port); }
     size_t write(uint8_t b) override { return write(&b, 1); }
@@ -186,13 +188,13 @@ public:
     using Print::write;
     int available() override;
     int read() override;
-    int read(uint8_t* buf, size_t size);
+    int read(uint8_t* buf, size_t size) override;
     int peek() override;
     void flush() override {}
-    void stop();
-    uint8_t connected();
+    void stop() override;
+    uint8_t connected() override;
     void setNoDelay(bool) {}
-    operator bool() { return _id > 0 && connected(); }
+    operator bool() override { return _id > 0 && connected(); }
     IPAddress remoteIP();
     uint16_t remotePort();
     int fd() const { return _id; }
@@ -224,28 +226,28 @@ private:
     int _pending = 0;
 };
 
-class WiFiUDP : public Stream {
+class WiFiUDP : public UDP {
 public:
-    uint8_t begin(uint16_t port);
+    uint8_t begin(uint16_t port) override;
     uint8_t begin(IPAddress, uint16_t port) { return begin(port); }
-    uint8_t beginMulticast(IPAddress, uint16_t port) { return begin(port); }
-    void stop();
-    int beginPacket(IPAddress ip, uint16_t port);
-    int beginPacket(const char* host, uint16_t port);
+    uint8_t beginMulticast(IPAddress, uint16_t port) override { return begin(port); }
+    void stop() override;
+    int beginPacket(IPAddress ip, uint16_t port) override;
+    int beginPacket(const char* host, uint16_t port) override;
     int beginPacket() { return beginPacket(_remoteIP, _remotePort); }
-    int endPacket();
+    int endPacket() override;
     size_t write(uint8_t b) override { return write(&b, 1); }
     size_t write(const uint8_t* buf, size_t size) override;
     using Print::write;
-    int parsePacket();
+    int parsePacket() override;
     int available() override { return _rxLen - _rxPos; }
     int read() override { return _rxPos < _rxLen ? _rx[_rxPos++] : -1; }
-    int read(unsigned char* buf, size_t len);
-    int read(char* buf, size_t len) { return read(reinterpret_cast<unsigned char*>(buf), len); }
+    int read(unsigned char* buf, size_t len) override;
+    int read(char* buf, size_t len) override { return read(reinterpret_cast<unsigned char*>(buf), len); }
     int peek() override { return _rxPos < _rxLen ? _rx[_rxPos] : -1; }
     void flush() override { _rxPos = _rxLen; }
-    IPAddress remoteIP() { return _remoteIP; }
-    uint16_t remotePort() { return _remotePort; }
+    IPAddress remoteIP() override { return _remoteIP; }
+    uint16_t remotePort() override { return _remotePort; }
 
 private:
     uint16_t _port = 0;
