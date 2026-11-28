@@ -79,7 +79,10 @@ namespace RobotWin.Studio.Shell
             {
                 try
                 {
-                    Measure(template, WarmUp);
+                    // a light world's half second is a few milliseconds: again until its code has had time to be optimised
+                    // (this pass is not timed, so how long it runs changes nothing that is)
+                    var warm = Stopwatch.StartNew();
+                    for (int rep = 0; rep < 8 && (rep == 0 || warm.ElapsedMilliseconds < 300); rep++) Measure(template, WarmUp);
                 }
                 catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is IOException || ex is KeyNotFoundException || ex is NotSupportedException || ex is ApiException)
                 {

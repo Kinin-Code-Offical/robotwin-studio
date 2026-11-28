@@ -45,6 +45,12 @@ $`C`$ is the constraint error (penetration depth, joint drift), $`\beta`$ the so
 
 A joint breaks when its design force is exceeded; the event is written to the **Olaylar** (events) tab.
 
+### Islands
+
+Bodies that move are joined into islands by every contact, joint and coupling between them; a body that does not move (static, kinematic, asleep) joins nothing, as it takes no impulse. Islands share no moving body, so each one's constraints are swept on their own, in their order in the whole list, and the islands side by side on several cores: the result is exactly that of sweeping everything together. Two robots on one floor are two islands.
+
+Before two solids are tested face by face, a pair whose bounding boxes overlap is first checked for a gap with the Gilbert-Johnson-Keerthi algorithm on their support functions: once its lower bound on the gap passes the contact margin no contact can come of the pair. The proved gap is remembered with the second body's pose in the first one's frame; while the bodies move less than that, relative to each other, the pair is not tested again.
+
 ### Welded parts: one rigid body
 
 A soft constraint is as stiff as the bodies it joins are heavy. A chain between a heavy body and a light part, such as a 400 g airframe → a 6 g wire leg → a 10 g wheel, is therefore far softer than real steel: the wheel toes in by degrees under load. So **unbreakable fixed bonds** (fixed joints with no break force or fastening set, shell walls, screwed lids) are not solved as separate constraints. Every step, the parts they join are gathered into one rigid body:

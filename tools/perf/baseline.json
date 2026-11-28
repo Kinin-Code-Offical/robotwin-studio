@@ -1,152 +1,152 @@
 {
-  "created": "2026-11-28 03:40",
+  "created": "2026-11-28 04:12",
   "machine": "24 \u00E7ekirdek",
-  "calibration_ms": 132.27,
+  "calibration_ms": 134.73,
   "seconds": 1,
   "templates": {
     "empty": {
-      "ms_per_s": 0.87,
-      "score": 0.0066
+      "ms_per_s": 1.01,
+      "score": 0.0075
     },
     "two-boards": {
-      "ms_per_s": 14.44,
-      "score": 0.1092
+      "ms_per_s": 14.29,
+      "score": 0.1061
     },
     "servo-arm": {
-      "ms_per_s": 251.16,
-      "score": 1.8989
+      "ms_per_s": 244.65,
+      "score": 1.8158
     },
     "z-axis": {
-      "ms_per_s": 1084.06,
-      "score": 8.1961
+      "ms_per_s": 1201.66,
+      "score": 8.9188
     },
     "displays": {
-      "ms_per_s": 265.97,
-      "score": 2.0109
+      "ms_per_s": 267.73,
+      "score": 1.9871
     },
     "car": {
-      "ms_per_s": 73.04,
-      "score": 0.5522
+      "ms_per_s": 71.8,
+      "score": 0.5329
     },
     "sonar": {
-      "ms_per_s": 21.8,
-      "score": 0.1648
+      "ms_per_s": 20.95,
+      "score": 0.1555
     },
     "motor-wheel": {
-      "ms_per_s": 31.47,
-      "score": 0.2379
+      "ms_per_s": 34.59,
+      "score": 0.2567
     },
     "factory-cell": {
-      "ms_per_s": 231.42,
-      "score": 1.7496
+      "ms_per_s": 240.01,
+      "score": 1.7814
     },
     "scara-cell": {
-      "ms_per_s": 74.14,
-      "score": 0.5605
+      "ms_per_s": 76.45,
+      "score": 0.5674
     },
     "prop-stand": {
-      "ms_per_s": 53.73,
-      "score": 0.4062
+      "ms_per_s": 54,
+      "score": 0.4008
     },
     "mini-drone": {
-      "ms_per_s": 194.72,
-      "score": 1.4722
+      "ms_per_s": 167.98,
+      "score": 1.2467
     },
     "esp32-quad": {
-      "ms_per_s": 381.26,
-      "score": 2.8825
+      "ms_per_s": 351.17,
+      "score": 2.6064
     },
     "shell-box": {
-      "ms_per_s": 50.76,
-      "score": 0.3838
+      "ms_per_s": 47.86,
+      "score": 0.3552
     },
     "motor-glider": {
-      "ms_per_s": 409.92,
-      "score": 3.0992
+      "ms_per_s": 368.53,
+      "score": 2.7353
     },
     "glider": {
-      "ms_per_s": 314.92,
-      "score": 2.381
+      "ms_per_s": 205.64,
+      "score": 1.5263
     },
     "mecanum": {
-      "ms_per_s": 114.54,
-      "score": 0.866
+      "ms_per_s": 104.47,
+      "score": 0.7754
     },
     "lights": {
-      "ms_per_s": 103.16,
-      "score": 0.78
+      "ms_per_s": 101.32,
+      "score": 0.752
     },
     "esp32-neopixel": {
-      "ms_per_s": 74.04,
-      "score": 0.5598
+      "ms_per_s": 75.8,
+      "score": 0.5626
     },
     "trafik-isigi": {
-      "ms_per_s": 158.05,
-      "score": 1.1949
+      "ms_per_s": 196.94,
+      "score": 1.4617
     },
     "ps5-car": {
-      "ms_per_s": 164.69,
-      "score": 1.2451
+      "ms_per_s": 175.57,
+      "score": 1.3031
     },
     "kapali-gezgin": {
-      "ms_per_s": 319.27,
-      "score": 2.4139
+      "ms_per_s": 338.13,
+      "score": 2.5096
     },
     "ps5-plane": {
-      "ms_per_s": 596.26,
-      "score": 4.5081
+      "ms_per_s": 556.58,
+      "score": 4.131
     },
     "water-rocket": {
-      "ms_per_s": 13.56,
-      "score": 0.1025
+      "ms_per_s": 14.61,
+      "score": 0.1085
     },
     "sugar-motor": {
-      "ms_per_s": 8.88,
-      "score": 0.0672
+      "ms_per_s": 9.22,
+      "score": 0.0685
     },
     "solid-rocket": {
-      "ms_per_s": 122.36,
-      "score": 0.9251
+      "ms_per_s": 123.26,
+      "score": 0.9149
     },
     "surfaces": {
-      "ms_per_s": 2.05,
-      "score": 0.0155
+      "ms_per_s": 2.23,
+      "score": 0.0166
     },
     "containers": {
-      "ms_per_s": 26.28,
-      "score": 0.1987
+      "ms_per_s": 26.3,
+      "score": 0.1952
     },
     "su-bardagi": {
-      "ms_per_s": 1313.87,
-      "score": 9.9336
+      "ms_per_s": 1295.24,
+      "score": 9.6134
     },
     "sarkac": {
-      "ms_per_s": 9.34,
-      "score": 0.0706
+      "ms_per_s": 9.13,
+      "score": 0.0677
     },
     "line-follower": {
-      "ms_per_s": 778.95,
-      "score": 5.8893
+      "ms_per_s": 774.31,
+      "score": 5.747
     },
     "sensor-rover": {
-      "ms_per_s": 372.92,
-      "score": 2.8195
+      "ms_per_s": 353.77,
+      "score": 2.6257
     },
     "camera-line": {
-      "ms_per_s": 104.76,
-      "score": 0.792
+      "ms_per_s": 103.87,
+      "score": 0.771
     },
     "wind-lab": {
-      "ms_per_s": 12.42,
-      "score": 0.0939
+      "ms_per_s": 13.29,
+      "score": 0.0987
     },
     "arazi-parkuru": {
-      "ms_per_s": 95.44,
-      "score": 0.7216
+      "ms_per_s": 95.02,
+      "score": 0.7052
     },
     "kapali-atolye": {
-      "ms_per_s": 87.24,
-      "score": 0.6596
+      "ms_per_s": 85.06,
+      "score": 0.6313
     }
   }
 }

@@ -896,13 +896,10 @@ namespace RobotTwin.CoreSim.Mechanics
             Soft(Math.Min(ContactHertz, 0.25 / h), ContactDampingRatio, h, out double cBias, out double cMass, out double cImp);
             Soft(Math.Min(JointHertz, 0.25 / h), JointDampingRatio, h, out double jBias, out double jMass, out double jImp);
 
-            WarmStart();
-            for (int it = 0; it < Iterations; it++)
-            {
-                SolveJoints(true, jBias, jMass, jImp, h);
-                SolveCouplings(true, jBias, jMass, jImp);
-                SolveContacts(true, cBias, cMass, cImp, h, false);
-            }
+            BuildIslands();   // [islands] Mechanics/PhysicsScene.Islands.cs
+            _pass = (h, cBias, cMass, cImp, jBias, jMass, jImp);
+            if (_islandCount < 2) IterateIsland(-1);
+            else ForIslands(_iterate ??= IterateIsland);
 
             // ---------------------------------------------------------- positions
             for (int i = 0; i < count; i++)
@@ -939,12 +936,8 @@ namespace RobotTwin.CoreSim.Mechanics
 
             IntegrateWeldPositions(h);   // [weld]
 
-            for (int it = 0; it < RelaxIterations; it++)
-            {
-                SolveJoints(false, jBias, jMass, jImp, h);
-                SolveCouplings(false, jBias, jMass, jImp);
-                SolveContacts(false, cBias, cMass, cImp, h, true);
-            }
+            if (_islandCount < 2) RelaxIsland(-1);
+            else ForIslands(_relax ??= RelaxIsland);
 
             ApplyRestitution(h);
 
@@ -1234,6 +1227,9 @@ namespace RobotTwin.CoreSim.Mechanics
 
         private Vec3[] _pieceCentres = Array.Empty<Vec3>();
 
+        /// <summary>[perf] A solid whose contact test is dear enough to be settled first by <see cref="Apart"/> (not a sphere, not a mesh).</summary>
+        private static bool Heavy(CollisionShape s) => s.Kind == ShapeKind.Box || s.Kind == ShapeKind.Cylinder || s.Kind == ShapeKind.ConvexHull || s.Kind == ShapeKind.Points;
+
         /// <summary>
         /// [perf] The pieces of a concave body share their edges: two wall pieces side by side touch a floor at the same
         /// corner, each with a contact of its own. The same point with the same normal twice is one constraint solved
@@ -1276,11 +1272,13 @@ namespace RobotTwin.CoreSim.Mechanics
             var A = Bodies[a];
             var B = Bodies[b];
             double margin = Margin(a, b, h);
-            var props = Materials.Pair(A.MaterialIndex, B.MaterialIndex);
             var xa = A.Position;
             var xb = B.Position;
             var qa = A.Orientation;
             var qb = B.Orientation;
+            // [perf] boxes overlapping, solids apart: settled by their support functions before the face-by-face tests
+            if (Heavy(sa) && Heavy(sb) && (sa.Kind != ShapeKind.Box || sb.Kind != ShapeKind.Box) && StillApart(a, b, sa, xa, qa, sb, xb, qb, margin)) return;
+            var props = Materials.Pair(A.MaterialIndex, B.MaterialIndex);
 
             if (sa.Kind == ShapeKind.Sphere)
             {
@@ -1705,37 +1703,43 @@ namespace RobotTwin.CoreSim.Mechanics
             return v;
         }
 
-        private void WarmStart()
+        /// <summary>The impulses of the last substep applied again (island <paramref name="k"/>'s constraints, or all: −1).</summary>
+        private void WarmStart(int k = -1)
         {
-            for (int i = 0; i < _contactCount; i++)
+            var (cf, ct, ci) = IslandRange(k, _contactCount, _islContactStart, _islContactIndex);
+            for (int t = cf; t < ct; t++)
             {
-                ref var c = ref _contacts[i];
+                ref var c = ref _contacts[ci == null ? t : ci[t]];
                 if (c.Pn == 0 && c.Pt1 == 0 && c.Pt2 == 0) continue;
                 ApplyImpulse(c.SA, c.SB, c.RA, c.RB, c.N * c.Pn + c.T1 * c.Pt1 + c.T2 * c.Pt2);
                 if (c.Rolling && (c.Pr1 != 0 || c.Pr2 != 0)) ApplyAngular(c.SA, c.SB, c.T1 * c.Pr1 + c.T2 * c.Pr2);
                 if (c.Ps != 0) ApplyAngular(c.SA, c.SB, c.N * c.Ps); // [phys]
             }
 
-            for (int i = 0; i < _pointCount; i++)
+            var (pf, pt, pi) = IslandRange(k, _pointCount, _islPointStart, _islPointIndex);
+            for (int t = pf; t < pt; t++)
             {
-                ref var pr = ref _points[i];
+                ref var pr = ref _points[pi == null ? t : pi[t]];
                 var j = Joints[pr.Joint];
                 ApplyJointImpulse(pr.P, pr.C, pr.RP, pr.RC, j.PointImpulse);
             }
 
-            for (int i = 0; i < _rowCount; i++)
+            var (rf, rt, ri) = IslandRange(k, _rowCount, _islRowStart, _islRowIndex);
+            for (int t = rf; t < rt; t++)
             {
-                ref var r = ref _rows[i];
+                ref var r = ref _rows[ri == null ? t : ri[t]];
                 double imp = Joints[r.Joint].Impulse[r.Slot];
                 if (imp != 0) ApplyRow(ref r, imp);
             }
         }
 
-        private void SolveContacts(bool useBias, double biasRate, double massScale, double impulseScale, double h, bool relax)
+        private void SolveContacts(bool useBias, double biasRate, double massScale, double impulseScale, double h, bool relax, int k = -1)
         {
             double invH = 1 / h;
-            for (int i = 0; i < _contactCount; i++)
+            var (cf, ct, ci) = IslandRange(k, _contactCount, _islContactStart, _islContactIndex);
+            for (int t = cf; t < ct; t++)
             {
+                int i = ci == null ? t : ci[t];
                 ref var c = ref _contacts[i];
                 // Separation, updated by the position step for the relax pass.
                 double s = c.Sep;
@@ -2221,15 +2225,16 @@ namespace RobotTwin.CoreSim.Mechanics
             }
         }
 
-        private void SolveJoints(bool useBias, double biasRate, double massScale, double impulseScale, double h)
+        private void SolveJoints(bool useBias, double biasRate, double massScale, double impulseScale, double h, int island = -1)
         {
             double invH = 1 / h;
+            var (rf, rt, ri) = IslandRange(island, _rowCount, _islRowStart, _islRowIndex);
             // Friction and limits, then the drives (so a drive sees the velocity the limits leave),
             // then the rigid equality rows and the point blocks.
             for (int pass = 0; pass < 3; pass++)
-            for (int i = 0; i < _rowCount; i++)
+            for (int t = rf; t < rt; t++)
             {
-                ref var r = ref _rows[i];
+                ref var r = ref _rows[ri == null ? t : ri[t]];
                 int rowPass = r.Type == RowType.Equality ? 2 : IsDriveSlot(r.Slot) ? 1 : 0;   // [d6] a configurable joint's drives too
                 if (rowPass != pass) continue;
                 var j = Joints[r.Joint];
@@ -2292,9 +2297,10 @@ namespace RobotTwin.CoreSim.Mechanics
                 }
             }
 
-            for (int i = 0; i < _pointCount; i++)
+            var (pf, pt, pi) = IslandRange(island, _pointCount, _islPointStart, _islPointIndex);
+            for (int t = pf; t < pt; t++)
             {
-                ref var pr = ref _points[i];
+                ref var pr = ref _points[pi == null ? t : pi[t]];
                 var j = Joints[pr.Joint];
                 ref var sc = ref _state[pr.C];
                 var cdot = sc.V + sc.W.Cross(pr.RC);

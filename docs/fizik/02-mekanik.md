@@ -45,6 +45,12 @@ $`C`$ kısıtın ihlali (iç içe geçme derinliği, eklem kayması), $`\beta`$ 
 
 Bir eklem, tasarım kuvvetini aşınca kopar; olay **Olaylar** sekmesine yazılır.
 
+### Adalar
+
+Hareket eden gövdeler aralarındaki her temas, eklem ve kuplajla adalarda birleşir; hareket etmeyen bir gövde (sabit, kinematik, uyuyan) hiçbir şeyi birleştirmez, çünkü itme almaz. Adalar hareket eden gövde paylaşmaz; her adanın kısıtları bütün listedeki sıralarıyla kendi başına taranır, adalar birden çok çekirdekte yan yana: sonuç her şeyi birlikte taramanınkiyle tam olarak aynıdır. Aynı zemindeki iki robot iki adadır.
+
+İki katı yüz yüze sınanmadan önce, sınır kutuları örtüşen bir çift destek fonksiyonları üzerinden Gilbert-Johnson-Keerthi algoritmasıyla boşluk için sınanır: boşluğun alt sınırı temas payını geçince çiftten temas çıkamaz. Kanıtlanan boşluk, ikinci gövdenin birincinin çerçevesindeki duruşuyla saklanır; gövdeler birbirine göre bundan az hareket ettikçe çift yeniden sınanmaz.
+
 ### Kaynaklı parçalar: tek rijit gövde
 
 Yumuşak kısıtın sertliği gövdenin kütlesiyle orantılıdır. Ağır bir gövdeyle hafif bir parça arasındaki zincir, örneğin 400 g'lık bir uçak gövdesi → 6 g'lık tel bacak → 10 g'lık tekerlek, bu yüzden gerçek çelikten çok daha esnek davranır: tekerlek yükte birkaç derece rot açısı yapar. Bu nedenle **kırılmaz sabit bağlantılar** (kırılma kuvveti ya da bağlantı türü verilmemiş sabit eklemler, kabuk duvarları, vidalı kapaklar) ayrı kısıt olarak çözülmez. Bunlarla birleşen parçalar her adımda tek bir rijit gövdede toplanır:

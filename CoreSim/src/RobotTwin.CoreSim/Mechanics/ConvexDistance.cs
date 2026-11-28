@@ -179,7 +179,7 @@ namespace RobotTwin.CoreSim.Mechanics
             return Keep(s, keep.ToArray());
         }
 
-        private static (double Wa, double Wb, double Wc) TriangleWeights(Vec3 a, Vec3 b, Vec3 c)
+        internal static (double Wa, double Wb, double Wc) TriangleWeights(Vec3 a, Vec3 b, Vec3 c)
         {
             var p = Vec3.Zero;
             Vec3 ab = b - a, ac = c - a, ap = p - a;

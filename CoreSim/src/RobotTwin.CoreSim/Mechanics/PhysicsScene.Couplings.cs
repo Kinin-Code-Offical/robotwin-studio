@@ -206,11 +206,12 @@ namespace RobotTwin.CoreSim.Mechanics
             if (r.Count > 3) Push(r.B3, r.L3, r.A3, impulse);
         }
 
-        private void SolveCouplings(bool useBias, double biasRate, double massScale, double impulseScale)
+        private void SolveCouplings(bool useBias, double biasRate, double massScale, double impulseScale, int k = -1)
         {
-            for (int i = 0; i < _couplingCount; i++)
+            var (cf, ct, ci) = IslandRange(k, _couplingCount, _islCouplingStart, _islCouplingIndex);
+            for (int t = cf; t < ct; t++)
             {
-                ref var r = ref _couplingRows[i];
+                ref var r = ref _couplingRows[ci == null ? t : ci[t]];
                 double cdot = 0;
                 if (r.Count > 0) cdot += Velocity(r.B0, r.L0, r.A0);
                 if (r.Count > 1) cdot += Velocity(r.B1, r.L1, r.A1);
