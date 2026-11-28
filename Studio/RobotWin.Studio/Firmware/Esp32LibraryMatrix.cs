@@ -34,6 +34,34 @@ namespace RobotWin.Studio.Firmware
             new Case("Arduino-ESP32 2.x çağrıları", "",
                 "#include <esp_task_wdt.h>\nvolatile int ticks=0;void IRAM_ATTR onTick(){ticks++;}\nvoid setup(){Serial.begin(115200);ledcSetup(3,5000,10);ledcAttachPin(18,3);ledcWrite(3,512);hw_timer_t*t=timerBegin(0,80,true);timerAttachInterrupt(t,&onTick,true);timerAlarmWrite(t,10000,true);timerAlarmEnable(t);int w=esp_task_wdt_init(5,false);delay(105);timerAlarmDisable(t);int n=ticks;delay(50);Serial.printf(\"SONUC duty=%u freq=%u ticks=%d after=%d wdt=%d\\n\",(unsigned)ledcRead(3),(unsigned)ledcReadFreq(3),n,ticks-n,w);}\nvoid loop(){delay(100);}\n",
                 @"^SONUC duty=512 freq=5000 ticks=1[01] after=0 wdt=0$", "çekirdek 2.x için yazılmış çizim; gerçek kart derlemesinde rw_esp32_v2.h ile"),
+            // not a library: mbedTLS on the chip's SHA and AES accelerators (the byte buffers unaligned, as the chip allows)
+            new Case("mbedTLS (SHA, AES)", "", @"// SHA-1/256/384/512 and AES-128 through mbedTLS, on the chip's accelerators (FIPS test vectors)
+#include <mbedtls/sha1.h>
+#include <mbedtls/sha256.h>
+#include <mbedtls/sha512.h>
+#include <mbedtls/aes.h>
+static String hex(const uint8_t* b, int n) { String s; char t[3]; for (int i = 0; i < n; i++) { snprintf(t, 3, ""%02x"", b[i]); s += t; } return s; }
+void setup() {
+  Serial.begin(115200);
+  const unsigned char abc[3] = {'a', 'b', 'c'};
+  static unsigned char aa[200]; memset(aa, 'a', sizeof aa);
+  uint8_t o[64];
+  String r = ""SONUC"";
+  mbedtls_sha1(abc, 3, o); r += "" s1="" + hex(o, 4);
+  mbedtls_sha256(aa, sizeof aa, o, 0); r += "" s256="" + hex(o, 4);
+  mbedtls_sha512(abc, 3, o, 1); r += "" s384="" + hex(o, 4);
+  mbedtls_sha512(aa, sizeof aa, o, 0); r += "" s512="" + hex(o, 4);
+  uint8_t key[16], pt[16], ct[16], back[16];
+  for (int i = 0; i < 16; i++) { key[i] = i; pt[i] = i * 0x11; }
+  mbedtls_aes_context a; mbedtls_aes_init(&a);
+  mbedtls_aes_setkey_enc(&a, key, 128); mbedtls_aes_crypt_ecb(&a, MBEDTLS_AES_ENCRYPT, pt, ct);
+  mbedtls_aes_setkey_dec(&a, key, 128); mbedtls_aes_crypt_ecb(&a, MBEDTLS_AES_DECRYPT, ct, back);
+  r += "" aes="" + hex(ct, 4) + "" geri="" + hex(back + 12, 4);
+  Serial.println(r);
+}
+void loop() { delay(100); }
+",
+                @"^SONUC s1=a9993e36 s256=c2a908d9 s384=cb00753f s512=4b11459c aes=69c4e0d8 geri=ccddeeff$", "FIPS test vektörleri; hızlı modda mbedTLS yok"),
             new Case("ArduinoJson", "ArduinoJson",
                 "#include <ArduinoJson.h>\nvoid setup(){Serial.begin(115200);JsonDocument d;deserializeJson(d,\"{\\\"a\\\":1,\\\"b\\\":[2,3]}\");d[\"c\"]=4.5;String s;serializeJson(d,s);Serial.printf(\"SONUC a=%d b1=%d %s\\n\",(int)d[\"a\"],(int)d[\"b\"][1],s.c_str());}\nvoid loop(){delay(100);}\n",
                 @"^SONUC a=1 b1=3 \{""a"":1,""b"":\[2,3\],""c"":4\.5\}$"),

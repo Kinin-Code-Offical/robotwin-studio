@@ -47,10 +47,10 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             uint address = A(s) + imm8 * 4;
             switch (r)
             {
-                case 0: F[t] = FromBits(L32(address)); return 1;                        // LSI
-                case 4: S32(address, Bits(F[t])); return 1;                             // SSI
-                case 8: F[t] = FromBits(L32(address)); SetA(s, address); return 1;      // LSIU
-                case 0xC: S32(address, Bits(F[t])); SetA(s, address); return 1;         // SSIU
+                case 0: F[t] = FromBits(L32U(address)); return 1;                        // LSI
+                case 4: S32U(address, Bits(F[t])); return 1;                             // SSI
+                case 8: F[t] = FromBits(L32U(address)); SetA(s, address); return 1;      // LSIU
+                case 0xC: S32U(address, Bits(F[t])); SetA(s, address); return 1;         // SSIU
             }
 
             Illegal();

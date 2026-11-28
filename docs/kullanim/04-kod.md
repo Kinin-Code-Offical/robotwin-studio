@@ -286,7 +286,8 @@ Arduino'daki tablo gibi: her özelliğin iki modda çalışıp çalışmadığı
 | mDNS (`ESPmDNS`) | ✓ (ad ve servis kaydı ortamda) | ✓ (yazılımın kendi yanıtlayıcısı, ortamın çoklu yayını) | `Esp32RadioTests`; *esp32-mdns* şablonu iki modda ve kartlar ayrı modlardayken aynı | |
 | BLE | ✓ | — | `Esp32RadioTests` | kullanan çizim hızlı modda çalışır |
 | Bluepad32 (PS4 / PS5 / Xbox kumandası) | ✓ | gerçek kart için derlenir (Bluepad32 çekirdeği); emülatörde hızlı modda çalışır | `GamepadCarTests`; *ps5-car* ve *ps5-plane* şablonlarının çizimleri Bluepad32 4.1.0 ile derlendi (718 / 749 KB) | gerçek kartta denenmedi (elde kart yok) |
-| TLS | — | — | | henüz yok |
+| SHA ve AES hızlandırıcıları (mbedTLS) | — (mbedTLS yok) | ✓ (SHA-1/256/384/512, AES-128/192/256) | `Esp32SocPeripheralTests`; gerçek yonga derlemesiyle FIPS test vektörleri (çok bloklu SHA, AES şifreleme ve çözme) | |
+| TLS | — | — | | henüz yok (dünyada TLS konuşan bir sunucu yok) |
 | Kayan nokta (FPU) | ✓ | ✓ (tek duyarlıklı FPU; bölme, karekök, 1/x ve 1/√x de) | `XtensaCoreTests`; gerçek yonga derlemesiyle `a / b`, `sqrtf`, `sinf`, `cosf`, `powf`, `atan2f`, `expf`, `logf`, `double` bölme, `printf("%f")`, `String(float)` | |
 | MAC16 (16 bitlik çarp-topla) | ✓ | ✓ (40 bitlik birikeç, M0–M3 ve otomatik artan yüklemeleri) | `XtensaCoreTests`: GCC'nin `mula.aa.ll`'si ve esp-dsp'nin `mula.dd.ll.ldinc` biçimi | |
 | Kesme noktası, adım adım | — | — | | yalnız Arduino Uno / Nano |
@@ -305,6 +306,7 @@ Popüler Arduino kütüphanelerinin her biri kendi küçük çizimiyle iki modda
 | DHT sensor library | 1.4.7 | ✓ | ✓ | NaN | duyarga takılı değil |
 | DallasTemperature (+ OneWire) | 4.0.6 | ✓ | ✓ | 0 aygıt | duyarga takılı değil |
 | AccelStepper | 1.64 | ✓ | ✓ | `pos=400` | 400 adım: hızlı 595 ms, donanım 598 ms |
+| mbedTLS (SHA, AES) | — | — | ✓ | `s1=a9993e36 s256=c2a908d9 … aes=69c4e0d8` | FIPS test vektörleri; hızlı modda mbedTLS yok |
 | FastLED | 3.10.10 | — | ✓ | `r0=255 g0=1` | hızlı modda derlenmez: ESP32 katmanı 32 bitlik işaretçi türlerini varsayar, hızlı mod bilgisayarda 64 bit derler (hızlı modda Adafruit_NeoPixel ve `rgbLedWrite` çalışır) |
 | TinyGPSPlus | 1.0.3 | ✓ | ✓ | `lat=48.1173 lng=11.5167 sats=8` | NMEA cümlelerinden konum |
 | Bounce2 | 2.71 | ✓ | ✓ | `read=1` | çekme dirençli boştaki giriş |

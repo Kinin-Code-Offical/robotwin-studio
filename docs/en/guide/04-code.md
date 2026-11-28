@@ -286,7 +286,8 @@ Like the Arduino table: whether each feature works in the two modes, how it was 
 | mDNS (`ESPmDNS`) | ✓ (names and services kept by the medium) | ✓ (the firmware's own responder, the medium's multicast) | `Esp32RadioTests`; the *esp32-mdns* template gives the same lines in both modes and with the boards in different modes | |
 | BLE | ✓ | — | `Esp32RadioTests` | a sketch using it runs in the fast mode |
 | Bluepad32 (PS4 / PS5 / Xbox gamepad) | ✓ | built for the real board (Bluepad32 core); runs in the fast mode on the emulator | `GamepadCarTests`; the *ps5-car* and *ps5-plane* templates' sketches built with Bluepad32 4.1.0 (718 / 749 KB) | not tried on a real board (none at hand) |
-| TLS | — | — | | not yet |
+| SHA and AES accelerators (mbedTLS) | — (no mbedTLS) | ✓ (SHA-1/256/384/512, AES-128/192/256) | `Esp32SocPeripheralTests`; FIPS test vectors in a real-chip build (multi-block SHA, AES encryption and decryption) | |
+| TLS | — | — | | not yet (no TLS server in the world) |
 | Floating point (FPU) | ✓ | ✓ (single-precision FPU; division, square root, 1/x and 1/√x too) | `XtensaCoreTests`; in a real-chip build `a / b`, `sqrtf`, `sinf`, `cosf`, `powf`, `atan2f`, `expf`, `logf`, `double` division, `printf("%f")`, `String(float)` | |
 | MAC16 (16-bit multiply-accumulate) | ✓ | ✓ (40-bit accumulator, M0–M3 and their auto-incrementing loads) | `XtensaCoreTests`: GCC's `mula.aa.ll` and esp-dsp's `mula.dd.ll.ldinc` form | |
 | Breakpoints, stepping | — | — | | Arduino Uno / Nano only |
@@ -305,6 +306,7 @@ Each popular Arduino library was built with a small sketch of its own in both mo
 | DHT sensor library | 1.4.7 | ✓ | ✓ | NaN | no sensor fitted |
 | DallasTemperature (+ OneWire) | 4.0.6 | ✓ | ✓ | 0 devices | no sensor fitted |
 | AccelStepper | 1.64 | ✓ | ✓ | `pos=400` | 400 steps: fast 595 ms, hardware 598 ms |
+| mbedTLS (SHA, AES) | — | — | ✓ | `s1=a9993e36 s256=c2a908d9 … aes=69c4e0d8` | FIPS test vectors; no mbedTLS in the fast mode |
 | FastLED | 3.10.10 | — | ✓ | `r0=255 g0=1` | does not build in the fast mode: its ESP32 layer assumes 32-bit pointer types, the fast mode builds 64-bit on the PC (Adafruit_NeoPixel and `rgbLedWrite` work there) |
 | TinyGPSPlus | 1.0.3 | ✓ | ✓ | `lat=48.1173 lng=11.5167 sats=8` | position from NMEA sentences |
 | Bounce2 | 2.71 | ✓ | ✓ | `read=1` | a free input with its pull-up |

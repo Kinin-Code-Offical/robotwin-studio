@@ -213,6 +213,39 @@ namespace RobotTwin.CoreSim.Tests
             Assert.Equal(0.3, soc.McpwmOutput(0, 0, 0).Duty, 3);
         }
 
+        /// <summary>[crypto] The SHA and AES accelerators as IDF's mbedTLS port drives them: FIPS test vectors.</summary>
+        [Fact]
+        public void ShaAndAesAcceleratorsGiveTheStandardsVectors()
+        {
+            var soc = Chip();
+            // SHA-256("abc"): the padded block as big-endian words, START, LOAD, the digest in SHA_TEXT
+            var block = new byte[64];
+            block[0] = (byte)'a'; block[1] = (byte)'b'; block[2] = (byte)'c'; block[3] = 0x80; block[63] = 24;
+            for (int i = 0; i < 16; i++) soc.Write32(0x3FF03000 + 4 * (uint)i, (uint)(block[4 * i] << 24 | block[4 * i + 1] << 16 | block[4 * i + 2] << 8 | block[4 * i + 3]));
+            soc.Write32(0x3FF03090, 1);   // SHA_256_START
+            Assert.Equal(0u, soc.Read32(0x3FF0309C));
+            soc.Write32(0x3FF03098, 1);   // SHA_256_LOAD
+            Assert.Equal(0xba7816bfu, soc.Read32(0x3FF03000));
+            Assert.Equal(0xf20015adu, soc.Read32(0x3FF0301C));
+
+            // AES-128, FIPS-197 C.1: key and text written as IDF does (memcpy words)
+            var key = new byte[16];
+            var pt = new byte[16];
+            for (int i = 0; i < 16; i++)
+            {
+                key[i] = (byte)i;
+                pt[i] = (byte)(i * 0x11);
+            }
+
+            for (int i = 0; i < 4; i++) soc.Write32(0x3FF01010 + 4 * (uint)i, BitConverter.ToUInt32(key, 4 * i));
+            soc.Write32(0x3FF01008, 0);   // encrypt, 128-bit key
+            for (int i = 0; i < 4; i++) soc.Write32(0x3FF01030 + 4 * (uint)i, BitConverter.ToUInt32(pt, 4 * i));
+            soc.Write32(0x3FF01000, 1);
+            var ct = new byte[16];
+            for (int i = 0; i < 4; i++) BitConverter.GetBytes(soc.Read32(0x3FF01030 + 4 * (uint)i)).CopyTo(ct, 4 * i);
+            Assert.Equal("69c4e0d86a7b0430d8cdb78070b4c55a", string.Concat(ct.Select(b => b.ToString("x2"))));
+        }
+
         [Fact]
         public void McpwmSyncLoadsThePhaseAndTheCarrierChops()
         {

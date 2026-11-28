@@ -28,6 +28,45 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
 
         private uint L32(uint address) => _bus.Read32(address & ~3u);
         private void S32(uint address, uint value) => _bus.Write32(address & ~3u, value);
+
+        // [xtensa] The ESP32's LX6 handles unaligned loads and stores in hardware (core-isa.h: XCHAL_UNALIGNED_LOAD_HW and
+        // _STORE_HW 1, no exception): L32I, S32I (and their narrow forms), L16UI, L16SI, S16I and the FPU's LSI / SSI / LSX
+        // / SSX reach the bytes at the address itself. The window spills (L32E / S32E), L32AI / S32RI and S32C1I are
+        // aligned by the ISA. An unaligned word was read from the address below (mbedTLS's AES block from a byte buffer).
+        private uint L32U(uint address)
+        {
+            if ((address & 3) == 0) return _bus.Read32(address);
+            return (uint)(_bus.Read8(address) | _bus.Read8(address + 1) << 8 | _bus.Read8(address + 2) << 16 | _bus.Read8(address + 3) << 24);
+        }
+
+        private void S32U(uint address, uint value)
+        {
+            if ((address & 3) == 0)
+            {
+                _bus.Write32(address, value);
+                return;
+            }
+
+            _bus.Write8(address, (byte)value);
+            _bus.Write8(address + 1, (byte)(value >> 8));
+            _bus.Write8(address + 2, (byte)(value >> 16));
+            _bus.Write8(address + 3, (byte)(value >> 24));
+        }
+
+        private ushort L16U(uint address) =>
+            (address & 1) == 0 ? _bus.Read16(address) : (ushort)(_bus.Read8(address) | _bus.Read8(address + 1) << 8);
+
+        private void S16U(uint address, ushort value)
+        {
+            if ((address & 1) == 0)
+            {
+                _bus.Write16(address, value);
+                return;
+            }
+
+            _bus.Write8(address, (byte)value);
+            _bus.Write8(address + 1, (byte)(value >> 8));
+        }
         private bool Bool(int index) => (Br & (1u << index)) != 0;
         private void SetBool(int index, bool on) => Br = on ? Br | (1u << index) : Br & ~(1u << index);
 
@@ -48,11 +87,11 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             {
                 case 0x8:   // L32I.N at, as, r*4
                     if (WindowCheck(Frames(s, t))) return 1;
-                    SetA(t, L32(A(s) + (uint)(r * 4)));
+                    SetA(t, L32U(A(s) + (uint)(r * 4)));
                     return 1;
                 case 0x9:   // S32I.N
                     if (WindowCheck(Frames(s, t))) return 1;
-                    S32(A(s) + (uint)(r * 4), A(t));
+                    S32U(A(s) + (uint)(r * 4), A(t));
                     return 1;
                 case 0xA:   // ADD.N
                     if (WindowCheck(Frames(r, s, t))) return 1;
@@ -228,10 +267,10 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
                     uint address = A(s) + A(t);
                     switch (op2)
                     {
-                        case 0: F[r] = BitConverter.Int32BitsToSingle((int)L32(address)); return 1;
-                        case 1: F[r] = BitConverter.Int32BitsToSingle((int)L32(address)); SetA(s, address); return 1;
-                        case 4: S32(address, (uint)BitConverter.SingleToInt32Bits(F[r])); return 1;
-                        case 5: S32(address, (uint)BitConverter.SingleToInt32Bits(F[r])); SetA(s, address); return 1;
+                        case 0: F[r] = BitConverter.Int32BitsToSingle((int)L32U(address)); return 1;
+                        case 1: F[r] = BitConverter.Int32BitsToSingle((int)L32U(address)); SetA(s, address); return 1;
+                        case 4: S32U(address, (uint)BitConverter.SingleToInt32Bits(F[r])); return 1;
+                        case 5: S32U(address, (uint)BitConverter.SingleToInt32Bits(F[r])); SetA(s, address); return 1;
                     }
 
                     break;
@@ -649,13 +688,13 @@ namespace RobotTwin.CoreSim.Firmware.Xtensa
             switch (r)
             {
                 case 0: SetA(t, _bus.Read8(a + imm8)); return 1;                                   // L8UI
-                case 1: SetA(t, _bus.Read16((a + imm8 * 2) & ~1u)); return 1;                      // L16UI
-                case 2: SetA(t, L32(a + imm8 * 4)); return 1;                                      // L32I
+                case 1: SetA(t, L16U(a + imm8 * 2)); return 1;                                     // L16UI
+                case 2: SetA(t, L32U(a + imm8 * 4)); return 1;                                     // L32I
                 case 4: _bus.Write8(a + imm8, (byte)A(t)); return 1;                               // S8I
-                case 5: _bus.Write16((a + imm8 * 2) & ~1u, (ushort)A(t)); return 1;                // S16I
-                case 6: S32(a + imm8 * 4, A(t)); return 1;                                         // S32I
+                case 5: S16U(a + imm8 * 2, (ushort)A(t)); return 1;                                // S16I
+                case 6: S32U(a + imm8 * 4, A(t)); return 1;                                        // S32I
                 case 7: return 1;                                                                  // cache operations
-                case 9: SetA(t, (uint)(short)_bus.Read16((a + imm8 * 2) & ~1u)); return 1;         // L16SI
+                case 9: SetA(t, (uint)(short)L16U(a + imm8 * 2)); return 1;                        // L16SI
                 case 0xA: SetA(t, (uint)Sx((uint)(s << 8) | imm8, 12)); return 1;                  // MOVI
                 case 0xB: SetA(t, L32(a + imm8 * 4)); return 1;                                    // L32AI
                 case 0xC: SetA(t, a + (uint)(sbyte)imm8); return 1;                                // ADDI

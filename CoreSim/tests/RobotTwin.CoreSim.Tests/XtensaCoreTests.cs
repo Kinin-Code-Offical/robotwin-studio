@@ -475,7 +475,48 @@ fib:
         }
 
         [XtensaAsmFact]
-        public void Mac16DataRegistersLoadAsTheyMultiply()
+        public void Mac16DataRegistersLoadAsTheyMultiply() => Mac16DataRegistersLoadAsTheyMultiplyBody();
+
+        /// <summary>[xtensa] The ESP32 handles unaligned loads and stores in hardware: the bytes at the address itself.</summary>
+        [XtensaAsmFact]
+        public void UnalignedLoadsAndStoresReachTheirOwnBytes()
+        {
+            var (c, _) = XtensaAsm.Run(@"
+    addi a11, a1, -32
+    movi a12, 0x11
+    s8i a12, a11, 0
+    movi a12, 0x22
+    s8i a12, a11, 1
+    movi a12, 0x33
+    s8i a12, a11, 2
+    movi a12, 0x44
+    s8i a12, a11, 3
+    movi a12, 0x55
+    s8i a12, a11, 4
+    movi a12, 0x66
+    s8i a12, a11, 5
+    addi a13, a11, 1
+    l32i a2, a13, 0          # 0x55443322
+    addi a13, a11, 3
+    l16ui a3, a13, 0         # 0x5544
+    movi a12, 0x7A
+    slli a12, a12, 8
+    addi a12, a12, 0x7B      # 0x7A7B
+    addi a13, a11, 9
+    s32i a12, a13, 0         # bytes 9..12: 7B 7A 00 00
+    l8ui a4, a11, 9
+    l8ui a5, a11, 10
+    addi a13, a11, 2
+    l32i a6, a13, 0          # 0x66554433
+");
+            Assert.Equal(0x55443322u, c.A(2));
+            Assert.Equal(0x5544u, c.A(3));
+            Assert.Equal(0x7Bu, c.A(4));
+            Assert.Equal(0x7Au, c.A(5));
+            Assert.Equal(0x66554433u, c.A(6));
+        }
+
+        private void Mac16DataRegistersLoadAsTheyMultiplyBody()
         {
             // esp-dsp's form: MULA.DD with LDINC, the accumulator's 40 bits wrapping into ACCHI
             var (c, _) = XtensaAsm.Run(@"
